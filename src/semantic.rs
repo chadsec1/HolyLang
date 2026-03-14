@@ -448,7 +448,7 @@ fn infer_expr_type(
         Expr::IntLiteral { value: value, ty: ty, span: span } => {
             // If literal already has concrete type, return it; otherwise default to Int32
             if *ty == Type::Infer {
-                // Never duplicate same code twice, but shitty Rust forces us to in this very specific
+                // Never duplicate same code twice, but Rust forces us to in this very specific
                 // scenario
                 // This is needed because of Arrays, to allow type inferrence for hard-coded array
                 // elements, depending on the array's exact type.
@@ -613,7 +613,7 @@ fn infer_expr_type(
 
         Expr::FloatLiteral { value: value, ty: ty, span: span } => {
             if *ty == Type::Infer {
-                // Never duplicate same code twice, but shitty Rust forces us to in this very specific
+                // Never duplicate same code twice, but Rust forces us to in this very specific
                 // scenario
                 // This is needed because of Arrays, to allow type inferrence for hard-coded array
                 // elements, depending on the array's exact type.
