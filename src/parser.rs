@@ -1,0 +1,1030 @@
+use crate::error::HolyError;
+use std::fmt;
+use std::num::IntErrorKind;
+
+
+const KEYWORDS: &[&str] = &[
+    "func", "own", "return", "for", "forever", "if", "else", "true", "false",
+    "int16", "int32", "int64", "int128", "uint16", "uint32", "uint64", "uint128",
+    "float32", "float64", "bool", "string"
+];
+
+/// Types for HolyLang
+#[derive(Debug, Clone, PartialEq)]
+pub enum Type {
+    Int16,
+    Int32,
+    Int64,
+    Int128,
+
+    Uint16,
+    Uint32,
+    Uint64,
+    Uint128,
+    
+    Float32,
+    Float64,
+    Bool,
+    String,
+    Array(Box<Type>),
+    /// Indicates this needs to be inferred during semantic analysis
+    Infer,
+}
+
+impl fmt::Display for Type {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            Type::Int16 => "int16",
+            Type::Int32 => "int32",
+            Type::Int64 => "int64",
+            Type::Int128 => "int128",
+
+            Type::Uint16 => "uint16",
+            Type::Uint32 => "uint32",
+            Type::Uint64 => "uint64",
+            Type::Uint128 => "uint128",
+
+            Type::Float32 => "float32",
+            Type::Float64 => "float64",
+            Type::Bool => "bool",
+            Type::String => "string",
+            Type::Array(inner) => &format!("{}[]", inner),
+            Type::Infer => "infer",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+impl fmt::Display for IntLiteralValue {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            IntLiteralValue::Signed(v) => write!(f, "{}", v),
+            IntLiteralValue::Unsigned(v) => write!(f, "{}", v),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum IntLiteralValue {
+    Signed(i128),
+    Unsigned(u128),
+}
+
+#[derive(Debug, Clone)]
+pub enum FloatLiteralValue {
+    Float32(f32),
+    Float64(f64),
+}
+
+/// AST nodes
+#[derive(Debug, Clone)]
+pub enum Expr {
+    /// Integer literal value with an explicit/type-or-infer marker
+    IntLiteral {
+        value: IntLiteralValue,
+        ty: Type, // usually Type::Infer until semantic phase
+        span: Span,
+    },
+    /// Float literal (value) and type marker (Infer or a concrete float type)
+    FloatLiteral {
+        value: FloatLiteralValue,
+        ty: Type, // Type::Infer or Float32/Float64
+        span: Span,
+    },
+    BoolLiteral {
+        value: bool,
+        span: Span,
+    },
+    ArrayLiteral {
+        elements: Vec<Expr>,
+        array_ty: Type,
+        span: Span,
+    },
+    Var { 
+        name: String,
+        span: Span,
+    },
+    UnaryOp {
+        op: UnaryOpKind,
+        expr: Box<Expr>,
+        span: Span,
+    },
+    BinOp {
+        left: Box<Expr>,
+        op: BinOpKind,
+        right: Box<Expr>,
+        span: Span,
+    },
+    Call {
+        name: String,
+        args: Vec<Expr>,
+        span: Span,
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum UnaryOpKind {
+    Negate,
+}
+
+#[derive(Debug, Clone)]
+pub enum BinOpKind {
+    Add,
+    Subtract,
+    Multiply,
+    Divide
+}
+
+#[derive(Debug, Clone)]
+pub struct Param {
+    pub name: String,
+    pub type_name: Type,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone)]
+pub struct Variable {
+    pub name: String,
+    /// Always present; Type::Infer means "infer in semantic phase"
+    pub type_name: Type,
+    pub value: Option<Expr>,
+    pub span: Span,
+
+}
+
+#[derive(Debug, Clone)]
+pub struct Function {
+    pub name: String,
+    pub params: Vec<Param>,
+    pub return_type: Option<Vec<Type>>,
+    pub body: Vec<Stmt>,
+    pub span: Span,
+}
+
+
+#[derive(Debug, Clone)]
+pub struct VariableAssignment {
+    pub name: String,
+    pub value: Expr,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone)]
+pub struct MultiAssignment {
+    pub names: Vec<String>,
+    pub value: Expr,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone)]
+pub enum Stmt {
+    VarDecl(Variable),
+    VarDeclMulti(Vec<Variable>, Expr),
+    VarAssign(VariableAssignment),
+    VarAssignMulti(MultiAssignment),
+    Expr(Expr),
+    Return(Vec<Expr>),
+    Func(Function), // optional convenience
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Span {
+    pub line: usize,
+    pub column: usize,
+}
+
+
+
+/// Program AST
+#[derive(Debug)]
+pub struct AST {
+    pub functions: Vec<Function>,
+}
+
+/// Public parse entry
+pub fn parse(source: &str) -> Result<AST, HolyError> {
+    let lines: Vec<&str> = source.lines().collect();
+    let mut i = 0usize;
+    let mut ast = AST { functions: vec![] };
+
+    while i < lines.len() {
+        let raw = lines[i];
+        let line = raw.trim();
+
+        if line.is_empty() || line.starts_with('#') {
+            i += 1;
+            continue;
+        }
+
+        if line.starts_with("func ") {
+            // Parse function header and body
+            let (func, new_i) = parse_function(&lines, i)?;
+            ast.functions.push(func);
+            i = new_i;
+            continue;
+        }
+
+        // unknown top-level line
+        return Err(HolyError::Parse(format!(
+            "Unexpected statement outside function at line {}: `{}`",
+            i + 1,
+            raw
+        )));
+    }
+
+    Ok(ast)
+}
+
+/// Parse function starting at index `start_i`.
+/// Returns (Function, index after function end).
+fn parse_function(lines: &Vec<&str>, start_i: usize) -> Result<(Function, usize), HolyError> {
+
+    let span = Span { line: start_i + 1, column: 0 };
+    
+    let header_raw = lines[start_i].trim();
+    // header like: func add(a int32, b int32) int32 {
+    let after_func = &header_raw["func ".len()..];
+
+    // find '(' matching for params
+    let open_paren = after_func.find('(').ok_or_else(|| {
+        HolyError::Parse(format!("Invalid function header (no '(') at line {}: `{}`", start_i + 1, header_raw))
+    })?;
+    
+    let name = after_func[..open_paren].trim().to_string();
+
+    validate_identifier_name(&name, start_i + 1)?;
+
+    let rest = &after_func[open_paren..]; // starts with '('
+    let close_paren = rest.find(')').ok_or_else(|| {
+        HolyError::Parse(format!("Invalid function header (no ')') at line {}: `{}`", start_i + 1, header_raw))
+    })?;
+
+    let params_str = &rest[1..close_paren]; // contents inside ()
+    let after_params = rest[close_paren + 1..].trim();
+
+    let brace_pos = after_params.find('{').ok_or_else(|| {
+        HolyError::Parse(format!("Missing '{{' after function header at line {}: `{}`", start_i + 1, header_raw))
+    })?;
+
+    let return_type_str = after_params[..brace_pos].trim();
+
+    let return_type = if return_type_str.is_empty() {
+        None
+    } else {
+        if return_type_str.starts_with('(') {
+            if !return_type_str.ends_with(')') {
+                return Err(HolyError::Parse(format!("Missing closing parentheses for return type in function `{}` at line {}", name, start_i + 1)));
+            }
+
+            let inner = &return_type_str[1..return_type_str.len()-1];
+            let mut types = Vec::new();
+            if !inner.trim().is_empty() {
+                for part in split_comma_top_level(inner) {
+                    let t = parse_type(part.trim()).map_err(|e| HolyError::Parse(format!("{} (line {})", e, start_i + 1)))?;
+                    types.push(t);
+                }
+            }
+            Some(types)
+
+        } else if return_type_str.ends_with(')') {
+            return Err(HolyError::Parse(format!("Missing opening parentheses for return type in function `{}` at line {}", name, start_i + 1)));
+        } else {
+            Some(vec![parse_type(return_type_str).map_err(|e| HolyError::Parse(format!("{} (line {})", e, start_i + 1)))?])
+        }
+    };
+
+    // parse params
+    let mut params = vec![];
+    if !params_str.trim().is_empty() {
+        for p in params_str.split(',') {
+            let p = p.trim();
+            let parts: Vec<&str> = p.split_whitespace().collect();
+            if parts.len() != 2 {
+                return Err(HolyError::Parse(format!("Invalid parameter `{}` at line {}", p, start_i + 1)));
+            }
+            let pname = parts[0].to_string();
+            validate_identifier_name(&pname, start_i + 1)?;
+
+            let ptype = parse_type(parts[1]) .map_err(|e| HolyError::Parse(format!("{} (line {})", e, start_i + 1)))?;
+            params.push(Param { name: pname, type_name: ptype, span: span });
+        }
+    }
+
+    // parse body: everything until matching closing brace
+    let mut body: Vec<Stmt> = vec![];
+    let mut idx = start_i + 1;
+    let mut brace_balance = 1; // we saw the opening brace in header
+    while idx < lines.len() {
+        let raw = lines[idx];
+        let t = raw.trim();
+
+        // track braces to support nested blocks if needed
+        if t.contains('{') {
+            brace_balance += t.matches('{').count();
+        }
+        if t.contains('}') {
+            brace_balance -= t.matches('}').count();
+            if brace_balance <= 0 {
+                // function end
+                return Ok((
+                    Function {
+                        name,
+                        params,
+                        return_type,
+                        body,
+                        span,
+                    },
+                    idx + 1,
+                ));
+            }
+        }
+
+        // otherwise parse statements inside function
+        if !t.is_empty() && !t.starts_with('#') {
+            let stmt = parse_stmt(t, idx + 1)?;
+            body.push(stmt);
+        }
+
+        idx += 1;
+    }
+
+    Err(HolyError::Parse(format!(
+        "Unterminated function starting at line {}: `{}`",
+        start_i + 1,
+        lines[start_i]
+    )))
+}
+
+/// Parse a single statement from a trimmed line. `line_no` used for error messages.
+fn parse_stmt(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
+    let span = Span { line: line_no, column: 0 };
+
+    // Return statement
+    if line == "return" {
+        return Err(HolyError::Parse(format!(
+            "Return requires a value (line {} column {})",
+            span.line, span.column
+        )));
+    }
+
+    if line.starts_with("return ") {
+        let expr_str = line["return ".len()..].trim();
+        if expr_str.is_empty() {
+            return Err(HolyError::Parse(format!(
+                "Return requires a value (line {} column {})",
+                span.line, span.column
+            )));
+        }
+            
+        // top-level comma -> tuple-like expression (e.g. "a, b")
+        //
+        // Check if return is like: return a, b, ...
+        // then split, parse each element, and return the vec.
+        // Otherwise create new vec of single parsed element.
+        let top_parts = split_comma_top_level(expr_str);
+        if top_parts.len() > 1 {
+            let mut elems = vec![];
+            for p in top_parts {
+                elems.push(parse_expr(p.trim(), span)?);
+            }
+            return Ok(Stmt::Return(elems));
+        } else {
+            let expr = parse_expr(expr_str, span)?;
+            return Ok(Stmt::Return(vec![expr]));
+        }
+
+    }
+
+    // Variable declaration: own ...
+    if line.starts_with("own ") {
+        // possibilities:
+        // own name = expr
+        // own name type = expr
+        // own name type
+        // special-case: own name = int32[1,2,3]  (typed array literal on RHS)
+        // special-case: own x, y = call() (just example, declared can be as many as you want.)
+        //
+        let rest = line["own ".len()..].trim();
+        // check for assignment '='
+        if let Some(eq_pos) = rest.find('=') {
+            let left = rest[..eq_pos].trim();
+            let right = rest[eq_pos + 1..].trim() ;
+
+
+            // Multiple variable declarations
+            if left.contains(',') {
+                let mut names = vec![];
+                for part in left.split(',') {
+                    let n = part.trim();
+                    // disallow typed multi-declaration for now (keep parser simple)
+                    if n.split_whitespace().count() != 1 {
+                        return Err(HolyError::Parse(format!("Invalid multi-variable declaration `{}` at line {}", left, line_no)));
+                    }
+                    validate_identifier_name(n, line_no)?;
+                    names.push(n.to_string());
+                }
+
+                let value = parse_expr(right, span)?;
+                // create multiple variables with Infer type; inference happens in semantic phase
+                let mut vars = vec![];
+                for n in &names {
+                    vars.push(Variable { name: n.clone(), type_name: Type::Infer, value: None, span });
+                }
+                return Ok(Stmt::VarDeclMulti(vars, value));
+            }
+
+
+
+
+            // left can be "name" or "name type"
+            let left_parts: Vec<&str> = left.split_whitespace().collect();
+            let (name, var_type) = match left_parts.len() {
+                1 => (left_parts[0].to_string(), Type::Infer),
+                2 => {
+                    let tp = parse_type(left_parts[1]).map_err(|e| HolyError::Parse(format!("{} (line {})", e, line_no)))?;
+                    (left_parts[0].to_string(), tp)
+                }
+                _ => return Err(HolyError::Parse(format!("Invalid variable declaration `{}` at line {}", line, line_no))),
+            };
+
+           
+            // ensure name doesnt have special characters, except _, and doesnt start with a
+            // number.
+            validate_identifier_name(&name, line_no)?;
+
+            // special-case: typed array literal on RHS: e.g. "int32[1, 2, 3]" 
+            // detect pattern: "<type_without_brackets>[ ... ]"
+            if var_type == Type::Infer || is_array_type(&var_type) {
+                if let Some(first_bracket) = find_constructor_bracket(&right) {
+                    if right.ends_with(']') {
+                        let type_str = right[..first_bracket].trim();
+                        let elems_str = &right[first_bracket + 1..right.len() - 1];
+
+                        if !type_str.is_empty() {
+                            let inner_ty = parse_type(type_str).map_err(|e| HolyError::Parse(format!("{} (line {})", e, line_no)))?;
+
+                            // wrap into array type for the variable
+                            let rhs_var_type = Type::Array(Box::new(inner_ty.clone()));
+
+                            let mut elems: Vec<Expr> = Vec::new();
+                            if !elems_str.trim().is_empty() {
+                                for part in split_comma_top_level(elems_str) {
+                                    let part = part.trim();
+                                    if find_constructor_bracket(part).is_some() {
+                                        let nested = parse_typed_array_literal(part, Span {line: line_no, column: 0} )?;
+                                        elems.push(nested);
+
+                                    } else {
+                                        let expr = parse_expr(part.trim(), Span { line: line_no, column: 0 })?;
+                                        // I could override expression's type here because we already
+                                        // know array's type, but I leave it up to semantic analysis 
+                                        // to determine types and error according.
+                                        elems.push(expr);
+                                    }
+                                }
+                            }
+
+
+                            // This is so it allows programmer to optionally explicitly set type of
+                            // array on left hand side. 
+                            // we still require rhs var type though, the optional left hand side
+                            // type of array is useful when you calling a function and want to lock
+                            // your code to expect a specific type and error otherwise.
+                            // Example:
+                            // own x int32[] = int32[1, 2, 3] # This is valid
+                            // own x = int32[1, 2, 3] # This is also valid
+                            // own x uint32[] = int32[1, 2, 3] # This is invalid.
+                            //
+                            let mut value = Expr::ArrayLiteral { elements: elems.clone(), span, array_ty: inner_ty.clone() };
+                            if is_array_type(&rhs_var_type) {
+                                if let Type::Array(inner_array_ty) = rhs_var_type.clone() {
+                                    value = Expr::ArrayLiteral { elements: elems, span, array_ty: *inner_array_ty };
+                                }
+                            }
+
+                            return Ok(Stmt::VarDecl(Variable { name, type_name: var_type, value: Some(value), span }));
+                        }
+                    }
+
+
+                // handle empty typed-array literal like "int32[]"
+                } else if right.ends_with("[]") {
+                    let type_str = right[..right.len() - 2].trim();
+                    if !type_str.is_empty() {
+                        // parse the inner element type (may be nested like "int32[]", parse_type handles nesting)
+                        let inner_ty = parse_type(type_str).map_err(|e| HolyError::Parse(format!("{} (line {})", e, line_no)))?;
+
+                        let rhs_var_type = Type::Array(Box::new(inner_ty.clone()));
+
+                        // create empty array literal (no elements)
+                        let mut value = Expr::ArrayLiteral {
+                            elements: Vec::new(),
+                            array_ty: inner_ty.clone(),
+                            span,
+                        };
+
+                        if is_array_type(&rhs_var_type) {
+                            if let Type::Array(inner_array_ty) = rhs_var_type.clone() {
+                                value = Expr::ArrayLiteral { elements: Vec::new(), span, array_ty: *inner_array_ty };
+                            }
+                        }
+
+                        return Ok(Stmt::VarDecl(Variable { name, type_name: var_type, value: Some(value), span }));
+                    }
+                }
+            }
+
+            // If RHS is an untyped bracket literal like "[1,2,3]" and the LHS had no explicit type -> error
+            if var_type == Type::Infer && right.starts_with('[') {
+                return Err(HolyError::Parse(format!(
+                    "Array literal requires an explicit type on right-hand side, e.g. `own x = int32[1,2,3]` (line {})",
+                    line_no
+                )));
+            }
+
+            let value = parse_expr(right, span)?;
+            return Ok(Stmt::VarDecl(Variable { name, type_name: var_type, value: Some(value), span: span }));
+        } else {
+            // no '=', expect "own name type" (explicit type, no initializer)
+            let parts: Vec<&str> = rest.split_whitespace().collect();
+            if parts.len() != 2 {
+                return Err(HolyError::Parse(format!("Invalid variable declaration `{}` at line {}", line, line_no)));
+            }
+            let name = parts[0].to_string();
+            validate_identifier_name(&name, line_no)?;
+
+            let tp = parse_type(parts[1]).map_err(|e| HolyError::Parse(format!("{} (line {})", e, line_no)))?;
+            return Ok(Stmt::VarDecl(Variable { name, type_name: tp, value: None, span: span }));
+        }
+    }
+
+    // multi-assignment outside 'own': "x, y = expr"
+    if line.contains(',') && line.contains('=') {
+        if let Some(eq_pos) = line.find('=') {
+            let left = line[..eq_pos].trim();
+            let right = line[eq_pos + 1..].trim();
+
+            if left.contains(',') {
+                let mut names = vec![];
+                for part in left.split(',') {
+                    let n = part.trim();
+                    validate_identifier_name(n, line_no)?;
+                    names.push(n.to_string());
+                }
+                let value = parse_expr(right, span)?;
+                return Ok(Stmt::VarAssignMulti(MultiAssignment { names, value, span }));
+            }
+        }
+    }
+
+    if let Some(eq_pos) = line.find('=') {
+        let name = line[..eq_pos].trim();
+        let right = line[eq_pos + 1..].trim();
+
+        // validate left is a valid identifier
+        validate_identifier_name(name, line_no)?;
+
+        let value = parse_expr(right, span)?;
+        return Ok(Stmt::VarAssign(VariableAssignment {
+            name: name.to_string(),
+            value,
+            span,
+        }));
+    }
+
+    // Expression statement (function call, assignment not supported here yet)
+    let expr = parse_expr(line, span)?;
+    Ok(Stmt::Expr(expr))
+}
+
+/// Checks if a given name is a valid HolyLang identifier.
+/// Rules:
+/// - Can contain letters, digits, and underscore
+/// - Must not start with a digit
+/// - Must not contain a reserved language keyword (i.e. `own`, etc)
+pub fn validate_identifier_name(name: &str, line_no: usize) -> Result<(), HolyError> {
+    if name.is_empty() {
+        return Err(HolyError::Parse(format!("Empty variable name at line {}", line_no)));
+    }
+
+    // Check first character is not a number
+    let first = name.chars().next().unwrap();
+    if first.is_ascii_digit() {
+        return Err(HolyError::Parse(format!(
+            "Variable name `{}` cannot start with a number (line {})",
+            name, line_no
+        )));
+    }
+
+    // Check allowed characters: a-z, A-Z, 0-9, _
+    if !name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
+        return Err(HolyError::Parse(format!(
+            "Variable name `{}` contains invalid characters (only letters, numbers, and `_` allowed) at line {}",
+            name, line_no
+        )));
+    }
+
+    // Check against keywords and error even if name is not the 
+    // same exact match in terms of being upper or lower case.
+    //
+    let name_lower = name.to_string();
+    let name_lower = name_lower.to_lowercase(); 
+    if KEYWORDS.contains(&name_lower.as_ref()) {
+        return Err(HolyError::Parse(format!(
+            "Variable name `{}` is a reserved keyword at line {}",
+            name, line_no
+        )));
+    }
+
+    Ok(())
+}
+
+/// Minimal expression parser:
+/// - handles binary `+` (left-associative),
+/// - function calls like add(x, y),
+/// - integer literals,
+/// - variable names
+fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
+    let s = s.trim();
+
+    if s.is_empty() {
+        return Err(HolyError::Parse(format!(
+                    "Empty expression  at line {}, column {}",
+                    span.line, span.column
+            )));
+    }
+
+    
+    if s.starts_with('[') {
+        return Err(HolyError::Parse(format!(
+                "Array literal requires an explicit type on right-hand side, e.g. `own x = int32[1,2,3]` (line {} column {})",
+                span.line, span.column
+            )));
+    }
+
+
+    // Unary negate support.
+    if s.starts_with('-') {
+        let rest = s[1..].trim();
+
+        if rest.is_empty() {
+            return Err(HolyError::Parse(format!(
+                "Expected expression before '-' at line {} column {}",
+                span.line, span.column
+            )));
+        }
+
+        // Parse inner expression
+        let inner = parse_expr(rest, span)?;
+
+        // Return the expression wrapped in Unary of operation negate.
+        return Ok(Expr::UnaryOp {
+            op: UnaryOpKind::Negate, 
+            expr: Box::new(inner), 
+            span: span
+        });
+    }
+
+
+
+    // Parentheses grouping: if the whole expression is wrapped in top-level parentheses, parse inner
+    if s.starts_with('(') && s.ends_with(')') {
+        // ensure the closing paren matches the opening at position 0 (top-level wrap)
+        let mut depth = 0usize;
+        let mut matched_at_end = false;
+        for (i, c) in s.char_indices() {
+            match c {
+                '(' => depth += 1,
+                ')' => {
+                    if depth > 0 {
+                        depth -= 1;
+                        if depth == 0 && i == s.len() - 1 {
+                            matched_at_end = true;
+                        }
+                    }
+                }
+                _ => {}
+            }
+            if depth == 0 && i < s.len() - 1 {
+                // top-level closed before end means its not a full wrap
+                matched_at_end = false;
+                break;
+            }
+        }
+        if matched_at_end {
+            let inner = &s[1..s.len() - 1];
+            return parse_expr(inner, span);
+        }
+    }
+    
+    
+    // Binary plus handling: split on the first operator
+    if let Some((pos, op)) = find_top_level_op_any(s, &['+', '-', '*', '/']) {
+        let left = &s[..pos].trim();
+        let right = &s[pos + 1..].trim();
+        if left.is_empty() {
+            return Err(HolyError::Parse(format!(
+                "Expected expression before '{}' at line {} column {}",
+                op, span.line, span.column
+            )));
+        }
+        if right.is_empty() {
+            return Err(HolyError::Parse(format!(
+                "Expected expression after '{}' at line {} column {}",
+                op, span.line, span.column
+            )));
+        }
+
+        let op_enum = match &op {
+            '+' => BinOpKind::Add,
+            '-' => BinOpKind::Subtract,
+            '*' => BinOpKind::Multiply,
+            '/' => BinOpKind::Divide,
+            o => {
+                return Err(HolyError::Parse(format!(
+                    "Unknown operand {} (line {} column {})",
+                    o,
+                    span.line, span.column
+                )));
+            },
+        };
+
+        let left_expr = parse_expr(left, span)?;
+        let right_expr = parse_expr(right, span)?;
+        return Ok(Expr::BinOp {
+            left: Box::new(left_expr),
+            op: op_enum,
+            right: Box::new(right_expr),
+            span: span,
+        });
+    }
+
+    // Function call: name(arg1, arg2)
+    if let Some(open) = s.find('(') {
+        if s.ends_with(')') {
+            let name = s[..open].trim().to_string();
+            let args_str = &s[open + 1..s.len() - 1];
+            let mut args = vec![];
+            if !args_str.trim().is_empty() {
+                for a in split_comma_top_level(args_str) {
+                    args.push(parse_expr(a.trim(), span)?);
+                }
+            }
+            return Ok(Expr::Call { name, args, span });
+        }
+    }
+
+    // integer literal (signed) ?
+    if let Ok(i) = s.parse::<i128>() {
+        return Ok(Expr::IntLiteral { value: IntLiteralValue::Signed(i), ty: Type::Infer, span: span });
+    }
+
+    // integer literal (unsigned) ?
+    if let Ok(i) = s.parse::<u128>() {
+        return Ok(Expr::IntLiteral { value: IntLiteralValue::Unsigned(i), ty: Type::Infer, span: span });
+    } else if let Err(e) = s.parse::<u128>() {
+        if matches!(e.kind(), IntErrorKind::PosOverflow) {
+            // Return error only if we sure expression is not meant as a float
+            if !s.contains('.') {
+                return Err(HolyError::Parse(format!(
+                    "Literal is an integer but is too big to fit even as an uint128, consider using a float literal (line {} column {})",
+                    span.line, span.column
+                )));
+                
+            }
+        }
+    }
+
+    
+
+    // float literal?
+    if let Ok(f64_val) = s.parse::<f64>() {
+        if f64_val.is_nan() {
+            return Err(HolyError::Parse(format!(
+                "Floating point literal `{}` is Nan (line {} column {})",
+                s, span.line, span.column
+            )));
+        }
+
+        if f64_val.is_infinite() {
+            return Err(HolyError::Parse(format!(
+                "Floating point literal `{}` is Infinite (line {} column {})",
+                s, span.line, span.column
+            )));
+        }
+
+        if s.chars().any(|c| !c.is_ascii_digit() && c != '.') {
+            return Err(HolyError::Parse(format!(
+                "Floating point literal `{}` is invalid (line {} column {})",
+                s, span.line, span.column
+            )));
+
+        }
+
+        let sig_trimmed = s.trim_start_matches('0');
+        let sig_count = sig_trimmed.len();
+
+        
+        // f32 has about 7 decimal digits of precision (log10(2^24) ≈ 7.22).
+        // Use 1 for the dot, that makes 8 a conservative threshold.
+        // It's reasonable for us to check inprecision and just use float64 if sig_count is higher
+        // than 8.
+        //
+        if sig_count <= 8 {
+            let f32_val = f64_val as f32;
+
+            if (!f32_val.is_infinite()) && (!f32_val.is_nan()) {
+                let roundtrip = f32_val as f64;
+                let diff = (f64_val - roundtrip).abs();
+
+                // compute next representable f32 (neighbor) by bit-twiddling
+                let bits = f32_val.to_bits();
+                // increment/decrement to get the neighbor toward +∞
+                let next_bits = if f32_val >= 0.0 { bits.wrapping_add(1) } else { bits.wrapping_sub(1) };
+                let next_up = f32::from_bits(next_bits);
+                let ulp = (next_up as f64 - roundtrip).abs();
+
+                // fallback: if ulp is zero (shouldn't happen for normals/subnormals), use EPSILON heuristic
+                let ok = if ulp > 0.0 {
+                    diff <= (ulp / 2.0)
+                } else {
+                    diff <= (f32::EPSILON as f64) * roundtrip.abs().max(1.0)
+                };
+
+
+                if ok {
+                    return Ok(Expr::FloatLiteral { value: FloatLiteralValue::Float32(f32_val), ty: Type::Float32, span: span });
+                }
+            }
+        }
+
+        return Ok(Expr::FloatLiteral { value: FloatLiteralValue::Float64(f64_val), ty: Type::Float64, span: span });
+
+
+    } else {
+        // Check to see if parsing as float failed due to it having more than one dot
+        let cleaned_s = s.replace(".", "");
+        if let Ok(f) = cleaned_s.parse::<f64>() {
+            return Err(HolyError::Parse(format!(
+                "Floating point literal `{}` must have only one `.` (line {} column {})",
+                s, span.line, span.column
+            )));
+         
+        }
+    }
+
+    // bool literal ? (true / false) 
+    if let Ok(b) = s.parse::<bool>() {
+        return Ok(Expr::BoolLiteral { value: b, span: span });
+    }
+
+    // otherwise a variable name
+
+    validate_identifier_name(s, span.line)?;
+    Ok(Expr::Var { name: s.to_string(), span: span})
+}
+
+
+
+fn parse_typed_array_literal(s: &str, span: Span) -> Result<Expr, HolyError> {
+    let s = s.trim();
+    // find the constructor '[' that starts the element list
+    let ctor_pos = find_constructor_bracket(s).ok_or_else(|| {
+        HolyError::Parse(format!("Malformed typed array literal `{}` at line {}", s, span.line))
+    })?;
+
+    if !s.ends_with(']') {
+        return Err(HolyError::Parse(format!("Typed array literal missing trailing ']' at line {}", span.line)));
+    }
+
+    let type_str = s[..ctor_pos].trim();
+    let elems_str = &s[ctor_pos + 1..s.len() - 1]; // between constructor '[' and final ']'
+
+    // parse the base/inner type (may be nested like "int32[]" -> parse_type handles it)
+    let inner_ty = parse_type(type_str).map_err(|e| HolyError::Parse(format!("{} (line {})", e, span.line)))?;
+
+    let mut elems: Vec<Expr> = Vec::new();
+    if !elems_str.trim().is_empty() {
+        for part in split_comma_top_level(elems_str) {
+            let part = part.trim();
+            // If the part itself looks like a typed-array-literal (i.e. has a constructor bracket),
+            // parse it recursively; otherwise use parse_expr for general expressions.
+            if find_constructor_bracket(part).is_some() {
+                let nested = parse_typed_array_literal(part, span)?;
+                elems.push(nested);
+            } else {
+                let expr = parse_expr(part, span)?;
+                elems.push(expr);
+            }
+        }
+    }
+
+    Ok(Expr::ArrayLiteral { elements: elems, array_ty: inner_ty, span })
+}
+
+/// Returns the index of the first `[` that does NOT immediately form a `[]` pair.
+/// Useful to distinguish type-suffix `[]` from the constructor `...[ ... ]`.
+fn find_constructor_bracket(s: &str) -> Option<usize> {
+    let bytes = s.as_bytes();
+    let mut i = 0usize;
+    while i < bytes.len() {
+        if bytes[i] == b'[' {
+            // if this '[' is immediately followed by ']' => it's a suffix pair "[]", skip both
+            if i + 1 < bytes.len() && bytes[i + 1] == b']' {
+                i += 2;
+                continue;
+            } else {
+                return Some(i);
+            }
+        } else {
+            i += 1;
+        }
+    }
+    None
+}
+
+
+/// Find the first top-level operator from `ops` (not inside parentheses).
+/// Returns Some((index, operator_char)) if found.
+fn find_top_level_op_any(s: &str, ops: &[char]) -> Option<(usize, char)> {
+    let mut depth = 0usize;
+    for (i, c) in s.char_indices() {
+        match c {
+            '(' => depth += 1,
+            ')' => if depth > 0 { depth -= 1 },
+            _ => {}
+        }
+        if depth == 0 && ops.contains(&c) {
+            return Some((i, c));
+        }
+    }
+    None
+}
+
+/// Split comma-separated args at top-level only (ignore commas in nested calls)
+fn split_comma_top_level(s: &str) -> Vec<&str> {
+    let mut parts = vec![];
+    let mut start = 0usize;
+    let mut depth = 0usize;
+    for (i, c) in s.char_indices() {
+        match c {
+            '(' | '[' => depth += 1,
+            ')' | ']' => if depth > 0 { depth -= 1 },
+            ',' => {
+                if depth == 0 {
+                    parts.push(s[start..i].trim());
+                    start = i + 1;
+                }
+            }
+            _ => {}
+        }
+    }
+    parts.push(s[start..].trim());
+    parts
+}
+
+
+
+fn is_array_type(t: &Type) -> bool {
+    matches!(t, Type::Array(_))
+}
+
+/// Parse type token like "int32" into `Type`
+fn parse_type(s: &str) -> Result<Type, String> {
+    let mut token = s.trim();
+
+    if token.is_empty() {
+        return Err("Empty string to parse_type".to_string());
+    }
+
+
+    let mut depth = 0usize;
+    while token.ends_with("[]") {
+        depth += 1;
+        token = token[..token.len() - 2].trim_end();
+    }
+
+    let mut base = match token {
+        "int16" => Type::Int16,
+        "int32" => Type::Int32,
+        "int64" => Type::Int64,
+        "int128" => Type::Int128,
+
+        "uint16" => Type::Uint16,
+        "uint32" => Type::Uint32,
+        "uint64" => Type::Uint64,
+        "uint128" => Type::Uint128,
+
+        "float32" => Type::Float32,
+        "float64" => Type::Float64,
+        "bool" => Type::Bool,
+        "string" => Type::String,
+        other => return Err(format!("Unknown type `{}`", other)),
+    };
+
+    for _ in 0..depth {
+        base = Type::Array(Box::new(base));
+    }
+
+    Ok(base)
+}
