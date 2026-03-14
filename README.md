@@ -46,11 +46,8 @@ func main() {
     # x = 2
 
 
-
-    own arg1 int32 = 1
-    own arg2 int32 = 2
-
-    own x = add(arg1, arg2)
+    # 1 and 2 are integer literals and evaluated as expressions to determine their type, with infer hint of the function arguments list
+    own x = add(1, 2)
 
 
 
