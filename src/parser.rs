@@ -62,37 +62,144 @@ impl fmt::Display for Type {
 impl fmt::Display for IntLiteralValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            IntLiteralValue::Signed(v) => write!(f, "{}", v),
-            IntLiteralValue::Unsigned(v) => write!(f, "{}", v),
+            IntLiteralValue::Int8(v) => write!(f, "{}", v),
+            IntLiteralValue::Int16(v) => write!(f, "{}", v),
+            IntLiteralValue::Int32(v) => write!(f, "{}", v),
+            IntLiteralValue::Int64(v) => write!(f, "{}", v),
+            IntLiteralValue::Int128(v) => write!(f, "{}", v),
+
+            IntLiteralValue::Byte(v) => write!(f, "{}", v),
+            IntLiteralValue::Uint16(v) => write!(f, "{}", v),
+            IntLiteralValue::Uint32(v) => write!(f, "{}", v),
+            IntLiteralValue::Uint64(v) => write!(f, "{}", v),
+            IntLiteralValue::Uint128(v) => write!(f, "{}", v),
         }
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum IntLiteralValue {
-    Signed(i128),
-    Unsigned(u128),
+    Int8(i8),
+    Int16(i16),
+    Int32(i32),
+    Int64(i64),
+    Int128(i128),
+    Byte(u8),
+    Uint16(u16),
+    Uint32(u32),
+    Uint64(u64),
+    Uint128(u128)
 }
 
-#[derive(Debug, Clone)]
+impl IntLiteralValue {
+    pub fn get_type(self) -> Type {
+        match self {
+            IntLiteralValue::Int8(_) => Type::Int8,
+            IntLiteralValue::Int16(_) => Type::Int16,
+            IntLiteralValue::Int32(_) => Type::Int32,
+            IntLiteralValue::Int64(_) => Type::Int64,
+            IntLiteralValue::Int128(_) => Type::Int128,
+
+            IntLiteralValue::Byte(v) => Type::Byte,
+
+            IntLiteralValue::Uint16(v) => Type::Uint16,
+            IntLiteralValue::Uint32(v) => Type::Uint32,
+            IntLiteralValue::Uint64(v) => Type::Uint64,
+            IntLiteralValue::Uint128(v) => Type::Uint128,
+
+        }
+    }
+
+    pub fn as_i128(self) -> i128 {
+        match self {
+            IntLiteralValue::Int8(v) => v as i128,
+            IntLiteralValue::Int16(v) => v as i128,
+            IntLiteralValue::Int32(v) => v as i128,
+            IntLiteralValue::Int64(v) => v as i128,
+            IntLiteralValue::Int128(v) => v,
+
+            other => {
+                panic!("(Compiler bug) Safety code to prevent you from casting an unsigned integer as signed i128. {:?}", other);
+            }
+        }
+    }
+
+
+    // Since we dont store numbers with negative sign, only wrapped in a negate node, we can
+    // actually skip type check and happily infer signed numbers as unsigned if need be.
+    //
+    // And since u128 can represent all signed numbers assuming no -, that's handled by upper
+    // negate node, it should be safe to cast as u128 regardless.
+    //
+
+
+    pub fn as_u128_UNSAFE(self) -> u128 {
+        match self {
+            // Signed types: check for negative before casting
+            IntLiteralValue::Int8(v) => {
+                if v < 0 { panic!("Cannot cast negative Int8 ({}) to u128", v); }
+                v as u128
+            }
+            IntLiteralValue::Int16(v) => {
+                if v < 0 { panic!("Cannot cast negative Int16 ({}) to u128", v); }
+                v as u128
+            }
+            IntLiteralValue::Int32(v) => {
+                if v < 0 { panic!("Cannot cast negative Int32 ({}) to u128", v); }
+                v as u128
+            }
+            IntLiteralValue::Int64(v) => {
+                if v < 0 { panic!("Cannot cast negative Int64 ({}) to u128", v); }
+                v as u128
+            }
+            IntLiteralValue::Int128(v) => {
+                if v < 0 { panic!("Cannot cast negative Int128 ({}) to u128", v); }
+                v as u128
+            }
+
+            // Unsigned types are always safe
+            IntLiteralValue::Byte(v) => v as u128,
+            IntLiteralValue::Uint16(v) => v as u128,
+            IntLiteralValue::Uint32(v) => v as u128,
+            IntLiteralValue::Uint64(v) => v as u128,
+            IntLiteralValue::Uint128(v) => v,
+            
+            other => {
+                panic!("(Compiler bug) Safety code prevented you from casting an unspported literal as signed u128. {:?}", other);
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
 pub enum FloatLiteralValue {
     Float32(f32),
     Float64(f64),
 }
 
+impl FloatLiteralValue {
+    pub fn get_type(self) -> Type {
+        match self {
+            FloatLiteralValue::Float32(_) => Type::Float32,
+            FloatLiteralValue::Float64(_) => Type::Float64,
+
+        }
+    }
+}
+
+
+
 /// AST nodes
 #[derive(Debug, Clone)]
 pub enum Expr {
-    /// Integer literal value with an explicit/type-or-infer marker
+    /// Integer literal value, the type is the IntLiteralValue Enum wrapper
     IntLiteral {
         value: IntLiteralValue,
-        ty: Type, // usually Type::Infer until semantic phase
         span: Span,
     },
-    /// Float literal (value) and type marker (Infer or a concrete float type)
+    /// Float literal (value) and type marker (the FloatLiteralValue Enum wrapper)
     FloatLiteral {
         value: FloatLiteralValue,
-        ty: Type, // Type::Infer or Float32/Float64
         span: Span,
     },
     BoolLiteral {
@@ -778,14 +885,52 @@ fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
         }
     }
 
-    // integer literal (signed) ?
-    if let Ok(i) = s.parse::<i128>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Signed(i), ty: Type::Infer, span: span });
+    // integer literal (int8) ?
+    if let Ok(i) = s.parse::<i8>() {
+        return Ok(Expr::IntLiteral { value: IntLiteralValue::Int8(i), span: span });
     }
 
-    // integer literal (unsigned) ?
+    // integer literal (int16) ?
+    if let Ok(i) = s.parse::<i16>() {
+        return Ok(Expr::IntLiteral { value: IntLiteralValue::Int16(i), span: span });
+    }
+
+    // integer literal (int32) ?
+    if let Ok(i) = s.parse::<i32>() {
+        return Ok(Expr::IntLiteral { value: IntLiteralValue::Int32(i), span: span });
+    }
+
+    // integer literal (int64) ?
+    if let Ok(i) = s.parse::<i64>() {
+        return Ok(Expr::IntLiteral { value: IntLiteralValue::Int64(i), span: span });
+    }
+
+    // integer literal (int128) ?
+    if let Ok(i) = s.parse::<i128>() {
+        return Ok(Expr::IntLiteral { value: IntLiteralValue::Int128(i), span: span });
+    }
+
+
+    // integer literal (byte, aka uint8) ?
+    if let Ok(i) = s.parse::<u8>() {
+        return Ok(Expr::IntLiteral { value: IntLiteralValue::Byte(i), span: span });
+    }
+
+    if let Ok(i) = s.parse::<u16>() {
+        return Ok(Expr::IntLiteral { value: IntLiteralValue::Uint16(i), span: span });
+    }
+
+    if let Ok(i) = s.parse::<u32>() {
+        return Ok(Expr::IntLiteral { value: IntLiteralValue::Uint32(i), span: span });
+    }
+
+    if let Ok(i) = s.parse::<u64>() {
+        return Ok(Expr::IntLiteral { value: IntLiteralValue::Uint64(i), span: span });
+    }
+
     if let Ok(i) = s.parse::<u128>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Unsigned(i), ty: Type::Infer, span: span });
+        return Ok(Expr::IntLiteral { value: IntLiteralValue::Uint128(i), span: span });
+
     } else if let Err(e) = s.parse::<u128>() {
         if matches!(e.kind(), IntErrorKind::PosOverflow) {
             // Return error only if we sure expression is not meant as a float
@@ -857,12 +1002,12 @@ fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
 
 
                 if ok {
-                    return Ok(Expr::FloatLiteral { value: FloatLiteralValue::Float32(f32_val), ty: Type::Float32, span: span });
+                    return Ok(Expr::FloatLiteral { value: FloatLiteralValue::Float32(f32_val), span: span });
                 }
             }
         }
 
-        return Ok(Expr::FloatLiteral { value: FloatLiteralValue::Float64(f64_val), ty: Type::Float64, span: span });
+        return Ok(Expr::FloatLiteral { value: FloatLiteralValue::Float64(f64_val), span: span });
 
 
     } else {

@@ -104,7 +104,7 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
                     // explicit type: if initializer present, ensure initializer is compatible
                     
                     if let Some(expr) = &mut var.value {
-                        assign_infer_type_to_expr(expr, var.type_name.clone())
+                        assign_infer_type_to_expr_value(expr, var.type_name.clone())
                             .map_err(|e| HolyError::Semantic(format!("{} in function `{}`", e, func.name)))?;
 
 
@@ -397,7 +397,7 @@ fn check_call(
         let arg_ty = infer_expr_type(arg_expr, locals, fun_sigs, Some(param_ty.clone()))?;
         if arg_ty == Type::Infer {
             // assign literal inference to param type when possible
-            assign_infer_type_to_expr(arg_expr, param_ty.clone())?;
+            assign_infer_type_to_expr_value(arg_expr, param_ty.clone())?;
         } else if !type_compatible(&arg_ty, param_ty) {
             return Err(HolyError::Semantic(format!(
                 "Argument number {} type mismatch in call to `{}`: expected `{}`, got `{}` (line {} column {})",
@@ -445,244 +445,40 @@ fn infer_expr_type(
     infer_hint: Option<Type>
 ) -> Result<Type, HolyError> {
     match expr {
-        Expr::IntLiteral { value: value, ty: ty, span: span } => {
-            // If literal already has concrete type, return it; otherwise default to Int32
-            if *ty == Type::Infer {
-                // Never duplicate same code twice, but Rust forces us to in this very specific
-                // scenario
-                // This is needed because of Arrays, to allow type inferrence for hard-coded array
-                // elements, depending on the array's exact type.
-                // NOTE:: Whenever you change anything here, reflect it in assign_infer_type_to_expr function!
-
-                // 
-                // If no hint, this should not get overwritten.
-                match value {
-                    IntLiteralValue::Signed(v) => {
-                        if *v < i128::MIN || *v > i128::MAX {
-                            return Err(HolyError::Semantic(format!(
-                                        "Integer literal {} out of range for representable int128, your signed integer literal will overflow because it's bigger than int128 capacity (line {} column {})", 
-                                        v, span.line, span.column)));
-                        }
-                        *ty = Type::Int128;
+        Expr::IntLiteral { value: value, span: span } => {
+            if infer_hint.is_some() {
+                let infer_hint = infer_hint.unwrap();
+                match infer_hint {
+                    Type::Int8 | Type::Int16 | Type::Int32 | Type::Int64 | Type::Int128 | Type::Byte | Type::Uint16 | Type::Uint32 | Type::Uint64 | Type::Uint128 => {
+                        *value = infer_integer_literal_helper(infer_hint, *value, *span)?;
                     }
-                    IntLiteralValue::Unsigned(v) => {
-                        if *v > u128::MAX {
-                            return Err(HolyError::Semantic(format!(
-                                        "Integer literal {} out of range for representable int128, your unsigned integer literal will overflow because it's bigger than uint128 capacity (line {} column {})", 
-                                        v, span.line, span.column)));
-                        }
-                        *ty = Type::Uint128;
-                    }
-                }
 
-                if infer_hint.is_some() {
-                    let infer_hint = infer_hint.unwrap();
-                    match infer_hint {
-                        Type::Int8 => {
-                            let v: i128 = match *value {
-                                IntLiteralValue::Signed(v) => v,
-                                IntLiteralValue::Unsigned(v) if v <= i128::MAX as u128 => v as i128,
-                                IntLiteralValue::Unsigned(v) => return Err(HolyError::Semantic(format!(
-                                            "Integer literal {} is unsigned and is out of range for type {} (line {} column {})", 
-                                            v, infer_hint, span.line, span.column))),
-                            };
-
-                            if v > i8::MAX as i128 {
-                                return Err(HolyError::Semantic(format!("Integer literal {} out of range for type {} (line {} column {})", v, infer_hint, span.line, span.column)));
-                            }
-
-                            *ty = Type::Int8;
-                        }
-                        Type::Int16 => {
-                            let v: i128 = match *value {
-                                IntLiteralValue::Signed(v) => v,
-                                IntLiteralValue::Unsigned(v) if v <= i128::MAX as u128 => v as i128,
-                                IntLiteralValue::Unsigned(v) => return Err(HolyError::Semantic(format!(
-                                            "Integer literal {} is unsigned and is out of range for type {} (line {} column {})", 
-                                            v, infer_hint, span.line, span.column))),
-                            };
-
-                            if v > i16::MAX as i128 {
-                                return Err(HolyError::Semantic(format!("Integer literal {} out of range for type {} (line {} column {})", v, infer_hint, span.line, span.column)));
-                            }
-
-                            *ty = Type::Int16;
-                        }
-                        Type::Int32 => {
-                            let v: i128 = match *value {
-                                IntLiteralValue::Signed(v) => v,
-                                IntLiteralValue::Unsigned(v) if v <= i128::MAX as u128 => v as i128,
-                                IntLiteralValue::Unsigned(v) => return Err(HolyError::Semantic(format!(
-                                            "Integer literal {} is unsigned and is out of range for type {} (line {} column {})", 
-                                            v, infer_hint, span.line, span.column))),
-                            };
-
-                            if v > i32::MAX as i128 {
-                                return Err(HolyError::Semantic(format!("Integer literal {} out of range for type {} (line {} column {})", v, infer_hint, span.line, span.column)));
-                            }
-
-                            *ty = Type::Int32;
-                        }
-                        Type::Int64 => {
-                            let v: i128 = match *value {
-                                IntLiteralValue::Signed(v) => v,
-                                IntLiteralValue::Unsigned(v) if v <= i128::MAX as u128 => v as i128,
-                                IntLiteralValue::Unsigned(v) => return Err(HolyError::Semantic(format!(
-                                            "Integer literal {} is unsigned and is out of range for type {} (line {} column {})", 
-                                            v, infer_hint, span.line, span.column))),
-                            };
-
-                            if v > i64::MAX as i128 {
-                                return Err(HolyError::Semantic(format!("Integer literal {} out of range for type {} (line {} column {})", v, infer_hint, span.line, span.column)));
-                            }
-
-                            *ty = Type::Int64;
-                        }
-
-                        Type::Int128 => {
-                            let v: i128 = match *value {
-                                IntLiteralValue::Signed(v) => v,
-                                IntLiteralValue::Unsigned(v) if v <= i128::MAX as u128 => v as i128,
-                                IntLiteralValue::Unsigned(v) => return Err(HolyError::Semantic(format!(
-                                            "Integer literal {} is unsigned and is out of range for type {} (line {} column {})", 
-                                            v, infer_hint, span.line, span.column))),
-                            };
-
-                            if v > i128::MAX {
-                                return Err(HolyError::Semantic(format!("Integer literal {} out of range for type {} (line {} column {})", v, infer_hint, span.line, span.column)));
-                            }
-
-                            *ty = Type::Int128;
-                        }
-
-
-                        Type::Byte => {
-                            let v: u128 = match *value {
-                                IntLiteralValue::Unsigned(v) => v,
-                                IntLiteralValue::Signed(v) if v >= 0 => v as u128,
-                                IntLiteralValue::Signed(v) => return Err(HolyError::Semantic(format!(
-                                            "Integer literal {} is signed and negative, which is out of range for type {} (line {} column {})", 
-                                            v, ty, span.line, span.column))),
-                            };
-
-                            if v > u8::MAX as u128 {
-                                return Err(HolyError::Semantic(format!("Integer literal {} out of range for type {} (line {} column {})", v, ty, span.line, span.column)));
-                            }
-
-                            *ty = Type::Byte;
-                        }
-
-                        Type::Uint16 => {
-                            let v: u128 = match *value {
-                                IntLiteralValue::Unsigned(v) => v,
-                                IntLiteralValue::Signed(v) if v >= 0 => v as u128,
-                                IntLiteralValue::Signed(v) => return Err(HolyError::Semantic(format!(
-                                            "Integer literal {} is signed and negative, which is out of range for type {} (line {} column {})", 
-                                            v, infer_hint, span.line, span.column))),
-                            };
-
-                            if v > u16::MAX as u128 {
-                                return Err(HolyError::Semantic(format!("Integer literal {} out of range for type {} (line {} column {})", v, infer_hint, span.line, span.column)));
-                            }
-
-                            *ty = Type::Uint16;
-                        }
-
-                        Type::Uint32 => {
-                            let v: u128 = match *value {
-                                IntLiteralValue::Unsigned(v) => v,
-                                IntLiteralValue::Signed(v) if v >= 0 => v as u128,
-                                IntLiteralValue::Signed(v) => return Err(HolyError::Semantic(format!(
-                                            "Integer literal {} is signed and negative, which is out of range for type {} (line {} column {})", 
-                                            v, infer_hint, span.line, span.column))),
-                            };
-
-                            if v > u32::MAX as u128 {
-                                return Err(HolyError::Semantic(format!("Integer literal {} out of range for type {} (line {} column {})", v, infer_hint, span.line, span.column)));
-                            }
-
-                            *ty = Type::Uint32;
-                        }
-                        Type::Uint64 => {
-                            let v: u128 = match *value {
-                                IntLiteralValue::Unsigned(v) => v,
-                                IntLiteralValue::Signed(v) if v >= 0 => v as u128,
-                                IntLiteralValue::Signed(v) => return Err(HolyError::Semantic(format!(
-                                            "Integer literal {} is signed and negative, which is out of range for type {} (line {} column {})", 
-                                            v, infer_hint, span.line, span.column))),
-                            };
-
-                            if v > u64::MAX as u128 {
-                                return Err(HolyError::Semantic(format!("Integer literal {} out of range for type {} (line {} column {})", v, infer_hint, span.line, span.column)));
-                            }
-
-                            *ty = Type::Uint64;
-                        }
-                        Type::Uint128 => {
-                            let v: u128 = match *value {
-                                IntLiteralValue::Unsigned(v) => v,
-                                IntLiteralValue::Signed(v) if v >= 0 => v as u128,
-                                IntLiteralValue::Signed(v) => return Err(HolyError::Semantic(format!(
-                                            "Integer literal {} is signed and negative, which is out of range for type {} (line {} column {})", 
-                                            v, infer_hint, span.line, span.column))),
-                            };
-
-                            if v > u128::MAX {
-                                return Err(HolyError::Semantic(format!("Integer literal {} out of range for type {} (line {} column {})", v, infer_hint, span.line, span.column)));
-                            }
-
-                            *ty = Type::Uint128;
-                        }
-
-                        _ => {}
-                        
-                    }
+                    _ => {}
+                    
                 }
             }
-            Ok(ty.clone())
+            Ok(value.get_type())
         }
 
-        Expr::FloatLiteral { value: value, ty: ty, span: span } => {
-            if *ty == Type::Infer {
-                // Never duplicate same code twice, but Rust forces us to in this very specific
-                // scenario
-                // This is needed because of Arrays, to allow type inferrence for hard-coded array
-                // elements, depending on the array's exact type.
-                // NOTE:: Whenever you change anything here, reflect it in assign_infer_type_to_expr function!
-
-                // 
-                // If no hint, this should not get overwritten.
-
-                if let FloatLiteralValue::Float32(_) = value {
-                    *ty = Type::Float32;
-
-                } else if let FloatLiteralValue::Float64(_) = value {
-                    *ty = Type::Float64;
-                } else {
-                    panic!("(Compiler bug) FloatLiteralValue should have only float32 and float64, if you add more float types, be ensure to extend this.");
-                }
-
-                if infer_hint.is_some() {
-                    match infer_hint.unwrap() {
-                        Type::Float32 => {
-                            if let FloatLiteralValue::Float64(_) = value {
-                                return Err(HolyError::Semantic(format!("Float literal has a float64 value but we expected a float32 value (line {} column {})", span.line, span.column)));
-                            }
-                            *ty = Type::Float32;
-                            
+        Expr::FloatLiteral { value: value, span: span } => {
+            if infer_hint.is_some() {
+                match infer_hint.unwrap() {
+                    Type::Float32 => {
+                        if let FloatLiteralValue::Float64(_) = value {
+                            return Err(HolyError::Semantic(format!("Float literal has a float64 value but we expected a float32 value (line {} column {})", span.line, span.column)));
                         }
-                        Type::Float64 => {
-                            *ty = Type::Float64;
-                            if let FloatLiteralValue::Float32(f) = value {
-                                *value = FloatLiteralValue::Float64(f.clone() as f64);
-                            }
-                        }
-                        _ => {}
-                 
                     }
+                    Type::Float64 => {
+                        if let FloatLiteralValue::Float32(f) = value {
+                            *value = FloatLiteralValue::Float64(f.clone() as f64);
+                        }
+                    }
+                    _ => {}
+             
                 }
             }
-            Ok(ty.clone())
+
+            Ok(value.get_type())
         }
 
         Expr::BoolLiteral { value: _, span: _ } => {
@@ -741,11 +537,14 @@ fn infer_expr_type(
 
         Expr::BinOp { left: left, op: _, right: right, span: span } => {
             // infer both sides
-            let lty = infer_expr_type(left, locals, fun_sigs, None)?;
-            let rty = infer_expr_type(right, locals, fun_sigs, None)?;
+            let lty = infer_expr_type(left, locals, fun_sigs, infer_hint.clone())?;
+            let rty = infer_expr_type(right, locals, fun_sigs, infer_hint.clone())?;
 
             // If either side is Infer (shouldn't after recursive call), try to resolve:
             let resolved = resolve_binary_op_types(&lty, &rty, &span)?;
+
+
+
             // update literal nodes inside if they were Infer (not necessary here but ok)
             Ok(resolved)
         }
@@ -781,223 +580,173 @@ fn infer_expr_type(
 
 
 
+
+fn infer_integer_literal_helper(infer_ty: Type, value: IntLiteralValue, span: Span) -> Result<IntLiteralValue, HolyError> {
+
+    if !matches!(value.get_type(), Type::Int8 | Type::Int16 | Type::Int32 | Type::Int64 | Type::Int128 | Type::Byte | Type::Uint16 | Type::Uint32 | Type::Uint64 | Type::Uint128) {
+        panic!("(Compiler bug) Value {} has unknown type", value);
+    }
+
+    match infer_ty {
+        Type::Int8 => {
+            if !matches!(value.get_type(), Type::Int8 | Type::Int16 | Type::Int32 | Type::Int64 | Type::Int128) {
+                return Err(HolyError::Semantic(format!("Integer literal `{}` is of type `{}`, which cannot be inferred to type `{}` (line {} column {})", value, value.get_type(), infer_ty, span.line, span.column)));
+            }
+
+            let val_raw: i128 = value.as_i128();
+            if val_raw < i8::MIN as i128 || val_raw > i8::MAX as i128 {
+                return Err(HolyError::Semantic(format!("Integer literal {} out of range for type {} (line {} column {})", value, infer_ty, span.line, span.column)));
+            }
+            
+            Ok(IntLiteralValue::Int8(val_raw as i8))
+        }
+
+        Type::Int16 => {
+            if !matches!(value.get_type(), Type::Int8 | Type::Int16 | Type::Int32 | Type::Int64 | Type::Int128) {
+                return Err(HolyError::Semantic(format!("Integer literal `{}` is of type `{}`, which cannot be inferred to type `{}` (line {} column {})", value, value.get_type(), infer_ty, span.line, span.column)));
+            }
+
+            let val_raw: i128 = value.as_i128();
+
+            if val_raw < i16::MIN as i128 || val_raw > i16::MAX as i128 {
+                return Err(HolyError::Semantic(format!("Integer literal {} out of range for type {} (line {} column {})", value, infer_ty, span.line, span.column)));
+            }
+            
+            Ok(IntLiteralValue::Int16(val_raw as i16))
+        }
+        Type::Int32 => {
+            if !matches!(value.get_type(), Type::Int8 | Type::Int16 | Type::Int32 | Type::Int64 | Type::Int128) {
+                return Err(HolyError::Semantic(format!("Integer literal `{}` is of type `{}`, which cannot be inferred to type `{}` (line {} column {})", value, value.get_type(), infer_ty, span.line, span.column)));
+            }
+
+            let val_raw: i128 = value.as_i128();
+            if val_raw < i32::MIN as i128 || val_raw > i32::MAX as i128 {
+                return Err(HolyError::Semantic(format!("Integer literal {} out of range for type {} (line {} column {})", value, infer_ty, span.line, span.column)));
+            }
+            
+            Ok(IntLiteralValue::Int32(val_raw as i32))
+        }
+        Type::Int64 => {
+            if !matches!(value.get_type(), Type::Int8 | Type::Int16 | Type::Int32 | Type::Int64 | Type::Int128) {
+                return Err(HolyError::Semantic(format!("Integer literal `{}` is of type `{}`, which cannot be inferred to type `{}` (line {} column {})", value, value.get_type(), infer_ty, span.line, span.column)));
+            }
+
+            let val_raw: i128 = value.as_i128();
+
+            if val_raw < i64::MIN as i128 || val_raw > i64::MAX as i128 {
+                return Err(HolyError::Semantic(format!("Integer literal {} out of range for type {} (line {} column {})", value, infer_ty, span.line, span.column)));
+            }
+            
+            Ok(IntLiteralValue::Int64(val_raw as i64))
+        }
+
+        Type::Int128 => {
+            if !matches!(value.get_type(), Type::Int8 | Type::Int16 | Type::Int32 | Type::Int64 | Type::Int128) {
+                return Err(HolyError::Semantic(format!("Integer literal `{}` is of type `{}`, which cannot be inferred to type `{}` (line {} column {})", value, value.get_type(), infer_ty, span.line, span.column)));
+            }
+
+            let val_raw: i128 = value.as_i128();
+
+            if val_raw < i128::MIN || val_raw > i128::MAX {
+                return Err(HolyError::Semantic(format!("Integer literal {} out of range for type {} (line {} column {})", value, infer_ty, span.line, span.column)));
+            }
+            
+            Ok(IntLiteralValue::Int128(val_raw))
+        }
+
+
+        // Since we dont store numbers with negative sign, only wrapped in a negate node, we can
+        // actually skip type check and happily infer signed numbers as unsigned if need be.
+        //
+        // And since u128 can represent all signed numbers assuming no -, that's handled by upper
+        // negate node, it should be safe to cast as u128 regardless.
+        //
+
+
+        Type::Byte => {
+            let val_raw: u128 = value.as_u128_UNSAFE();
+            if val_raw > u8::MAX as u128 {
+                return Err(HolyError::Semantic(format!("Integer literal {} out of range for type {} (line {} column {})", value, infer_ty, span.line, span.column)));
+            }
+            
+            Ok(IntLiteralValue::Byte(val_raw as u8))
+        }
+
+        Type::Uint16 => {
+            let val_raw: u128 = value.as_u128_UNSAFE();
+            if val_raw > u16::MAX as u128 {
+                return Err(HolyError::Semantic(format!("Integer literal {} out of range for type {} (line {} column {})", value, infer_ty, span.line, span.column)));
+            }
+            
+            Ok(IntLiteralValue::Uint16(val_raw as u16))
+        }
+
+        Type::Uint32 => {
+            let val_raw: u128 = value.as_u128_UNSAFE();
+            if val_raw > u32::MAX as u128 {
+                return Err(HolyError::Semantic(format!("Integer literal {} out of range for type {} (line {} column {})", value, infer_ty, span.line, span.column)));
+            }
+            
+            Ok(IntLiteralValue::Uint32(val_raw as u32))
+        }
+
+        Type::Uint64 => {
+            let val_raw: u128 = value.as_u128_UNSAFE();
+            if val_raw > u64::MAX as u128 {
+                return Err(HolyError::Semantic(format!("Integer literal {} out of range for type {} (line {} column {})", value, infer_ty, span.line, span.column)));
+            }
+            
+            Ok(IntLiteralValue::Uint64(val_raw as u64))
+        }
+        Type::Uint128 => {
+            let val_raw: u128 = value.as_u128_UNSAFE();
+            if val_raw > u128::MAX {
+                return Err(HolyError::Semantic(format!("Integer literal {} out of range for type {} (line {} column {})", value, infer_ty, span.line, span.column)));
+            }
+            
+            Ok(IntLiteralValue::Uint128(val_raw))
+        }
+
+        other => {
+            panic!("(Compiler bug) You must ensure type is an integer literal before passing it to this function");
+        }
+    }
+}
+
+// Function to attempt to change an expression's literal to match `ty`. If fails, it errors.
 // ty is the expression holder type (i.e. variable type)
 // expr is the value literal its self
-fn assign_infer_type_to_expr(expr: &mut Expr, ty: Type) -> Result<(), HolyError> {
+fn assign_infer_type_to_expr_value(expr: &mut Expr, ty: Type) -> Result<(), HolyError> {
     match expr {
-        Expr::IntLiteral { value: value, ty: t, span: span } => {
-            if *t == Type::Infer {
-                match ty {
-                    Type::Int8 => {
-                        let v: i128 = match *value {
-                            IntLiteralValue::Signed(v) => v,
-                            IntLiteralValue::Unsigned(v) if v <= i128::MAX as u128 => v as i128,
-                            IntLiteralValue::Unsigned(v) => return Err(HolyError::Semantic(format!(
-                                        "Integer literal {} is unsigned and is out of range for type {} (line {} column {})", 
-                                        v, ty, span.line, span.column))),
-                        };
+        Expr::IntLiteral { value: value, span: span } => {
+            match ty {
+                Type::Int8 | Type::Int16 | Type::Int32 | Type::Int64 | Type::Int128 | Type::Byte | Type::Uint16 | Type::Uint32 | Type::Uint64 | Type::Uint128 => {
+                    *value = infer_integer_literal_helper(ty, *value, *span)?;
+                }
 
-                        if v > i8::MAX as i128 {
-                            return Err(HolyError::Semantic(format!("Integer literal {} out of range for type {} (line {} column {})", v, ty, span.line, span.column)));
-                        }
-
-                        *t = Type::Int8;
-                        return Ok(());
-                    }
-
-
-                    Type::Int16 => {
-                        let v: i128 = match *value {
-                            IntLiteralValue::Signed(v) => v,
-                            IntLiteralValue::Unsigned(v) if v <= i128::MAX as u128 => v as i128,
-                            IntLiteralValue::Unsigned(v) => return Err(HolyError::Semantic(format!(
-                                        "Integer literal {} is unsigned and is out of range for type {} (line {} column {})", 
-                                        v, ty, span.line, span.column))),
-                        };
-
-                        if v > i16::MAX as i128 {
-                            return Err(HolyError::Semantic(format!("Integer literal {} out of range for type {} (line {} column {})", v, ty, span.line, span.column)));
-                        }
-
-                        *t = Type::Int16;
-                        return Ok(());
-                    }
-
-                    Type::Int32 => {
-                        let v: i128 = match *value {
-                            IntLiteralValue::Signed(v) => v,
-                            IntLiteralValue::Unsigned(v) if v <= i128::MAX as u128 => v as i128,
-                            IntLiteralValue::Unsigned(v) => return Err(HolyError::Semantic(format!(
-                                        "Integer literal {} is unsigned and is out of range for type {} (line {} column {})", 
-                                        v, ty, span.line, span.column))),
-                        };
-
-                        if v > i32::MAX as i128 {
-                            return Err(HolyError::Semantic(format!("Integer literal {} out of range for type {} (line {} column {})", v, ty, span.line, span.column)));
-                        }
-
-                        *t = Type::Int32;
-                        return Ok(());
-
-                    }
-
-                    Type::Int64 => {
-                        let v: i128 = match *value {
-                            IntLiteralValue::Signed(v) => v,
-                            IntLiteralValue::Unsigned(v) if v <= i128::MAX as u128 => v as i128,
-                            IntLiteralValue::Unsigned(v) => return Err(HolyError::Semantic(format!(
-                                        "Integer literal {} is unsigned and is out of range for type {} (line {} column {})", 
-                                        v, ty, span.line, span.column))),
-                        };
-
-                        if v > i64::MAX as i128 {
-                            return Err(HolyError::Semantic(format!("Integer literal {} out of range for type {} (line {} column {})", v, ty, span.line, span.column)));
-                        }
-
-                        *t = Type::Int64;
-                        return Ok(());
-                    }
-
-                    Type::Int128 => {
-                        let v: i128 = match *value {
-                            IntLiteralValue::Signed(v) => v,
-                            IntLiteralValue::Unsigned(v) if v <= i128::MAX as u128 => v as i128,
-                            IntLiteralValue::Unsigned(v) => return Err(HolyError::Semantic(format!(
-                                        "Integer literal {} is unsigned and is out of range for type {} (line {} column {})", 
-                                        v, ty, span.line, span.column))),
-                        };
-
-                        if v > i128::MAX {
-                            return Err(HolyError::Semantic(format!("Integer literal {} out of range for type {} (line {} column {})", v, ty, span.line, span.column)));
-                        }
-
-                        *t = Type::Int128;
-                        return Ok(());
-                    }
-
-                    Type::Byte => {
-                        let v: u128 = match *value {
-                            IntLiteralValue::Unsigned(v) => v,
-                            IntLiteralValue::Signed(v) if v >= 0 => v as u128,
-                            IntLiteralValue::Signed(v) => return Err(HolyError::Semantic(format!(
-                                        "Integer literal {} is signed and negative, which is out of range for type {} (line {} column {})", 
-                                        v, ty, span.line, span.column))),
-                        };
-
-                        if v > u8::MAX as u128 {
-                            return Err(HolyError::Semantic(format!("Integer literal {} out of range for type {} (line {} column {})", v, ty, span.line, span.column)));
-                        }
-
-                        *t = Type::Byte;
-                        return Ok(());
-                    }
-                    Type::Uint16 => {
-                        let v: u128 = match *value {
-                            IntLiteralValue::Unsigned(v) => v,
-                            IntLiteralValue::Signed(v) if v >= 0 => v as u128,
-                            IntLiteralValue::Signed(v) => return Err(HolyError::Semantic(format!(
-                                        "Integer literal {} is signed and negative, which is out of range for type {} (line {} column {})", 
-                                        v, ty, span.line, span.column))),
-                        };
-
-                        if v > u16::MAX as u128 {
-                            return Err(HolyError::Semantic(format!("Integer literal {} out of range for type {} (line {} column {})", v, ty, span.line, span.column)));
-                        }
-
-                        *t = Type::Uint16;
-                        return Ok(());
-                    }
-
-                    Type::Uint32 => {
-                        let v: u128 = match *value {
-                            IntLiteralValue::Unsigned(v) => v,
-                            IntLiteralValue::Signed(v) if v >= 0 => v as u128,
-                            IntLiteralValue::Signed(v) => return Err(HolyError::Semantic(format!(
-                                        "Integer literal {} is signed and negative, which is out of range for type {} (line {} column {})", 
-                                        v, ty, span.line, span.column))),
-                        };
-
-                        if v > u32::MAX as u128 {
-                            return Err(HolyError::Semantic(format!("Integer literal {} out of range for type {} (line {} column {})", v, ty, span.line, span.column)));
-                        }
-
-                        *t = Type::Uint32;
-                        return Ok(());
-                    }
-
-                    Type::Uint64 => {
-                        let v: u128 = match *value {
-                            IntLiteralValue::Unsigned(v) => v,
-                            IntLiteralValue::Signed(v) if v >= 0 => v as u128,
-                            IntLiteralValue::Signed(v) => return Err(HolyError::Semantic(format!(
-                                        "Integer literal {} is signed and negative, which is out of range for type {} (line {} column {})", 
-                                        v, ty, span.line, span.column))),
-                        };
-
-                        if v > u64::MAX as u128 {
-                            return Err(HolyError::Semantic(format!("Integer literal {} out of range for type {} (line {} column {})", v, ty, span.line, span.column)));
-                        }
-
-                        *t = Type::Uint64;
-                        return Ok(());
-                    }
-
-                    Type::Uint128 => {
-                        let v: u128 = match *value {
-                            IntLiteralValue::Unsigned(v) => v,
-                            IntLiteralValue::Signed(v) if v >= 0 => v as u128,
-                            IntLiteralValue::Signed(v) => return Err(HolyError::Semantic(format!(
-                                        "Integer literal {} is signed and negative, which is out of range for type {} (line {} column {})", 
-                                        v, ty, span.line, span.column))),
-                        };
-
-                        if v > u128::MAX {
-                            return Err(HolyError::Semantic(format!("Integer literal {} out of range for type {} (line {} column {})", v, ty, span.line, span.column)));
-                        }
-
-                        *t = Type::Uint128;
-                        return Ok(());
-                    }
-
-                    _ => {
-                        return Err(HolyError::Semantic(format!("Cannot assign integer literal to non-integer type `{}` (line {} column {})", ty, span.line, span.column)));
-                    }
+                _ => {
+                    return Err(HolyError::Semantic(format!("Cannot assign integer literal to non-integer type `{}` (line {} column {})", ty, span.line, span.column)));
                 }
             }
+
+            return Ok(());
         }
-        Expr::FloatLiteral { value: value, ty: t, span: span } => {
-            if *t == Type::Infer {
-                match ty {
-                    Type::Float32 => {
-                        if let FloatLiteralValue::Float64(_) = value {
-                            return Err(HolyError::Semantic(format!("Float literal has a float64 value but we expected a float32 value (line {} column {})", span.line, span.column)));
-                        }
-
-                        *t = Type::Float32;
-                        return Ok(());
+        Expr::FloatLiteral { value: value, span: span } => {
+            match ty {
+                Type::Float32 => {
+                    if let FloatLiteralValue::Float64(_) = value {
+                        return Err(HolyError::Semantic(format!("Float literal has a float64 value but we expected a float32 value (line {} column {})", span.line, span.column)));
                     }
-                    Type::Float64 => {
-                        *t = Type::Float64;
-
-                        // Allow automatic conversions of float32 to float64 
-                        if let FloatLiteralValue::Float32(f) = value {
-                            *value = FloatLiteralValue::Float64(f.clone() as f64);
-                        }
-                        return Ok(());
+                }
+                Type::Float64 => {
+                    if let FloatLiteralValue::Float32(f) = value {
+                        *value = FloatLiteralValue::Float64(f.clone() as f64);
                     }
-                    _ => {
+                }
+                _ => {
                         return Err(HolyError::Semantic(format!("Cannot assign float literal to non-float type `{}` (line {} column {})", ty, span.line, span.column)));
                     }
-                }
-            }
 
-            // Unlike integer literals, here we allow automatic conversion of float32 literals to
-            // float64 if the holder type `ty` is float64
-            if ty == Type::Float64 {
-                if let FloatLiteralValue::Float32(f) = value {
-                    *value = FloatLiteralValue::Float64(f.clone() as f64);
-                    *t = Type::Float64
-                }
             }
 
         }
@@ -1026,38 +775,44 @@ fn assign_default_value_for_type(expr: &mut Option<Expr>, ty: &Type, span: Span)
     }
     
     match ty {
+        Type::Int8 => {
+            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Int8(0), span: span })
+        }
         Type::Int16 => {
-            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Signed(0), ty: Type::Int16, span: span })
+            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Int16(0), span: span })
         }
         Type::Int32 => {
-            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Signed(0), ty: Type::Int32, span: span })
+            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Int32(0), span: span })
         }
         Type::Int64 => {
-            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Signed(0), ty: Type::Int64, span: span })
+            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Int64(0), span: span })
         }
         Type::Int128 => {
-            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Signed(0), ty: Type::Int128, span: span })
+            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Int128(0), span: span })
         }
         
+        Type::Byte => {
+            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Byte(0), span: span })
+        }
         Type::Uint16 => {
-            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Unsigned(0), ty: Type::Uint16, span: span })
+            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Uint16(0), span: span })
         }
         Type::Uint32 => {
-            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Unsigned(0), ty: Type::Uint32, span: span })
+            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Uint32(0), span: span })
         }
         Type::Uint64 => {
-            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Unsigned(0), ty: Type::Uint64, span: span })
+            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Uint64(0), span: span })
         }
         Type::Uint128 => {
-            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Unsigned(0), ty: Type::Uint128, span: span })
+            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Uint128(0), span: span })
         }
 
         Type::Float32 => {
-            *expr = Some(Expr::FloatLiteral { value: FloatLiteralValue::Float32(0.0), ty: Type::Float32, span: span })
+            *expr = Some(Expr::FloatLiteral { value: FloatLiteralValue::Float32(0.0), span: span })
         }
 
         Type::Float64 => {
-            *expr = Some(Expr::FloatLiteral { value: FloatLiteralValue::Float64(0.0), ty: Type::Float64, span: span })
+            *expr = Some(Expr::FloatLiteral { value: FloatLiteralValue::Float64(0.0), span: span })
         }
 
         Type::Bool => {
@@ -1095,8 +850,18 @@ fn type_compatible(a: &Type, b: &Type) -> bool {
 fn resolve_binary_op_types(a: &Type, b: &Type, span: &Span) -> Result<Type, HolyError> {
     use Type::*;
     match (a, b) {
+        (Int8, Int8) => Ok(Int8),
+        (Int16, Int16) => Ok(Int16),
         (Int32, Int32) => Ok(Int32),
+        (Int64, Int64) => Ok(Int64),
+        (Int128, Int128) => Ok(Int128),
+
+        (Byte, Byte) => Ok(Byte),
+        (Uint16, Uint16) => Ok(Uint16),
         (Uint32, Uint32) => Ok(Uint32),
+        (Uint64, Uint64) => Ok(Uint64),
+        (Uint128, Uint128) => Ok(Uint128),
+
         (Float32, Float32) => Ok(Float32),
         (Float64, Float64) => Ok(Float64),
 
