@@ -4,7 +4,7 @@ HolyLang programming language: A mix between Go's readability, C's simplicity, a
 
 # Work-in-progress
 This only implements parser, and semantics.
-It still lacks copy(), if conditions, for loops, infinte loops, and unsafe blocks.
+It still lacks: if conditions, for loops, infinte loops, and unsafe blocks.
 
 
 

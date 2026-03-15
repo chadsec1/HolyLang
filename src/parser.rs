@@ -393,7 +393,7 @@ fn parse_function(lines: &Vec<&str>, start_i: usize) -> Result<(Function, usize)
             let mut types = Vec::new();
             if !inner.trim().is_empty() {
                 for part in split_comma_top_level(inner) {
-                    let t = parse_type(part.trim()).map_err(|e| HolyError::Parse(format!("{} (line {})", e, start_i + 1)))?;
+                    let t = parse_type(part.trim(), &span)?;
                     types.push(t);
                 }
             }
@@ -402,7 +402,7 @@ fn parse_function(lines: &Vec<&str>, start_i: usize) -> Result<(Function, usize)
         } else if return_type_str.ends_with(')') {
             return Err(HolyError::Parse(format!("Missing opening parentheses for return type in function `{}` at line {}", name, start_i + 1)));
         } else {
-            Some(vec![parse_type(return_type_str).map_err(|e| HolyError::Parse(format!("{} (line {})", e, start_i + 1)))?])
+            Some(vec![parse_type(return_type_str, &span)?])
         }
     };
 
@@ -418,7 +418,7 @@ fn parse_function(lines: &Vec<&str>, start_i: usize) -> Result<(Function, usize)
             let pname = parts[0].to_string();
             validate_identifier_name(&pname, start_i + 1)?;
 
-            let ptype = parse_type(parts[1]) .map_err(|e| HolyError::Parse(format!("{} (line {})", e, start_i + 1)))?;
+            let ptype = parse_type(parts[1], &span)?;
             params.push(Param { name: pname, type_name: ptype, span: span });
         }
     }
@@ -554,7 +554,7 @@ fn parse_stmt(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
             let (name, var_type) = match left_parts.len() {
                 1 => (left_parts[0].to_string(), Type::Infer),
                 2 => {
-                    let tp = parse_type(left_parts[1]).map_err(|e| HolyError::Parse(format!("{} (line {})", e, line_no)))?;
+                    let tp = parse_type(left_parts[1], &span)?;
                     (left_parts[0].to_string(), tp)
                 }
                 _ => return Err(HolyError::Parse(format!("Invalid variable declaration `{}` at line {}", line, line_no))),
@@ -574,7 +574,7 @@ fn parse_stmt(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
                         let elems_str = &right[first_bracket + 1..right.len() - 1];
 
                         if !type_str.is_empty() {
-                            let inner_ty = parse_type(type_str).map_err(|e| HolyError::Parse(format!("{} (line {})", e, line_no)))?;
+                            let inner_ty = parse_type(type_str, &span)?;
 
                             // wrap into array type for the variable
                             let rhs_var_type = Type::Array(Box::new(inner_ty.clone()));
@@ -625,7 +625,7 @@ fn parse_stmt(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
                     let type_str = right[..right.len() - 2].trim();
                     if !type_str.is_empty() {
                         // parse the inner element type (may be nested like "int32[]", parse_type handles nesting)
-                        let inner_ty = parse_type(type_str).map_err(|e| HolyError::Parse(format!("{} (line {})", e, line_no)))?;
+                        let inner_ty = parse_type(type_str, &span)?;
 
                         let rhs_var_type = Type::Array(Box::new(inner_ty.clone()));
 
@@ -666,7 +666,7 @@ fn parse_stmt(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
             let name = parts[0].to_string();
             validate_identifier_name(&name, line_no)?;
 
-            let tp = parse_type(parts[1]).map_err(|e| HolyError::Parse(format!("{} (line {})", e, line_no)))?;
+            let tp = parse_type(parts[1], &span)?;
             return Ok(Stmt::VarDecl(Variable { name, type_name: tp, value: None, span: span }));
         }
     }
@@ -986,7 +986,7 @@ fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
         let sig_count = sig_trimmed.len();
 
         
-        // f32 has about 7 decimal digits of precision (log10(2^24) ≈ 7.22).
+        // f32 has about 7 decimal digits of precision (log10(2^24) = 7.22).
         // Use 1 for the dot, that makes 8 a conservative threshold.
         // It's reasonable for us to check inprecision and just use float64 if sig_count is higher
         // than 8.
@@ -1062,7 +1062,7 @@ fn parse_typed_array_literal(s: &str, span: Span) -> Result<Expr, HolyError> {
     let elems_str = &s[ctor_pos + 1..s.len() - 1]; // between constructor '[' and final ']'
 
     // parse the base/inner type (may be nested like "int32[]" -> parse_type handles it)
-    let inner_ty = parse_type(type_str).map_err(|e| HolyError::Parse(format!("{} (line {})", e, span.line)))?;
+    let inner_ty = parse_type(type_str,  &span)?;
 
     let mut elems: Vec<Expr> = Vec::new();
     if !elems_str.trim().is_empty() {
@@ -1151,11 +1151,11 @@ fn is_array_type(t: &Type) -> bool {
 }
 
 /// Parse type token like "int32" into `Type`
-fn parse_type(s: &str) -> Result<Type, String> {
+fn parse_type(s: &str, span: &Span) -> Result<Type, HolyError> {
     let mut token = s.trim();
 
     if token.is_empty() {
-        return Err("Empty string to parse_type".to_string());
+        panic!("(Compiler bug) Empty string to parse_type, ensure token is not empty before passing it.");
     }
 
 
@@ -1182,7 +1182,10 @@ fn parse_type(s: &str) -> Result<Type, String> {
         "float64" => Type::Float64,
         "bool" => Type::Bool,
         "string" => Type::String,
-        other => return Err(format!("Unknown type `{}`", other)),
+        other => return Err(HolyError::Parse(format!(
+                    "Unknown type `{}` (line {} column {})",
+                    other, span.line, span.column
+                )))
     };
 
     for _ in 0..depth {
