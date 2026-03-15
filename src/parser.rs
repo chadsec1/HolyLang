@@ -5,18 +5,20 @@ use std::num::IntErrorKind;
 
 const KEYWORDS: &[&str] = &[
     "func", "own", "return", "for", "forever", "if", "else", "true", "false",
-    "int16", "int32", "int64", "int128", "uint16", "uint32", "uint64", "uint128",
-    "float32", "float64", "bool", "string"
+    "int8", "int16", "int32", "int64", "int128", "byte", "uint16", "uint32", "uint64",
+    "uint128", "float32", "float64", "bool", "string"
 ];
 
 /// Types for HolyLang
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
+    Int8,
     Int16,
     Int32,
     Int64,
     Int128,
 
+    Byte,
     Uint16,
     Uint32,
     Uint64,
@@ -34,11 +36,13 @@ pub enum Type {
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match self {
+            Type::Int8 => "int8",
             Type::Int16 => "int16",
             Type::Int32 => "int32",
             Type::Int64 => "int64",
             Type::Int128 => "int128",
 
+            Type::Byte => "byte",
             Type::Uint16 => "uint16",
             Type::Uint32 => "uint32",
             Type::Uint64 => "uint64",
@@ -1005,11 +1009,13 @@ fn parse_type(s: &str) -> Result<Type, String> {
     }
 
     let mut base = match token {
+        "int8" => Type::Int8,
         "int16" => Type::Int16,
         "int32" => Type::Int32,
         "int64" => Type::Int64,
         "int128" => Type::Int128,
 
+        "byte" => Type::Byte,
         "uint16" => Type::Uint16,
         "uint32" => Type::Uint32,
         "uint64" => Type::Uint64,

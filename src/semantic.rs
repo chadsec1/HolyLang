@@ -478,6 +478,21 @@ fn infer_expr_type(
                 if infer_hint.is_some() {
                     let infer_hint = infer_hint.unwrap();
                     match infer_hint {
+                        Type::Int8 => {
+                            let v: i128 = match *value {
+                                IntLiteralValue::Signed(v) => v,
+                                IntLiteralValue::Unsigned(v) if v <= i128::MAX as u128 => v as i128,
+                                IntLiteralValue::Unsigned(v) => return Err(HolyError::Semantic(format!(
+                                            "Integer literal {} is unsigned and is out of range for type {} (line {} column {})", 
+                                            v, infer_hint, span.line, span.column))),
+                            };
+
+                            if v > i8::MAX as i128 {
+                                return Err(HolyError::Semantic(format!("Integer literal {} out of range for type {} (line {} column {})", v, infer_hint, span.line, span.column)));
+                            }
+
+                            *ty = Type::Int8;
+                        }
                         Type::Int16 => {
                             let v: i128 = match *value {
                                 IntLiteralValue::Signed(v) => v,
@@ -540,6 +555,22 @@ fn infer_expr_type(
                             *ty = Type::Int128;
                         }
 
+
+                        Type::Byte => {
+                            let v: u128 = match *value {
+                                IntLiteralValue::Unsigned(v) => v,
+                                IntLiteralValue::Signed(v) if v >= 0 => v as u128,
+                                IntLiteralValue::Signed(v) => return Err(HolyError::Semantic(format!(
+                                            "Integer literal {} is signed and negative, which is out of range for type {} (line {} column {})", 
+                                            v, ty, span.line, span.column))),
+                            };
+
+                            if v > u8::MAX as u128 {
+                                return Err(HolyError::Semantic(format!("Integer literal {} out of range for type {} (line {} column {})", v, ty, span.line, span.column)));
+                            }
+
+                            *ty = Type::Byte;
+                        }
 
                         Type::Uint16 => {
                             let v: u128 = match *value {
@@ -757,6 +788,24 @@ fn assign_infer_type_to_expr(expr: &mut Expr, ty: Type) -> Result<(), HolyError>
         Expr::IntLiteral { value: value, ty: t, span: span } => {
             if *t == Type::Infer {
                 match ty {
+                    Type::Int8 => {
+                        let v: i128 = match *value {
+                            IntLiteralValue::Signed(v) => v,
+                            IntLiteralValue::Unsigned(v) if v <= i128::MAX as u128 => v as i128,
+                            IntLiteralValue::Unsigned(v) => return Err(HolyError::Semantic(format!(
+                                        "Integer literal {} is unsigned and is out of range for type {} (line {} column {})", 
+                                        v, ty, span.line, span.column))),
+                        };
+
+                        if v > i8::MAX as i128 {
+                            return Err(HolyError::Semantic(format!("Integer literal {} out of range for type {} (line {} column {})", v, ty, span.line, span.column)));
+                        }
+
+                        *t = Type::Int8;
+                        return Ok(());
+                    }
+
+
                     Type::Int16 => {
                         let v: i128 = match *value {
                             IntLiteralValue::Signed(v) => v,
@@ -826,6 +875,22 @@ fn assign_infer_type_to_expr(expr: &mut Expr, ty: Type) -> Result<(), HolyError>
                         return Ok(());
                     }
 
+                    Type::Byte => {
+                        let v: u128 = match *value {
+                            IntLiteralValue::Unsigned(v) => v,
+                            IntLiteralValue::Signed(v) if v >= 0 => v as u128,
+                            IntLiteralValue::Signed(v) => return Err(HolyError::Semantic(format!(
+                                        "Integer literal {} is signed and negative, which is out of range for type {} (line {} column {})", 
+                                        v, ty, span.line, span.column))),
+                        };
+
+                        if v > u8::MAX as u128 {
+                            return Err(HolyError::Semantic(format!("Integer literal {} out of range for type {} (line {} column {})", v, ty, span.line, span.column)));
+                        }
+
+                        *t = Type::Byte;
+                        return Ok(());
+                    }
                     Type::Uint16 => {
                         let v: u128 = match *value {
                             IntLiteralValue::Unsigned(v) => v,
