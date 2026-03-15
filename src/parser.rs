@@ -131,8 +131,6 @@ impl IntLiteralValue {
     // And since u128 can represent all signed numbers assuming no -, that's handled by upper
     // negate node, it should be safe to cast as u128 regardless.
     //
-
-
     pub fn as_u128_UNSAFE(self) -> u128 {
         match self {
             // Signed types: check for negative before casting

@@ -526,7 +526,7 @@ fn infer_expr_type(
             
             // Ensure that no negate unary operation is allowed on an unsigned integer.
             if *op == UnaryOpKind::Negate {
-                if matches!(ety, Type::Uint16 | Type::Uint32 | Type::Uint64 | Type::Uint128) {
+                if matches!(ety, Type::Byte | Type::Uint16 | Type::Uint32 | Type::Uint64 | Type::Uint128) {
                     return Err(HolyError::Semantic(format!("{} cannot have negate unary operation. (line {} column {})", ety, span.line, span.column)))
                 }
             }
