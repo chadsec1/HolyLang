@@ -45,6 +45,11 @@ func main() {
     # This is invalid, it would not compile if I uncomment it.
     # x = 2
 
+    own z = copy(y)
+    # This is valid, because z did not move y, it only copied it.
+    y = 3
+
+
 
     # 1 and 2 are integer literals and evaluated as expressions to determine their type, with infer hint of the function arguments list
     own x = add(1, 2)
