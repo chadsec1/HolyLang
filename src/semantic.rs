@@ -71,6 +71,7 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
                     Expr::Var { span, .. } => *span,
                     Expr::BinOp { span, .. } => *span,
                     Expr::UnaryOp { span, .. } => *span,
+                    Expr::CopyCall { span, .. } => *span,
                     Expr::Call { span, .. } => *span,
                 }
             }
@@ -551,7 +552,12 @@ fn infer_expr_type(
 
 
 
+        Expr::CopyCall { expr: e, span: span } => {
+            let e_ty = infer_expr_type(e, locals, fun_sigs, infer_hint.clone())?;
 
+            Ok(e_ty)
+
+        }
         Expr::Call { name: name, args: args, span: span } => {
             let ret_opt = check_call(name, args, locals, fun_sigs, true, *span)?;
             match ret_opt {

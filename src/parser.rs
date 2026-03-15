@@ -6,7 +6,7 @@ use std::num::IntErrorKind;
 const KEYWORDS: &[&str] = &[
     "func", "own", "return", "for", "forever", "if", "else", "true", "false",
     "int8", "int16", "int32", "int64", "int128", "byte", "uint16", "uint32", "uint64",
-    "uint128", "float32", "float64", "bool", "string"
+    "uint128", "float32", "float64", "bool", "string", "copy"
 ];
 
 /// Types for HolyLang
@@ -228,6 +228,10 @@ pub enum Expr {
         name: String,
         args: Vec<Expr>,
         span: Span,
+    },
+    CopyCall {
+        expr: Box<Expr>,
+        span: Span,
     }
 }
 
@@ -293,7 +297,7 @@ pub enum Stmt {
     VarAssignMulti(MultiAssignment),
     Expr(Expr),
     Return(Vec<Expr>),
-    Func(Function), // optional convenience
+    Func(Function), // is this even needed? 
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -749,7 +753,7 @@ pub fn validate_identifier_name(name: &str, line_no: usize) -> Result<(), HolyEr
 }
 
 /// Minimal expression parser:
-/// - handles binary `+` (left-associative),
+/// - handles binary operations (left-associative),
 /// - function calls like add(x, y),
 /// - integer literals,
 /// - variable names
@@ -873,6 +877,16 @@ fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
         if s.ends_with(')') {
             let name = s[..open].trim().to_string();
             let args_str = &s[open + 1..s.len() - 1];
+
+            // Check to see if it copy(), which is called like a normal function
+            // but its not.
+            if name == "copy" {
+                let arg_expr = parse_expr(args_str, span)?;
+
+                return Ok(Expr::CopyCall{ expr: Box::new(arg_expr), span: span });
+            }
+
+
             let mut args = vec![];
             if !args_str.trim().is_empty() {
                 for a in split_comma_top_level(args_str) {
