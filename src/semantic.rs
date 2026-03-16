@@ -68,6 +68,7 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
                     Expr::FloatLiteral { span, .. } => *span,
                     Expr::BoolLiteral { span, .. } => *span,
                     Expr::ArrayLiteral { span, .. } => *span,
+                    Expr::ArrayAccess { span, .. } => *span,
                     Expr::Var { span, .. } => *span,
                     Expr::BinOp { span, .. } => *span,
                     Expr::UnaryOp { span, .. } => *span,
@@ -502,6 +503,29 @@ fn infer_expr_type(
             Ok(Type::Array(Box::new(array_ty.clone())))
         }
 
+        Expr::ArrayAccess { array, index,  span } => {
+            if let Expr::Var { name, span } = &**array {
+                println!("Variable name: {}", name);
+                if let Some(info) = locals.get(name) {
+                    if info.moved {
+                        return Err(HolyError::Semantic(format!(
+                                    "Array access on moved variable `{}` (line {} column {})", 
+                                    name, span.line, span.column
+                                )));
+                    }
+                    Ok(info.ty.clone())
+                } else {
+                    Err(HolyError::Semantic(format!("Array access on undeclared variable `{}` (line {} column {})", name, span.line, span.column)))
+                }
+            } else {
+                return Err(HolyError::Semantic(format!(
+                        "You can only access arrays via variables  (line {} column {})", 
+                        span.line, span.column
+                    )));
+            }
+
+        }
+
         Expr::Var{name: name, span: span} => {
             if let Some(info) = locals.get(name) {
                 if info.moved {
@@ -889,7 +913,7 @@ mod tests {
     use super::*; 
     
     #[test]
-    fn default_for_nested_arrays() {
+    fn test_default_for_nested_arrays() {
         let span = Span { line: 1, column: 0 };
         let mut expr: Option<Expr> = None;
 

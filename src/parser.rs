@@ -77,7 +77,7 @@ impl fmt::Display for IntLiteralValue {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum IntLiteralValue {
     Int8(i8),
     Int16(i16),
@@ -232,7 +232,12 @@ pub enum Expr {
     CopyCall {
         expr: Box<Expr>,
         span: Span,
-    }
+    },
+    ArrayAccess {
+        array: Box<Expr>,
+        index: Box<Expr>,
+        span: Span,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -574,50 +579,62 @@ fn parse_stmt(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
                         let elems_str = &right[first_bracket + 1..right.len() - 1];
 
                         if !type_str.is_empty() {
-                            let inner_ty = parse_type(type_str, &span)?;
+                            match parse_type(type_str, &span) {
+                                Ok(inner_ty) => {
+                                    // wrap into array type for the variable
+                                    let rhs_var_type = Type::Array(Box::new(inner_ty.clone()));
 
-                            // wrap into array type for the variable
-                            let rhs_var_type = Type::Array(Box::new(inner_ty.clone()));
+                                    let mut elems: Vec<Expr> = Vec::new();
+                                    if !elems_str.trim().is_empty() {
+                                        for part in split_comma_top_level(elems_str) {
+                                            let part = part.trim();
+                                            if find_constructor_bracket(part).is_some() {
+                                                let nested = parse_typed_array_literal(part, Span {line: line_no, column: 0} )?;
+                                                elems.push(nested);
 
-                            let mut elems: Vec<Expr> = Vec::new();
-                            if !elems_str.trim().is_empty() {
-                                for part in split_comma_top_level(elems_str) {
-                                    let part = part.trim();
-                                    if find_constructor_bracket(part).is_some() {
-                                        let nested = parse_typed_array_literal(part, Span {line: line_no, column: 0} )?;
-                                        elems.push(nested);
-
-                                    } else {
-                                        let expr = parse_expr(part.trim(), Span { line: line_no, column: 0 })?;
-                                        // I could override expression's type here because we already
-                                        // know array's type, but I leave it up to semantic analysis 
-                                        // to determine types and error according.
-                                        elems.push(expr);
+                                            } else {
+                                                let expr = parse_expr(part.trim(), Span { line: line_no, column: 0 })?;
+                                                // I could override expression's type here because we already
+                                                // know array's type, but I leave it up to semantic analysis 
+                                                // to determine types and error according.
+                                                elems.push(expr);
+                                            }
+                                        }
                                     }
-                                }
+
+
+                                    // This is so it allows programmer to optionally explicitly set type of
+                                    // array on left hand side. 
+                                    // we still require rhs var type though, the optional left hand side
+                                    // type of array is useful when you calling a function and want to lock
+                                    // your code to expect a specific type and error otherwise.
+                                    // Example:
+                                    // own x int32[] = int32[1, 2, 3] # This is valid
+                                    // own x = int32[1, 2, 3] # This is also valid
+                                    // own x uint32[] = int32[1, 2, 3] # This is invalid.
+                                    //
+                                    let mut value = Expr::ArrayLiteral { elements: elems.clone(), span, array_ty: inner_ty.clone() };
+                                    if is_array_type(&rhs_var_type) {
+                                        if let Type::Array(inner_array_ty) = rhs_var_type.clone() {
+                                            value = Expr::ArrayLiteral { elements: elems, span, array_ty: *inner_array_ty };
+                                        }
+                                    }
+
+                                    return Ok(Stmt::VarDecl(Variable { name, type_name: var_type, value: Some(value), span }));
                             }
+                            // Not an array literal, but an array access
+                            Err(e) => {
+                                let array_name = parse_expr(type_str, span)?;
+                                let index_literal = parse_expr(elems_str, span)?;
+                                
+                                let value = Expr::ArrayAccess { array: Box::new(array_name), index: Box::new(index_literal), span };
 
-
-                            // This is so it allows programmer to optionally explicitly set type of
-                            // array on left hand side. 
-                            // we still require rhs var type though, the optional left hand side
-                            // type of array is useful when you calling a function and want to lock
-                            // your code to expect a specific type and error otherwise.
-                            // Example:
-                            // own x int32[] = int32[1, 2, 3] # This is valid
-                            // own x = int32[1, 2, 3] # This is also valid
-                            // own x uint32[] = int32[1, 2, 3] # This is invalid.
-                            //
-                            let mut value = Expr::ArrayLiteral { elements: elems.clone(), span, array_ty: inner_ty.clone() };
-                            if is_array_type(&rhs_var_type) {
-                                if let Type::Array(inner_array_ty) = rhs_var_type.clone() {
-                                    value = Expr::ArrayLiteral { elements: elems, span, array_ty: *inner_array_ty };
-                                }
+                                return Ok(Stmt::VarDecl(Variable { name, type_name: Type::Infer, value: Some(value), span }));
                             }
-
-                            return Ok(Stmt::VarDecl(Variable { name, type_name: var_type, value: Some(value), span }));
+                            
                         }
                     }
+                }
 
 
                 // handle empty typed-array literal like "int32[]"
@@ -1193,4 +1210,153 @@ fn parse_type(s: &str, span: &Span) -> Result<Type, HolyError> {
     }
 
     Ok(base)
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*; 
+    
+    fn internal_integer_literal_parsing(src: &str, name: &str, ty: Type, LiteralValue: IntLiteralValue) -> Result<(), String> {
+        let result = parse(&src).map_err(|e| {
+            format!("Failed to parse {:?}", e).to_string()
+        })?;
+
+        dbg!(&result);
+
+
+        if result.functions.len() != 1 {
+            return Err(format!("{} functions are defined, but our src only has 1.", result.functions.len()));
+        }
+        
+        let func = &result.functions[0];
+
+        if func.name != "main" {
+            return Err(format!( "Function name is `{}` when it should've been `main` instead!", func.name));
+        }
+
+        if func.params.len() != 0 {
+            return Err(format!( "Function has parameters when it shouldn't"));
+        }
+
+        if func.return_type != None {
+            return Err(format!("Function has a {:?} return_type when it shouldn't!", func.return_type));
+        }
+
+
+        if let Stmt::VarDecl(var) = &func.body[0] {
+
+            if var.name != name {
+                return Err(format!("Expected variable name to be `{}`, instead we got {}", name, var.name));
+            }
+
+            if var.type_name != ty {
+                return Err(format!("Expected variable `{}` type to be `{}`, instead we got `{}`", name, ty, var.type_name));
+            }
+
+            if let Some(Expr::IntLiteral { value, .. }) = &var.value {
+                if *value != LiteralValue {
+                    return Err(format!("Value of variable `{}` is not {:?}, instead we got {:?}", name, LiteralValue, *value));
+                }
+            } else {
+                return Err(format!("Expected an IntLiteral, instead we got {:?}", var.value));
+            }
+
+
+        } else {
+            return Err(format!("Expected first statement in function to be a variable declaration, instead we got {:?}", func.body[0]));
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_integer_literal_parsing() {
+        let src = String::from("
+func main() {
+    own x  = 1
+}
+        ");
+        let result = internal_integer_literal_parsing(&src, &"x", Type::Infer, IntLiteralValue::Int8(1));
+        assert!(!result.is_err(), "Error: {:?}", result.err());
+
+        let src = String::from("
+func main() {
+    own x = 1000
+}       
+        ");
+
+        let result = internal_integer_literal_parsing(&src, &"x", Type::Infer, IntLiteralValue::Int16(1000));
+        assert!(!result.is_err(), "Error: {:?}", result.err());
+
+
+        let src = String::from("
+func main() {
+    own x int32 = 100000
+}       
+        ");
+
+        let result = internal_integer_literal_parsing(&src, &"x", Type::Int32, IntLiteralValue::Int32(100000));
+        assert!(!result.is_err(), "Error: {:?}", result.err());
+
+
+        // At parser stage, the literal has its own type. So even though `x` is uint32, the literal its
+        // self is int32.
+        // In semantics enforcement phase, if the literal type can be safely converted to `x`'s type,
+        // it is converted, otherwise, it would error.
+        // So the parser does not care if literal and the variable types are not the same, that's
+        // the semantics phase job.
+        // 
+        let src = String::from("
+func main() {
+    own x uint32 = 100000
+}       
+        ");
+
+        let result = internal_integer_literal_parsing(&src, &"x", Type::Uint32, IntLiteralValue::Int32(100000));
+        assert!(!result.is_err(), "Error: {:?}", result.err());
+
+
+
+        let src = String::from("
+func main() {
+    own x uint32 = 10000000000
+}       
+        ");
+
+        let result = internal_integer_literal_parsing(&src, &"x", Type::Uint32, IntLiteralValue::Int64(10000000000));
+        assert!(!result.is_err(), "Error: {:?}", result.err());
+
+
+
+        let src = String::from("
+func main() {
+    own x byte = 1
+}       
+        ");
+
+        let result = internal_integer_literal_parsing(&src, &"x", Type::Byte, IntLiteralValue::Int8(1));
+        assert!(!result.is_err(), "Error: {:?}", result.err());
+
+
+
+        
+        // Test invalid syntax
+
+        let src = String::from("
+func main() {
+    own x intt32 = 100
+}       
+        ");
+
+        let result = internal_integer_literal_parsing(&src, &"x", Type::Uint32, IntLiteralValue::Int64(10000000000));
+        assert!(result.is_err(), "The parser did not error on invalid syntax: {:?}", result);
+
+        
+
+
+
+
+
+    }
 }
