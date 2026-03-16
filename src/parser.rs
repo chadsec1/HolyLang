@@ -233,9 +233,15 @@ pub enum Expr {
         expr: Box<Expr>,
         span: Span,
     },
-    ArrayAccess {
+    ArraySingleAccess {
         array: Box<Expr>,
         index: Box<Expr>,
+        span: Span,
+    },
+    ArrayMultipleAccess {
+        array: Box<Expr>,
+        start: Box<Expr>,
+        end: Box<Expr>,
         span: Span,
     },
 }
@@ -570,115 +576,17 @@ fn parse_stmt(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
             // number.
             validate_identifier_name(&name, line_no)?;
 
-            // special-case: typed array literal on RHS: e.g. "int32[1, 2, 3]" 
-            // detect pattern: "<type_without_brackets>[ ... ]"
-            if var_type == Type::Infer || is_array_type(&var_type) {
-                if let Some(first_bracket) = find_constructor_bracket(&right) {
-                    if right.ends_with(']') {
-                        let type_str = right[..first_bracket].trim();
-                        let elems_str = &right[first_bracket + 1..right.len() - 1];
-
-                        if !type_str.is_empty() {
-                            match parse_type(type_str, &span) {
-                                Ok(inner_ty) => {
-                                    // wrap into array type for the variable
-                                    let rhs_var_type = Type::Array(Box::new(inner_ty.clone()));
-
-                                    let mut elems: Vec<Expr> = Vec::new();
-                                    if !elems_str.trim().is_empty() {
-                                        for part in split_comma_top_level(elems_str) {
-                                            let part = part.trim();
-                                            if find_constructor_bracket(part).is_some() {
-                                                let nested = parse_typed_array_literal(part, Span {line: line_no, column: 0} )?;
-                                                elems.push(nested);
-
-                                            } else {
-                                                let expr = parse_expr(part.trim(), Span { line: line_no, column: 0 })?;
-                                                // I could override expression's type here because we already
-                                                // know array's type, but I leave it up to semantic analysis 
-                                                // to determine types and error according.
-                                                elems.push(expr);
-                                            }
-                                        }
-                                    }
-
-
-                                    // This is so it allows programmer to optionally explicitly set type of
-                                    // array on left hand side. 
-                                    // we still require rhs var type though, the optional left hand side
-                                    // type of array is useful when you calling a function and want to lock
-                                    // your code to expect a specific type and error otherwise.
-                                    // Example:
-                                    // own x int32[] = int32[1, 2, 3] # This is valid
-                                    // own x = int32[1, 2, 3] # This is also valid
-                                    // own x uint32[] = int32[1, 2, 3] # This is invalid.
-                                    //
-                                    let mut value = Expr::ArrayLiteral { elements: elems.clone(), span, array_ty: inner_ty.clone() };
-                                    if is_array_type(&rhs_var_type) {
-                                        if let Type::Array(inner_array_ty) = rhs_var_type.clone() {
-                                            value = Expr::ArrayLiteral { elements: elems, span, array_ty: *inner_array_ty };
-                                        }
-                                    }
-
-                                    return Ok(Stmt::VarDecl(Variable { name, type_name: var_type, value: Some(value), span }));
-                            }
-                            // Not an array literal, but an array access
-                            Err(e) => {
-                                let array_name = parse_expr(type_str, span)?;
-                                let index_literal = parse_expr(elems_str, span)?;
-                                
-                                let value = Expr::ArrayAccess { array: Box::new(array_name), index: Box::new(index_literal), span };
-
-                                return Ok(Stmt::VarDecl(Variable { name, type_name: Type::Infer, value: Some(value), span }));
-                            }
-                            
-                        }
-                    }
-                }
-
-
-                // handle empty typed-array literal like "int32[]"
-                } else if right.ends_with("[]") {
-                    let type_str = right[..right.len() - 2].trim();
-                    if !type_str.is_empty() {
-                        // parse the inner element type (may be nested like "int32[]", parse_type handles nesting)
-                        let inner_ty = parse_type(type_str, &span)?;
-
-                        let rhs_var_type = Type::Array(Box::new(inner_ty.clone()));
-
-                        // create empty array literal (no elements)
-                        let mut value = Expr::ArrayLiteral {
-                            elements: Vec::new(),
-                            array_ty: inner_ty.clone(),
-                            span,
-                        };
-
-                        if is_array_type(&rhs_var_type) {
-                            if let Type::Array(inner_array_ty) = rhs_var_type.clone() {
-                                value = Expr::ArrayLiteral { elements: Vec::new(), span, array_ty: *inner_array_ty };
-                            }
-                        }
-
-                        return Ok(Stmt::VarDecl(Variable { name, type_name: var_type, value: Some(value), span }));
-                    }
-                }
-            }
-
-            // If RHS is an untyped bracket literal like "[1,2,3]" and the LHS had no explicit type -> error
-            if var_type == Type::Infer && right.starts_with('[') {
-                return Err(HolyError::Parse(format!(
-                    "Array literal requires an explicit type on right-hand side, e.g. `own x = int32[1,2,3]` (line {})",
-                    line_no
-                )));
-            }
 
             let value = parse_expr(right, span)?;
             return Ok(Stmt::VarDecl(Variable { name, type_name: var_type, value: Some(value), span: span }));
+
+
+
         } else {
             // no '=', expect "own name type" (explicit type, no initializer)
             let parts: Vec<&str> = rest.split_whitespace().collect();
             if parts.len() != 2 {
-                return Err(HolyError::Parse(format!("Invalid variable declaration `{}` at line {}", line, line_no)));
+                return Err(HolyError::Parse(format!("Invalid variable declaration `{}` at line {} column {}", line, span.line, span.column)));
             }
             let name = parts[0].to_string();
             validate_identifier_name(&name, line_no)?;
@@ -846,6 +754,116 @@ fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
             return parse_expr(inner, span);
         }
     }
+
+
+
+
+    // special-case: typed array literal on RHS: e.g. "int32[1, 2, 3]" 
+    // detect pattern: "<type_without_brackets>[ ... ]"
+   
+    if let Some(first_bracket) = find_constructor_bracket(&s) {
+        if s.ends_with(']') {
+            let constructor_type_str = s[..first_bracket].trim();
+            let elems_str = &s[first_bracket + 1..s.len() - 1];
+
+            if !constructor_type_str.is_empty() {
+                match parse_type(constructor_type_str, &span) {
+                    Ok(inner_ty) => {
+                        // wrap into array type for the variable
+                        let rhs_var_type = Type::Array(Box::new(inner_ty.clone()));
+
+                        let mut elems: Vec<Expr> = Vec::new();
+                        if !elems_str.trim().is_empty() {
+                            for part in split_comma_top_level(elems_str) {
+                                let part = part.trim();
+                                if find_constructor_bracket(part).is_some() {
+                                    let nested = parse_typed_array_literal(part, span )?;
+                                    elems.push(nested);
+
+                                } else {
+                                    let expr = parse_expr(part.trim(), span)?;
+                                    // I could override expression's type here because we already
+                                    // know array's type, but I leave it up to semantic analysis 
+                                    // to determine types and error according.
+                                    elems.push(expr);
+                                }
+                            }
+                        }
+
+
+                        // This is so it allows programmer to optionally explicitly set type of
+                        // array on left hand side. 
+                        // we still require rhs var type though, the optional left hand side
+                        // type of array is useful when you calling a function and want to lock
+                        // your code to expect a specific type and error otherwise.
+                        // Example:
+                        // own x int32[] = int32[1, 2, 3] # This is valid
+                        // own x = int32[1, 2, 3] # This is also valid
+                        // own x uint32[] = int32[1, 2, 3] # This is invalid.
+                        //
+                        let mut value = Expr::ArrayLiteral { elements: elems.clone(), span, array_ty: inner_ty.clone() };
+                        if is_array_type(&rhs_var_type) {
+                            if let Type::Array(inner_array_ty) = rhs_var_type.clone() {
+                                value = Expr::ArrayLiteral { elements: elems, span, array_ty: *inner_array_ty };
+                            }
+                        }
+
+                        return Ok(value);
+                }
+                // Not an array literal, but an array access
+                Err(e) => {
+                    let array = parse_expr(constructor_type_str, span)?;
+                    let indx_parts: Vec<&str> = elems_str.split(':').collect();
+
+                    // Treat as access to a single element. 
+                    if indx_parts.len() == 1 {
+                        let index = parse_expr(indx_parts[0], span)?;
+                        
+                        let value = Expr::ArraySingleAccess { array: Box::new(array), index: Box::new(index), span };
+
+                        return Ok(value);
+                    
+                    // We do >= here because indx_parts could themselves contain
+                    // expressions of array access. 
+                    // We only care about first, and last indx_parts.
+                    // TODO: I dont think this is reliable approach tbh but im bit lazy. 
+                    //       Might be worth stress testing in unit testing..
+                    } else if indx_parts.len() >= 2 {
+                        let start = parse_expr(indx_parts[0], span)?;
+                        let end = parse_expr(indx_parts[indx_parts.len() - 1], span)?;
+                        
+                        let value = Expr::ArrayMultipleAccess { array: Box::new(array), start: Box::new(start), end: Box::new(end), span };
+
+                        return Ok(value);
+                    }
+                }
+            }
+        }
+        // handle empty typed-array literal like "int32[]"
+        } else if s.ends_with("[]") {
+            let type_str = s[..s.len() - 2].trim();
+            if !type_str.is_empty() {
+                // parse the inner element type (may be nested like "int32[]", parse_type handles nesting)
+                let inner_ty = parse_type(type_str, &span)?;
+
+                let rhs_var_type = Type::Array(Box::new(inner_ty.clone()));
+
+                // create empty array literal (no elements)
+                let mut value = Expr::ArrayLiteral {
+                    elements: Vec::new(),
+                    array_ty: inner_ty.clone(),
+                    span,
+                };
+
+                if is_array_type(&rhs_var_type) {
+                    if let Type::Array(inner_array_ty) = rhs_var_type.clone() {
+                        value = Expr::ArrayLiteral { elements: Vec::new(), span, array_ty: *inner_array_ty };
+                    }
+                }
+            }
+        }
+    }
+
     
     
     // Binary plus handling: split on the first operator
@@ -1068,36 +1086,46 @@ fn parse_typed_array_literal(s: &str, span: Span) -> Result<Expr, HolyError> {
     let s = s.trim();
     // find the constructor '[' that starts the element list
     let ctor_pos = find_constructor_bracket(s).ok_or_else(|| {
-        HolyError::Parse(format!("Malformed typed array literal `{}` at line {}", s, span.line))
+        HolyError::Parse(format!("Malformed typed array literal `{}` (line {} column {})", s, span.line, span.column))
     })?;
 
     if !s.ends_with(']') {
-        return Err(HolyError::Parse(format!("Typed array literal missing trailing ']' at line {}", span.line)));
+        return Err(HolyError::Parse(format!("Typed array literal missing trailing ']' (line {} column {})", span.line, span.column)));
     }
 
     let type_str = s[..ctor_pos].trim();
     let elems_str = &s[ctor_pos + 1..s.len() - 1]; // between constructor '[' and final ']'
 
-    // parse the base/inner type (may be nested like "int32[]" -> parse_type handles it)
-    let inner_ty = parse_type(type_str,  &span)?;
-
-    let mut elems: Vec<Expr> = Vec::new();
-    if !elems_str.trim().is_empty() {
-        for part in split_comma_top_level(elems_str) {
-            let part = part.trim();
-            // If the part itself looks like a typed-array-literal (i.e. has a constructor bracket),
-            // parse it recursively; otherwise use parse_expr for general expressions.
-            if find_constructor_bracket(part).is_some() {
-                let nested = parse_typed_array_literal(part, span)?;
-                elems.push(nested);
-            } else {
-                let expr = parse_expr(part, span)?;
-                elems.push(expr);
+    // parse the base/inner type (may be nested literal like "int32[]" -> parse_type handles it)
+    match parse_type(type_str, &span) {
+        Ok(inner_ty) => {
+            let mut elems: Vec<Expr> = Vec::new();
+            if !elems_str.trim().is_empty() {
+                for part in split_comma_top_level(elems_str) {
+                    let part = part.trim();
+                    // If the part itself looks like a typed-array-literal (i.e. has a constructor bracket),
+                    // parse it recursively; otherwise use parse_expr for general expressions.
+                    if find_constructor_bracket(part).is_some() {
+                        let nested = parse_typed_array_literal(part, span)?;
+                        elems.push(nested);
+                    } else {
+                        let expr = parse_expr(part, span)?;
+                        elems.push(expr);
+                    }
+                }
             }
+
+            Ok(Expr::ArrayLiteral { elements: elems, array_ty: inner_ty, span })
+                
+        }
+
+        // If its not a type constructor, we gonna assume it's an expression (like an array access)
+        Err(e) => {     
+            let expr = parse_expr(s, span)?;
+
+            Ok(expr)
         }
     }
-
-    Ok(Expr::ArrayLiteral { elements: elems, array_ty: inner_ty, span })
 }
 
 /// Returns the index of the first `[` that does NOT immediately form a `[]` pair.

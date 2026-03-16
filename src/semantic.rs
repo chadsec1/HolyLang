@@ -6,7 +6,7 @@ use crate::parser::{
 };
 
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct VarInfo {
     ty: Type,
     moved: bool,
@@ -68,7 +68,8 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
                     Expr::FloatLiteral { span, .. } => *span,
                     Expr::BoolLiteral { span, .. } => *span,
                     Expr::ArrayLiteral { span, .. } => *span,
-                    Expr::ArrayAccess { span, .. } => *span,
+                    Expr::ArraySingleAccess { span, .. } => *span,
+                    Expr::ArrayMultipleAccess { span, .. } => *span,
                     Expr::Var { span, .. } => *span,
                     Expr::BinOp { span, .. } => *span,
                     Expr::UnaryOp { span, .. } => *span,
@@ -493,6 +494,7 @@ fn infer_expr_type(
             for e in elements.iter_mut() {
                 let ety = infer_expr_type(e, locals, fun_sigs, Some(array_ty.clone()))?;
                 if !type_compatible(&ety, &array_ty) {
+
                     return Err(HolyError::Semantic(format!(
                         "Array element type mismatch: expected `{}` got `{}` (line {} column {})",
                         array_ty, ety, span.line, span.column
@@ -503,17 +505,23 @@ fn infer_expr_type(
             Ok(Type::Array(Box::new(array_ty.clone())))
         }
 
-        Expr::ArrayAccess { array, index,  span } => {
-            if let Expr::Var { name, span } = &**array {
-                println!("Variable name: {}", name);
+        Expr::ArraySingleAccess { array, index,  span } => {
+            if let Expr::Var { name, span: inner_span } = &**array {
                 if let Some(info) = locals.get(name) {
                     if info.moved {
                         return Err(HolyError::Semantic(format!(
                                     "Array access on moved variable `{}` (line {} column {})", 
-                                    name, span.line, span.column
+                                    name, inner_span.line, inner_span.column
                                 )));
                     }
-                    Ok(info.ty.clone())
+
+                    // Because we are accessing (or shall I say copying) a single element of an array
+                    // we only care about the inner type, not the outer array type.
+                    if let Type::Array(unarrayed_ty) = info.ty.clone() {
+                        Ok(*unarrayed_ty)
+                    }  else {
+                        panic!("(Compiler bug) We were unable to get array inner type");
+                    }
                 } else {
                     Err(HolyError::Semantic(format!("Array access on undeclared variable `{}` (line {} column {})", name, span.line, span.column)))
                 }
@@ -526,6 +534,10 @@ fn infer_expr_type(
 
         }
 
+        Expr::ArrayMultipleAccess { array, start, end,  span } => {
+        
+            Ok(Type::Int32)
+        }
         Expr::Var{name: name, span: span} => {
             if let Some(info) = locals.get(name) {
                 if info.moved {
