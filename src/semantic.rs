@@ -520,7 +520,7 @@ fn infer_expr_type(
                     if let Type::Array(unarrayed_ty) = info.ty.clone() {
                         Ok(*unarrayed_ty)
                     }  else {
-                        panic!("(Compiler bug) We were unable to get array inner type");
+                        Err(HolyError::Semantic(format!("Array access on non-array variable `{}` (line {} column {})", name, span.line, span.column)))
                     }
                 } else {
                     Err(HolyError::Semantic(format!("Array access on undeclared variable `{}` (line {} column {})", name, span.line, span.column)))
@@ -535,8 +535,31 @@ fn infer_expr_type(
         }
 
         Expr::ArrayMultipleAccess { array, start, end,  span } => {
-        
-            Ok(Type::Int32)
+            if let Expr::Var { name, span: inner_span } = &**array {
+                if let Some(info) = locals.get(name) {
+                    if info.moved {
+                        return Err(HolyError::Semantic(format!(
+                                    "Array access on moved variable `{}` (line {} column {})", 
+                                    name, inner_span.line, inner_span.column
+                                )));
+                    }
+
+                    if let Type::Array(_) = info.ty.clone() {
+                        // We are fine returning Type wrapping in Aray, because thats what the
+                        // caller should expect anyway. x[s:e] always returns an array.
+                        Ok(info.ty.clone())
+                    }  else {
+                        Err(HolyError::Semantic(format!("Array access on non-array variable `{}` (line {} column {})", name, span.line, span.column)))
+                    }
+                } else {
+                    Err(HolyError::Semantic(format!("Array access on undeclared variable `{}` (line {} column {})", name, span.line, span.column)))
+                }
+            } else {
+                return Err(HolyError::Semantic(format!(
+                        "You can only access arrays via variables  (line {} column {})", 
+                        span.line, span.column
+                    )));
+            }
         }
         Expr::Var{name: name, span: span} => {
             if let Some(info) = locals.get(name) {
