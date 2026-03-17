@@ -209,6 +209,10 @@ pub enum Expr {
         array_ty: Type,
         span: Span,
     },
+    StringLiteral {
+        value: String,
+        span: Span
+    },
     Var { 
         name: String,
         span: Span,
@@ -723,6 +727,23 @@ fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
         });
     }
 
+    
+
+    // String Literal ?
+    if s.starts_with('"') {
+        if !s.ends_with('"') {
+            return Err(HolyError::Parse(format!(
+                "String double quotes were never closed (line {} column {})",
+                span.line, span.column
+            )));
+        }
+
+        let str_nq = &s[1..s.len() - 1];
+
+        let value = Expr::StringLiteral { value: str_nq.to_string(), span};
+
+        return Ok(value);
+    }
 
 
     // Parentheses grouping: if the whole expression is wrapped in top-level parentheses, parse inner

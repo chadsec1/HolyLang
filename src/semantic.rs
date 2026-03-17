@@ -68,6 +68,8 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
                     Expr::FloatLiteral { span, .. } => *span,
                     Expr::BoolLiteral { span, .. } => *span,
                     Expr::ArrayLiteral { span, .. } => *span,
+                    Expr::StringLiteral { span, .. } => *span,
+
                     Expr::ArraySingleAccess { span, .. } => *span,
                     Expr::ArrayMultipleAccess { span, .. } => *span,
                     Expr::Var { span, .. } => *span,
@@ -488,6 +490,9 @@ fn infer_expr_type(
             Ok(Type::Bool)
         }
 
+        Expr::StringLiteral { value: _, span: _ } => {
+            Ok(Type::String)
+        }
         
         Expr::ArrayLiteral { elements, array_ty,  span } => {
             // all elements must have same type
