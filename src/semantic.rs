@@ -2,9 +2,10 @@ use std::collections::HashMap;
 
 use crate::error::HolyError;
 use crate::parser::{
-    AST, Expr, Function, Param, Stmt, Type, Variable, Span, validate_identifier_name, IntLiteralValue, FloatLiteralValue, UnaryOpKind
-};
+    AST, Expr, Function, Param, Stmt, Type, Variable, Span, IntLiteralValue, FloatLiteralValue, UnaryOpKind,
 
+    validate_identifier_name
+};
 
 #[derive(Clone, Debug)]
 struct VarInfo {

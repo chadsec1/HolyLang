@@ -1,6 +1,12 @@
-use crate::error::HolyError;
 use std::fmt;
 use std::num::IntErrorKind;
+
+use crate::error::HolyError;
+
+mod helpers;
+mod parse_expr;
+
+pub(crate) use helpers::validate_identifier_name;
 
 
 const KEYWORDS: &[&str] = &[
@@ -382,49 +388,9 @@ pub fn parse(source: &str) -> Result<AST, HolyError> {
     Ok(ast)
 }
 
-/// Remove an inline `#` comment from `s`, but only when the `#` is outside
-/// single- or double-quoted string literals. Preserves contents when `#` is inside a string.
-fn strip_inline_comment(s: &str) -> String {
-    let mut in_string: Option<char> = None;
-    let mut escape = false;
-
-    for (i, c) in s.char_indices() {
-        if let Some(q) = in_string {
-            if escape {
-                escape = false;
-                continue;
-            }
-            if c == '\\' {
-                escape = true;
-                continue;
-            }
-            if c == q {
-                in_string = None;
-            }
-            // while inside string, ignore all other chars
-            continue;
-        } else {
-            // not in string
-            if c == '"' || c == '\'' {
-                in_string = Some(c);
-                continue;
-            }
-            if c == '#' {
-                // found comment start outside of any string, so we should strip from here
-                return s[..i].trim_end().to_string();
-            }
-        }
-    }
-
-    // no comment found (or only inside strings)
-    s.to_string()
-}
-
-
 /// Parse function starting at index `start_i`.
 /// Returns (Function, index after function end).
 fn parse_function(lines: &Vec<&str>, start_i: usize) -> Result<(Function, usize), HolyError> {
-
     let span = Span { line: start_i + 1, column: 0 };
     
     let header_raw = lines[start_i].trim();
@@ -438,7 +404,7 @@ fn parse_function(lines: &Vec<&str>, start_i: usize) -> Result<(Function, usize)
     
     let name = after_func[..open_paren].trim().to_string();
 
-    validate_identifier_name(&name, start_i + 1)?;
+    helpers::validate_identifier_name(&name, start_i + 1)?;
 
     let rest = &after_func[open_paren..]; // starts with '('
     let close_paren = rest.find(')').ok_or_else(|| {
@@ -465,7 +431,7 @@ fn parse_function(lines: &Vec<&str>, start_i: usize) -> Result<(Function, usize)
             let inner = &return_type_str[1..return_type_str.len()-1];
             let mut types = Vec::new();
             if !inner.trim().is_empty() {
-                let split_parts = split_comma_top_level(inner)
+                let split_parts = helpers::split_comma_top_level(inner)
                     .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
 
 
@@ -493,7 +459,7 @@ fn parse_function(lines: &Vec<&str>, start_i: usize) -> Result<(Function, usize)
                 return Err(HolyError::Parse(format!("Invalid parameter `{}` at line {}", p, start_i + 1)));
             }
             let pname = parts[0].to_string();
-            validate_identifier_name(&pname, start_i + 1)?;
+            helpers::validate_identifier_name(&pname, start_i + 1)?;
 
             let ptype = parse_type(parts[1], &span)?;
             params.push(Param { name: pname, type_name: ptype, span: span });
@@ -506,11 +472,11 @@ fn parse_function(lines: &Vec<&str>, start_i: usize) -> Result<(Function, usize)
     let mut brace_balance = 1; // we saw the opening brace in header
     while idx < lines.len() {
         let raw = lines[idx];
-        let t = strip_inline_comment(raw);
+        let t = helpers::strip_inline_comment(raw);
         let t = t.trim();
 
         // track braces to support nested blocks if needed, but ignore braces inside strings
-        let (opens, closes) = count_braces_outside_strings(t);
+        let (opens, closes) = helpers::count_braces_outside_strings(t);
         if opens > 0 {
             brace_balance += opens;
         }
@@ -549,45 +515,7 @@ fn parse_function(lines: &Vec<&str>, start_i: usize) -> Result<(Function, usize)
     )))
 }
 
-/// Count '{' and '}' that are outside string literals.
-/// Handles both single-quoted and double-quoted strings and backslash escapes.
-fn count_braces_outside_strings(line: &str) -> (usize, usize) {
-    let mut in_string: Option<char> = None;
-    let mut escape = false;
-    let mut opens = 0usize;
-    let mut closes = 0usize;
 
-    for ch in line.chars() {
-        if let Some(q) = in_string {
-            if escape {
-                escape = false;
-                continue;
-            }
-            if ch == '\\' {
-                escape = true;
-                continue;
-            }
-            if ch == q {
-                in_string = None;
-            }
-            // while inside string, ignore other chars
-            continue;
-        } else {
-            // not inside string
-            if ch == '"' || ch == '\'' {
-                in_string = Some(ch);
-                continue;
-            }
-            match ch {
-                '{' => opens += 1,
-                '}' => closes += 1,
-                _ => {}
-            }
-        }
-    }
-
-    (opens, closes)
-}
 
 
 /// Parse a single statement from a trimmed line. `line_no` used for error messages.
@@ -614,17 +542,17 @@ fn parse_stmt(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
         // Check if return is like: return a, b, ...
         // then split, parse each element, and return the vec.
         // Otherwise create new vec of single parsed element.
-        let top_parts = split_comma_top_level(expr_str)
+        let top_parts = helpers::split_comma_top_level(expr_str)
             .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
 
         if top_parts.len() > 1 {
             let mut elems = vec![];
             for p in top_parts {
-                elems.push(parse_expr(p.trim(), span)?);
+                elems.push(parse_expr::parse_expr(p.trim(), span)?);
             }
             return Ok(Stmt::Return(elems));
         } else {
-            let expr = parse_expr(expr_str, span)?;
+            let expr = parse_expr::parse_expr(expr_str, span)?;
             return Ok(Stmt::Return(vec![expr]));
         }
 
@@ -655,11 +583,11 @@ fn parse_stmt(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
                     if n.split_whitespace().count() != 1 {
                         return Err(HolyError::Parse(format!("Invalid multi-variable declaration `{}` at line {}", left, line_no)));
                     }
-                    validate_identifier_name(n, line_no)?;
+                    helpers::validate_identifier_name(n, line_no)?;
                     names.push(n.to_string());
                 }
 
-                let value = parse_expr(right, span)?;
+                let value = parse_expr::parse_expr(right, span)?;
                 // create multiple variables with Infer type; inference happens in semantic phase
                 let mut vars = vec![];
                 for n in &names {
@@ -685,10 +613,10 @@ fn parse_stmt(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
            
             // ensure name doesnt have special characters, except _, and doesnt start with a
             // number.
-            validate_identifier_name(&name, line_no)?;
+            helpers::validate_identifier_name(&name, line_no)?;
 
 
-            let value = parse_expr(right, span)?;
+            let value = parse_expr::parse_expr(right, span)?;
 
             return Ok(Stmt::VarDecl(Variable { name, type_name: var_type, value: Some(value), span: span }));
 
@@ -701,7 +629,7 @@ fn parse_stmt(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
                 return Err(HolyError::Parse(format!("Invalid variable declaration `{}` at line {} column {}", line, span.line, span.column)));
             }
             let name = parts[0].to_string();
-            validate_identifier_name(&name, line_no)?;
+            helpers::validate_identifier_name(&name, line_no)?;
 
             let tp = parse_type(parts[1], &span)?;
             return Ok(Stmt::VarDecl(Variable { name, type_name: tp, value: None, span: span }));
@@ -718,10 +646,10 @@ fn parse_stmt(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
                 let mut names = vec![];
                 for part in left.split(',') {
                     let n = part.trim();
-                    validate_identifier_name(n, line_no)?;
+                    helpers::validate_identifier_name(n, line_no)?;
                     names.push(n.to_string());
                 }
-                let value = parse_expr(right, span)?;
+                let value = parse_expr::parse_expr(right, span)?;
                 return Ok(Stmt::VarAssignMulti(MultiAssignment { names, value, span }));
             }
         }
@@ -732,9 +660,9 @@ fn parse_stmt(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
         let right = line[eq_pos + 1..].trim();
 
         // validate left is a valid identifier
-        validate_identifier_name(name, line_no)?;
+        helpers::validate_identifier_name(name, line_no)?;
 
-        let value = parse_expr(right, span)?;
+        let value = parse_expr::parse_expr(right, span)?;
         return Ok(Stmt::VarAssign(VariableAssignment {
             name: name.to_string(),
             value,
@@ -743,532 +671,15 @@ fn parse_stmt(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
     }
 
     // Expression statement (function call, assignment not supported here yet)
-    let expr = parse_expr(line, span)?;
+    let expr = parse_expr::parse_expr(line, span)?;
     Ok(Stmt::Expr(expr))
 }
-
-/// Checks if a given name is a valid HolyLang identifier.
-/// Rules:
-/// - Can contain letters, digits, and underscore
-/// - Must not start with a digit
-/// - Must not contain a reserved language keyword (i.e. `own`, etc)
-pub fn validate_identifier_name(name: &str, line_no: usize) -> Result<(), HolyError> {
-    if name.is_empty() {
-        return Err(HolyError::Parse(format!("Empty variable name at line {}", line_no)));
-    }
-
-    // Check first character is not a number
-    let first = name.chars().next().unwrap();
-    if first.is_ascii_digit() {
-        return Err(HolyError::Parse(format!(
-            "Variable name `{}` cannot start with a number (line {})",
-            name, line_no
-        )));
-    }
-
-    // Check allowed characters: a-z, A-Z, 0-9, _
-    if !name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
-        return Err(HolyError::Parse(format!(
-            "Variable name `{}` contains invalid characters (only letters, numbers, and `_` allowed) at line {}",
-            name, line_no
-        )));
-    }
-
-    // Check against keywords and error even if name is not the 
-    // same exact match in terms of being upper or lower case.
-    //
-    let name_lower = name.to_string();
-    let name_lower = name_lower.to_lowercase(); 
-    if KEYWORDS.contains(&name_lower.as_ref()) {
-        return Err(HolyError::Parse(format!(
-            "Variable name `{}` is a reserved keyword at line {}",
-            name, line_no
-        )));
-    }
-
-    Ok(())
-}
-
-/// Minimal expression parser:
-/// - handles binary operations (left-associative),
-/// - function calls like add(x, y),
-/// - integer literals,
-/// - variable names
-fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
-    let s = s.trim();
-
-    if s.is_empty() {
-        return Err(HolyError::Parse(format!(
-                    "Empty expression at line {}, column {}",
-                    span.line, span.column
-            )));
-    }
-
-    
-    if s.starts_with('[') {
-        return Err(HolyError::Parse(format!(
-                "Array literal requires an explicit type on right-hand side, e.g. `own x = int32[1,2,3]` (line {} column {})",
-                span.line, span.column
-            )));
-    }
-
-
-    // Unary negate support.
-    if s.starts_with('-') {
-        let rest = s[1..].trim();
-
-        if rest.is_empty() {
-            return Err(HolyError::Parse(format!(
-                "Expected expression before '-' at line {} column {}",
-                span.line, span.column
-            )));
-        }
-
-        // Parse inner expression
-        let inner = parse_expr(rest, span)?;
-
-        // Return the expression wrapped in Unary of operation negate.
-        return Ok(Expr::UnaryOp {
-            op: UnaryOpKind::Negate, 
-            expr: Box::new(inner), 
-            span: span
-        });
-    }
-
-    
-
-    // String Literal ?
-    if s.starts_with('"') {
-        if !s.ends_with('"') {
-            return Err(HolyError::Parse(format!(
-                "String double quotes were never closed (line {} column {})",
-                span.line, span.column
-            )));
-        }
-
-        let str_unescaped = strip_outer_quotes_and_unescape(s);
-
-        let value = Expr::StringLiteral { value: str_unescaped.to_string(), span};
-
-        return Ok(value);
-    }
-
-
-    // Parentheses grouping: if the whole expression is wrapped in top-level parentheses, parse inner
-    if s.starts_with('(') && s.ends_with(')') {
-        // ensure the closing paren matches the opening at position 0 (top-level wrap)
-        let mut depth = 0usize;
-        let mut matched_at_end = false;
-        for (i, c) in s.char_indices() {
-            match c {
-                '(' => depth += 1,
-                ')' => {
-                    if depth > 0 {
-                        depth -= 1;
-                        if depth == 0 && i == s.len() - 1 {
-                            matched_at_end = true;
-                        }
-                    }
-                }
-                _ => {}
-            }
-            if depth == 0 && i < s.len() - 1 {
-                // top-level closed before end means its not a full wrap
-                matched_at_end = false;
-                break;
-            }
-        }
-        if matched_at_end {
-            let inner = &s[1..s.len() - 1];
-            return parse_expr(inner, span);
-        }
-    }
-
-
-
-
-    // special-case: typed array literal on RHS: e.g. "int32[1, 2, 3]" 
-    // detect pattern: "<type_without_brackets>[ ... ]"
-   
-    if let Some(first_bracket) = find_constructor_bracket(&s) && s.ends_with(']') {
-            let constructor_type_str = s[..first_bracket].trim();
-            let elems_str = &s[first_bracket + 1..s.len() - 1];
-
-            if !constructor_type_str.is_empty() {
-                match parse_type(constructor_type_str, &span) {
-                    Ok(inner_ty) => {
-                        // wrap into array type for the variable
-                        let rhs_var_type = Type::Array(Box::new(inner_ty.clone()));
-
-                        let mut elems: Vec<Expr> = Vec::new();
-                        if !elems_str.trim().is_empty() {
-                            let split_parts = split_comma_top_level(elems_str)
-                                                .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
-
-                            for part in split_parts {
-                                let part = part.trim();
-                                if find_constructor_bracket(part).is_some() {
-                                    let nested = parse_typed_array_literal(part, span )?;
-                                    elems.push(nested);
-
-                                } else {
-                                    let expr = parse_expr(part.trim(), span)?;
-                                    // I could override expression's type here because we already
-                                    // know array's type, but I leave it up to semantic analysis 
-                                    // to determine types and error according.
-                                    elems.push(expr);
-                                }
-                            }
-                        }
-
-
-                        // This is so it allows programmer to optionally explicitly set type of
-                        // array on left hand side. 
-                        // we still require rhs var type though, the optional left hand side
-                        // type of array is useful when you calling a function and want to lock
-                        // your code to expect a specific type and error otherwise.
-                        // Example:
-                        // own x int32[] = int32[1, 2, 3] # This is valid
-                        // own x = int32[1, 2, 3] # This is also valid
-                        // own x uint32[] = int32[1, 2, 3] # This is invalid.
-                        //
-                        let mut value = Expr::ArrayLiteral { elements: elems.clone(), span, array_ty: inner_ty.clone() };
-                        if is_array_type(&rhs_var_type) {
-                            if let Type::Array(inner_array_ty) = rhs_var_type.clone() {
-                                value = Expr::ArrayLiteral { elements: elems, span, array_ty: *inner_array_ty };
-                            }
-                        }
-
-                        return Ok(value);
-                }
-                // Not an array literal, but an array access
-                Err(_) => {
-                    let array = parse_expr(constructor_type_str, span)?;
-                    let indx_parts: Vec<&str> = elems_str.split(':').collect();
-
-                    // Treat as access to a single element. 
-                    if indx_parts.len() == 1 {
-                        let index = parse_expr(indx_parts[0], span)?;
-                        
-                        let value = Expr::ArraySingleAccess { array: Box::new(array), index: Box::new(index), span };
-
-                        return Ok(value);
-                    
-                    // We do >= here because indx_parts could themselves contain
-                    // expressions of array access. 
-                    // We only care about first, and last indx_parts.
-                    } else if indx_parts.len() >= 2 {
-                        let start = indx_parts[0].trim();
-                        let end = indx_parts[indx_parts.len() - 1].trim();
-
-                        let mut start_expr: Option<Box<Expr>> = None;
-                        let mut end_expr: Option<Box<Expr>> = None;
-
-                        if start.is_empty() && end.is_empty() {
-                            return Err(HolyError::Parse(format!(
-                                        "Start and or end index are empty! (line {} column {})",
-                                        span.line, span.column
-                                    )));
-                        }
-
-                        // i.e. x[:10]
-                        if start.is_empty() {
-                            end_expr = Some(Box::new(parse_expr(end, span)?));
-                        }
-
-                        // i.e. x[1:]
-                        if end.is_empty() {
-                            start_expr = Some(Box::new(parse_expr(start, span)?));
-                        }
-
-                        // i.e. x[1:10]
-                        if !start.is_empty() && !end.is_empty() {
-                            start_expr = Some(Box::new(parse_expr(start, span)?));
-                            end_expr = Some(Box::new(parse_expr(end, span)?));
-                        }
-
-                        
-                        let value = Expr::ArrayMultipleAccess { array: Box::new(array), start: start_expr, end: end_expr, span };
-
-                        return Ok(value);
-                    }
-                }
-            }
-        }
-       
-    // handle empty typed-array literal like:
-    // own x = int32[]
-    } else if s.ends_with("[]") {
-        let type_str = s[..s.len() - 2].trim();
-        if !type_str.is_empty() {
-            // parse the inner element type (may be nested like "int32[]", parse_type handles nesting)
-            let inner_ty = parse_type(type_str, &span)?;
-
-            let rhs_var_type = Type::Array(Box::new(inner_ty.clone()));
-
-            // create empty array literal (no elements)
-            let mut value = Expr::ArrayLiteral {
-                elements: Vec::new(),
-                array_ty: inner_ty.clone(),
-                span,
-            };
-
-            if is_array_type(&rhs_var_type) {
-                if let Type::Array(inner_array_ty) = rhs_var_type.clone() {
-                    value = Expr::ArrayLiteral { elements: Vec::new(), span, array_ty: *inner_array_ty };
-                }
-            }
-            return Ok(value);
-        }
-    }
-
-
-    
-    
-    // Binary plus handling: split on the first operator
-    if let Some((pos, op)) = find_top_level_op_any(s, &['+', '-', '*', '/']) {
-        let left = &s[..pos].trim();
-        let right = &s[pos + 1..].trim();
-        if left.is_empty() {
-            return Err(HolyError::Parse(format!(
-                "Expected expression before '{}' at line {} column {}",
-                op, span.line, span.column
-            )));
-        }
-        if right.is_empty() {
-            return Err(HolyError::Parse(format!(
-                "Expected expression after '{}' at line {} column {}",
-                op, span.line, span.column
-            )));
-        }
-
-        let op_enum = match &op {
-            '+' => BinOpKind::Add,
-            '-' => BinOpKind::Subtract,
-            '*' => BinOpKind::Multiply,
-            '/' => BinOpKind::Divide,
-            o => {
-                return Err(HolyError::Parse(format!(
-                    "Unknown operand {} (line {} column {})",
-                    o,
-                    span.line, span.column
-                )));
-            },
-        };
-
-        let left_expr = parse_expr(left, span)?;
-        let right_expr = parse_expr(right, span)?;
-        return Ok(Expr::BinOp {
-            left: Box::new(left_expr),
-            op: op_enum,
-            right: Box::new(right_expr),
-            span: span,
-        });
-    }
-
-    // Function call: name(arg1, arg2)
-    if let Some(open) = s.find('(') {
-        if s.ends_with(')') {
-            let name = s[..open].trim().to_string();
-            let args_str = &s[open + 1..s.len() - 1];
-
-            
-            // Argument parsing function
-            let mut args = vec![];
-            if !args_str.trim().is_empty() {
-                let split_args = split_comma_top_level(args_str)
-                                    .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
-
-                for a in split_args {
-                    args.push(parse_expr(a.trim(), span)?);
-                }
-            }
-
-
-            // Check for language-defined functions, otherwise, treat this 
-            // expression as a normal programmer-defined function call.
-            match name.as_ref() {
-                "copy" => {
-                    if args.len() != 1 {
-                        return Err(HolyError::Parse(format!(
-                            "copy() takes exactly 1 argument, {} arguments provided (line {} column {})",
-                            args.len(), span.line, span.column
-                        )));
-                    }
-
-                    return Ok(Expr::CopyCall{ expr: Box::new(args[0].clone()), span: span });
-                }
-
-                "format" => {
-                    if args.len() != 1 {
-                        return Err(HolyError::Parse(format!(
-                            "format() takes exactly 1 argument, {} arguments provided (line {} column {})",
-                            args.len(), span.line, span.column
-                        )));
-                    }
-                    return Ok(Expr::FormatCall{ expr: Box::new(args[0].clone()), span: span });
-
-                }
-
-                _ => return Ok(Expr::Call { name, args, span })   
-            }
-        }
-    }
-
-    // integer literal (int8) ?
-    if let Ok(i) = s.parse::<i8>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Int8(i), span: span });
-    }
-
-    // integer literal (int16) ?
-    if let Ok(i) = s.parse::<i16>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Int16(i), span: span });
-    }
-
-    // integer literal (int32) ?
-    if let Ok(i) = s.parse::<i32>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Int32(i), span: span });
-    }
-
-    // integer literal (int64) ?
-    if let Ok(i) = s.parse::<i64>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Int64(i), span: span });
-    }
-
-    // integer literal (int128) ?
-    if let Ok(i) = s.parse::<i128>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Int128(i), span: span });
-    }
-
-
-    // integer literal (byte, aka uint8) ?
-    if let Ok(i) = s.parse::<u8>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Byte(i), span: span });
-    }
-
-    if let Ok(i) = s.parse::<u16>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Uint16(i), span: span });
-    }
-
-    if let Ok(i) = s.parse::<u32>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Uint32(i), span: span });
-    }
-
-    if let Ok(i) = s.parse::<u64>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Uint64(i), span: span });
-    }
-
-    if let Ok(i) = s.parse::<u128>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Uint128(i), span: span });
-
-    } else if let Err(e) = s.parse::<u128>() {
-        if matches!(e.kind(), IntErrorKind::PosOverflow) {
-            // Return error only if we sure expression is not meant as a float
-            if !s.contains('.') {
-                return Err(HolyError::Parse(format!(
-                    "Literal is an integer but is too big to fit even as an uint128, consider using a float literal (line {} column {})",
-                    span.line, span.column
-                )));
-                
-            }
-        }
-    }
-
-    
-
-    // float literal?
-    if let Ok(f64_val) = s.parse::<f64>() {
-        if f64_val.is_nan() {
-            return Err(HolyError::Parse(format!(
-                "Floating point literal `{}` is Nan (line {} column {})",
-                s, span.line, span.column
-            )));
-        }
-
-        if f64_val.is_infinite() {
-            return Err(HolyError::Parse(format!(
-                "Floating point literal `{}` is Infinite (line {} column {})",
-                s, span.line, span.column
-            )));
-        }
-
-        if s.chars().any(|c| !c.is_ascii_digit() && c != '.') {
-            return Err(HolyError::Parse(format!(
-                "Floating point literal `{}` is invalid (line {} column {})",
-                s, span.line, span.column
-            )));
-
-        }
-
-        let sig_trimmed = s.trim_start_matches('0');
-        let sig_count = sig_trimmed.len();
-
-        
-        // f32 has about 7 decimal digits of precision (log10(2^24) = 7.22).
-        // Use 1 for the dot, that makes 8 a conservative threshold.
-        // It's reasonable for us to check inprecision and just use float64 if sig_count is higher
-        // than 8.
-        //
-        if sig_count <= 8 {
-            let f32_val = f64_val as f32;
-
-            if (!f32_val.is_infinite()) && (!f32_val.is_nan()) {
-                let roundtrip = f32_val as f64;
-                let diff = (f64_val - roundtrip).abs();
-
-                // compute next representable f32 (neighbor) by bit-twiddling
-                let bits = f32_val.to_bits();
-                // increment/decrement to get the neighbor toward +∞
-                let next_bits = if f32_val >= 0.0 { bits.wrapping_add(1) } else { bits.wrapping_sub(1) };
-                let next_up = f32::from_bits(next_bits);
-                let ulp = (next_up as f64 - roundtrip).abs();
-
-                // fallback: if ulp is zero (shouldn't happen for normals/subnormals), use EPSILON heuristic
-                let ok = if ulp > 0.0 {
-                    diff <= (ulp / 2.0)
-                } else {
-                    diff <= (f32::EPSILON as f64) * roundtrip.abs().max(1.0)
-                };
-
-
-                if ok {
-                    return Ok(Expr::FloatLiteral { value: FloatLiteralValue::Float32(f32_val), span: span });
-                }
-            }
-        }
-
-        return Ok(Expr::FloatLiteral { value: FloatLiteralValue::Float64(f64_val), span: span });
-
-
-    } else {
-        // Check to see if parsing as float failed due to it having more than one dot
-        let cleaned_s = s.replace(".", "");
-        if let Ok(f) = cleaned_s.parse::<f64>() {
-            return Err(HolyError::Parse(format!(
-                "Floating point literal `{}` must have only one `.` (line {} column {})",
-                s, span.line, span.column
-            )));
-         
-        }
-    }
-
-    // bool literal ? (true / false) 
-    if let Ok(b) = s.parse::<bool>() {
-        return Ok(Expr::BoolLiteral { value: b, span: span });
-    }
-
-    // otherwise a variable name
-
-    validate_identifier_name(s, span.line)?;
-    Ok(Expr::Var { name: s.to_string(), span: span})
-}
-
 
 
 fn parse_typed_array_literal(s: &str, span: Span) -> Result<Expr, HolyError> {
     let s = s.trim();
     // find the constructor '[' that starts the element list
-    let ctor_pos = find_constructor_bracket(s).ok_or_else(|| {
+    let ctor_pos = helpers::find_constructor_bracket(s).ok_or_else(|| {
         HolyError::Parse(format!("Malformed typed array literal `{}` (line {} column {})", s, span.line, span.column))
     })?;
 
@@ -1284,18 +695,18 @@ fn parse_typed_array_literal(s: &str, span: Span) -> Result<Expr, HolyError> {
         Ok(inner_ty) => {
             let mut elems: Vec<Expr> = Vec::new();
             if !elems_str.trim().is_empty() {
-                let split_parts = split_comma_top_level(elems_str)
+                let split_parts = helpers::split_comma_top_level(elems_str)
                                     .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
 
                 for part in split_parts {
                     let part = part.trim();
                     // If the part itself looks like a typed-array-literal (i.e. has a constructor bracket),
                     // parse it recursively; otherwise use parse_expr for general expressions.
-                    if find_constructor_bracket(part).is_some() {
+                    if helpers::find_constructor_bracket(part).is_some() {
                         let nested = parse_typed_array_literal(part, span)?;
                         elems.push(nested);
                     } else {
-                        let expr = parse_expr(part, span)?;
+                        let expr = parse_expr::parse_expr(part, span)?;
                         elems.push(expr);
                     }
                 }
@@ -1307,184 +718,14 @@ fn parse_typed_array_literal(s: &str, span: Span) -> Result<Expr, HolyError> {
 
         // If its not a type constructor, we gonna assume it's an expression (like an array access)
         Err(e) => {     
-            let expr = parse_expr(s, span)?;
+            let expr = parse_expr::parse_expr(s, span)?;
 
             Ok(expr)
         }
     }
 }
 
-/// Returns the index of the first `[` that does NOT immediately form a `[]` pair.
-/// Useful to distinguish type-suffix `[]` from the constructor `...[ ... ]`.
-fn find_constructor_bracket(s: &str) -> Option<usize> {
-    let bytes = s.as_bytes();
-    let mut i = 0usize;
-    while i < bytes.len() {
-        if bytes[i] == b'[' {
-            // if this '[' is immediately followed by ']' => it's a suffix pair "[]", skip both
-            if i + 1 < bytes.len() && bytes[i + 1] == b']' {
-                i += 2;
-                continue;
-            } else {
-                return Some(i);
-            }
-        } else {
-            i += 1;
-        }
-    }
-    None
-}
 
-
-/// Find the first top-level operator from `ops` (not inside parentheses).
-/// Returns Some((index, operator_char)) if found.
-fn find_top_level_op_any(s: &str, ops: &[char]) -> Option<(usize, char)> {
-    let mut depth = 0usize;
-    for (i, c) in s.char_indices() {
-        match c {
-            '(' => depth += 1,
-            ')' => if depth > 0 { depth -= 1 },
-            _ => {}
-        }
-        if depth == 0 && ops.contains(&c) {
-            return Some((i, c));
-        }
-    }
-    None
-}
-
-
-
-
-/// Split comma-separated args at top-level only.
-/// - respects nested (), [], {}
-/// - respects "..." and '...' with backslash escapes
-/// - returns slices into `s` (no allocation for substrings beyond the Vec)
-pub fn split_comma_top_level(s: &str) -> Result<Vec<&str>, HolyError> {
-    let mut parts = Vec::new();
-    let mut start = 0usize;
-    let mut stack: Vec<char> = Vec::new();
-    let mut in_string: Option<char> = None; // Some('"') or Some('\'')
-    let mut escape = false;
-    let mut just_closed_string = false;
-
-    for (i, c) in s.char_indices() {
-        if let Some(q) = in_string {
-            // inside quoted string
-            if escape {
-                escape = false;
-                continue;
-            }
-            if c == '\\' {
-                escape = true;
-                continue;
-            }
-            if c == q {
-                // closing quote
-                in_string = None;
-                just_closed_string = true; // remember we just closed a string
-            }
-            continue;
-        } else {
-            // if we just closed a string, reject any immediate new quote
-            if just_closed_string {
-                if c == '"' || c == '\'' {
-                    return Err(HolyError::Parse(format!(
-                        "Unexpected adjacent string literal at character index {}",
-                        i
-                    )));
-                }
-                // clear the flag on the first non-whitespace (so "hi" ) or comma or bracket clears it)
-                if !c.is_whitespace() {
-                    just_closed_string = false;
-                }
-            }
-
-            match c {
-                '"' | '\'' => {
-                    in_string = Some(c);
-                }
-                '(' | '[' | '{' => {
-                    stack.push(c);
-                    just_closed_string = false;
-                }
-                ')' => {
-                    if matches!(stack.last(), Some('(')) { stack.pop(); }
-                    just_closed_string = false;
-                }
-                ']' => {
-                    if matches!(stack.last(), Some('[')) { stack.pop(); }
-                    just_closed_string = false;
-                }
-                '}' => {
-                    if matches!(stack.last(), Some('{')) { stack.pop(); }
-                    just_closed_string = false;
-                }
-                ',' => {
-                    if stack.is_empty() && in_string.is_none() {
-                        parts.push(s[start..i].trim());
-                        start = i + c.len_utf8();
-                        just_closed_string = false;
-                    }
-                }
-                _ => {}
-            }
-        }
-    }
-
-    if in_string.is_some() {
-        return Err(HolyError::Parse("Unclosed string literal".into()));
-    }
-
-    if escape {
-        return Err(HolyError::Parse("Invalid trailing escape in string".into()));
-    }
-
-    // push last part
-    parts.push(s[start..].trim());
-    Ok(parts)
-}
-
-
-fn strip_outer_quotes_and_unescape(s: &str) -> String {
-    // This removes surrounding double quotes if both ends are quotes
-    let inner = if s.len() >= 2 && s.starts_with('"') && s.ends_with('"') {
-        &s[1..s.len()-1]
-    } else {
-        s
-    };
-
-    // This unescape of common sequences
-    let mut out = String::with_capacity(inner.len());
-    let mut chars = inner.chars().peekable();
-
-    while let Some(c) = chars.next() {
-        if c == '\\' {
-            match chars.next() {
-                Some('n') => out.push('\n'),
-                Some('r') => out.push('\r'),
-                Some('t') => out.push('\t'),
-                Some('\\') => out.push('\\'),
-                Some('"') => out.push('"'),
-                Some('\'') => out.push('\''),
-                Some('0') => out.push('\0'),
-                // unknown escape: just emit the escaped char as-is
-                Some(other) => out.push(other),
-                None => out.push('\\'), // trailing backslash
-            }
-        } else {
-            out.push(c);
-        }
-    }
-
-    out
-}
-
-
-
-fn is_array_type(t: &Type) -> bool {
-    matches!(t, Type::Array(_))
-}
 
 /// Parse type token like "int32" into `Type`
 fn parse_type(s: &str, span: &Span) -> Result<Type, HolyError> {
@@ -1565,31 +806,31 @@ mod tests {
  
     #[test]
     fn identifier_valid() {
-        assert!(validate_identifier_name("foo", 1).is_ok());
-        assert!(validate_identifier_name("_foo", 1).is_ok());
-        assert!(validate_identifier_name("foo_bar", 1).is_ok());
-        assert!(validate_identifier_name("FOO", 1).is_ok());
-        assert!(validate_identifier_name("x123", 1).is_ok());
-        assert!(validate_identifier_name("1xd", 1).is_err());
+        assert!(helpers::validate_identifier_name("foo", 1).is_ok());
+        assert!(helpers::validate_identifier_name("_foo", 1).is_ok());
+        assert!(helpers::validate_identifier_name("foo_bar", 1).is_ok());
+        assert!(helpers::validate_identifier_name("FOO", 1).is_ok());
+        assert!(helpers::validate_identifier_name("x123", 1).is_ok());
+        assert!(helpers::validate_identifier_name("1xd", 1).is_err());
     }
  
     #[test]
     fn identifier_empty() {
-        assert!(validate_identifier_name("", 1).is_err());
+        assert!(helpers::validate_identifier_name("", 1).is_err());
     }
  
     #[test]
     fn identifier_starts_with_digit() {
-        assert!(validate_identifier_name("1foo", 1).is_err());
-        assert!(validate_identifier_name("9", 1).is_err());
+        assert!(helpers::validate_identifier_name("1foo", 1).is_err());
+        assert!(helpers::validate_identifier_name("9", 1).is_err());
     }
  
     #[test]
     fn identifier_invalid_chars() {
-        assert!(validate_identifier_name("foo-bar", 1).is_err());
-        assert!(validate_identifier_name("foo.bar", 1).is_err());
-        assert!(validate_identifier_name("foo bar", 1).is_err());
-        assert!(validate_identifier_name("foo@bar", 1).is_err());
+        assert!(helpers::validate_identifier_name("foo-bar", 1).is_err());
+        assert!(helpers::validate_identifier_name("foo.bar", 1).is_err());
+        assert!(helpers::validate_identifier_name("foo bar", 1).is_err());
+        assert!(helpers::validate_identifier_name("foo@bar", 1).is_err());
     }
  
     #[test]
@@ -1598,7 +839,7 @@ mod tests {
                     "true", "false", "int8", "int32", "float64", "bool", "string",
                     "copy", "format"] {
             assert!(
-                validate_identifier_name(kw, 1).is_err(),
+                helpers::validate_identifier_name(kw, 1).is_err(),
                 "Expected error for keyword `{}`", kw
             );
         }
@@ -1607,53 +848,49 @@ mod tests {
     #[test]
     fn identifier_keyword_case_insensitive() {
         // Keywords are matched case-insensitively
-        assert!(validate_identifier_name("FUNC", 1).is_err());
-        assert!(validate_identifier_name("OWN", 1).is_err());
-        assert!(validate_identifier_name("Return", 1).is_err());
+        assert!(helpers::validate_identifier_name("FUNC", 1).is_err());
+        assert!(helpers::validate_identifier_name("OWN", 1).is_err());
+        assert!(helpers::validate_identifier_name("Return", 1).is_err());
     }
  
-    // ─────────────────────────────────────────────────────────────
     // split_comma_top_level
-    // ─────────────────────────────────────────────────────────────
  
     #[test]
     fn split_single_item() {
-        let result = split_comma_top_level("a").unwrap();
+        let result = helpers::split_comma_top_level("a").unwrap();
         assert_eq!(result, vec!["a"]);
     }
  
     #[test]
     fn split_multiple_items() {
-        let result = split_comma_top_level("a, b, c").unwrap();
+        let result = helpers::split_comma_top_level("a, b, c").unwrap();
         assert_eq!(result, vec!["a", "b", "c"]);
     }
  
     #[test]
     fn split_nested_parens_not_split() {
-        let result = split_comma_top_level("foo(a, b), c").unwrap();
+        let result = helpers::split_comma_top_level("foo(a, b), c").unwrap();
         assert_eq!(result, vec!["foo(a, b)", "c"]);
     }
  
     #[test]
     fn split_nested_brackets_not_split() {
-        let result = split_comma_top_level("int32[1, 2], int32[3, 4]").unwrap();
+        let result = helpers::split_comma_top_level("int32[1, 2], int32[3, 4]").unwrap();
         assert_eq!(result, vec!["int32[1, 2]", "int32[3, 4]"]);
     }
  
     #[test]
     fn split_string_containing_comma() {
-        let result = split_comma_top_level(r#""hello, world", b"#).unwrap();
+        let result = helpers::split_comma_top_level(r#""hello, world", b"#).unwrap();
         assert_eq!(result, vec![r#""hello, world""#, "b"]);
     }
  
     #[test]
     fn split_unclosed_string_errors() {
-        assert!(split_comma_top_level(r#""unclosed, x"#).is_err());
+        assert!(helpers::split_comma_top_level(r#""unclosed, x"#).is_err());
     }
  
-    // ─────────────────────────────────────────────────────────────
     // Top-level parse: empty / comment-only / outside-function errors
-    // ─────────────────────────────────────────────────────────────
  
     #[test]
     fn parse_empty_source() {
@@ -1673,9 +910,7 @@ mod tests {
         assert_parse_err("own x = 1");
     }
  
-    // ─────────────────────────────────────────────────────────────
     // Function declarations
-    // ─────────────────────────────────────────────────────────────
  
     #[test]
     fn parse_empty_function() {
@@ -1757,9 +992,7 @@ mod tests {
         assert_eq!(f.return_type, Some(vec![Type::Array(Box::new(Type::Int32))]));
     }
  
-    // ─────────────────────────────────────────────────────────────
     // Variable declarations
-    // ─────────────────────────────────────────────────────────────
  
     #[test]
     fn var_decl_inferred_int() {
@@ -1908,9 +1141,7 @@ mod tests {
         assert_parse_err(&wrap("own return = 1"));
     }
  
-    // ─────────────────────────────────────────────────────────────
     // Variable assignment
-    // ─────────────────────────────────────────────────────────────
  
     #[test]
     fn var_assign() {
@@ -1933,9 +1164,7 @@ mod tests {
         }
     }
  
-    // ─────────────────────────────────────────────────────────────
     // Return statements
-    // ─────────────────────────────────────────────────────────────
  
     #[test]
     fn return_single_value() {
@@ -1973,9 +1202,7 @@ mod tests {
         }
     }
  
-    // ─────────────────────────────────────────────────────────────
     // Integer literals — correct type selection
-    // ─────────────────────────────────────────────────────────────
  
     #[test]
     fn integer_literal_fits_int8() {
@@ -2018,9 +1245,7 @@ mod tests {
         assert_parse_err(&wrap(&format!("own x = {}", huge)));
     }
  
-    // ─────────────────────────────────────────────────────────────
     // Float literals
-    // ─────────────────────────────────────────────────────────────
  
     #[test]
     fn float_literal_f32() {
@@ -2048,9 +1273,7 @@ mod tests {
         assert_parse_err(&wrap("own x = 1.2.3"));
     }
  
-    // ─────────────────────────────────────────────────────────────
     // Bool literals
-    // ─────────────────────────────────────────────────────────────
  
     #[test]
     fn bool_literal_true() {
@@ -2068,9 +1291,7 @@ mod tests {
         }
     }
  
-    // ─────────────────────────────────────────────────────────────
     // String literals
-    // ─────────────────────────────────────────────────────────────
  
     #[test]
     fn string_literal_basic() {
@@ -2118,9 +1339,7 @@ mod tests {
         }
     }
  
-    // ─────────────────────────────────────────────────────────────
     // Binary operations
-    // ─────────────────────────────────────────────────────────────
  
     #[test]
     fn binop_add() {
@@ -2196,9 +1415,7 @@ mod tests {
         }
     }
  
-    // ─────────────────────────────────────────────────────────────
     // Unary negate
-    // ─────────────────────────────────────────────────────────────
  
     #[test]
     fn unary_negate_literal() {
@@ -2227,9 +1444,7 @@ mod tests {
         assert_parse_err(&wrap("own x = -"));
     }
  
-    // ─────────────────────────────────────────────────────────────
     // Function calls
-    // ─────────────────────────────────────────────────────────────
  
     #[test]
     fn call_no_args() {
@@ -2272,9 +1487,7 @@ mod tests {
         assert!(matches!(stmts[0], Stmt::Expr(Expr::Call { .. })));
     }
  
-    // ─────────────────â────────────────────────────────────────
     // Built-in: copy()
-    // ─────────────────────────────────────────────────────────────
  
     #[test]
     fn copy_call() {
@@ -2290,7 +1503,6 @@ mod tests {
         assert_parse_err(&wrap("own z = copy()"));
     }
  
-    // ─────────────────────────────────────────────────────────────
     // Built-in: format()
  
     #[test]
@@ -2307,9 +1519,7 @@ mod tests {
         assert_parse_err(&wrap("own s = format(a, b)"));
     }
  
-    // ───────────────────────────────────────────────────────
     // Array access — single element
-    // ─────────────────────────────────────────────────────────────
  
     #[test]
     fn array_single_access() {
@@ -2330,7 +1540,6 @@ mod tests {
     }
  
     // Array access — slice
-    // ─────────────────────────────────────────────────────────────
  
     #[test]
     fn array_slice_both_bounds() {
@@ -2365,9 +1574,7 @@ mod tests {
         }
     }
  
-    // ─────────────────────────────────────────────────────────────
     // Inline comment stripping
-    // ─────────────────────────────────────────────────────────────
  
     #[test]
     fn inline_comment_stripped() {
@@ -2383,9 +1590,7 @@ mod tests {
         assert_eq!(stmts.len(), 1);
     }
  
-    // ─────────────────────────────────────────────────────────────
     // Span tracking
-    // ───────────────────────────────────────────────
  
     #[test]
     fn span_line_number_is_correct() {
@@ -2434,13 +1639,13 @@ mod tests {
         assert_eq!(FloatLiteralValue::Float64(1.0).get_type(), Type::Float64);
     }
 
-    /*
     #[test]
     fn type_display() {
         assert_eq!(Type::Int32.to_string(), "int32");
         assert_eq!(Type::Float64.to_string(), "float64");
         assert_eq!(Type::Bool.to_string(), "bool");
-        assert_eq!(Type::String.to_string(), "string"   assert_eq!(Type::Array(Box::new(Type::Int32)).to_string(), "int32[]");
+        assert_eq!(Type::String.to_string(), "string");
+        assert_eq!(Type::Array(Box::new(Type::Int32)).to_string(), "int32[]");
         assert_eq!(Type::Array(Box::new(Type::Array(Box::new(Type::Int32)))).to_string(), "int32[][]");
         assert_eq!(Type::Infer.to_string(), "infer");
     }
@@ -2453,14 +1658,14 @@ mod tests {
         let stmts = parse_body("own x = 1\nown x = 2");
         assert_eq!(stmts.len(), 2);
         assert!(matches!(stmts[0], Stmt::VarDecl(_)));
-        assert!(matches!(stmts[1], Stmt::VarDec;
+        assert!(matches!(stmts[1], Stmt::VarDecl(_)));
     }
  
     // Empty expression / edge-case errors
  
     #[test]
     fn untyped_bare_bracket_literal_errors() {
-        // '[' wut a type prefix is not allowed
+        // '[' without a type prefix is not allowed
         assert_parse_err(&wrap("own x = [1, 2, 3]"));
     }
  
@@ -2469,6 +1674,5 @@ mod tests {
         // Ensure we don't silently accept malformed call
         assert_parse_err(&wrap("own x = foo(,)"));
     }
-    */
 }
  
