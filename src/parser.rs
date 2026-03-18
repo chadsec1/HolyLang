@@ -354,7 +354,8 @@ fn parse_function(lines: &Vec<&str>, start_i: usize) -> Result<(Function, usize)
     
     let name = after_func[..open_paren].trim().to_string();
 
-    helpers::validate_identifier_name(&name, start_i + 1)?;
+    helpers::validate_identifier_name(&name)
+        .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
 
     let rest = &after_func[open_paren..]; // starts with '('
     let close_paren = rest.find(')').ok_or_else(|| {
@@ -409,7 +410,8 @@ fn parse_function(lines: &Vec<&str>, start_i: usize) -> Result<(Function, usize)
                 return Err(HolyError::Parse(format!("Invalid parameter `{}` at line {}", p, start_i + 1)));
             }
             let pname = parts[0].to_string();
-            helpers::validate_identifier_name(&pname, start_i + 1)?;
+            helpers::validate_identifier_name(&pname)
+                .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
 
             let ptype = parse_type(parts[1], &span)?;
             params.push(Param { name: pname, type_name: ptype, span: span });
@@ -533,7 +535,10 @@ fn parse_stmt(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
                     if n.split_whitespace().count() != 1 {
                         return Err(HolyError::Parse(format!("Invalid multi-variable declaration `{}` at line {}", left, line_no)));
                     }
-                    helpers::validate_identifier_name(n, line_no)?;
+
+                    helpers::validate_identifier_name(n)
+                        .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+
                     names.push(n.to_string());
                 }
 
@@ -563,8 +568,8 @@ fn parse_stmt(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
            
             // ensure name doesnt have special characters, except _, and doesnt start with a
             // number.
-            helpers::validate_identifier_name(&name, line_no)?;
-
+            helpers::validate_identifier_name(&name)
+                .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
 
             let value = parse_expr::parse_expr(right, span)?;
 
@@ -579,7 +584,8 @@ fn parse_stmt(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
                 return Err(HolyError::Parse(format!("Invalid variable declaration `{}` at line {} column {}", line, span.line, span.column)));
             }
             let name = parts[0].to_string();
-            helpers::validate_identifier_name(&name, line_no)?;
+            helpers::validate_identifier_name(&name)
+                .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
 
             let tp = parse_type(parts[1], &span)?;
             return Ok(Stmt::VarDecl(Variable { name, type_name: tp, value: None, span: span }));
@@ -596,7 +602,9 @@ fn parse_stmt(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
                 let mut names = vec![];
                 for part in left.split(',') {
                     let n = part.trim();
-                    helpers::validate_identifier_name(n, line_no)?;
+                    helpers::validate_identifier_name(n)
+                        .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+
                     names.push(n.to_string());
                 }
                 let value = parse_expr::parse_expr(right, span)?;
@@ -610,7 +618,8 @@ fn parse_stmt(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
         let right = line[eq_pos + 1..].trim();
 
         // validate left is a valid identifier
-        helpers::validate_identifier_name(name, line_no)?;
+        helpers::validate_identifier_name(name)
+                .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
 
         let value = parse_expr::parse_expr(right, span)?;
         return Ok(Stmt::VarAssign(VariableAssignment {

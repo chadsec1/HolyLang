@@ -30,60 +30,60 @@ fn assert_parse_err(src: &str) {
 
 #[test]
 fn identifier_valid() {
-    assert!(helpers::validate_identifier_name("foo", 1).is_ok());
-    assert!(helpers::validate_identifier_name("_foo", 1).is_ok());
-    assert!(helpers::validate_identifier_name("foo_bar", 1).is_ok());
-    assert!(helpers::validate_identifier_name("FOO", 1).is_ok());
-    assert!(helpers::validate_identifier_name("x123", 1).is_ok());
-    assert!(helpers::validate_identifier_name("1xd", 1).is_err());
+    assert!(helpers::validate_identifier_name("foo").is_ok());
+    assert!(helpers::validate_identifier_name("_foo").is_ok());
+    assert!(helpers::validate_identifier_name("foo_bar").is_ok());
+    assert!(helpers::validate_identifier_name("FOO").is_ok());
+    assert!(helpers::validate_identifier_name("x123").is_ok());
+    assert!(helpers::validate_identifier_name("1xd").is_err());
 }
 
 #[test]
 fn identifier_empty() {
-    assert!(helpers::validate_identifier_name("", 1).is_err());
-    assert!(helpers::validate_identifier_name(" ", 1).is_err());
-    assert!(helpers::validate_identifier_name("    ", 1).is_err());
+    assert!(helpers::validate_identifier_name("").is_err());
+    assert!(helpers::validate_identifier_name(" ").is_err());
+    assert!(helpers::validate_identifier_name("    ").is_err());
 }
 
 #[test]
 fn identifier_starts_with_digit() {
-    assert!(helpers::validate_identifier_name("1foo", 1).is_err());
-    assert!(helpers::validate_identifier_name("9", 1).is_err());
+    assert!(helpers::validate_identifier_name("1foo").is_err());
+    assert!(helpers::validate_identifier_name("9").is_err());
 }
 
 #[test]
 fn identifier_invalid_chars() {
-    assert!(helpers::validate_identifier_name("foo-bar", 1).is_err());
-    assert!(helpers::validate_identifier_name("foo?bar", 1).is_err());
-    assert!(helpers::validate_identifier_name("foo,bar", 1).is_err());
-    assert!(helpers::validate_identifier_name("foo.bar", 1).is_err());
-    assert!(helpers::validate_identifier_name("foo bar", 1).is_err());
-    assert!(helpers::validate_identifier_name("foo@bar", 1).is_err());
-    assert!(helpers::validate_identifier_name("foo|bar", 1).is_err());
-    assert!(helpers::validate_identifier_name("foo!bar", 1).is_err());
-    assert!(helpers::validate_identifier_name("foo#bar", 1).is_err());
-    assert!(helpers::validate_identifier_name("foo~bar", 1).is_err());
-    assert!(helpers::validate_identifier_name("foo^bar", 1).is_err());
-    assert!(helpers::validate_identifier_name("foo%bar", 1).is_err());
-    assert!(helpers::validate_identifier_name("foo[bar", 1).is_err());
-    assert!(helpers::validate_identifier_name("foo]bar", 1).is_err());
-    assert!(helpers::validate_identifier_name("[foobar]", 1).is_err());
-    assert!(helpers::validate_identifier_name("{foobar}", 1).is_err());
-    assert!(helpers::validate_identifier_name("foo{bar", 1).is_err());
-    assert!(helpers::validate_identifier_name("foo}bar", 1).is_err());
+    assert!(helpers::validate_identifier_name("foo-bar").is_err());
+    assert!(helpers::validate_identifier_name("foo?bar").is_err());
+    assert!(helpers::validate_identifier_name("foo,bar").is_err());
+    assert!(helpers::validate_identifier_name("foo.bar").is_err());
+    assert!(helpers::validate_identifier_name("foo bar").is_err());
+    assert!(helpers::validate_identifier_name("foo@bar").is_err());
+    assert!(helpers::validate_identifier_name("foo|bar").is_err());
+    assert!(helpers::validate_identifier_name("foo!bar").is_err());
+    assert!(helpers::validate_identifier_name("foo#bar").is_err());
+    assert!(helpers::validate_identifier_name("foo~bar").is_err());
+    assert!(helpers::validate_identifier_name("foo^bar").is_err());
+    assert!(helpers::validate_identifier_name("foo%bar").is_err());
+    assert!(helpers::validate_identifier_name("foo[bar").is_err());
+    assert!(helpers::validate_identifier_name("foo]bar").is_err());
+    assert!(helpers::validate_identifier_name("[foobar]").is_err());
+    assert!(helpers::validate_identifier_name("{foobar}").is_err());
+    assert!(helpers::validate_identifier_name("foo{bar").is_err());
+    assert!(helpers::validate_identifier_name("foo}bar").is_err());
 }
 
 #[test]
 fn identifier_reserved_keywords() {
     for kw in consts::RESERVED_KEYWORDS { 
         assert!(
-            helpers::validate_identifier_name(kw, 1).is_err(),
+            helpers::validate_identifier_name(kw).is_err(),
             "Expected error for keyword `{}`", kw
         );
 
 
         assert!(
-            helpers::validate_identifier_name(&kw.to_uppercase(), 1).is_err(),
+            helpers::validate_identifier_name(&kw.to_uppercase()).is_err(),
             "Expected error for keyword `{}`", &kw.to_uppercase()
         );
 

@@ -474,7 +474,9 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
 
     // otherwise a variable name
 
-    helpers::validate_identifier_name(s, span.line)?;
+    helpers::validate_identifier_name(s)
+        .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+
     Ok(Expr::Var { name: s.to_string(), span: span})
 }
 

@@ -180,25 +180,22 @@ pub fn is_array_type(t: &Type) -> bool {
 /// - Can contain letters, digits, and underscore
 /// - Must not start with a digit
 /// - Must not contain a reserved language keyword (i.e. `own`, etc)
-pub fn validate_identifier_name(name: &str, line_no: usize) -> Result<(), HolyError> {
+pub fn validate_identifier_name(name: &str) -> Result<(), HolyError> {
     if name.is_empty() {
-        return Err(HolyError::Parse(format!("Empty variable name at line {}", line_no)));
+        return Err(HolyError::Parse("Empty variable name (You most likely have invalid syntax)".to_string()));
     }
 
     // Check first character is not a number
     let first = name.chars().next().unwrap();
     if first.is_ascii_digit() {
-        return Err(HolyError::Parse(format!(
-            "Variable name `{}` cannot start with a number (line {})",
-            name, line_no
-        )));
+        return Err(HolyError::Parse(format!("Variable name `{}` cannot start with a number!", name)));
     }
 
     // Check allowed characters: a-z, A-Z, 0-9, _
     if !name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
         return Err(HolyError::Parse(format!(
-            "Variable name `{}` contains invalid characters (only letters, numbers, and `_` allowed) at line {}",
-            name, line_no
+            "Variable name `{}` contains invalid characters (only letters, numbers, and `_` allowed)",
+            name
         )));
     }
 
@@ -208,10 +205,7 @@ pub fn validate_identifier_name(name: &str, line_no: usize) -> Result<(), HolyEr
     let name_lower = name.to_string();
     let name_lower = name_lower.to_lowercase(); 
     if consts::RESERVED_KEYWORDS.contains(&name_lower.as_ref()) {
-        return Err(HolyError::Parse(format!(
-            "Variable name `{}` is a reserved keyword at line {}",
-            name, line_no
-        )));
+        return Err(HolyError::Parse(format!("Variable name `{}` is a reserved keyword", name)));
     }
 
     Ok(())
