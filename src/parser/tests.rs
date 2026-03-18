@@ -543,7 +543,7 @@ use super::*;
  
     #[test]
     fn integer_literal_int128_boundary() {
-        // 9223372036854775807 fits int64, 9223372036854775808 does not
+        // 170141183460469231731687303715884105727 fits int128,  170141183460469231731687303715884105728 does not
         let stmts = parse_body("own a = 170141183460469231731687303715884105727\nown b = 170141183460469231731687303715884105728");
         if let Stmt::VarDecl(v) = &stmts[0] {
             if let Some(Expr::IntLiteral { value, .. }) = &v.value {
@@ -557,7 +557,16 @@ use super::*;
         }
     }
 
-
+    #[test]
+    fn integer_literal_fits_uint128() {
+        let stmts = parse_body("own x = 170141183460469231731687303715884105728");
+        if let Stmt::VarDecl(v) = &stmts[0] {
+            if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                assert!(matches!(value, IntLiteralValue::Uint128(170141183460469231731687303715884105728)));
+            } else { panic!(); }
+        }
+    }
+ 
 
 
     #[test]
