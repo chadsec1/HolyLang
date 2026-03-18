@@ -1,11 +1,14 @@
 use super::*;
 
 
-/// Minimal expression parser:
+/// Expression parser:
 /// - handles binary operations (left-associative),
+/// - handles unary operations (like negate)
 /// - function calls like add(x, y),
+/// - Internal "function" calls (like CopyCall, FormatCall, etc),
 /// - integer literals,
-/// - variable names
+/// - float literals
+/// - variables
 pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
     let s = s.trim();
 

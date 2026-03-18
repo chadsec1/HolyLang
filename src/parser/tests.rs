@@ -424,8 +424,7 @@ use super::*;
         }
     }
  
-    // Integer literals — correct type selection
- 
+    // Integer literals, correct type inferrence tests
     #[test]
     fn integer_literal_fits_int8() {
         let stmts = parse_body("own x = 1");
@@ -451,6 +450,34 @@ use super::*;
             }
         }
     }
+
+
+    #[test]
+    fn integer_literal_fits_int16() {
+        let stmts = parse_body("own x = 128");
+        if let Stmt::VarDecl(v) = &stmts[0] {
+            if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                assert!(matches!(value, IntLiteralValue::Int16(128)));
+            } else { panic!(); }
+        }
+    }
+ 
+    #[test]
+    fn integer_literal_int16_boundary() {
+        // 32767 fits int8, 32768 does not
+        let stmts = parse_body("own a = 32767\nown b = 32768");
+        if let Stmt::VarDecl(v) = &stmts[0] {
+            if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                assert!(matches!(value, IntLiteralValue::Int16(32767)));
+            }
+        }
+        if let Stmt::VarDecl(v) = &stmts[1] {
+            if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                assert!(!matches!(value, IntLiteralValue::Int16(_)));
+            }
+        }
+    }
+
  
     #[test]
     fn integer_literal_negative_via_unary() {
