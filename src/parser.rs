@@ -370,6 +370,12 @@ fn parse_function(lines: &Vec<&str>, start_i: usize) -> Result<(Function, usize)
     })?;
 
     let return_type_str = after_params[..brace_pos].trim();
+    let after_brace = after_params[brace_pos+1..].trim();
+
+    if !after_brace.is_empty() {
+        return Err(HolyError::Parse(format!("Function body statements must start on the next line (line {})", start_i + 1)));
+    }
+
 
     let return_type = if return_type_str.is_empty() {
         None
@@ -427,15 +433,34 @@ fn parse_function(lines: &Vec<&str>, start_i: usize) -> Result<(Function, usize)
         let t = helpers::strip_inline_comment(raw);
         let t = t.trim();
 
-        // track braces to support nested blocks if needed, but ignore braces inside strings
+        // Reject braces attached to other code on the same line.
         let (opens, closes) = helpers::count_braces_outside_strings(t);
-        if opens > 0 {
-            brace_balance += opens;
+
+        if opens > 0 || closes > 0 {
+            // Allow only a line that is exactly "{" or exactly "}".
+            // NOTE: Im keeping this rule for block delimiters.
+            let brace_only = t == "{" || t == "}";
+
+            if !brace_only {
+                return Err(HolyError::Parse(format!(
+                    "Brace must appear on its own line at line {}: `{}`",
+                    idx + 1,
+                    raw
+                )));
+            }
         }
-        if closes > 0 {
-            // avoid underflow: closing more than opened means function end
-            if closes >= brace_balance {
-                // function end
+
+        // Opening brace inside body
+        if t == "{" {
+            brace_balance += 1;
+            idx += 1;
+            continue;
+        }
+
+        // Closing brace inside body ends the function
+        if t == "}" {
+            brace_balance -= 1;
+            if brace_balance == 0 {
                 return Ok((
                     Function {
                         name,
@@ -446,9 +471,9 @@ fn parse_function(lines: &Vec<&str>, start_i: usize) -> Result<(Function, usize)
                     },
                     idx + 1,
                 ));
-            } else {
-                brace_balance -= closes;
             }
+            idx += 1;
+            continue;
         }
 
         // otherwise parse statements inside function
@@ -458,7 +483,7 @@ fn parse_function(lines: &Vec<&str>, start_i: usize) -> Result<(Function, usize)
         }
 
         idx += 1;
-    }
+     }
 
     Err(HolyError::Parse(format!(
         "Unterminated function starting at line {}: `{}`",

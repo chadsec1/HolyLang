@@ -229,12 +229,24 @@ fn parse_function_keyword_name_errors() {
 }
 
 #[test]
+fn parse_function_inline_statements_in_braces_errors() {
+    assert_parse_err("func bad() {own x = 1\n}\n");
+    
+    assert_parse_err("func bad() {\nown x = 1}\n");
+}
+
+#[test]
 fn parse_multiple_functions() {
     let src = "func a() {\n}\nfunc b() {\n}\n";
     let ast = parse(src).unwrap();
     assert_eq!(ast.functions.len(), 2);
     assert_eq!(ast.functions[0].name, "a");
+    assert_eq!(ast.functions[0].params.len(), 0);
+    assert!(ast.functions[0].return_type.is_none());
+    
     assert_eq!(ast.functions[1].name, "b");
+    assert_eq!(ast.functions[1].params.len(), 0);
+    assert!(ast.functions[1].return_type.is_none());
 }
 
 #[test]
