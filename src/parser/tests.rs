@@ -970,7 +970,13 @@ fn span_line_number_is_correct() {
 fn int_literal_get_type() {
     assert_eq!(IntLiteralValue::Int8(1).get_type(), Type::Int8);
     assert_eq!(IntLiteralValue::Int32(1).get_type(), Type::Int32);
+    assert_eq!(IntLiteralValue::Int64(1).get_type(), Type::Int64);
+    assert_eq!(IntLiteralValue::Int128(1).get_type(), Type::Int128);
+    assert_eq!(IntLiteralValue::Byte(1).get_type(), Type::Byte);
+    assert_eq!(IntLiteralValue::Uint16(1).get_type(), Type::Uint16);
+    assert_eq!(IntLiteralValue::Uint32(1).get_type(), Type::Uint32);
     assert_eq!(IntLiteralValue::Uint64(1).get_type(), Type::Uint64);
+    assert_eq!(IntLiteralValue::Uint128(1).get_type(), Type::Uint128);
     assert_eq!(IntLiteralValue::Usize(1).get_type(), Type::Usize);
 }
 

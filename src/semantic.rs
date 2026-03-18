@@ -15,8 +15,8 @@ struct VarInfo {
     
     len: Option<usize> // NOTE: This field purpose is only for partial, simple compile-time safety
                        // for out of bounds array/string indexing/slicing. It is not reliable but
-                       // it will catch most simple out-of-bounds except if the most upstream
-                       // source is a function call. 
+                       // it will catch most simple out-of-bounds (except if the most upstream
+                       // source is a function call). 
                        // This is fine, because Rust automatically inserts bounds checking before
                        // array / string access/slicing anyway!
                        // Rust also will handle literals in expressions smartly so it would also
