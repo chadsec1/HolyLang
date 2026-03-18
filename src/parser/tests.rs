@@ -1,4 +1,6 @@
 use super::*;
+
+use crate::consts;
  
 // Test helper functions
 
@@ -39,6 +41,8 @@ fn identifier_valid() {
 #[test]
 fn identifier_empty() {
     assert!(helpers::validate_identifier_name("", 1).is_err());
+    assert!(helpers::validate_identifier_name(" ", 1).is_err());
+    assert!(helpers::validate_identifier_name("    ", 1).is_err());
 }
 
 #[test]
@@ -50,30 +54,42 @@ fn identifier_starts_with_digit() {
 #[test]
 fn identifier_invalid_chars() {
     assert!(helpers::validate_identifier_name("foo-bar", 1).is_err());
+    assert!(helpers::validate_identifier_name("foo?bar", 1).is_err());
+    assert!(helpers::validate_identifier_name("foo,bar", 1).is_err());
     assert!(helpers::validate_identifier_name("foo.bar", 1).is_err());
     assert!(helpers::validate_identifier_name("foo bar", 1).is_err());
     assert!(helpers::validate_identifier_name("foo@bar", 1).is_err());
+    assert!(helpers::validate_identifier_name("foo|bar", 1).is_err());
+    assert!(helpers::validate_identifier_name("foo!bar", 1).is_err());
+    assert!(helpers::validate_identifier_name("foo#bar", 1).is_err());
+    assert!(helpers::validate_identifier_name("foo~bar", 1).is_err());
+    assert!(helpers::validate_identifier_name("foo^bar", 1).is_err());
+    assert!(helpers::validate_identifier_name("foo%bar", 1).is_err());
+    assert!(helpers::validate_identifier_name("foo[bar", 1).is_err());
+    assert!(helpers::validate_identifier_name("foo]bar", 1).is_err());
+    assert!(helpers::validate_identifier_name("[foobar]", 1).is_err());
+    assert!(helpers::validate_identifier_name("{foobar}", 1).is_err());
+    assert!(helpers::validate_identifier_name("foo{bar", 1).is_err());
+    assert!(helpers::validate_identifier_name("foo}bar", 1).is_err());
 }
 
 #[test]
 fn identifier_reserved_keywords() {
-    for kw in &["func", "own", "return", "for", "forever", "if", "else",
-                "true", "false", "int8", "int32", "float64", "bool", "string",
-                "copy", "format"] {
+    for kw in consts::RESERVED_KEYWORDS { 
         assert!(
             helpers::validate_identifier_name(kw, 1).is_err(),
             "Expected error for keyword `{}`", kw
         );
+
+
+        assert!(
+            helpers::validate_identifier_name(&kw.to_uppercase(), 1).is_err(),
+            "Expected error for keyword `{}`", &kw.to_uppercase()
+        );
+
     }
 }
 
-#[test]
-fn identifier_keyword_case_insensitive() {
-    // Keywords are matched case-insensitively
-    assert!(helpers::validate_identifier_name("FUNC", 1).is_err());
-    assert!(helpers::validate_identifier_name("OWN", 1).is_err());
-    assert!(helpers::validate_identifier_name("Return", 1).is_err());
-}
 
 // split_comma_top_level
 
@@ -147,14 +163,16 @@ fn parse_empty_function() {
 
 #[test]
 fn parse_function_with_params() {
-    let ast = parse("func add(a int32, b int32) int32 {\n}\n").unwrap();
+    let ast = parse("func test(a int32, b uint32, c usize) float32 {\n}\n").unwrap();
     let f = &ast.functions[0];
-    assert_eq!(f.name, "add");
-    assert_eq!(f.params.len(), 2);
+    assert_eq!(f.name, "test");
+    assert_eq!(f.params.len(), 3);
     assert_eq!(f.params[0].name, "a");
     assert_eq!(f.params[0].type_name, Type::Int32);
     assert_eq!(f.params[1].name, "b");
-    assert_eq!(f.params[1].type_name, Type::Int32);
+    assert_eq!(f.params[1].type_name, Type::Uint32);
+    assert_eq!(f.params[2].name, "c");
+    assert_eq!(f.params[2].type_name, Type::Usize);
 }
 
 #[test]
@@ -996,9 +1014,36 @@ fn int_literal_as_u128_unsafe_unsigned() {
 
 #[test]
 #[should_panic]
-fn int_literal_as_u128_unsafe_panics_on_negative_signed() {
+fn int_literal_int8_as_u128_unsafe_panics_on_negative_signed() {
+    IntLiteralValue::Int8(-5).as_u128_UNSAFE();
+}
+
+#[test]
+#[should_panic]
+fn int_literal_int16_as_u128_unsafe_panics_on_negative_signed() {
+    IntLiteralValue::Int16(-5).as_u128_UNSAFE();
+}
+
+#[test]
+#[should_panic]
+fn int_literal_int32_as_u128_unsafe_panics_on_negative_signed() {
     IntLiteralValue::Int32(-5).as_u128_UNSAFE();
 }
+
+#[test]
+#[should_panic]
+fn int_literal_int64_as_u128_unsafe_panics_on_negative_signed() {
+    IntLiteralValue::Int64(-5).as_u128_UNSAFE();
+}
+
+#[test]
+#[should_panic]
+fn int_literal_int128_as_u128_unsafe_panics_on_negative_signed() {
+    IntLiteralValue::Int128(-5).as_u128_UNSAFE();
+}
+
+
+
 
 // FloatLiteralValue helpers
 #[test]
