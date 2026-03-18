@@ -506,6 +506,61 @@ use super::*;
 
 
     #[test]
+    fn integer_literal_fits_int64() {
+        let stmts = parse_body("own x = 2147483648");
+        if let Stmt::VarDecl(v) = &stmts[0] {
+            if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                assert!(matches!(value, IntLiteralValue::Int64(2147483648)));
+            } else { panic!(); }
+        }
+    }
+ 
+    #[test]
+    fn integer_literal_int64_boundary() {
+        // 9223372036854775807 fits int64, 9223372036854775808 does not
+        let stmts = parse_body("own a = 9223372036854775807\nown b = 9223372036854775808");
+        if let Stmt::VarDecl(v) = &stmts[0] {
+            if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                assert!(matches!(value, IntLiteralValue::Int64(9223372036854775807)));
+            }
+        }
+        if let Stmt::VarDecl(v) = &stmts[1] {
+            if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                assert!(!matches!(value, IntLiteralValue::Int64(_)));
+            }
+        }
+    }
+
+    #[test]
+    fn integer_literal_fits_int128() {
+        let stmts = parse_body("own x = 9223372036854775808");
+        if let Stmt::VarDecl(v) = &stmts[0] {
+            if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                assert!(matches!(value, IntLiteralValue::Int128(9223372036854775808)));
+            } else { panic!(); }
+        }
+    }
+ 
+    #[test]
+    fn integer_literal_int128_boundary() {
+        // 9223372036854775807 fits int64, 9223372036854775808 does not
+        let stmts = parse_body("own a = 170141183460469231731687303715884105727\nown b = 170141183460469231731687303715884105728");
+        if let Stmt::VarDecl(v) = &stmts[0] {
+            if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                assert!(matches!(value, IntLiteralValue::Int128(170141183460469231731687303715884105727)));
+            }
+        }
+        if let Stmt::VarDecl(v) = &stmts[1] {
+            if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                assert!(!matches!(value, IntLiteralValue::Int128(_)));
+            }
+        }
+    }
+
+
+
+
+    #[test]
     fn integer_literal_negative_via_unary() {
         let stmts = parse_body("own x = -1");
         if let Stmt::VarDecl(v) = &stmts[0] {
