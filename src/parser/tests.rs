@@ -318,7 +318,6 @@ use super::*;
         let stmts = parse_body("own x = int32[]");
         if let Stmt::VarDecl(v) = &stmts[0] {
             if let Some(Expr::ArrayLiteral { elements, .. }) = &v.value {
-                println!("Wtf ? {:?}", elements);
                 assert!(elements.is_empty());
             } else {
                 panic!("Expected ArrayLiteral");
@@ -677,6 +676,30 @@ use super::*;
             } else { panic!(); }
         }
     }
+
+
+    #[test]
+    fn string_literal_containing_curly_brackets_end() {
+        // '}' inside a string must not be treated as a function closing curly bracket.
+        let stmts = parse_body(r#"own x = "hello } world""#);
+        if let Stmt::VarDecl(v) = &stmts[0] {
+            if let Some(Expr::StringLiteral { value, .. }) = &v.value {
+                assert_eq!(value, "hello } world");
+            } else { panic!(); }
+        }
+    }
+ 
+    #[test]
+    fn string_literal_containing_curly_brackets_start() {
+        // '{' inside a string must not be treated as a function start curly bracket.
+        let stmts = parse_body(r#"own x = "hello { world""#);
+        if let Stmt::VarDecl(v) = &stmts[0] {
+            if let Some(Expr::StringLiteral { value, .. }) = &v.value {
+                assert_eq!(value, "hello { world");
+            } else { panic!(); }
+        }
+    }
+
  
     // Binary operations
  

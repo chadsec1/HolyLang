@@ -12,12 +12,6 @@ mod parse_expr;
 pub(crate) use helpers::validate_identifier_name;
 
 
-const KEYWORDS: &[&str] = &[
-    "func", "own", "return", "for", "forever", "if", "else", "true", "false",
-    "int8", "int16", "int32", "int64", "int128", "byte", "uint16", "uint32", "uint64",
-    "uint128", "float32", "float64", "usize", "bool", "string", "copy", "format"
-];
-
 /// Types for HolyLang
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {

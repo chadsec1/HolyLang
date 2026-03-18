@@ -1,6 +1,7 @@
 mod parser;
 mod semantic;
 mod error;
+mod consts;
 
 use std::fs;
 

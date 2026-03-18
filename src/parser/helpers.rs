@@ -1,5 +1,6 @@
 use super::*;
 
+use crate::consts;
 
 /// Returns the index of the first `[` that does NOT immediately form a `[]` pair.
 /// Useful to distinguish type-suffix `[]` from the constructor `...[ ... ]`.
@@ -206,7 +207,7 @@ pub fn validate_identifier_name(name: &str, line_no: usize) -> Result<(), HolyEr
     //
     let name_lower = name.to_string();
     let name_lower = name_lower.to_lowercase(); 
-    if KEYWORDS.contains(&name_lower.as_ref()) {
+    if consts::RESERVED_KEYWORDS.contains(&name_lower.as_ref()) {
         return Err(HolyError::Parse(format!(
             "Variable name `{}` is a reserved keyword at line {}",
             name, line_no
