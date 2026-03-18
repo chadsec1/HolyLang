@@ -464,7 +464,7 @@ use super::*;
  
     #[test]
     fn integer_literal_int16_boundary() {
-        // 32767 fits int8, 32768 does not
+        // 32767 fits int16, 32768 does not
         let stmts = parse_body("own a = 32767\nown b = 32768");
         if let Stmt::VarDecl(v) = &stmts[0] {
             if let Some(Expr::IntLiteral { value, .. }) = &v.value {
@@ -478,7 +478,33 @@ use super::*;
         }
     }
 
+    #[test]
+    fn integer_literal_fits_int32() {
+        let stmts = parse_body("own x = 32768");
+        if let Stmt::VarDecl(v) = &stmts[0] {
+            if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                assert!(matches!(value, IntLiteralValue::Int32(32768)));
+            } else { panic!(); }
+        }
+    }
  
+    #[test]
+    fn integer_literal_int32_boundary() {
+        // 2147483647 fits int32, 2147483648 does not
+        let stmts = parse_body("own a = 2147483647\nown b = 2147483648");
+        if let Stmt::VarDecl(v) = &stmts[0] {
+            if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                assert!(matches!(value, IntLiteralValue::Int32(2147483647)));
+            }
+        }
+        if let Stmt::VarDecl(v) = &stmts[1] {
+            if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                assert!(!matches!(value, IntLiteralValue::Int32(_)));
+            }
+        }
+    }
+
+
     #[test]
     fn integer_literal_negative_via_unary() {
         let stmts = parse_body("own x = -1");
