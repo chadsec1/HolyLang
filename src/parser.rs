@@ -6,7 +6,7 @@ use std::num::IntErrorKind;
 const KEYWORDS: &[&str] = &[
     "func", "own", "return", "for", "forever", "if", "else", "true", "false",
     "int8", "int16", "int32", "int64", "int128", "byte", "uint16", "uint32", "uint64",
-    "uint128", "float32", "float64", "usize", "bool", "string", "copy"
+    "uint128", "float32", "float64", "usize", "bool", "string", "copy", "format"
 ];
 
 /// Types for HolyLang
@@ -262,11 +262,10 @@ pub enum Expr {
         expr: Box<Expr>,
         span: Span,
     },
-    /*
     FormatCall {
         expr: Box<Expr>,
         span: Span,
-    },*/
+    },
 
 }
 
@@ -383,6 +382,45 @@ pub fn parse(source: &str) -> Result<AST, HolyError> {
     Ok(ast)
 }
 
+/// Remove an inline `#` comment from `s`, but only when the `#` is outside
+/// single- or double-quoted string literals. Preserves contents when `#` is inside a string.
+fn strip_inline_comment(s: &str) -> String {
+    let mut in_string: Option<char> = None;
+    let mut escape = false;
+
+    for (i, c) in s.char_indices() {
+        if let Some(q) = in_string {
+            if escape {
+                escape = false;
+                continue;
+            }
+            if c == '\\' {
+                escape = true;
+                continue;
+            }
+            if c == q {
+                in_string = None;
+            }
+            // while inside string, ignore all other chars
+            continue;
+        } else {
+            // not in string
+            if c == '"' || c == '\'' {
+                in_string = Some(c);
+                continue;
+            }
+            if c == '#' {
+                // found comment start outside of any string, so we should strip from here
+                return s[..i].trim_end().to_string();
+            }
+        }
+    }
+
+    // no comment found (or only inside strings)
+    s.to_string()
+}
+
+
 /// Parse function starting at index `start_i`.
 /// Returns (Function, index after function end).
 fn parse_function(lines: &Vec<&str>, start_i: usize) -> Result<(Function, usize), HolyError> {
@@ -427,7 +465,11 @@ fn parse_function(lines: &Vec<&str>, start_i: usize) -> Result<(Function, usize)
             let inner = &return_type_str[1..return_type_str.len()-1];
             let mut types = Vec::new();
             if !inner.trim().is_empty() {
-                for part in split_comma_top_level(inner) {
+                let split_parts = split_comma_top_level(inner)
+                    .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+
+
+                for part in split_parts {
                     let t = parse_type(part.trim(), &span)?;
                     types.push(t);
                 }
@@ -464,15 +506,17 @@ fn parse_function(lines: &Vec<&str>, start_i: usize) -> Result<(Function, usize)
     let mut brace_balance = 1; // we saw the opening brace in header
     while idx < lines.len() {
         let raw = lines[idx];
-        let t = raw.trim();
+        let t = strip_inline_comment(raw);
+        let t = t.trim();
 
-        // track braces to support nested blocks if needed
-        if t.contains('{') {
-            brace_balance += t.matches('{').count();
+        // track braces to support nested blocks if needed, but ignore braces inside strings
+        let (opens, closes) = count_braces_outside_strings(t);
+        if opens > 0 {
+            brace_balance += opens;
         }
-        if t.contains('}') {
-            brace_balance -= t.matches('}').count();
-            if brace_balance <= 0 {
+        if closes > 0 {
+            // avoid underflow; closing more than opened means function end
+            if closes >= brace_balance {
                 // function end
                 return Ok((
                     Function {
@@ -484,6 +528,8 @@ fn parse_function(lines: &Vec<&str>, start_i: usize) -> Result<(Function, usize)
                     },
                     idx + 1,
                 ));
+            } else {
+                brace_balance -= closes;
             }
         }
 
@@ -502,6 +548,47 @@ fn parse_function(lines: &Vec<&str>, start_i: usize) -> Result<(Function, usize)
         lines[start_i]
     )))
 }
+
+/// Count '{' and '}' that are outside string literals.
+/// Handles both single-quoted and double-quoted strings and backslash escapes.
+fn count_braces_outside_strings(line: &str) -> (usize, usize) {
+    let mut in_string: Option<char> = None;
+    let mut escape = false;
+    let mut opens = 0usize;
+    let mut closes = 0usize;
+
+    for ch in line.chars() {
+        if let Some(q) = in_string {
+            if escape {
+                escape = false;
+                continue;
+            }
+            if ch == '\\' {
+                escape = true;
+                continue;
+            }
+            if ch == q {
+                in_string = None;
+            }
+            // while inside string, ignore other chars
+            continue;
+        } else {
+            // not inside string
+            if ch == '"' || ch == '\'' {
+                in_string = Some(ch);
+                continue;
+            }
+            match ch {
+                '{' => opens += 1,
+                '}' => closes += 1,
+                _ => {}
+            }
+        }
+    }
+
+    (opens, closes)
+}
+
 
 /// Parse a single statement from a trimmed line. `line_no` used for error messages.
 fn parse_stmt(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
@@ -524,12 +611,12 @@ fn parse_stmt(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
             )));
         }
             
-        // top-level comma -> tuple-like expression (e.g. "a, b")
-        //
         // Check if return is like: return a, b, ...
         // then split, parse each element, and return the vec.
         // Otherwise create new vec of single parsed element.
-        let top_parts = split_comma_top_level(expr_str);
+        let top_parts = split_comma_top_level(expr_str)
+            .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+
         if top_parts.len() > 1 {
             let mut elems = vec![];
             for p in top_parts {
@@ -758,9 +845,9 @@ fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
             )));
         }
 
-        let str_nq = &s[1..s.len() - 1];
+        let str_unescaped = strip_outer_quotes_and_unescape(s);
 
-        let value = Expr::StringLiteral { value: str_nq.to_string(), span};
+        let value = Expr::StringLiteral { value: str_unescaped.to_string(), span};
 
         return Ok(value);
     }
@@ -815,7 +902,10 @@ fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
 
                         let mut elems: Vec<Expr> = Vec::new();
                         if !elems_str.trim().is_empty() {
-                            for part in split_comma_top_level(elems_str) {
+                            let split_parts = split_comma_top_level(elems_str)
+                                                .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+
+                            for part in split_parts {
                                 let part = part.trim();
                                 if find_constructor_bracket(part).is_some() {
                                     let nested = parse_typed_array_literal(part, span )?;
@@ -983,7 +1073,10 @@ fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
             // Argument parsing function
             let mut args = vec![];
             if !args_str.trim().is_empty() {
-                for a in split_comma_top_level(args_str) {
+                let split_args = split_comma_top_level(args_str)
+                                    .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+
+                for a in split_args {
                     args.push(parse_expr(a.trim(), span)?);
                 }
             }
@@ -1003,19 +1096,16 @@ fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
                     return Ok(Expr::CopyCall{ expr: Box::new(args[0].clone()), span: span });
                 }
 
-                /*
                 "format" => {
                     if args.len() != 1 {
                         return Err(HolyError::Parse(format!(
                             "format() takes exactly 1 argument, {} arguments provided (line {} column {})",
                             args.len(), span.line, span.column
                         )));
-                    
-                        return Ok(Expr::FormatCall{ expr: Box::new(args[0].clone()), span: span });
                     }
+                    return Ok(Expr::FormatCall{ expr: Box::new(args[0].clone()), span: span });
 
                 }
-*/
 
                 _ => return Ok(Expr::Call { name, args, span })   
             }
@@ -1186,12 +1276,15 @@ fn parse_typed_array_literal(s: &str, span: Span) -> Result<Expr, HolyError> {
     let type_str = s[..ctor_pos].trim();
     let elems_str = &s[ctor_pos + 1..s.len() - 1]; // between constructor '[' and final ']'
 
-    // parse the base/inner type (may be nested literal like "int32[]" -> parse_type handles it)
+    // parse the base/inner type (may be nested literal like "int32[]") we let  parse_type handle it
     match parse_type(type_str, &span) {
         Ok(inner_ty) => {
             let mut elems: Vec<Expr> = Vec::new();
             if !elems_str.trim().is_empty() {
-                for part in split_comma_top_level(elems_str) {
+                let split_parts = split_comma_top_level(elems_str)
+                                    .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+
+                for part in split_parts {
                     let part = part.trim();
                     // If the part itself looks like a typed-array-literal (i.e. has a constructor bracket),
                     // parse it recursively; otherwise use parse_expr for general expressions.
@@ -1257,26 +1350,131 @@ fn find_top_level_op_any(s: &str, ops: &[char]) -> Option<(usize, char)> {
     None
 }
 
-/// Split comma-separated args at top-level only (ignore commas in nested calls)
-fn split_comma_top_level(s: &str) -> Vec<&str> {
-    let mut parts = vec![];
+
+
+
+/// Split comma-separated args at top-level only.
+/// - respects nested (), [], {}
+/// - respects "..." and '...' with backslash escapes
+/// - returns slices into `s` (no allocation for substrings beyond the Vec)
+pub fn split_comma_top_level(s: &str) -> Result<Vec<&str>, HolyError> {
+    let mut parts = Vec::new();
     let mut start = 0usize;
-    let mut depth = 0usize;
+    let mut stack: Vec<char> = Vec::new();
+    let mut in_string: Option<char> = None; // Some('"') or Some('\'')
+    let mut escape = false;
+    let mut just_closed_string = false;
+
     for (i, c) in s.char_indices() {
-        match c {
-            '(' | '[' => depth += 1,
-            ')' | ']' => if depth > 0 { depth -= 1 },
-            ',' => {
-                if depth == 0 {
-                    parts.push(s[start..i].trim());
-                    start = i + 1;
+        if let Some(q) = in_string {
+            // inside quoted string
+            if escape {
+                escape = false;
+                continue;
+            }
+            if c == '\\' {
+                escape = true;
+                continue;
+            }
+            if c == q {
+                // closing quote
+                in_string = None;
+                just_closed_string = true; // remember we just closed a string
+            }
+            continue;
+        } else {
+            // if we just closed a string, reject any immediate new quote
+            if just_closed_string {
+                if c == '"' || c == '\'' {
+                    return Err(HolyError::Parse(format!(
+                        "Unexpected adjacent string literal at character index {}",
+                        i
+                    )));
+                }
+                // clear the flag on the first non-whitespace (so "hi" ) or comma or bracket clears it)
+                if !c.is_whitespace() {
+                    just_closed_string = false;
                 }
             }
-            _ => {}
+
+            match c {
+                '"' | '\'' => {
+                    in_string = Some(c);
+                }
+                '(' | '[' | '{' => {
+                    stack.push(c);
+                    just_closed_string = false;
+                }
+                ')' => {
+                    if matches!(stack.last(), Some('(')) { stack.pop(); }
+                    just_closed_string = false;
+                }
+                ']' => {
+                    if matches!(stack.last(), Some('[')) { stack.pop(); }
+                    just_closed_string = false;
+                }
+                '}' => {
+                    if matches!(stack.last(), Some('{')) { stack.pop(); }
+                    just_closed_string = false;
+                }
+                ',' => {
+                    if stack.is_empty() && in_string.is_none() {
+                        parts.push(s[start..i].trim());
+                        start = i + c.len_utf8();
+                        just_closed_string = false;
+                    }
+                }
+                _ => {}
+            }
         }
     }
+
+    if in_string.is_some() {
+        return Err(HolyError::Parse("Unclosed string literal".into()));
+    }
+
+    if escape {
+        return Err(HolyError::Parse("Invalid trailing escape in string".into()));
+    }
+
+    // push last part
     parts.push(s[start..].trim());
-    parts
+    Ok(parts)
+}
+
+
+fn strip_outer_quotes_and_unescape(s: &str) -> String {
+    // This removes surrounding double quotes if both ends are quotes
+    let inner = if s.len() >= 2 && s.starts_with('"') && s.ends_with('"') {
+        &s[1..s.len()-1]
+    } else {
+        s
+    };
+
+    // This unescape of common sequences
+    let mut out = String::with_capacity(inner.len());
+    let mut chars = inner.chars().peekable();
+
+    while let Some(c) = chars.next() {
+        if c == '\\' {
+            match chars.next() {
+                Some('n') => out.push('\n'),
+                Some('r') => out.push('\r'),
+                Some('t') => out.push('\t'),
+                Some('\\') => out.push('\\'),
+                Some('"') => out.push('"'),
+                Some('\'') => out.push('\''),
+                Some('0') => out.push('\0'),
+                // unknown escape: just emit the escaped char as-is
+                Some(other) => out.push(other),
+                None => out.push('\\'), // trailing backslash
+            }
+        } else {
+            out.push(c);
+        }
+    }
+
+    out
 }
 
 
@@ -1336,7 +1534,39 @@ fn parse_type(s: &str, span: &Span) -> Result<Type, HolyError> {
 #[cfg(test)]
 mod tests {
     use super::*; 
+    #[test]
+    fn test_split_comma_top_level() {
+        assert_eq!(split_comma_top_level("a,b,c").unwrap(), vec!["a", "b", "c"]);
+        
+        assert_eq!(
+            split_comma_top_level("foo(1,2), bar, baz(x,y,z)").unwrap(),
+            vec!["foo(1,2)", "bar", "baz(x,y,z)"]
+        );
+
+        assert_eq!(
+            split_comma_top_level(r#"f("x,y", z), g"#).unwrap(),
+            vec![r#"f("x,y", z)"#, "g"]
+        );
+
+        assert_eq!(
+            split_comma_top_level(r#"f("a\, b \" c", d), e"#).unwrap(),
+            vec![r#"f("a\, b \" c", d)"#, "e"]
+        );
+
+        assert_eq!(
+            split_comma_top_level(r#"f(',', x), y"#).unwrap(),
+            vec![r#"f(',', x)"#, "y"]
+        );
+
+
+        assert_eq!(
+            split_comma_top_level(r#"f(',', xde, 69, 23), yaf"#).unwrap(),
+            vec![r#"f(',', xde, 69, 23)"#, "yaf"]
+        );
+
     
+    }
+
     fn internal_integer_literal_parsing(src: &str, name: &str, ty: Type, LiteralValue: IntLiteralValue) -> Result<(), String> {
         let result = parse(&src).map_err(|e| {
             format!("Failed to parse {:?}", e).to_string()
@@ -1471,12 +1701,6 @@ func main() {
 
         let result = internal_integer_literal_parsing(&src, &"x", Type::Uint32, IntLiteralValue::Int64(10000000000));
         assert!(result.is_err(), "The parser did not error on invalid syntax: {:?}", result);
-
-        
-
-
-
-
 
     }
 }
