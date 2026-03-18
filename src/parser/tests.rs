@@ -163,9 +163,12 @@ fn parse_empty_function() {
 
 #[test]
 fn parse_function_with_params() {
-    let ast = parse("func test(a int32, b uint32, c usize) float32 {\n}\n").unwrap();
+    let ast = parse("func hello(a int32, b uint32, c usize) float32 {\n}\n").unwrap();
     let f = &ast.functions[0];
-    assert_eq!(f.name, "test");
+    assert_eq!(f.name, "hello");
+    
+    assert_eq!(f.return_type, Some(vec![Type::Float32]));
+
     assert_eq!(f.params.len(), 3);
     assert_eq!(f.params[0].name, "a");
     assert_eq!(f.params[0].type_name, Type::Int32);
@@ -179,6 +182,9 @@ fn parse_function_with_params() {
 fn parse_function_single_return_type() {
     let ast = parse("func foo() int64 {\n}\n").unwrap();
     let f = &ast.functions[0];
+
+    assert_eq!(f.name, "foo");
+    assert_eq!(f.params.len(), 0);
     assert_eq!(f.return_type, Some(vec![Type::Int64]));
 }
 
@@ -186,6 +192,9 @@ fn parse_function_single_return_type() {
 fn parse_function_multi_return_type() {
     let ast = parse("func foo() (int32, bool) {\n}\n").unwrap();
     let f = &ast.functions[0];
+
+    assert_eq!(f.name, "foo");
+    assert_eq!(f.params.len(), 0);
     assert_eq!(f.return_type, Some(vec![Type::Int32, Type::Bool]));
 }
 
@@ -193,6 +202,9 @@ fn parse_function_multi_return_type() {
 fn parse_function_no_return_type() {
     let ast = parse("func noop() {\n}\n").unwrap();
     let f = &ast.functions[0];
+
+    assert_eq!(f.name, "noop");
+    assert_eq!(f.params.len(), 0);
     assert!(f.return_type.is_none());
 }
 
