@@ -244,10 +244,6 @@ pub enum Expr {
         args: Vec<Expr>,
         span: Span,
     },
-    CopyCall {
-        expr: Box<Expr>,
-        span: Span,
-    },
     ArraySingleAccess {
         array: Box<Expr>,
         index: Box<Expr>,
@@ -259,6 +255,19 @@ pub enum Expr {
         end: Option<Box<Expr>>,
         span: Span,
     },
+
+
+    // internal language functions / expressions hard-coded into the language.
+    CopyCall {
+        expr: Box<Expr>,
+        span: Span,
+    },
+    /*
+    FormatCall {
+        expr: Box<Expr>,
+        span: Span,
+    },*/
+
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -970,22 +979,46 @@ fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
             let name = s[..open].trim().to_string();
             let args_str = &s[open + 1..s.len() - 1];
 
-            // Check to see if it copy(), which is called like a normal function
-            // but its not.
-            if name == "copy" {
-                let arg_expr = parse_expr(args_str, span)?;
-
-                return Ok(Expr::CopyCall{ expr: Box::new(arg_expr), span: span });
-            }
-
-
+            
+            // Argument parsing function
             let mut args = vec![];
             if !args_str.trim().is_empty() {
                 for a in split_comma_top_level(args_str) {
                     args.push(parse_expr(a.trim(), span)?);
                 }
             }
-            return Ok(Expr::Call { name, args, span });
+
+
+            // Check for language-defined functions, otherwise, treat this 
+            // expression as a normal programmer-defined function call.
+            match name.as_ref() {
+                "copy" => {
+                    if args.len() != 1 {
+                        return Err(HolyError::Parse(format!(
+                            "copy() takes exactly 1 argument, {} arguments provided (line {} column {})",
+                            args.len(), span.line, span.column
+                        )));
+                    }
+
+                    return Ok(Expr::CopyCall{ expr: Box::new(args[0].clone()), span: span });
+                }
+
+                /*
+                "format" => {
+                    if args.len() != 1 {
+                        return Err(HolyError::Parse(format!(
+                            "format() takes exactly 1 argument, {} arguments provided (line {} column {})",
+                            args.len(), span.line, span.column
+                        )));
+                    
+                        return Ok(Expr::FormatCall{ expr: Box::new(args[0].clone()), span: span });
+                    }
+
+                }
+*/
+
+                _ => return Ok(Expr::Call { name, args, span })   
+            }
         }
     }
 

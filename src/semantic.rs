@@ -18,6 +18,8 @@ struct VarInfo {
                        // source is a function call. 
                        // This is fine, because Rust automatically inserts bounds checking before
                        // array / string access/slicing anyway!
+                       // Rust also will handle literals in expressions smartly so it would also
+                       // act as an additional protection for our implementation
                        // but it's something to keep in mind.
 }
 
@@ -386,9 +388,9 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
                         }
 
                         for (i, expr) in expr_vec.iter_mut().enumerate() {
-                            let expr_ty = infer_expr_type(expr, &mut locals, fun_sigs, None)?;
-
                             let declared_ty = declared_ty_vec[i].clone();
+                            let expr_ty = infer_expr_type(expr, &mut locals, fun_sigs, Some(declared_ty.clone()))?;
+
 
                             if !type_compatible(&expr_ty, &declared_ty) {
                                 return Err(HolyError::Semantic(format!(
@@ -403,10 +405,8 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
             }
 
             Stmt::Func(_) => {
-                // nested function nodes aren't used in our current parser; ignore or error
-                // we'll ignore for now
-                // and honestly, that's a good thing. HolyLang shall not have nested
-                // functions (ewwww)
+                // nested function nodes aren't currently used, because HolyLang does not allow
+                // nested functions.
             }
         }
     }
