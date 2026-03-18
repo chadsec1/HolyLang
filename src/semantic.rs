@@ -10,6 +10,9 @@ use crate::parser::{
 struct VarInfo {
     ty: Type,
     moved: bool,
+    value: Option<Expr>,
+    
+    len: Option<usize>
 }
 
 /// Public entry: check semantics and fill in inferred types where possible.
@@ -38,11 +41,17 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
     // Build local symbol table starting with params
     let mut locals: HashMap<String, VarInfo> = HashMap::new();
     for p in &func.params {
+
         locals.insert(
             p.name.clone(), 
             VarInfo {
                 ty: p.type_name.clone(),
                 moved: false,
+                
+                // We do not know a parameter value.
+                value: None,
+                // Nor its length
+                len: None
             });
     }
     
@@ -143,13 +152,35 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
                     src.moved = true;
                 }
 
+
+                if var.value.is_none() {
+                    panic!("(Compiler bug) Variable value is none even after we attempted to assign default value! {:?}", var);
+                }
+
+                let mut value_len: Option<usize> = None;
+
+                match var.value.clone().unwrap() {
+                    Expr::ArrayLiteral{elements: elements, array_ty: _, span: _} => {
+                        value_len = Some(elements.len())
+                    }
+
+                    Expr::StringLiteral{value: v, span: _} => {
+                        value_len = Some(v.len())
+                    }
+                    // Other experessions we can't / don't need to store their length
+                    _ => {}
+                }
+
+
                 // register variable in locals (now with concrete type)
                 locals.insert(
                     var.name.clone(),
                     VarInfo {
                         ty: var.type_name.clone(),
+                        value: var.value.clone(),
                         moved: false,
-                    },
+                        len: value_len
+                    }
                 );
             }
 
@@ -184,7 +215,7 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
                         // insert into locals
                         locals.insert(
                             var.name.clone(),
-                            VarInfo { ty: var.type_name.clone(), moved: false }
+                            VarInfo { ty: var.type_name.clone(), value: var.value.clone(), moved: false, len: None }
                         );
                     }
                 } else {
@@ -450,11 +481,13 @@ fn infer_expr_type(
     infer_hint: Option<Type>
 ) -> Result<Type, HolyError> {
     match expr {
+
+        // Note: If infer hint is set, we alter the value to fit the hint, if we can.
         Expr::IntLiteral { value: value, span: span } => {
             if infer_hint.is_some() {
                 let infer_hint = infer_hint.unwrap();
                 match infer_hint {
-                    Type::Int8 | Type::Int16 | Type::Int32 | Type::Int64 | Type::Int128 | Type::Byte | Type::Uint16 | Type::Uint32 | Type::Uint64 | Type::Uint128 => {
+                    Type::Int8 | Type::Int16 | Type::Int32 | Type::Int64 | Type::Int128 | Type::Usize | Type::Byte | Type::Uint16 | Type::Uint32 | Type::Uint64 | Type::Uint128 => {
                         *value = infer_integer_literal_helper(infer_hint, *value, *span)?;
                     }
 
@@ -464,7 +497,6 @@ fn infer_expr_type(
             }
             Ok(value.get_type())
         }
-
         Expr::FloatLiteral { value: value, span: span } => {
             if infer_hint.is_some() {
                 match infer_hint.unwrap() {
@@ -512,7 +544,7 @@ fn infer_expr_type(
 
         Expr::ArraySingleAccess { array, index,  span } => {
             if let Expr::Var { name, span: inner_span } = &**array {
-                if let Some(info) = locals.get(name) {
+                if let Some(info) = locals.get(name).cloned() {
                     if info.moved {
                         return Err(HolyError::Semantic(format!(
                                     "Array access on moved variable `{}` (line {} column {})", 
@@ -520,19 +552,38 @@ fn infer_expr_type(
                                 )));
                     }
 
+                
+                    // Ensure that the type of the index expression is usize.
+                    let ety = infer_expr_type(index, locals, fun_sigs, Some(Type::Usize))?;
+                    if !type_compatible(&ety, &Type::Usize) {
+                        return Err(HolyError::Semantic(format!("Expected array index to be of type `usize`, instead we got `{}` (line {} column {})", ety, span.line, span.column)));
+                    }
+
+
+                    if !matches!(&info.ty, Type::Array(_)) {
+                        return Err(HolyError::Semantic(format!("Array access on non-array variable `{}` (line {} column {})", name, span.line, span.column)));
+                    }
+
+                    // If info length is none, then this must not be an array.
+                    if info.len.is_none() {
+                        panic!("(Compiler bug) this shouldnt ever happen, but it happened. We expected an info.len to be a usize, but we got None. This shouldve been handled by variable declaration/assignment, but apparently not: {:?}", locals);
+                    }
+
+                    check_usize_literal_to_src(&**index, info.len.unwrap(), span.clone(), locals.clone())?;
+                   
                     // Because we are accessing (or shall I say copying) a single element of an array
                     // we only care about the inner type, not the outer array type.
-                    if let Type::Array(unarrayed_ty) = info.ty.clone() {
-                        Ok(*unarrayed_ty)
-                    }  else {
-                        Err(HolyError::Semantic(format!("Array access on non-array variable `{}` (line {} column {})", name, span.line, span.column)))
+                    if let Type::Array(unarrayed_ty) = &info.ty {
+                        Ok(*unarrayed_ty.clone())
+                    } else {
+                        panic!("(Compiler bug) Expected array type, instead we got: {:?}", info.ty);
                     }
                 } else {
                     Err(HolyError::Semantic(format!("Array access on undeclared variable `{}` (line {} column {})", name, span.line, span.column)))
                 }
             } else {
                 return Err(HolyError::Semantic(format!(
-                        "You can only access arrays via variables  (line {} column {})", 
+                        "You can only access declared array variables  (line {} column {})", 
                         span.line, span.column
                     )));
             }
@@ -541,7 +592,7 @@ fn infer_expr_type(
 
         Expr::ArrayMultipleAccess { array, start, end,  span } => {
             if let Expr::Var { name, span: inner_span } = &**array {
-                if let Some(info) = locals.get(name) {
+                if let Some(info) = locals.get(name).cloned() {
                     if info.moved {
                         return Err(HolyError::Semantic(format!(
                                     "Array access on moved variable `{}` (line {} column {})", 
@@ -549,12 +600,49 @@ fn infer_expr_type(
                                 )));
                     }
 
+
+                    if start.is_none() && end.is_none() {
+                        panic!("(Compiler bug) We expected the parser to not allow such invalid syntax of no start and no end indexes in array multiple access");
+                    }
+
+                    if !matches!(&info.ty, Type::Array(_)) {
+                        return Err(HolyError::Semantic(format!("Array access on non-array variable `{}` (line {} column {})", name, span.line, span.column)));
+                    }
+
+                    // If info length is none, then this must not be an array.
+                    if info.len.is_none() {
+                        panic!("(Compiler bug) this shouldnt ever happen, but it happened. We expected an info.len to be a usize, but we got None. This shouldve been handled by variable declaration/assignment, but apparently not: {:?}", locals);
+                    }
+
+
+                    if let Some(s) = &mut *start {
+                        // Ensure that the type of the start index expression is usize, and try to
+                        // convert it if possible.
+                        let start_ety = infer_expr_type(s, locals, fun_sigs, Some(Type::Usize))?;
+                        if !type_compatible(&start_ety, &Type::Usize) {
+                            return Err(HolyError::Semantic(format!("Expected start index to be of type `usize` for array `{}`, instead we got `{}` (line {} column {})", start_ety, name, span.line, span.column)));
+                        }
+
+                        check_usize_literal_to_src(&s, info.len.unwrap(), span.clone(), locals.clone())?;
+                    }
+ 
+                    if let Some(e) = &mut *end {
+                        let end_ety = infer_expr_type(e, locals, fun_sigs, Some(Type::Usize))?;
+                        if !type_compatible(&end_ety, &Type::Usize) {
+                            return Err(HolyError::Semantic(format!("Expected end index to be of type `usize` for array `{}`, instead we got `{}` (line {} column {})", end_ety, name, span.line, span.column)));
+                        }
+
+
+                        check_usize_literal_to_src(&e, info.len.unwrap(), span.clone(), locals.clone())?;
+                    }
+
+
                     if let Type::Array(_) = info.ty.clone() {
                         // We are fine returning Type wrapping in Aray, because thats what the
                         // caller should expect anyway. x[s:e] always returns an array.
                         Ok(info.ty.clone())
                     }  else {
-                        Err(HolyError::Semantic(format!("Array access on non-array variable `{}` (line {} column {})", name, span.line, span.column)))
+                        panic!("(Compiler bug) Expected array type, instead we got: {:?}", info.ty);
                     }
                 } else {
                     Err(HolyError::Semantic(format!("Array access on undeclared variable `{}` (line {} column {})", name, span.line, span.column)))
@@ -591,7 +679,7 @@ fn infer_expr_type(
             
             // Ensure that no negate unary operation is allowed on an unsigned integer.
             if *op == UnaryOpKind::Negate {
-                if matches!(ety, Type::Byte | Type::Uint16 | Type::Uint32 | Type::Uint64 | Type::Uint128) {
+                if matches!(ety, Type::Usize | Type::Byte | Type::Uint16 | Type::Uint32 | Type::Uint64 | Type::Uint128) {
                     return Err(HolyError::Semantic(format!("{} cannot have negate unary operation. (line {} column {})", ety, span.line, span.column)))
                 }
             }
@@ -649,11 +737,63 @@ fn infer_expr_type(
 }
 
 
+// helper: check an expression that's allowed to be an IntLiteral::Usize
+fn check_usize_literal_to_src(expr: &Expr, len: usize, span: Span, locals: HashMap<String, VarInfo>) -> Result<(), HolyError> {
+    match expr {
+        Expr::IntLiteral { value, .. } => match value {
+            IntLiteralValue::Usize(n) => {
+                if *n >= len {
+                    return Err(HolyError::Semantic(format!(
+                        "Index `{}` is out-of-bounds for array length `{}`! Out-of-bounds access will cause a forced panic at runtime! Always check your array length before accessing it! (line {} column {})",
+                        n, len, span.line, span.column
+                    )));
+                }
+                Ok(())
+            }
+            other => panic!(
+                "(Compiler bug) expected IntLiteral::Usize, got {:?}. This should've been caught by other semantic checks.",
+                other
+            ),
+        },
+
+        // TODO IMPORTANT NOTE: If later in transcompile stage, even with all rust's optimization
+        // disabled, rust errors at compile-time because a BinOp expression makes a literal go out
+        // of bounds and rust catches it,
+        // then you're gonna have to uncomment this and parse left and right expressions to ensure
+        // they do n ot go over len.
+        // Expr::BinOp { .. } => Ok(()), // allow expressions evaluated at runtime
+                                      
+        Expr::Var {name, ..} => {
+            if let Some(inner_info) = locals.get(name).cloned() {
+                if inner_info.value.is_none() {
+                    panic!("(Compiler bug) Inner value is None, it should never be none unless youre misusing this function or wrote a bug elsewhere. inner_info: {:?}", inner_info);
+                }
+                check_usize_literal_to_src(&inner_info.value.unwrap(), len, span, locals)?;
+
+                Ok(())
+            } else {
+                panic!("(Compiler bug) We could not find variable `{}` in in `locals`. This should've been caught by other semantic checks, but that didnt happen..", name);
+            }
+        },
+
+        Expr::CopyCall{expr: e, ..} => {
+            check_usize_literal_to_src(e, len, span, locals)?;
+            Ok(())
+        }
+
+
+        // If it's not a literal, like, a function call, etc. We just assume it's within range
+        // Rust will insert checks in the compiled binary that'd panic if you try to go
+        // out-of-bounds.
+        other => Ok(())
+            
+    }
+}
 
 
 fn infer_integer_literal_helper(infer_ty: Type, value: IntLiteralValue, span: Span) -> Result<IntLiteralValue, HolyError> {
 
-    if !matches!(value.get_type(), Type::Int8 | Type::Int16 | Type::Int32 | Type::Int64 | Type::Int128 | Type::Byte | Type::Uint16 | Type::Uint32 | Type::Uint64 | Type::Uint128) {
+    if !matches!(value.get_type(), Type::Int8 | Type::Int16 | Type::Int32 | Type::Int64 | Type::Int128 | Type::Usize | Type::Byte | Type::Uint16 | Type::Uint32 | Type::Uint64 | Type::Uint128) {
         panic!("(Compiler bug) Value {} has unknown type", value);
     }
 
@@ -733,6 +873,15 @@ fn infer_integer_literal_helper(infer_ty: Type, value: IntLiteralValue, span: Sp
         //
 
 
+        Type::Usize => {
+            let val_raw: u128 = value.as_u128_UNSAFE();
+            if val_raw > usize::MAX as u128 {
+                return Err(HolyError::Semantic(format!("Integer literal {} out of range for type {} (line {} column {})", value, infer_ty, span.line, span.column)));
+            }
+            
+            Ok(IntLiteralValue::Usize(val_raw as usize))
+        }
+
         Type::Byte => {
             let val_raw: u128 = value.as_u128_UNSAFE();
             if val_raw > u8::MAX as u128 {
@@ -790,7 +939,7 @@ fn assign_infer_type_to_expr_value(expr: &mut Expr, ty: Type) -> Result<(), Holy
     match expr {
         Expr::IntLiteral { value: value, span: span } => {
             match ty {
-                Type::Int8 | Type::Int16 | Type::Int32 | Type::Int64 | Type::Int128 | Type::Byte | Type::Uint16 | Type::Uint32 | Type::Uint64 | Type::Uint128 => {
+                Type::Int8 | Type::Int16 | Type::Int32 | Type::Int64 | Type::Int128 | Type::Byte | Type::Uint16 | Type::Uint32 | Type::Uint64 | Type::Uint128 | Type::Usize => {
                     *value = infer_integer_literal_helper(ty, *value, *span)?;
                 }
 
@@ -860,7 +1009,10 @@ fn assign_default_value_for_type(expr: &mut Option<Expr>, ty: &Type, span: Span)
         Type::Int128 => {
             *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Int128(0), span: span })
         }
-        
+       
+        Type::Usize => {
+            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Usize(0), span: span })
+        }
         Type::Byte => {
             *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Byte(0), span: span })
         }
@@ -926,6 +1078,8 @@ fn resolve_binary_op_types(a: &Type, b: &Type, span: &Span) -> Result<Type, Holy
         (Int64, Int64) => Ok(Int64),
         (Int128, Int128) => Ok(Int128),
 
+        (Usize, Usize) => Ok(Usize),
+        
         (Byte, Byte) => Ok(Byte),
         (Uint16, Uint16) => Ok(Uint16),
         (Uint32, Uint32) => Ok(Uint32),

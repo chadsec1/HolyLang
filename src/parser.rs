@@ -6,7 +6,7 @@ use std::num::IntErrorKind;
 const KEYWORDS: &[&str] = &[
     "func", "own", "return", "for", "forever", "if", "else", "true", "false",
     "int8", "int16", "int32", "int64", "int128", "byte", "uint16", "uint32", "uint64",
-    "uint128", "float32", "float64", "bool", "string", "copy"
+    "uint128", "float32", "float64", "usize", "bool", "string", "copy"
 ];
 
 /// Types for HolyLang
@@ -23,6 +23,8 @@ pub enum Type {
     Uint32,
     Uint64,
     Uint128,
+
+    Usize,
     
     Float32,
     Float64,
@@ -47,6 +49,8 @@ impl fmt::Display for Type {
             Type::Uint32 => "uint32",
             Type::Uint64 => "uint64",
             Type::Uint128 => "uint128",
+            
+            Type::Usize => "usize",
 
             Type::Float32 => "float32",
             Type::Float64 => "float64",
@@ -68,6 +72,9 @@ impl fmt::Display for IntLiteralValue {
             IntLiteralValue::Int64(v) => write!(f, "{}", v),
             IntLiteralValue::Int128(v) => write!(f, "{}", v),
 
+
+            IntLiteralValue::Usize(v) => write!(f, "{}", v),
+
             IntLiteralValue::Byte(v) => write!(f, "{}", v),
             IntLiteralValue::Uint16(v) => write!(f, "{}", v),
             IntLiteralValue::Uint32(v) => write!(f, "{}", v),
@@ -88,7 +95,8 @@ pub enum IntLiteralValue {
     Uint16(u16),
     Uint32(u32),
     Uint64(u64),
-    Uint128(u128)
+    Uint128(u128),
+    Usize(usize),
 }
 
 impl IntLiteralValue {
@@ -106,6 +114,8 @@ impl IntLiteralValue {
             IntLiteralValue::Uint32(v) => Type::Uint32,
             IntLiteralValue::Uint64(v) => Type::Uint64,
             IntLiteralValue::Uint128(v) => Type::Uint128,
+            
+            IntLiteralValue::Usize(v) => Type::Usize,
 
         }
     }
@@ -156,6 +166,7 @@ impl IntLiteralValue {
             }
 
             // Unsigned types are always safe
+            IntLiteralValue::Usize(v) => v as u128,
             IntLiteralValue::Byte(v) => v as u128,
             IntLiteralValue::Uint16(v) => v as u128,
             IntLiteralValue::Uint32(v) => v as u128,
@@ -244,8 +255,8 @@ pub enum Expr {
     },
     ArrayMultipleAccess {
         array: Box<Expr>,
-        start: Box<Expr>,
-        end: Box<Expr>,
+        start: Option<Box<Expr>>,
+        end: Option<Box<Expr>>,
         span: Span,
     },
 }
@@ -691,7 +702,7 @@ fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
 
     if s.is_empty() {
         return Err(HolyError::Parse(format!(
-                    "Empty expression  at line {}, column {}",
+                    "Empty expression at line {}, column {}",
                     span.line, span.column
             )));
     }
@@ -832,7 +843,7 @@ fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
                         return Ok(value);
                 }
                 // Not an array literal, but an array access
-                Err(e) => {
+                Err(_) => {
                     let array = parse_expr(constructor_type_str, span)?;
                     let indx_parts: Vec<&str> = elems_str.split(':').collect();
 
@@ -847,13 +858,38 @@ fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
                     // We do >= here because indx_parts could themselves contain
                     // expressions of array access. 
                     // We only care about first, and last indx_parts.
-                    // TODO: I dont think this is reliable approach tbh but im bit lazy. 
-                    //       Might be worth stress testing in unit testing..
                     } else if indx_parts.len() >= 2 {
-                        let start = parse_expr(indx_parts[0], span)?;
-                        let end = parse_expr(indx_parts[indx_parts.len() - 1], span)?;
+                        let start = indx_parts[0].trim();
+                        let end = indx_parts[indx_parts.len() - 1].trim();
+
+                        let mut start_expr: Option<Box<Expr>> = None;
+                        let mut end_expr: Option<Box<Expr>> = None;
+
+                        if start.is_empty() && end.is_empty() {
+                            return Err(HolyError::Parse(format!(
+                                        "Start and or end index are empty! (line {} column {})",
+                                        span.line, span.column
+                                    )));
+                        }
+
+                        // i.e. x[:10]
+                        if start.is_empty() {
+                            end_expr = Some(Box::new(parse_expr(end, span)?));
+                        }
+
+                        // i.e. x[1:]
+                        if end.is_empty() {
+                            start_expr = Some(Box::new(parse_expr(start, span)?));
+                        }
+
+                        // i.e. x[1:10]
+                        if !start.is_empty() && !end.is_empty() {
+                            start_expr = Some(Box::new(parse_expr(start, span)?));
+                            end_expr = Some(Box::new(parse_expr(end, span)?));
+                        }
+
                         
-                        let value = Expr::ArrayMultipleAccess { array: Box::new(array), start: Box::new(start), end: Box::new(end), span };
+                        let value = Expr::ArrayMultipleAccess { array: Box::new(array), start: start_expr, end: end_expr, span };
 
                         return Ok(value);
                     }
@@ -1244,6 +1280,8 @@ fn parse_type(s: &str, span: &Span) -> Result<Type, HolyError> {
         "uint64" => Type::Uint64,
         "uint128" => Type::Uint128,
 
+        "usize" => Type::Usize,
+        
         "float32" => Type::Float32,
         "float64" => Type::Float64,
         "bool" => Type::Bool,
