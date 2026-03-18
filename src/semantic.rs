@@ -12,7 +12,13 @@ struct VarInfo {
     moved: bool,
     value: Option<Expr>,
     
-    len: Option<usize>
+    len: Option<usize> // NOTE: This field purpose is only for partial, simple compile-time safety
+                       // for out of bounds array/string indexing/slicing. It is not reliable but
+                       // it will catch most simple out-of-bounds except if the most upstream
+                       // source is a function call. 
+                       // This is fine, because Rust automatically inserts bounds checking before
+                       // array / string access/slicing anyway!
+                       // but it's something to keep in mind.
 }
 
 /// Public entry: check semantics and fill in inferred types where possible.
@@ -213,9 +219,15 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
                         }
 
                         // insert into locals
+                        //
                         locals.insert(
                             var.name.clone(),
-                            VarInfo { ty: var.type_name.clone(), value: var.value.clone(), moved: false, len: None }
+                            VarInfo {
+                                ty: var.type_name.clone(), 
+                                value: var.value.clone(), 
+                                moved: false, 
+                                len: None
+                            }
                         );
                     }
                 } else {
@@ -234,6 +246,10 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
                     ))
                 })?.clone();
 
+                // Its fine to clone and pass it to infer_expr_type in this specific scenario
+                // because we don't give it any infer type hint and therefore no need for it to be
+                // reflected back in locals. I think.
+
                 let expr_ty = infer_expr_type(&mut assign.value.clone(), &mut locals, fun_sigs, None)?;
                 if !type_compatible(&expr_ty, &varinfo.ty) {
                     return Err(HolyError::Semantic(format!(
@@ -242,15 +258,15 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
                     )));
                 }
 
-
+                // Check if source value is a variable and if it is moved. 
+                // And moves it
                 if varinfo.moved {
                     return Err(HolyError::Semantic(format!(
                         "Value assignment to moved variable `{}` (line {} column {})",
                         assign.name, assign.span.line, assign.span.column
                     )));
                 }
-                // Check if source value is a variable and if it is moved. 
-                // And moves it
+              
                 if let Expr::Var { name: src_name, span } = &assign.value {
                     let src = locals.get_mut(src_name).ok_or_else(|| {
                         HolyError::Semantic(format!("Use of undeclared variable `{}` (line {} column {})", src_name, span.line, span.column))
@@ -263,6 +279,25 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
                     // mark source as moved because ownership was transferred
                     src.moved = true;
                 }
+
+
+                let mut value_len: Option<usize> = None;
+
+                match assign.value.clone() {
+                    Expr::ArrayLiteral{elements: elements, array_ty: _, span: _} => {
+                        value_len = Some(elements.len());
+                    }
+
+                    Expr::StringLiteral{value: v, span: _} => {
+                        value_len = Some(v.len());
+                    }
+                    // Other experessions we can't / don't need to store their length
+                    _ => {}
+                }
+
+                // Let us get a mutable varinfo to update length
+                let varinfo = locals.get_mut(&assign.name).unwrap();
+                varinfo.len = value_len;
 
             }
 
@@ -766,7 +801,9 @@ fn check_usize_literal_to_src(expr: &Expr, len: usize, span: Span, locals: HashM
         Expr::Var {name, ..} => {
             if let Some(inner_info) = locals.get(name).cloned() {
                 if inner_info.value.is_none() {
-                    panic!("(Compiler bug) Inner value is None, it should never be none unless youre misusing this function or wrote a bug elsewhere. inner_info: {:?}", inner_info);
+                    // This could happen if the most upstream source is a function call. We just
+                    // return Ok.
+                    return Ok(());
                 }
                 check_usize_literal_to_src(&inner_info.value.unwrap(), len, span, locals)?;
 
