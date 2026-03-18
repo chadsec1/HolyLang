@@ -1,5 +1,6 @@
 # HolyLang
 ![Unit Tests](https://github.com/chadsec1/HolyLang/actions/workflows/unit_tests.yml/badge.svg)
+
 HolyLang programming language: A mix between Go's readability, C's simplicity, and Rust's compile-time safety.
 
 

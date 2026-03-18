@@ -11,12 +11,15 @@ on:
 
 jobs:
   unit_tests:
-    runs-on: latest-ubuntu
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      
       - name: Run unit tests
         run: cargo test --all --verbose
 
