@@ -910,17 +910,34 @@ fn copy_wrong_arg_count_errors() {
 // Built-in: format()
 
 #[test]
-fn format_call() {
-    let stmts = parse_body(r#"own s = format(x)"#);
+fn format_call_binop_expr() {
+    let stmts = parse_body(r#"own s = format("Your age is {17 + 1}")"#);
     if let Stmt::VarDecl(v) = &stmts[0] {
         assert!(matches!(v.value, Some(Expr::FormatCall { .. })));
     }
 }
 
+
 #[test]
-fn format_wrong_arg_count_errors() {
+fn format_call_variable() {
+    let stmts = parse_body("own x = \"World\"\n own s = format(\"Hello, {x}!\")");
+    if let Stmt::VarDecl(v) = &stmts[1] {
+        assert!(matches!(v.value, Some(Expr::FormatCall { .. })));
+    }
+}
+
+#[test]
+fn format_invalid_args_errors() {
     assert_parse_err(&wrap("own s = format()"));
     assert_parse_err(&wrap("own s = format(a, b)"));
+    assert_parse_err(&wrap("own s = format(1)"));
+    assert_parse_err(&wrap("own s = format(true)"));
+    assert_parse_err(&wrap("own s = format(int32[1,2,3])"));
+    assert_parse_err(&wrap("own s = format(format(\"Hi\"))"));
+    
+    assert_parse_err(&wrap("own s = format(\"{}\")"));
+    assert_parse_err(&wrap("own s = format(\"Hi {}\")"));
+    assert_parse_err(&wrap("own s = format(\"Hi\")"));
 }
 
 // Array access — single element
