@@ -134,7 +134,7 @@ pub fn split_comma_top_level(s: &str) -> Result<Vec<&str>, HolyError> {
 }
 
 
-pub fn strip_outer_quotes_and_unescape(s: &str) -> String {
+pub fn strip_outer_quotes_and_unescape(s: &str) -> Result<String, HolyError> {
     // This removes surrounding double quotes if both ends are quotes
     let inner = if s.len() >= 2 && s.starts_with('"') && s.ends_with('"') {
         &s[1..s.len()-1]
@@ -146,6 +146,8 @@ pub fn strip_outer_quotes_and_unescape(s: &str) -> String {
     let mut out = String::with_capacity(inner.len());
     let mut chars = inner.chars().peekable();
 
+    let mut double_quotes_encountered = false;
+
     while let Some(c) = chars.next() {
         if c == '\\' {
             match chars.next() {
@@ -153,19 +155,28 @@ pub fn strip_outer_quotes_and_unescape(s: &str) -> String {
                 Some('r') => out.push('\r'),
                 Some('t') => out.push('\t'),
                 Some('\\') => out.push('\\'),
-                Some('"') => out.push('"'),
+                Some('"') => {
+                    double_quotes_encountered = true;
+                    out.push('"')
+                },
                 Some('\'') => out.push('\''),
                 Some('0') => out.push('\0'),
                 // unknown escape: just emit the escaped char as-is
                 Some(other) => out.push(other),
                 None => out.push('\\'), // trailing backslash
             }
+            
+
+        } else if c == '"' {
+            if double_quotes_encountered == false {
+                return Err(HolyError::Parse(format!("Unterminated string: `{}`", out).into()));
+            }
         } else {
             out.push(c);
         }
     }
 
-    out
+    Ok(out)
 }
 
 
@@ -290,6 +301,79 @@ pub fn count_braces_outside_strings(line: &str) -> (usize, usize) {
     }
 
     (opens, closes)
+}
+
+
+
+pub fn parse_format_string(s: &str) -> Result<(String, Vec<String>), HolyError> {
+    let mut chars = s.chars().peekable();
+    let mut buffer = String::new();
+    let mut expressions_str: Vec<String> = vec![];
+
+    while let Some(c) = chars.next() {
+        match c {
+            '{' => {
+                // literal {{
+                if let Some('{') = chars.peek() {
+                    chars.next();
+                    buffer.push('{');
+                    buffer.push('{');
+                    continue;
+                }
+
+                // placeholder start: { ... }
+                let mut inner = String::new();
+                let mut closed = false;
+
+                while let Some(nc) = chars.next() {
+                    if nc == '}' {
+                        // literal }} inside the placeholder text
+                        if let Some('}') = chars.peek() {
+                            chars.next();
+                            inner.push('}');
+                            inner.push('}');
+                            continue;
+                        } else {
+                            closed = true;
+                            break;
+                        }
+                    } else {
+                        inner.push(nc);
+                    }
+                }
+
+                if !closed {
+                    return Err(HolyError::Parse("Unclosed '{' in input".to_string()));
+                }
+
+                if inner.is_empty() {
+                    return Err(HolyError::Parse(
+                        "Empty string format {} placeholder is not allowed".to_string(),
+                    ));
+                }
+
+                expressions_str.push(inner);
+
+                buffer.push('{');
+                buffer.push('}');
+            }
+
+            '}' => {
+                // literal }}
+                if let Some('}') = chars.peek() {
+                    chars.next();
+                    buffer.push('}');
+                    buffer.push('}');
+                } else {
+                    return Err(HolyError::Parse("Unmatched '}' in input".to_string()));
+                }
+            }
+
+            _ => buffer.push(c),
+        }
+    }
+
+    Ok((buffer, expressions_str))
 }
 
 

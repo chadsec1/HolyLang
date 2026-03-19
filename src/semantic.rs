@@ -147,6 +147,11 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
                 }
 
 
+                let mut value_len: Option<usize> = None;
+                if var.value.is_none() {
+                    panic!("(Compiler bug) Variable value is none even after we attempted to assign default value! {:?}", var);
+                }
+
                 // Check if source value is a variable and if it is moved. 
                 // And moves it
                 if let Some(Expr::Var { name: src_name, span }) = &var.value {
@@ -160,14 +165,10 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
 
                     // mark source as moved because ownership was transferred
                     src.moved = true;
+
+                    // We copy its length
+                    value_len = src.len
                 }
-
-
-                if var.value.is_none() {
-                    panic!("(Compiler bug) Variable value is none even after we attempted to assign default value! {:?}", var);
-                }
-
-                let mut value_len: Option<usize> = None;
 
                 match var.value.clone().unwrap() {
                     Expr::ArrayLiteral{elements: elements, array_ty: _, span: _} => {
@@ -236,7 +237,7 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
                     }
                 } else {
                     return Err(HolyError::Semantic(format!(
-                        "Multi-declarement requires only a single call on the right-hand side",
+                        "Multi-declarement requires only a single function call on the right-hand side",
                         // call_expr.span.line, call_expr.span.column
                     )));
                 }
@@ -270,6 +271,8 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
                         assign.name, assign.span.line, assign.span.column
                     )));
                 }
+                
+                let mut value_len: Option<usize> = None;
               
                 if let Expr::Var { name: src_name, span } = &assign.value {
                     let src = locals.get_mut(src_name).ok_or_else(|| {
@@ -282,10 +285,11 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
 
                     // mark source as moved because ownership was transferred
                     src.moved = true;
+
+                    // We copy its length
+                    value_len = src.len
+
                 }
-
-
-                let mut value_len: Option<usize> = None;
 
                 match assign.value.clone() {
                     Expr::ArrayLiteral{elements: elements, array_ty: _, span: _} => {
@@ -351,7 +355,7 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
 
                 } else {
                     return Err(HolyError::Semantic(format!(
-                        "Multi-assignment requires only a single call on the right-hand side (line {} column {})",
+                        "Multi-assignment requires only a single function call on the right-hand side (line {} column {})",
                         expr.span.line, expr.span.column
                     )));
                 }
@@ -664,6 +668,7 @@ fn infer_expr_type(
                     }
  
                     if let Some(e) = &mut *end {
+                        // Same as above, for end index.
                         let end_ety = infer_expr_type(e, locals, fun_sigs, Some(Type::Usize))?;
                         if !type_compatible(&end_ety, &Type::Usize) {
                             return Err(HolyError::Semantic(format!("Expected end index to be of type `usize` for array `{}`, instead we got `{}` (line {} column {})", end_ety, name, span.line, span.column)));
@@ -673,6 +678,36 @@ fn infer_expr_type(
                         check_usize_literal_to_src(&e, info.len.unwrap(), span.clone(), locals.clone())?;
                     }
 
+
+                    // If both start and end are present, ensure that start is not larger than end,
+                    // and end not smaller than start.
+                    if start.is_some() && end.is_some() {
+                        let start_num: usize = if let Expr::IntLiteral { value: IntLiteralValue::Usize(n), .. } = start.as_deref().unwrap() {
+                            *n
+                        } else {
+                            panic!("(Compiler bug) expected IntLiteral with Usize for start, instead we got {:?}", start);
+                        };
+
+                        let end_num: usize = if let Expr::IntLiteral { value: IntLiteralValue::Usize(n), .. } = end.as_deref().unwrap() {
+                            *n
+                        } else {
+                            panic!("(Compiler bug) expected IntLiteral with Usize for end, instead we got {:?}", end);
+                        };
+
+                        if start_num > end_num {
+                            return Err(HolyError::Semantic(format!(
+                                        "Start index `{}` cannot be larger than end index `{}` (line {} column {})", 
+                                        start_num, end_num, span.line, span.column
+                                    )));
+                        }
+                        // just to be defensive:
+                        if end_num < start_num {
+                            return Err(HolyError::Semantic(format!(
+                                        "End index `{}` cannot be larger than start index `{}` (line {} column {})", 
+                                        end_num, start_num, span.line, span.column
+                                    )));
+                        }
+                    }
 
                     if let Type::Array(_) = info.ty.clone() {
                         // We are fine returning Type wrapping in Aray, because thats what the
@@ -716,7 +751,7 @@ fn infer_expr_type(
             
             // Ensure that no negate unary operation is allowed on an unsigned integer.
             if *op == UnaryOpKind::Negate {
-                if matches!(ety, Type::Usize | Type::Byte | Type::Uint16 | Type::Uint32 | Type::Uint64 | Type::Uint128) {
+                if !matches!(ety, Type::Int8 | Type::Int16 | Type::Int32 | Type::Int64 | Type::Int128) {
                     return Err(HolyError::Semantic(format!("{} cannot have negate unary operation. (line {} column {})", ety, span.line, span.column)))
                 }
             }
@@ -730,26 +765,98 @@ fn infer_expr_type(
             let lty = infer_expr_type(left, locals, fun_sigs, infer_hint.clone())?;
             let rty = infer_expr_type(right, locals, fun_sigs, infer_hint.clone())?;
 
+                
+            if matches!(**left, Expr::CopyCall { .. }) || matches!(**right, Expr::CopyCall { .. }) {
+                return Err(HolyError::Semantic(format!(
+                        "Copying is not needed for variables in binary operations, because they're always copied. Remove the copy call. (line {} column {})", 
+                        span.line, span.column)))
+            }
+                                   
             // If either side is Infer (shouldn't after recursive call), try to resolve:
             let resolved = resolve_binary_op_types(&lty, &rty, &span)?;
-
-
 
             // update literal nodes inside if they were Infer (not necessary here but ok)
             Ok(resolved)
         }
 
         Expr::CopyCall { expr: e, span: span } => {
-            let e_ty = infer_expr_type(e, locals, fun_sigs, infer_hint.clone())?;
 
-            Ok(e_ty)
+            // Catch the "makes no sense" calls (like nested copying, or copying of a literal,  or
+            // array access, or a binary op where left and right are both literals)
+            // Basically, copy call only works on variables.
+            match &mut **e {
+                Expr::CopyCall {span: inner_span, ..} => {
+                    return Err(HolyError::Semantic(format!("Double copying is not needed, Remove the extra copy call. (line {} column {})", inner_span.line, inner_span.column)))
+                }
+                Expr::IntLiteral{span: inner_span, ..} | Expr::FloatLiteral{span: inner_span, ..} | Expr::BoolLiteral{span: inner_span, ..} | Expr::StringLiteral{span: inner_span, ..} | Expr::ArrayLiteral{span: inner_span, ..}   => {
+                    return Err(HolyError::Semantic(format!("Copying a literal is not needed. Remove the copy call and use the literal directly. (line {} column {})", inner_span.line, inner_span.column)))
+                }
+                Expr::ArraySingleAccess{span: inner_span, ..} | Expr::ArrayMultipleAccess{span: inner_span, ..} => {
+                    return Err(HolyError::Semantic(format!(
+                        "Copying is not needed for array access, when you access or slice an array or a string, a new copy is made. Remove the copy call and use operation directly. (line {} column {})", 
+                        inner_span.line, inner_span.column)))
+                }
+                Expr::Var {..} => {
+                    let e_ty = infer_expr_type(e, locals, fun_sigs, infer_hint.clone())?;
+                    Ok(e_ty)
+                }
+
+                other => {
+                    return Err(HolyError::Semantic(format!("Copy call expects a variable, instead we got `{}` (line {} column {})", other, span.line, span.column)))
+
+                }
+            }
+            
 
         }
 
-        Expr::FormatCall { expr: e, span: span } => {
-            let e_ty = infer_expr_type(e, locals, fun_sigs, infer_hint.clone())?;
+        Expr::FormatCall { template: template, expressions: exprs_vec, span: span} => {
 
-            Ok(e_ty)
+            // defensive check, I don't see any reason for infer_hint to be anything other than
+            // none in formatcall expressions, but hey, i could be wrong..
+            if infer_hint.is_some() {
+                panic!("(Compiler bug) Infer hint is {:?}, but we expected none, to formatcall.", infer_hint);
+            }
+
+            if !template.contains("{}") {
+                panic!("(Compielr bug) We got a FormatCall Without any template placeholders, the parser should've not allowed this. template: `{:?}`, expressions: `{:?}`", template, exprs_vec);
+            }
+
+            for e in exprs_vec {
+                // Catch the "makes no sense" calls, like only passing a literal in {..<expr>..} formating
+                // placeholders
+                match e {
+                    Expr::CopyCall {span: inner_span, ..} => {
+                        return Err(HolyError::Semantic(format!("Format calls copy by default, Remove the extra copy call. (line {} column {})", inner_span.line, inner_span.column)))
+                    }
+                    Expr::IntLiteral{span: inner_span, ..} | Expr::FloatLiteral{span: inner_span, ..} | Expr::BoolLiteral{span: inner_span, ..} | Expr::StringLiteral{span: inner_span, ..} | Expr::ArrayLiteral{span: inner_span, ..}   => {
+                        return Err(HolyError::Semantic(format!(
+                                    "Plain literals are not allowed in formating! Remove the format placeholders and use the literal directly! (line {} column {})", 
+                                    inner_span.line, inner_span.column
+                                )))
+                    }
+
+                    Expr::FormatCall{span: inner_span, ..} => {
+                        return Err(HolyError::Semantic(format!("Nested FormatCalls are not allowed. (line {} column {})", inner_span.line, inner_span.column)))
+                    }
+
+
+
+                    _ => {
+                        // We call infer expr type here for it to validate the expression up to most
+                        // upstream expression, and to see if types are compatiable if its a binop, and to
+                        // see if variable exists in scope, etc etc.
+                        // but we don't return inferred type obviously, the formatcall parent experession is
+                        // always of type string.
+                        //
+                        // Likewise, since formatcall takes many expressions, we don't care about
+                        // infer_hint, we wont pass it
+                        infer_expr_type(e, locals, fun_sigs, None)?;
+                    }
+                }
+            }
+
+            Ok(Type::String)
 
         }
         Expr::Call { name: name, args: args, span: span } => {
@@ -1133,6 +1240,8 @@ fn resolve_binary_op_types(a: &Type, b: &Type, span: &Span) -> Result<Type, Holy
         (Float32, Float32) => Ok(Float32),
         (Float64, Float64) => Ok(Float64),
 
+        (Type::String, Type::String) => Err(HolyError::Semantic(format!("Type mismatch in binary operation. To concatnate strings, use `format()` (line {} column {})", span.line, span.column))),
+
         // If one side is Infer, prefer the other side if concrete
         (Infer, t @ _) if *t != Infer => Ok(t.clone()),
         (t @ _, Infer) if *t != Infer => Ok(t.clone()),
@@ -1144,6 +1253,9 @@ fn resolve_binary_op_types(a: &Type, b: &Type, span: &Span) -> Result<Type, Holy
         _ => Err(HolyError::Semantic(format!("Type mismatch in binary operation: `{}` vs `{}` (line {} column {})", a, b, span.line, span.column))),
     }
 }
+
+
+
 
 
 #[cfg(test)]

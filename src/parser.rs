@@ -219,7 +219,8 @@ pub enum Expr {
         span: Span,
     },
     FormatCall {
-        expr: Box<Expr>,
+        template: String,
+        expressions: Vec<Expr>,
         span: Span,
     },
 

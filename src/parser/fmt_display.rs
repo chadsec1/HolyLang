@@ -50,3 +50,25 @@ impl fmt::Display for IntLiteralValue {
 }
 
 
+impl fmt::Display for Expr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let name = match self {
+            Expr::IntLiteral { .. } => "Int Literal",
+            Expr::FloatLiteral { .. } => "Float Literal",
+            Expr::BoolLiteral { .. } => "Bool Literal",
+            Expr::ArrayLiteral { .. } => "Array Literal",
+            Expr::StringLiteral { .. } => "String Literal",
+            Expr::Var { .. } => "Variable",
+            Expr::UnaryOp { .. } => "Unary Operation",
+            Expr::BinOp { .. } => "Binary Operation",
+            Expr::Call { .. } => "Function Call",
+            Expr::ArraySingleAccess { .. } => "Array Index Access",
+            Expr::ArrayMultipleAccess { .. } => "Array Slice Access",
+            Expr::CopyCall { .. } => "Copy Call",
+            Expr::FormatCall { .. } => "Format Call",
+        };
+        write!(f, "{}", name)
+    }
+}
+
+

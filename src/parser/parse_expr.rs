@@ -61,7 +61,8 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
             )));
         }
 
-        let str_unescaped = helpers::strip_outer_quotes_and_unescape(s);
+        let str_unescaped = helpers::strip_outer_quotes_and_unescape(s)
+                                        .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
 
         let value = Expr::StringLiteral { value: str_unescaped.to_string(), span};
 
@@ -302,11 +303,15 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
 
             // Check for language-defined functions, otherwise, treat this 
             // expression as a normal programmer-defined function call.
+            //
+            // Even though the parser in general is pretty dumb, we have to check it a bit more strictly for internal functions whose argument sizes
+            // and argument type are part of the language syntax its self.
+            //
             match name.as_ref() {
                 "copy" => {
                     if args.len() != 1 {
                         return Err(HolyError::Parse(format!(
-                            "copy() takes exactly 1 argument, {} arguments provided (line {} column {})",
+                            "copy() takes exactly 1 argument, instead found {} arguments provided (line {} column {})",
                             args.len(), span.line, span.column
                         )));
                     }
@@ -317,11 +322,43 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
                 "format" => {
                     if args.len() != 1 {
                         return Err(HolyError::Parse(format!(
-                            "format() takes exactly 1 argument, {} arguments provided (line {} column {})",
+                            "format() takes exactly 1 string argument, instead found `{}` arguments provided (line {} column {})",
                             args.len(), span.line, span.column
                         )));
                     }
-                    return Ok(Expr::FormatCall{ expr: Box::new(args[0].clone()), span: span });
+
+                    let format_arg_raw = args[0].clone();
+
+
+                    let raw_str: String = if let Expr::StringLiteral { value: s, .. } = format_arg_raw {
+                            s.to_string()
+                        } else {
+                            return Err(HolyError::Parse(format!(
+                                "Expected a string literal, instead found `{}` (line {} column {})",
+                                format_arg_raw, span.line, span.column
+                            )));
+                        };
+
+
+
+                    let (template_str, expr_str_vec) = helpers::parse_format_string(&raw_str)
+                                                        .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+
+                    // Parse expressions from string to Expr
+                    let mut expr_vec: Vec<Expr> = vec![];
+                    for e in expr_str_vec {
+                        expr_vec.push(parse_expr(e.trim(), span)?);
+                    }
+
+                    if expr_vec.len() == 0 {
+                        return Err(HolyError::Parse(format!(
+                                "format() must have at least one embedded expression! (line {} column {})",
+                                span.line, span.column
+                            )));
+
+                    }
+
+                    return Ok(Expr::FormatCall{ template: template_str, expressions: expr_vec, span: span});
 
                 }
 
