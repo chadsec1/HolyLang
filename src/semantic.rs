@@ -7,10 +7,13 @@ use crate::parser::{
     validate_identifier_name
 };
 
+mod helpers;
+
 #[derive(Clone, Debug)]
 struct VarInfo {
     ty: Type,
     moved: bool,
+    locked: bool,
     value: Option<Expr>,
     
     len: Option<usize> // NOTE: This field purpose is only for partial, simple compile-time safety
@@ -56,6 +59,7 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
             VarInfo {
                 ty: p.type_name.clone(),
                 moved: false,
+                locked: false,
                 
                 // We do not know a parameter value.
                 value: None,
@@ -67,39 +71,8 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
     // Ensure that no code exists after return
     if let Some(last_ret_pos) = func.body.iter().rposition(|s| matches!(s, Stmt::Return(_))) {
         if last_ret_pos + 1 < func.body.len() {
-            // helper to get the span of a statement (so we can point to offending code)
-            fn stmt_span(s: &Stmt) -> Span {
-                match s {
-                    Stmt::VarDecl(v) => v.span,
-                    Stmt::VarAssign(a) => a.span,
-                    Stmt::Expr(e) => expr_span(e),
-                    Stmt::Return(e) => expr_span(&e[0]), // First return element is always present
-                                                        // if there is a return
-                    Stmt::Func(f) => f.span,
-                    Stmt::VarDeclMulti(_, v) => expr_span(v), 
-                    Stmt::VarAssignMulti(ma) => ma.span,
-                }
-            }
-            fn expr_span(e: &Expr) -> Span {
-                match e {
-                    Expr::IntLiteral { span, .. } => *span,
-                    Expr::FloatLiteral { span, .. } => *span,
-                    Expr::BoolLiteral { span, .. } => *span,
-                    Expr::ArrayLiteral { span, .. } => *span,
-                    Expr::StringLiteral { span, .. } => *span,
-
-                    Expr::ArraySingleAccess { span, .. } => *span,
-                    Expr::ArrayMultipleAccess { span, .. } => *span,
-                    Expr::Var { span, .. } => *span,
-                    Expr::BinOp { span, .. } => *span,
-                    Expr::UnaryOp { span, .. } => *span,
-                    Expr::CopyCall { span, .. } => *span,
-                    Expr::FormatCall { span, .. } => *span,
-                    Expr::Call { span, .. } => *span,
-                }
-            }
-
-            let offending_span = stmt_span(&func.body[last_ret_pos + 1]);
+            
+            let offending_span = helpers::stmt_span(&func.body[last_ret_pos + 1]);
             return Err(HolyError::Semantic(format!(
                 "Code after `return` is not allowed (line {} column {})",
                 offending_span.line, offending_span.column
@@ -110,6 +83,8 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
 
     // Walk statements in order. This is a single-pass inference (simple)
     for stmt in &mut func.body {
+        let stmt_span = helpers::stmt_span(&stmt);
+
         match stmt {
             Stmt::VarDecl(var) => {
                 // If var has explicit type: keep it. If Infer: try infer from initializer.
@@ -146,14 +121,25 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
                     }
                 }
 
+            
+                // Check if variable exists in locals and if its locked.
+                if let Some(info) = locals.get(&var.name) {
+                    if info.locked {
+                        return Err(HolyError::Semantic(format!(
+                                "Variable `{}` is locked, therefore you cannot overshadow it (line {} column {})", 
+                                &var.name, var.span.line, var.span.column
+                            )));
+                    }
+                }
+
 
                 let mut value_len: Option<usize> = None;
                 if var.value.is_none() {
                     panic!("(Compiler bug) Variable value is none even after we attempted to assign default value! {:?}", var);
                 }
 
-                // Check if source value is a variable and if it is moved. 
-                // And moves it
+                // Check if source value is a variable and if it is moved, 
+                // and moves it
                 if let Some(Expr::Var { name: src_name, span }) = &var.value {
                     let src = locals.get_mut(src_name).ok_or_else(|| {
                         HolyError::Semantic(format!("Use of undeclared variable `{}` (line {} column {})", src_name, span.line, span.column))
@@ -190,6 +176,7 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
                         ty: var.type_name.clone(),
                         value: var.value.clone(),
                         moved: false,
+                        locked: false,
                         len: value_len
                     }
                 );
@@ -223,6 +210,18 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
                             )));
                         }
 
+                        // Check if variable exists in locals and if its locked.
+                        if let Some(info) = locals.get(&var.name) {
+                            if info.locked {
+                                return Err(HolyError::Semantic(format!(
+                                        "Variable `{}` is locked, therefore you cannot overshadow it (line {} column {})", 
+                                        &var.name, var.span.line, var.span.column
+                                    )));
+                            }
+                        }
+
+
+
                         // insert into locals
                         //
                         locals.insert(
@@ -231,6 +230,7 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
                                 ty: var.type_name.clone(), 
                                 value: var.value.clone(), 
                                 moved: false, 
+                                locked: false,
                                 len: None
                             }
                         );
@@ -269,8 +269,17 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
                     return Err(HolyError::Semantic(format!(
                         "Value assignment to moved variable `{}` (line {} column {})",
                         assign.name, assign.span.line, assign.span.column
-                    )));
+                    ))); 
                 }
+
+                // Check if variable is locked.
+                if varinfo.locked {
+                    return Err(HolyError::Semantic(format!(
+                            "Variable `{}` is locked, therefore you cannot assign to it (line {} column {})", 
+                            &assign.name, assign.span.line, assign.span.column
+                        )));
+                }
+
                 
                 let mut value_len: Option<usize> = None;
               
@@ -343,6 +352,16 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
                             )));
                         }
 
+
+                        // Check if variable is locked.
+                        if varinfo.locked {
+                            return Err(HolyError::Semantic(format!(
+                                    "Variable `{}` is locked, therefore you cannot assign to it (line {} column {})", 
+                                    &var_name, expr.span.line, expr.span.column
+                                )));
+                        }
+
+
                         if !type_compatible(&varinfo.ty, ret_ty) {
                             return Err(HolyError::Semantic(format!(
                                 "Type mismatch for variable `{}`: declared `{}` but call returns `{}` (line {} column {})",
@@ -372,6 +391,57 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
                 }
             }
 
+            Stmt::Lock(expr_vec) => {
+                let mut var_names_to_lock: Vec<String> = vec![];
+
+                for expr in expr_vec.iter_mut() {
+                    match expr {
+                        Expr::Var { name: name, span: span} => {
+                            if var_names_to_lock.contains(name) {
+                                return Err(HolyError::Semantic(format!(
+                                    "Lock arguments have duplicated variable `{}` (line {} column {})",
+                                    name, span.line, span.column
+                                )))
+                            }
+
+                            var_names_to_lock.push(name.to_string());
+
+
+                            // We dont care about its type, we just checking if it exists or not,
+                            // and its contents are valid, and that its not already locked, etc.
+                            infer_expr_type(expr, &mut locals, fun_sigs, None)?;
+
+                        },
+
+
+                        _ => {
+                            return Err(HolyError::Semantic(format!(
+                                "Expected variable name, instead got `{}` (line {} column {})",
+                                expr, stmt_span.line, stmt_span.column
+                            )))
+                        }
+                    }
+                }
+
+
+                for var_name in var_names_to_lock {
+                    let var = locals.get_mut(&var_name).ok_or_else(|| {
+                        panic!("(Compiler bug) Variable doesnt exist in locals despite our earlier call to infer_expr_type shouldve checked the variable thourghly, including its existence, but apparently it didnt. expr_vec: `{:?}`, var_name: {:?}", 
+                            expr_vec, var_name);
+                    })?;
+
+                    if var.locked == true {
+                        return Err(HolyError::Semantic(format!(
+                                "Variable `{}` is already locked (line {} column {})",
+                                var_name, stmt_span.line, stmt_span.column
+                            )))
+
+                    }
+
+                    var.locked = true;
+                }
+
+            }
             Stmt::Return(expr_vec) => {
                 // If function has no declared return type, we error.
                 match &func.return_type {
@@ -734,6 +804,8 @@ fn infer_expr_type(
                                 name, span.line, span.column
                             )));
                 }
+
+                
                 Ok(info.ty.clone())
             } else {
                 

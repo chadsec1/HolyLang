@@ -995,12 +995,18 @@ fn array_slice_open_end() {
     }
 }
 
+#[test]
+fn array_access_errors() {
+    assert_parse_err(&wrap("own v = arr[:]"));
+    assert_parse_err(&wrap("own v = arr[]"));
+}
+
 // Inline comment stripping
 
 #[test]
 fn inline_comment_stripped() {
     // Statement followed by inline comment should still parse cleanly
-    let stmts = parse_body("own x = 1 # this is x");
+    let stmts = parse_body("own x = 1 # this is a comment");
     assert_eq!(stmts.len(), 1);
     assert!(matches!(stmts[0], Stmt::VarDecl(_)));
 }

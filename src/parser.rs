@@ -280,6 +280,7 @@ pub struct MultiAssignment {
     pub span: Span,
 }
 
+
 #[derive(Debug, Clone)]
 pub enum Stmt {
     VarDecl(Variable),
@@ -287,6 +288,7 @@ pub enum Stmt {
     VarAssign(VariableAssignment),
     VarAssignMulti(MultiAssignment),
     Expr(Expr),
+    Lock(Vec<Expr>),
     Return(Vec<Expr>),
     Func(Function), // is this even needed? 
 }
@@ -534,6 +536,26 @@ fn parse_stmt(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
             return Ok(Stmt::Return(vec![expr]));
         }
 
+    }
+    
+
+    // Variable locking: lock ...
+    if line.starts_with("lock ") {
+        // possibilities:
+        // lock x
+        // lock x, y
+        //
+        
+        let rest = line["lock ".len()..].trim();
+
+        let mut expr_vec = vec![];
+
+        for e in rest.split(',') {
+            let expr = parse_expr::parse_expr(e, span)?;
+            expr_vec.push(expr);
+        }
+
+        return Ok(Stmt::Lock(expr_vec));
     }
 
     // Variable declaration: own ...

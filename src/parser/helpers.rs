@@ -376,4 +376,3 @@ pub fn parse_format_string(s: &str) -> Result<(String, Vec<String>), HolyError> 
     Ok((buffer, expressions_str))
 }
 
-
