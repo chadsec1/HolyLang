@@ -83,6 +83,16 @@ func main() {
 
 
 
+    own x = 1
+
+    # Variable locking prevents overshadowing it, and assigning to it.
+    # You can still move or copy it though.
+    lock x
+
+    # x = 2 # If I uncomment this, it will be compiler error
+    # own x = 3 # Same thing here.
+
+
 }
 
 
