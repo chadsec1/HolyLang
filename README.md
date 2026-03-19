@@ -35,11 +35,19 @@ func main() {
     own x = int32[1, 2, 3, 4, 55]
 
 
+    # Array access example (array accessing is always a copy)
+    own y = x[0] # This is equal to 1st element in array x, which is 1
+
+    # Array slicing example (array slicing is always a copy)
+    own y = x[1:3] # this creates new array starting from x's end element up to 4th element
+
+
     # Nested arrays example
     own x int32[][] = int32[][int32[1,2], int32[3,4], int32[5,6]]
 
 
-    # Example of move-or-copy safety model, only one owner of a variable exists. no aliasing, no references, no borrowing.
+    # Example of move-or-copy safety model, only one owner of a variable exists,
+    # no aliasing, no references, no borrowing.
 
     own x = 1
     own y = x
@@ -53,12 +61,26 @@ func main() {
 
 
 
-    # 1 and 2 are integer literals and evaluated as expressions to determine their type, with infer hint of the function arguments list
+    # 1 and 2 are integer literals and evaluated as expressions to determine their 
+    # type, with infer hint of the function arguments list
     own x = add(1, 2)
 
 
 
+    # This is multi declaration
     own x, y, z = give_3_numbers()
+
+    # You can also do multi assignment
+    x, y, z = give_3_numbers()
+
+
+    # Strings example
+    own name = "John"
+
+    # Format takes one string argument, placeholders are directly in string
+    # To escape a placeholder use {{}}
+    own greeting_str = format("Hello, {name}! How are you ?")
+
 
 
 }
