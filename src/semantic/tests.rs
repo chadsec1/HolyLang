@@ -56,9 +56,27 @@ mod tests {
         })
     }
 
+    fn int8_lit(n: i8) -> Expr {
+        Expr::IntLiteral { value: IntLiteralValue::Int8(n), span: span() }
+    }
+
+    fn int16_lit(n: i16) -> Expr {
+        Expr::IntLiteral { value: IntLiteralValue::Int16(n), span: span() }
+    }
+
     fn int32_lit(n: i32) -> Expr {
         Expr::IntLiteral { value: IntLiteralValue::Int32(n), span: span() }
     }
+
+    fn int64_lit(n: i64) -> Expr {
+        Expr::IntLiteral { value: IntLiteralValue::Int64(n), span: span() }
+    }
+
+    fn int128_lit(n: i128) -> Expr {
+        Expr::IntLiteral { value: IntLiteralValue::Int128(n), span: span() }
+    }
+
+
 
     fn usize_lit(n: usize) -> Expr {
         Expr::IntLiteral { value: IntLiteralValue::Usize(n), span: span() }
@@ -140,7 +158,7 @@ mod tests {
 
     #[test]
     fn test_infer_type_from_int32_literal() {
-        // `own x = 5` type should be inferred as Int32
+        // an Int32 literal with infer type should be inferred correctly as Int32
         let body = vec![var_decl("x", Type::Infer, Some(int32_lit(5)))];
         let func = void_func("foo", vec![], body);
         let mut ast = ast_one(func);
@@ -155,7 +173,7 @@ mod tests {
 
     #[test]
     fn test_infer_requires_initializer_or_explicit_type() {
-        // `own x` with Infer type and no value must error
+        // Variables declared with Infer type and no value must error
         let body = vec![var_decl("x", Type::Infer, None)];
         let func = void_func("foo", vec![], body);
         let mut ast = ast_one(func);
@@ -168,7 +186,7 @@ mod tests {
 
     #[test]
     fn test_type_mismatch_int_bool_errors() {
-        // `own x bool = 5` is a type mismatch
+        // Variables declared with explicit type of bool, but given an int32 literal is a type mismatch
         let body = vec![var_decl("x", Type::Bool, Some(int32_lit(5)))];
         let func = void_func("foo", vec![], body);
         let mut ast = ast_one(func);
@@ -201,6 +219,32 @@ mod tests {
 
     // default values assigning tests
     //
+
+    #[test]
+    fn test_default_int8_zero() {
+        // `own x int8` value should default to an Int literal with type Int32 and value of 0
+        let body = vec![var_decl("x", Type::Int8, None)];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        check_semantics(&mut ast).unwrap();
+        if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+            assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Int8(0), .. })));
+        }
+    }
+
+    #[test]
+    fn test_default_int16_zero() {
+        // `own x int16` value should default to an Int literal with type Int32 and value of 0
+        let body = vec![var_decl("x", Type::Int16, None)];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        check_semantics(&mut ast).unwrap();
+        if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+            assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Int16(0), .. })));
+        }
+    }
+
+
     #[test]
     fn test_default_int32_zero() {
         // `own x int32` value should default to an Int literal with type Int32 and value of 0
@@ -214,6 +258,30 @@ mod tests {
     }
 
     #[test]
+    fn test_default_int64_zero() {
+        // `own x int64` value should default to an Int literal with type Int64 and value of 0
+        let body = vec![var_decl("x", Type::Int64, None)];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        check_semantics(&mut ast).unwrap();
+        if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+            assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Int64(0), .. })));
+        }
+    }
+
+    #[test]
+    fn test_default_int128_zero() {
+        // `own x int128` value should default to an Int literal with type Int128 and value of 0
+        let body = vec![var_decl("x", Type::Int128, None)];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        check_semantics(&mut ast).unwrap();
+        if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+            assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Int128(0), .. })));
+        }
+    }
+
+    #[test]
     fn test_default_bool_false() {
         // `own x bool` value should default to a Bool literal with value of false
         let body = vec![var_decl("flag", Type::Bool, None)];
@@ -222,6 +290,18 @@ mod tests {
         check_semantics(&mut ast).unwrap();
         if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
             assert!(matches!(v.value, Some(Expr::BoolLiteral { value: false, .. })));
+        }
+    }
+
+    #[test]
+    fn test_default_float32_zero() {
+        // `own x float64` value should default to a Float literal with value of 0.0
+        let body = vec![var_decl("f", Type::Float32, None)];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        check_semantics(&mut ast).unwrap();
+        if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+            assert!(matches!(v.value, Some(Expr::FloatLiteral { value: FloatLiteralValue::Float32(0.0), .. })));
         }
     }
 
@@ -252,16 +332,66 @@ mod tests {
         }
     }
 
+
+    #[test]
+    fn test_default_nested_array_is_empty() {
+        let body = vec![var_decl("nested_array", Type::Array(Box::new(Type::Array(Box::new(Type::Int32)))), None)];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        check_semantics(&mut ast).unwrap();
+        if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+            if let Some(Expr::ArrayLiteral { elements, .. }) = &v.value {
+                assert!(elements.is_empty());
+            } else {
+                panic!("expected empty ArrayLiteral");
+            }
+        }
+    }
+
     // move semantics 
 
     #[test]
-    fn test_use_after_move_errors() {
+    fn test_use_after_move_errors_explicit_type() {
         // own a int32 = 5
         // own b int32 = a   (moves `a`)
         // own c int32 = a   (this must error because `a` already moved)
         let body = vec![
             var_decl("a", Type::Int32, Some(int32_lit(5))),
             var_decl("b", Type::Int32, Some(var_expr("a"))),
+            var_decl("c", Type::Int32, Some(var_expr("a"))),
+        ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("moved"));
+    }
+
+    #[test]
+    fn test_use_after_move_errors_infer_type() {
+        // own a = 5
+        // own b = a   (moves `a`)
+        // own c = a   (this must error because `a` already moved)
+        let body = vec![
+            var_decl("a", Type::Infer, Some(int32_lit(5))),
+            var_decl("b", Type::Infer, Some(var_expr("a"))),
+            var_decl("c", Type::Infer, Some(var_expr("a"))),
+        ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("moved"));
+    }
+
+    #[test]
+    fn test_use_after_move_errors_explicit_and_infer_type() {
+        // own a int32 = 5
+        // own b = a   (moves `a`)
+        // own c int32 = a   (this must error because `a` already moved)
+        let body = vec![
+            var_decl("a", Type::Int32, Some(int32_lit(5))),
+            var_decl("b", Type::Infer, Some(var_expr("a"))),
             var_decl("c", Type::Int32, Some(var_expr("a"))),
         ];
         let func = void_func("foo", vec![], body);
@@ -571,27 +701,38 @@ mod tests {
     //
     #[test]
     fn test_string_binop_errors() {
-        // Strings may not be added with `+`, we use format() instead.
-        let bin = Expr::BinOp {
-            left: Box::new(str_lit("hello")),
-            op: crate::parser::BinOpKind::Add,
-            right: Box::new(str_lit(" world")),
-            span: span(),
-        };
-        let body = vec![var_decl("s", Type::String, Some(bin))];
-        let func = void_func("foo", vec![], body);
-        let mut ast = ast_one(func);
-        let result = check_semantics(&mut ast);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("concatnate strings"));
+        const all: [BinOpKind; 4] = [
+            BinOpKind::Add,
+            BinOpKind::Subtract,
+            BinOpKind::Multiply,
+            BinOpKind::Divide,
+        ];
+
+        for b in all {
+            // Strings may not be added with ANY BinOpKind, we use format() instead.
+            let bin = Expr::BinOp {
+                left: Box::new(str_lit("hello")),
+                op: b,
+                right: Box::new(str_lit(" world")),
+                span: span(),
+            };
+            let body = vec![var_decl("s", Type::String, Some(bin))];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("concatnate strings"));
+
+        }
     }
 
     // integer literal inference 
 
     #[test]
     fn test_integer_literal_inferred_to_int8() {
-        // own x int8 = 100  (fits in i8)
-        let lit = Expr::IntLiteral { value: IntLiteralValue::Int32(100), span: span() };
+        // if variable is declared with an int8 and the value is an int32, but it can fit in int8,
+        // it shouldn't error
+        let lit = int32_lit(100); 
         let body = vec![var_decl("x", Type::Int8, Some(lit))];
         let func = void_func("foo", vec![], body);
         let mut ast = ast_one(func);
@@ -603,7 +744,7 @@ mod tests {
 
     #[test]
     fn test_integer_literal_out_of_range_for_int8_errors() {
-        let lit = Expr::IntLiteral { value: IntLiteralValue::Int32(200), span: span() };
+        let lit = int32_lit(200);
         let body = vec![var_decl("x", Type::Int8, Some(lit))];
         let func = void_func("foo", vec![], body);
         let mut ast = ast_one(func);
@@ -630,7 +771,7 @@ mod tests {
         // int32 + int64 is not allowed (we don't allow any different types mixing in expressions)
         let bin = Expr::BinOp {
             left: Box::new(int32_lit(1)),
-            right: Box::new(Expr::IntLiteral { value: IntLiteralValue::Int64(2), span: span() }),
+            right: Box::new(int64_lit(2)),
             op: crate::parser::BinOpKind::Add,
             span: span(),
         };
