@@ -142,8 +142,7 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
                     panic!("(Compiler bug) Variable value is none even after we attempted to assign default value! {:?}", var);
                 }
 
-                // Check if source value is a variable and if it is moved, 
-                // and moves it
+                // Check if source value is a variable and if its locked or moved, and moves it
                 if let Some(Expr::Var { name: src_name, span }) = &var.value {
                     let src = locals.get_mut(src_name).ok_or_else(|| {
                         HolyError::Semantic(format!("Use of undeclared variable `{}` (line {} column {})", src_name, span.line, span.column))
@@ -152,6 +151,11 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
                     if src.moved {
                         return Err(HolyError::Semantic(format!("Use of moved variable `{}` (line {} column {})", src_name, span.line, span.column)));
                     }
+
+                    if src.locked {
+                        return Err(HolyError::Semantic(format!("Moving locked variable `{}` is not allowed, either copy it or unlock to move. (line {} column {})", src_name, span.line, span.column)));
+                    }
+
 
                     // mark source as moved because ownership was transferred
                     src.moved = true;
@@ -295,6 +299,11 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
                     if src.moved {
                         return Err(HolyError::Semantic(format!("Use of moved variable `{}` (line {} column {})", src_name, span.line, span.column)));
                     }
+
+                    if src.locked {
+                        return Err(HolyError::Semantic(format!("Moving locked variable `{}` is not allowed, either copy it or unlock to move. (line {} column {})", src_name, span.line, span.column)));
+                    }
+
 
                     // mark source as moved because ownership was transferred
                     src.moved = true;

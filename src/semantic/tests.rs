@@ -744,13 +744,21 @@ mod tests {
 
     #[test]
     fn test_integer_literal_out_of_range_for_int8_errors() {
-        let lit = int32_lit(200);
-        let body = vec![var_decl("x", Type::Int8, Some(lit))];
-        let func = void_func("foo", vec![], body);
-        let mut ast = ast_one(func);
-        let result = check_semantics(&mut ast);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("out of range"));
+        for i in 0..32767 {
+            let lit = int16_lit(i);
+            let body = vec![var_decl("x", Type::Int8, Some(lit))];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+
+            if i <= i8::MAX as i16 {
+                assert!(result.is_ok());
+
+            } else {
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("out of range"));
+            }
+        }
     }
 
     #[test]
