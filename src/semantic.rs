@@ -819,33 +819,30 @@ fn infer_expr_type(
 
                     // If both start and end are present, ensure that start is not larger than end,
                     // and end not smaller than start.
+                    // This is **very basic** out-of-bounds safety check against int literals. It does not follow variables upstream
+                    // The real out-of-bounds safety is inserted in the binary machine code that'd panic if index is
+                    // larger than array, thanks to rust.
                     if start.is_some() && end.is_some() {
-                        let start_num: usize = if let Expr::IntLiteral { value: IntLiteralValue::Usize(n), .. } = start.as_deref().unwrap() {
-                            *n
-                        } else {
-                            panic!("(Compiler bug) expected IntLiteral with Usize for start, instead we got {:?}", start);
-                        };
+                        if let Expr::IntLiteral { value: IntLiteralValue::Usize(start_num), .. } = start.as_deref().unwrap() {
 
-                        let end_num: usize = if let Expr::IntLiteral { value: IntLiteralValue::Usize(n), .. } = end.as_deref().unwrap() {
-                            *n
-                        } else {
-                            panic!("(Compiler bug) expected IntLiteral with Usize for end, instead we got {:?}", end);
-                        };
-
-                        if start_num > end_num {
-                            return Err(HolyError::Semantic(format!(
-                                        "Start index `{}` cannot be larger than end index `{}` (line {} column {})", 
-                                        start_num, end_num, span.line, span.column
-                                    )));
-                        }
-                        // just to be defensive:
-                        if end_num < start_num {
-                            return Err(HolyError::Semantic(format!(
-                                        "End index `{}` cannot be larger than start index `{}` (line {} column {})", 
-                                        end_num, start_num, span.line, span.column
-                                    )));
+                            if let Expr::IntLiteral { value: IntLiteralValue::Usize(end_num), .. } = end.as_deref().unwrap() {
+                                if start_num > end_num {
+                                    return Err(HolyError::Semantic(format!(
+                                                "Start index `{}` cannot be larger than end index `{}` (line {} column {})", 
+                                                start_num, end_num, span.line, span.column
+                                            )));
+                                }
+                                // just to be defensive:
+                                if end_num < start_num {
+                                    return Err(HolyError::Semantic(format!(
+                                                "End index `{}` cannot be larger than start index `{}` (line {} column {})", 
+                                                end_num, start_num, span.line, span.column
+                                            )));
+                                }
+                            }
                         }
                     }
+
 
                     if let Type::Array(_) = info.ty.clone() {
                         // We are fine returning Type wrapping in Aray, because thats what the
