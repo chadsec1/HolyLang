@@ -289,6 +289,7 @@ pub enum Stmt {
     VarAssignMulti(MultiAssignment),
     Expr(Expr),
     Lock(Vec<Expr>),
+    Unlock(Vec<Expr>),
     Return(Vec<Expr>),
     Func(Function), // is this even needed? 
 }
@@ -514,7 +515,7 @@ fn parse_stmt(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
         let expr_str = line["return ".len()..].trim();
         if expr_str.is_empty() {
             return Err(HolyError::Parse(format!(
-                "Return requires a value (line {} column {})",
+                "Return requires (at least) one expression (line {} column {})",
                 span.line, span.column
             )));
         }
@@ -548,6 +549,14 @@ fn parse_stmt(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
         
         let rest = line["lock ".len()..].trim();
 
+        // Not needed, but I like defensive-coding style
+        if rest.is_empty() {
+            return Err(HolyError::Parse(format!(
+                    "Lock requires at least one variable name (line {} column {})",
+                    span.line, span.column
+                )));
+        }
+
         let mut expr_vec = vec![];
 
         for e in rest.split(',') {
@@ -556,6 +565,34 @@ fn parse_stmt(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
         }
 
         return Ok(Stmt::Lock(expr_vec));
+    }
+
+
+    // Variable unlocking: unlock ...
+    if line.starts_with("unlock ") {
+        // possibilities:
+        // unlock x
+        // unlock x, y
+        //
+        
+        let rest = line["unlock ".len()..].trim();
+        // Not needed, but I like defensive-coding style
+        if rest.is_empty() {
+            return Err(HolyError::Parse(format!(
+                "Unlock requires at least one variable name (line {} column {})",
+                span.line, span.column
+            )));
+
+        }
+
+        let mut expr_vec = vec![];
+
+        for e in rest.split(',') {
+            let expr = parse_expr::parse_expr(e, span)?;
+            expr_vec.push(expr);
+        }
+
+        return Ok(Stmt::Unlock(expr_vec));
     }
 
     // Variable declaration: own ...

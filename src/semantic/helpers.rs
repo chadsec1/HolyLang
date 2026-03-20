@@ -6,8 +6,8 @@ pub fn stmt_span(s: &Stmt) -> Span {
         Stmt::VarDecl(v) => v.span,
         Stmt::VarAssign(a) => a.span,
         Stmt::Expr(e) => expr_span(e),
-        Stmt::Lock(e) => expr_span(&e[0]),  // At least one lock element is always
-                                            // present
+        Stmt::Lock(e) => expr_span(&e[0]),  // At least one lock element is always present
+        Stmt::Unlock(e) => expr_span(&e[0]),  // At least one unlock element is always present
         Stmt::Return(e) => expr_span(&e[0]), // First return element is always present
                                             // if there is a return
         Stmt::Func(f) => f.span,

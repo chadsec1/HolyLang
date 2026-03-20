@@ -93,6 +93,14 @@ func main() {
     # own x = 3 # Same thing here.
 
 
+    # You can unlock variables.
+    unlock x
+
+    # Now these work fine! 
+    x = 2
+    own x = 3
+
+
 }
 
 

@@ -408,7 +408,7 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
 
 
                             // We dont care about its type, we just checking if it exists or not,
-                            // and its contents are valid, and that its not already locked, etc.
+                            // and its contents are valid, etc.
                             infer_expr_type(expr, &mut locals, fun_sigs, None)?;
 
                         },
@@ -442,6 +442,61 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
                 }
 
             }
+
+
+            Stmt::Unlock(expr_vec) => {
+                let mut var_names_to_unlock: Vec<String> = vec![];
+
+                for expr in expr_vec.iter_mut() {
+                    match expr {
+                        Expr::Var { name: name, span: span} => {
+                            if var_names_to_unlock.contains(name) {
+                                return Err(HolyError::Semantic(format!(
+                                    "Unlock arguments have duplicated variable `{}` (line {} column {})",
+                                    name, span.line, span.column
+                                )))
+                            }
+
+                            var_names_to_unlock.push(name.to_string());
+
+
+                            // We dont care about its type, we just checking if it exists or not,
+                            // and its contents are valid, etc.
+                            infer_expr_type(expr, &mut locals, fun_sigs, None)?;
+
+                        },
+
+
+                        _ => {
+                            return Err(HolyError::Semantic(format!(
+                                "Expected variable name, instead got `{}` (line {} column {})",
+                                expr, stmt_span.line, stmt_span.column
+                            )))
+                        }
+                    }
+                }
+
+
+                for var_name in var_names_to_unlock {
+                    let var = locals.get_mut(&var_name).ok_or_else(|| {
+                        panic!("(Compiler bug) Variable doesnt exist in locals despite our earlier call to infer_expr_type shouldve checked the variable thourghly, including its existence, but apparently it didnt. expr_vec: `{:?}`, var_name: {:?}", 
+                            expr_vec, var_name);
+                    })?;
+
+                    if var.locked == false {
+                        return Err(HolyError::Semantic(format!(
+                                "Variable `{}` is already unlocked (line {} column {})",
+                                var_name, stmt_span.line, stmt_span.column
+                            )))
+
+                    }
+
+                    var.locked = false;
+                }
+
+
+            }
+
             Stmt::Return(expr_vec) => {
                 // If function has no declared return type, we error.
                 match &func.return_type {
