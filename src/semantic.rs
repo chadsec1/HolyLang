@@ -7,7 +7,11 @@ use crate::parser::{
     validate_identifier_name
 };
 
+#[cfg(test)]
+mod tests;
+
 mod helpers;
+ 
 
 #[derive(Clone, Debug)]
 struct VarInfo {
@@ -939,12 +943,6 @@ fn infer_expr_type(
 
         Expr::FormatCall { template: template, expressions: exprs_vec, span: span} => {
 
-            // defensive check, I don't see any reason for infer_hint to be anything other than
-            // none in formatcall expressions, but hey, i could be wrong..
-            if infer_hint.is_some() {
-                panic!("(Compiler bug) Infer hint is {:?}, but we expected none, to formatcall.", infer_hint);
-            }
-
             if !template.contains("{}") {
                 panic!("(Compielr bug) We got a FormatCall Without any template placeholders, the parser should've not allowed this. template: `{:?}`, expressions: `{:?}`", template, exprs_vec);
             }
@@ -976,8 +974,8 @@ fn infer_expr_type(
                         // but we don't return inferred type obviously, the formatcall parent experession is
                         // always of type string.
                         //
-                        // Likewise, since formatcall takes many expressions, we don't care about
-                        // infer_hint, we wont pass it
+                        // TODO: Maybe check if returned type can be converted to a string? or
+                        // should I make everything printable? idk yet..
                         infer_expr_type(e, locals, fun_sigs, None)?;
                     }
                 }
@@ -1324,6 +1322,10 @@ fn assign_default_value_for_type(expr: &mut Option<Expr>, ty: &Type, span: Span)
             *expr = Some(Expr::ArrayLiteral { elements: Vec::new(), array_ty: *inner_ty, span: span })
         }
 
+        Type::String => {
+            *expr = Some(Expr::StringLiteral { value: "".to_string(), span: span })
+        }
+
 
 
 
@@ -1385,6 +1387,7 @@ fn resolve_binary_op_types(a: &Type, b: &Type, span: &Span) -> Result<Type, Holy
 
 
 
+/*
 #[cfg(test)]
 mod tests {
     use super::*; 
@@ -1408,3 +1411,4 @@ mod tests {
     }
 
 }
+*/
