@@ -64,7 +64,9 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
             VarInfo {
                 ty: p.type_name.clone(),
                 moved: false,
-                locked: false,
+                
+                // By default, arguments are locked to help reduce logic bugs.
+                locked: true,
                 
                 // We do not know a parameter value.
                 value: None,
