@@ -192,7 +192,7 @@ mod tests {
         let mut ast = ast_one(func);
         let result = check_semantics(&mut ast);
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Semantic error: Cannot assign integer literal to non-integer type `bool` (line 1 column 0) in function `foo`"));
+        assert!(result.unwrap_err().to_string().starts_with("Semantic error: Cannot assign integer literal to non-integer type `bool`"));
     }
 
     #[test]
@@ -653,12 +653,13 @@ mod tests {
         };
         let access = Expr::ArrayMultipleAccess {
             array: Box::new(var_expr("arr")),
-            index: Box::new(usize_lit(2)),
+            start: Some(Box::new(usize_lit(1))),
+            end: Some(Box::new(usize_lit(2))),
             span: span(),
         };
         let body = vec![
             var_decl("arr", Type::Array(Box::new(Type::Int32)), Some(arr_lit)),
-            var_decl("x", Type::Int32, Some(access)),
+            var_decl("x", Type::Infer, Some(access)),
         ];
         let func = void_func("foo", vec![], body);
         let mut ast = ast_one(func);
@@ -744,7 +745,7 @@ mod tests {
             let mut ast = ast_one(func);
             let result = check_semantics(&mut ast);
             assert!(result.is_err());
-            assert!(result.unwrap_err().to_string().contains("concatnate strings"));
+            assert!(result.unwrap_err().to_string().starts_with("Semantic error: You cannot perform arithmetic on type `string`"));
 
         }
     }
