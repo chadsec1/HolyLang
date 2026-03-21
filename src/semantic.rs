@@ -570,6 +570,31 @@ fn check_stmts(func: Function, block: &mut Vec<Stmt>, locals: &mut HashMap<Strin
             }
 
 
+            Stmt::While(whileStmt) => {
+                let expr_ty = infer_expr_type(&mut whileStmt.condition, locals, fun_sigs, Some(Type::Bool))?;
+                
+                if expr_ty != Type::Bool {
+                    return Err(HolyError::Semantic(format!(
+                        "While statement require an expression to be evaulatable to type `bool`, instead we got `{}` (line {} column {})",
+                        expr_ty, stmt_span.line, stmt_span.column,
+                    )));
+                }
+
+                // This gets all upstream variable names, and passes it to check stmts to ensure
+                // you cannot overshadow them (because it makes reading code confusing).
+                let mut upstream = upstream_var_names.clone();
+                for var_name in locals.keys() {
+                    upstream.push(var_name.to_string());
+                }
+                    
+                let mut locals_clone = locals.clone();
+                check_stmts(func.clone(), &mut whileStmt.block, &mut locals_clone, upstream.clone(), fun_sigs)?;
+                update_local_assignments_from_clone(locals, locals_clone);
+                
+            }
+
+
+
             Stmt::If(ifStmt) => {
                 let main_expr_ty = infer_expr_type(&mut ifStmt.condition, locals, fun_sigs, Some(Type::Bool))?;
                 

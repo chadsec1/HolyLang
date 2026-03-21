@@ -288,6 +288,14 @@ pub struct MultiAssignment {
 }
 
 #[derive(Debug, Clone)]
+pub struct WhileStmt {
+    pub condition: Expr,
+    pub branch: Vec<Stmt>,
+    pub span: Span
+}
+
+
+#[derive(Debug, Clone)]
 pub struct IfStmt {
     pub condition: Expr,
     pub if_branch: Vec<Stmt>,
@@ -296,6 +304,15 @@ pub struct IfStmt {
     pub span: Span
 }
 
+#[derive(Debug, Clone)]
+pub struct BreakStmt {
+    pub span: Span
+}
+
+#[derive(Debug, Clone)]
+pub struct ContinueStmt {
+    pub span: Span
+}
 
 #[derive(Debug, Clone)]
 pub enum Stmt {
@@ -307,6 +324,9 @@ pub enum Stmt {
     Lock(Vec<Expr>),
     Unlock(Vec<Expr>),
     Return(Vec<Expr>),
+    While(WhileStmt),
+    Break(BreakStmt),
+    Continue(ContinueStmt),
     If(IfStmt),
     Func(Function), 
 }
@@ -526,7 +546,8 @@ fn parse_block(lines: &Vec<&str>, mut idx: usize) -> Result<(Vec<Stmt>, usize), 
         // NOTE to self: any statement that legitimately ends with `{` must be listed here.
         let is_block_opener = t.starts_with("if ")
             || t.starts_with("elif ")
-            || t.starts_with("else ");
+            || t.starts_with("else ")
+            || t.starts_with("while ");
 
         if !is_block_opener {
             // Reject stray braces in the middle of a line (standalone `{` is still allowed)
@@ -649,6 +670,44 @@ fn parse_if_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), Hol
     ))
 }
 
+
+
+fn parse_while_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), HolyError> {
+    let raw = lines[start_i];
+    let line = helpers::strip_inline_comment(raw);
+    let line = line.trim();
+    let span = Span { line: start_i + 1, column: 0 };
+
+    if !line.ends_with('{') {
+        return Err(HolyError::Parse(format!(
+            "While statement must end with {{ at line {}: {}",
+            span.line, raw
+        )));
+    }
+
+    let cond_str = line["while ".len()..].trim_end_matches('{').trim();
+    if cond_str.is_empty() {
+        return Err(HolyError::Parse(format!(
+            "Missing while loop condition at line {}",
+            span.line
+        )));
+    }
+
+    let condition = parse_expr::parse_expr(cond_str, span)?;
+    let (branch, mut next_i) = parse_block(lines, start_i + 1)?;
+
+    Ok((
+        Stmt::While(WhileStmt {
+            condition,
+            branch,
+            span,
+        }),
+        next_i,
+    ))
+}
+
+
+
 fn parse_stmt_at(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), HolyError> {
     let raw = lines[start_i];
     let line = helpers::strip_inline_comment(raw).trim().to_string();
@@ -656,6 +715,8 @@ fn parse_stmt_at(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), Hol
 
     if line.starts_with("if ") {
         return parse_if_stmt(lines, start_i);
+    } else if line.starts_with("while ") {
+        return parse_while_stmt(lines, start_i);
     }
 
     let stmt = parse_stmt_line(&line, start_i + 1)?;
@@ -701,6 +762,16 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
         }
 
     }
+
+
+    if line == "break" {
+        return Ok(Stmt::Break(BreakStmt{ span: span }));
+    }
+
+    if line == "continue" {
+        return Ok(Stmt::Continue(ContinueStmt{ span: span }));
+    }
+
     
 
     // Variable locking: lock ...
