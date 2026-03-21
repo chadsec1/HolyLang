@@ -54,19 +54,34 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
 
     // String Literal ?
     if s.starts_with('"') {
-        if !s.ends_with('"') {
-            return Err(HolyError::Parse(format!(
-                "String double quotes were never closed (line {} column {})",
-                span.line, span.column
-            )));
+        // Find the matching closing quote
+        let mut chars = s.char_indices().skip(1);
+        let closing = loop {
+            match chars.next() {
+                Some((_, '\\')) => { chars.next(); }
+                Some((i, '"')) => break Some(i),
+                None => break None,
+                _ => {}
+            }
+        };
+
+        match closing {
+            None => {
+                return Err(HolyError::Parse(format!(
+                    "String double quotes were never closed (line {} column {})",
+                    span.line, span.column
+                )));
+            }
+            Some(i) if i == s.len() - 1 => {
+                let str_unescaped = helpers::strip_outer_quotes_and_unescape(s)
+                    .map_err(|e| HolyError::Parse(format!("{} (line {} column {})",
+                        e, span.line, span.column)))?;
+                return Ok(Expr::StringLiteral { value: str_unescaped, span });
+            }
+            // Fall through
+            _ => {}
         }
 
-        let str_unescaped = helpers::strip_outer_quotes_and_unescape(s)
-                                        .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
-
-        let value = Expr::StringLiteral { value: str_unescaped.to_string(), span};
-
-        return Ok(value);
     }
 
 
