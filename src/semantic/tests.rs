@@ -622,6 +622,35 @@ mod tests {
         assert!(result.unwrap_err().to_string().contains("out-of-bounds"));
     }
 
+
+
+    #[test]
+    fn test_array_out_of_bounds_multiple_access_errors() {
+        // own arr int32[] = [0, 1]
+        // own x int32 = arr[3]  (out of bounds)
+        let arr_lit = Expr::ArrayLiteral {
+            elements: vec![int32_lit(0), int32_lit(1), int32_lit(2)],
+            array_ty: Type::Int32,
+            span: span(),
+        };
+        let access = Expr::ArrayMultipleAccess {
+            array: Box::new(var_expr("arr")),
+            start: Box::new(usize_lit(0)),
+            end: Box::new(usize_lit(4)),
+            span: span(),
+        };
+        let body = vec![
+            var_decl("arr", Type::Array(Box::new(Type::Int32)), Some(arr_lit)),
+            var_decl("x", Type::Int32, Some(access)),
+        ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("out-of-bounds"));
+    }
+
+
     #[test]
     fn test_array_valid_access_passes() {
         let arr_lit = Expr::ArrayLiteral {
@@ -645,7 +674,7 @@ mod tests {
 
 
     #[test]
-    fn test_array_valid_multiple_access_passes() {
+    fn test_array_valid_multiple_access_both_ends_passes() {
         let arr_lit = Expr::ArrayLiteral {
             elements: vec![int32_lit(10), int32_lit(20), int32_lit(30)],
             array_ty: Type::Int32,
@@ -665,6 +694,55 @@ mod tests {
         let mut ast = ast_one(func);
         check_semantics(&mut ast).unwrap();
     }
+
+
+    #[test]
+    fn test_array_valid_multiple_access_start_only_passes() {
+        let arr_lit = Expr::ArrayLiteral {
+            elements: vec![int32_lit(10), int32_lit(20), int32_lit(30)],
+            array_ty: Type::Int32,
+            span: span(),
+        };
+        let access = Expr::ArrayMultipleAccess {
+            array: Box::new(var_expr("arr")),
+            start: Some(Box::new(usize_lit(1))),
+            end: None,
+            span: span(),
+        };
+        let body = vec![
+            var_decl("arr", Type::Array(Box::new(Type::Int32)), Some(arr_lit)),
+            var_decl("x", Type::Infer, Some(access)),
+        ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        check_semantics(&mut ast).unwrap();
+    }
+
+    #[test]
+    fn test_array_valid_multiple_access_end_only_passes() {
+        let arr_lit = Expr::ArrayLiteral {
+            elements: vec![int32_lit(10), int32_lit(20), int32_lit(30)],
+            array_ty: Type::Int32,
+            span: span(),
+        };
+        let access = Expr::ArrayMultipleAccess {
+            array: Box::new(var_expr("arr")),
+            start: None,
+            end: Some(Box::new(usize_lit(1))),
+            span: span(),
+        };
+        let body = vec![
+            var_decl("arr", Type::Array(Box::new(Type::Int32)), Some(arr_lit)),
+            var_decl("x", Type::Infer, Some(access)),
+        ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        check_semantics(&mut ast).unwrap();
+    }
+
+
+
+
 
 
     #[test]
