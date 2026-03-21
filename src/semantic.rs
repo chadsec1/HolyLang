@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::error::HolyError;
 use crate::parser::{
-    AST, Expr, Function, Param, Stmt, Type, Variable, Span, IntLiteralValue, FloatLiteralValue, UnaryOpKind,
+    AST, Expr, Function, Param, Stmt, Type, Variable, Span, IntLiteralValue, FloatLiteralValue, UnaryOpKind, BinOpKind,
 
     validate_identifier_name
 };
@@ -56,8 +56,9 @@ pub fn check_semantics(ast: &mut AST) -> Result<(), HolyError> {
 fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Option<Vec<Type>>)>) -> Result<(), HolyError> {
     // Build local symbol table starting with params
     let mut locals: HashMap<String, VarInfo> = HashMap::new();
-    for p in &func.params {
+    let mut upstream_var_names: Vec<String> = vec![];
 
+    for p in &func.params {
         locals.insert(
             p.name.clone(), 
             VarInfo {
@@ -70,6 +71,8 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
                 // Nor its length
                 len: None
             });
+
+        upstream_var_names.push(p.name.clone());
     }
     
     // Ensure that no code exists after return
@@ -84,9 +87,16 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
         }
     }
 
+    check_stmts(func.clone(), &mut func.body, &mut locals, upstream_var_names, fun_sigs)
 
-    // Walk statements in order. This is a single-pass inference (simple)
-    for stmt in &mut func.body {
+
+}
+
+// Parse stmts in a block
+fn check_stmts(func: Function, block: &mut Vec<Stmt>, locals: &mut HashMap<String, VarInfo>, upstream_var_names: Vec<String>, fun_sigs: &HashMap<String, (Vec<Type>, Option<Vec<Type>>)>) -> Result<(), HolyError> {
+    
+    // Walk statements in order. 
+    for stmt in block {
         let stmt_span = helpers::stmt_span(&stmt);
 
         match stmt {
@@ -94,29 +104,27 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
                 // If var has explicit type: keep it. If Infer: try infer from initializer.
                 if var.type_name == Type::Infer {
                     if let Some(expr) = &mut var.value {
-                        let ty = infer_expr_type(expr, &mut locals, fun_sigs, None)?;
+                        let ty = infer_expr_type(expr, locals, fun_sigs, None)?;
                         // assign inferred type to variable and propagate to literal nodes if needed
                         var.type_name = ty.clone();
                     } else {
                         return Err(HolyError::Semantic(format!(
-                            "Variable `{}` requires explicit type when no initializer is provided in function `{}` (line {} column {})",
-                            var.name, func.name, var.span.line, var.span.column
+                            "Variable `{}` requires explicit type when no initializer is provided (line {} column {})",
+                            var.name, var.span.line, var.span.column
                         )));
                     }
                 } else {
                     // explicit type: if initializer present, ensure initializer is compatible
                     
                     if let Some(expr) = &mut var.value {
-                        assign_infer_type_to_expr_value(expr, var.type_name.clone())
-                            .map_err(|e| HolyError::Semantic(format!("{} in function `{}`", e, func.name)))?;
-
+                        assign_infer_type_to_expr_value(expr, var.type_name.clone())?;
 
                         // Now infer/check the expression type as usual.
-                        let expr_ty = infer_expr_type(expr, &mut locals, fun_sigs, Some(var.type_name.clone()))?;
+                        let expr_ty = infer_expr_type(expr, locals, fun_sigs, Some(var.type_name.clone()))?;
                         if !type_compatible(&expr_ty, &var.type_name) {
                             return Err(HolyError::Semantic(format!(
-                                "Type mismatch assigning to `{}`: got `{}`, expected `{}` in function `{}` (line {} column {})",
-                                var.name, expr_ty, var.type_name, func.name, var.span.line, var.span.column
+                                "Type mismatch assigning to `{}`: got `{}`, expected `{}` (line {} column {})",
+                                var.name, expr_ty, var.type_name, var.span.line, var.span.column
                             )));
                         }
 
@@ -134,6 +142,14 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
                                 &var.name, var.span.line, var.span.column
                             )));
                     }
+                }
+
+
+                if upstream_var_names.contains(&var.name) {
+                    return Err(HolyError::Semantic(format!(
+                                "Variable `{}` is already defined upstream, you cannot overshadow upstream variables (line {} column {})", 
+                                &var.name, var.span.line, var.span.column
+                            )));
                 }
 
 
@@ -194,7 +210,7 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
                 // Expect the rhs to be a Call
                 if let Expr::Call { name, args, span } = call_expr {
                     // check_call with require_ret = true -> Option<Vec<Type>>
-                    let ret_opt = check_call(name, args, &mut locals, fun_sigs, true, *span)?;
+                    let ret_opt = check_call(name, args, locals, fun_sigs, true, *span)?;
                     let ret_vec = ret_opt.ok_or_else(|| HolyError::Semantic(format!(
                         "Call to `{}` used in multi-declaration but has no return types (line {} column {})",
                         name, span.line, span.column
@@ -226,6 +242,13 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
                                         &var.name, var.span.line, var.span.column
                                     )));
                             }
+                        }
+
+                        if upstream_var_names.contains(&var.name) {
+                            return Err(HolyError::Semantic(format!(
+                                        "Variable `{}` is already defined upstream, you cannot overshadow upstream variables (line {} column {})", 
+                                        &var.name, var.span.line, var.span.column
+                                    )));
                         }
 
 
@@ -263,7 +286,7 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
                 // because we don't give it any infer type hint and therefore no need for it to be
                 // reflected back in locals. I think.
 
-                let expr_ty = infer_expr_type(&mut assign.value.clone(), &mut locals, fun_sigs, None)?;
+                let expr_ty = infer_expr_type(&mut assign.value.clone(), locals, fun_sigs, None)?;
                 if !type_compatible(&expr_ty, &varinfo.ty) {
                     return Err(HolyError::Semantic(format!(
                         "Cannot assign `{}` to `{}` of type `{}` (line {} column {})",
@@ -336,7 +359,7 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
                 
                 if let Expr::Call { name, args, span } = &mut expr.value {
                     // check_call with require_ret = true -> Option<Vec<Type>>
-                    let ret_opt = check_call(name, args, &mut locals, fun_sigs, true, *span)?;
+                    let ret_opt = check_call(name, args, locals, fun_sigs, true, *span)?;
                     let ret_vec = ret_opt.ok_or_else(|| HolyError::Semantic(format!(
                         "Call to `{}` used in multi-assignment but has no return types (line {} column {})",
                         name, span.line, span.column
@@ -396,11 +419,11 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
             Stmt::Expr(expr) => {
                 if let Expr::Call { name, args, span } = expr {
                     // allow void calls as statements (require_ret = false)
-                    let _ = check_call(name, args, &mut locals, fun_sigs, false, *span)?;
+                    let _ = check_call(name, args, locals, fun_sigs, false, *span)?;
                     // no returned type expected; ok to ignore
                 } else {
                     // other expressions-as-statements: fully type-check
-                    let _ = infer_expr_type(expr, &mut locals, fun_sigs, None)?;
+                    let _ = infer_expr_type(expr, locals, fun_sigs, None)?;
                 }
             }
 
@@ -422,7 +445,7 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
 
                             // We dont care about its type, we just checking if it exists or not,
                             // and its contents are valid, etc.
-                            infer_expr_type(expr, &mut locals, fun_sigs, None)?;
+                            infer_expr_type(expr, locals, fun_sigs, None)?;
 
                         },
 
@@ -475,7 +498,7 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
 
                             // We dont care about its type, we just checking if it exists or not,
                             // and its contents are valid, etc.
-                            infer_expr_type(expr, &mut locals, fun_sigs, None)?;
+                            infer_expr_type(expr, locals, fun_sigs, None)?;
 
                         },
 
@@ -533,8 +556,7 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
 
                         for (i, expr) in expr_vec.iter_mut().enumerate() {
                             let declared_ty = declared_ty_vec[i].clone();
-                            let expr_ty = infer_expr_type(expr, &mut locals, fun_sigs, Some(declared_ty.clone()))?;
-
+                            let expr_ty = infer_expr_type(expr, locals, fun_sigs, Some(declared_ty.clone()))?;
 
                             if !type_compatible(&expr_ty, &declared_ty) {
                                 return Err(HolyError::Semantic(format!(
@@ -548,10 +570,56 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
                 }
             }
 
-            Stmt::Func(_) => {
-                // nested function nodes aren't currently used, because HolyLang does not allow
-                // nested functions.
+
+            Stmt::If(ifStmt) => {
+                let main_expr_ty = infer_expr_type(&mut ifStmt.condition, locals, fun_sigs, Some(Type::Bool))?;
+                
+                if main_expr_ty != Type::Bool {
+                    return Err(HolyError::Semantic(format!(
+                        "If statement require an expression to be evaulatable to type `bool`, instead we got `{}` (line {} column {})",
+                        main_expr_ty, stmt_span.line, stmt_span.column,
+                    )));
+                }
+
+                // This gets all upstream variable names, and passes it to check stmts to ensure
+                // you cannot overshadow them (because it makes reading code confusing).
+                let mut upstream = upstream_var_names.clone();
+                for var_name in locals.keys() {
+                    upstream.push(var_name.to_string());
+                }
+
+
+                    
+                let mut main_locals_clone = locals.clone();
+                check_stmts(func.clone(), &mut ifStmt.if_branch, &mut main_locals_clone, upstream.clone(), fun_sigs)?;
+                update_local_assignments_from_clone(locals, main_locals_clone);
+                
+
+                for s in &mut ifStmt.elif_branches {
+                    let elif_expr_ty = infer_expr_type(&mut s.0, locals, fun_sigs, Some(Type::Bool))?; 
+
+                    if elif_expr_ty != Type::Bool {
+                        return Err(HolyError::Semantic(format!(
+                            "Elif statements require an expression to be evaulatable to type `bool`, instead we got `{}` (line {} column {})",
+                            elif_expr_ty, stmt_span.line, stmt_span.column,
+                        )));
+                    }
+
+                
+                    let mut elif_locals_clone = locals.clone();
+                    check_stmts(func.clone(), &mut s.1, &mut locals.clone(), upstream.clone(), fun_sigs)?;
+                    update_local_assignments_from_clone(locals, elif_locals_clone);
+                }
+
+                if let Some(else_stmts) = ifStmt.else_branch.as_mut() {
+                    let mut else_locals_clone = locals.clone();
+                    check_stmts(func.clone(), else_stmts, locals, upstream, fun_sigs)?;
+                    update_local_assignments_from_clone(locals, else_locals_clone);
+                }
+                
             }
+
+            Stmt::Func(_) => {}
         }
     }
 
@@ -573,6 +641,17 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
 
 
     Ok(())
+}
+
+fn update_local_assignments_from_clone(upstream: &mut HashMap<String, VarInfo>, downstream: HashMap<String, VarInfo> ) {
+    // We loop over the locals, to update our corresponding locals
+    // like variable assignments, length change, ownership change, etc
+    for (n, vi) in downstream {
+        if let Some(info) = upstream.get_mut(&n) {
+            *info = vi.clone();
+        }
+
+    }
 }
 
 /// Validate a call's arguments, infer literal arg types to parameter types,
@@ -799,7 +878,10 @@ fn infer_expr_type(
                         // convert it if possible.
                         let start_ety = infer_expr_type(s, locals, fun_sigs, Some(Type::Usize))?;
                         if !type_compatible(&start_ety, &Type::Usize) {
-                            return Err(HolyError::Semantic(format!("Expected start index to be of type `usize` for array `{}`, instead we got `{}` (line {} column {})", start_ety, name, span.line, span.column)));
+                            return Err(HolyError::Semantic(format!(
+                                        "Expected start index to be of type `usize` for array `{}`, instead we got `{}` (line {} column {})", 
+                                        start_ety, name, span.line, span.column
+                                    )));
                         }
 
                         check_usize_literal_to_src(&s, info.len.unwrap(), span.clone(), locals.clone())?;
@@ -809,7 +891,10 @@ fn infer_expr_type(
                         // Same as above, for end index.
                         let end_ety = infer_expr_type(e, locals, fun_sigs, Some(Type::Usize))?;
                         if !type_compatible(&end_ety, &Type::Usize) {
-                            return Err(HolyError::Semantic(format!("Expected end index to be of type `usize` for array `{}`, instead we got `{}` (line {} column {})", end_ety, name, span.line, span.column)));
+                            return Err(HolyError::Semantic(format!(
+                                        "Expected end index to be of type `usize` for array `{}`, instead we got `{}` (line {} column {})", 
+                                        end_ety, name, span.line, span.column
+                                    )));
                         }
 
 
@@ -819,8 +904,8 @@ fn infer_expr_type(
 
                     // If both start and end are present, ensure that start is not larger than end,
                     // and end not smaller than start.
-                    // This is **very basic** out-of-bounds safety check against int literals. It does not follow variables upstream
-                    // The real out-of-bounds safety is inserted in the binary machine code that'd panic if index is
+                    // This is **basic** out-of-bounds safety check against int literals.
+                    // The real out-of-bounds safety guarantees is inserted in the binary machine code that'd panic if index is
                     // larger than array, thanks to rust.
                     if start.is_some() && end.is_some() {
                         if let Expr::IntLiteral { value: IntLiteralValue::Usize(start_num), .. } = start.as_deref().unwrap() {
@@ -897,7 +982,7 @@ fn infer_expr_type(
         
         }
 
-        Expr::BinOp { left: left, op: _, right: right, span: span } => {
+        Expr::BinOp { left: left, op: op, right: right, span: span } => {
             // infer both sides
             let lty = infer_expr_type(left, locals, fun_sigs, infer_hint.clone())?;
             let rty = infer_expr_type(right, locals, fun_sigs, infer_hint.clone())?;
@@ -908,12 +993,35 @@ fn infer_expr_type(
                         "Copying is not needed for variables in binary operations, because they're always copied. Remove the copy call. (line {} column {})", 
                         span.line, span.column)))
             }
-                                   
-            // If either side is Infer (shouldn't after recursive call), try to resolve:
-            let resolved = resolve_binary_op_types(&lty, &rty, &span)?;
 
-            // update literal nodes inside if they were Infer (not necessary here but ok)
-            Ok(resolved)
+            if lty == Type::Infer {
+                panic!("(Compiler bug) lty and rty are of type Infer even after we tried to infer: Left: {:?} Right: {:?}", **left, **right);
+            }
+
+            // Ensure binary operations resolve to same type.
+            if lty != rty {
+                return Err(HolyError::Semantic(format!("Type mismatch in binary operation: `{}` vs `{}` (line {} column {})", lty, rty, span.line, span.column)));
+            }
+
+            
+            // Since we already know both lty and rty equal same type, we can do our operations on
+            // lty, and is safe to assume both are equal.
+            if matches!(lty, Type::String | Type::Bool | Type::Array(_) ) {
+                if matches!(op, BinOpKind::Add | BinOpKind::Subtract | BinOpKind::Multiply | BinOpKind::Divide | BinOpKind::Greater | BinOpKind::GreaterEqual | BinOpKind::Less | BinOpKind::LessEqual) {
+                    return Err(HolyError::Semantic(format!("You cannot perform arithmetic on type `{}`. (line {} column {})", lty, span.line, span.column)));
+                } 
+            }
+
+            // arthmetic
+            if matches!(op, BinOpKind::Add | BinOpKind::Subtract | BinOpKind::Multiply | BinOpKind::Divide ) {
+                Ok(lty)
+
+            // boolean comparison
+            } else if matches!(op, BinOpKind::Equal | BinOpKind::NotEqual | BinOpKind::Greater | BinOpKind::GreaterEqual | BinOpKind::Less | BinOpKind::LessEqual ) {
+                Ok(Type::Bool)
+            } else {
+                panic!("(Compiler bug) We got an unexpected BinOpKind: {:?}", op)
+            }
         }
 
         Expr::CopyCall { expr: e, span: span } => {
@@ -925,7 +1033,11 @@ fn infer_expr_type(
                 Expr::CopyCall {span: inner_span, ..} => {
                     return Err(HolyError::Semantic(format!("Double copying is not needed, Remove the extra copy call. (line {} column {})", inner_span.line, inner_span.column)))
                 }
-                Expr::IntLiteral{span: inner_span, ..} | Expr::FloatLiteral{span: inner_span, ..} | Expr::BoolLiteral{span: inner_span, ..} | Expr::StringLiteral{span: inner_span, ..} | Expr::ArrayLiteral{span: inner_span, ..}   => {
+                Expr::IntLiteral{span: inner_span, ..} | 
+                Expr::FloatLiteral{span: inner_span, ..} | 
+                Expr::BoolLiteral{span: inner_span, ..} | 
+                Expr::StringLiteral{span: inner_span, ..} | 
+                Expr::ArrayLiteral{span: inner_span, ..} => {
                     return Err(HolyError::Semantic(format!("Copying a literal is not needed. Remove the copy call and use the literal directly. (line {} column {})", inner_span.line, inner_span.column)))
                 }
                 Expr::ArraySingleAccess{span: inner_span, ..} | Expr::ArrayMultipleAccess{span: inner_span, ..} => {
@@ -1042,6 +1154,9 @@ fn check_usize_literal_to_src(expr: &Expr, len: usize, span: Span, locals: HashM
         // then you're gonna have to uncomment this and parse left and right expressions to ensure
         // they do n ot go over len.
         // Expr::BinOp { .. } => Ok(()), // allow expressions evaluated at runtime
+        // 
+        // Or, just, you know, propgate errors back to user nicely, so we dont have to re-implement
+        // safety checks already guaranteed by rust in generated binary
                                       
         Expr::Var {name, ..} => {
             if let Some(inner_info) = locals.get(name).cloned() {
@@ -1350,45 +1465,6 @@ fn assign_default_value_for_type(expr: &mut Option<Expr>, ty: &Type, span: Span)
 fn type_compatible(a: &Type, b: &Type) -> bool {
     a == b
 }
-
-/// Resolve binary operation types (e.g., `+`). Rules:
-/// - both must be numeric and same kind (int/int or float/float)
-/// - mixing signed and unsigned is an error
-/// - return the resulting type
-fn resolve_binary_op_types(a: &Type, b: &Type, span: &Span) -> Result<Type, HolyError> {
-    use Type::*;
-    match (a, b) {
-        (Int8, Int8) => Ok(Int8),
-        (Int16, Int16) => Ok(Int16),
-        (Int32, Int32) => Ok(Int32),
-        (Int64, Int64) => Ok(Int64),
-        (Int128, Int128) => Ok(Int128),
-
-        (Usize, Usize) => Ok(Usize),
-        
-        (Byte, Byte) => Ok(Byte),
-        (Uint16, Uint16) => Ok(Uint16),
-        (Uint32, Uint32) => Ok(Uint32),
-        (Uint64, Uint64) => Ok(Uint64),
-        (Uint128, Uint128) => Ok(Uint128),
-
-        (Float32, Float32) => Ok(Float32),
-        (Float64, Float64) => Ok(Float64),
-
-        (Type::String, Type::String) => Err(HolyError::Semantic(format!("Type mismatch in binary operation. To concatnate strings, use `format()` (line {} column {})", span.line, span.column))),
-
-        // If one side is Infer, prefer the other side if concrete
-        (Infer, t @ _) if *t != Infer => Ok(t.clone()),
-        (t @ _, Infer) if *t != Infer => Ok(t.clone()),
-
-        // both infer -> default to Int32
-        (Infer, Infer) => Ok(Int32),
-
-        // mixed signed/unsigned or int/float combos -> error
-        _ => Err(HolyError::Semantic(format!("Type mismatch in binary operation: `{}` vs `{}` (line {} column {})", a, b, span.line, span.column))),
-    }
-}
-
 
 
 

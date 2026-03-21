@@ -236,7 +236,14 @@ pub enum BinOpKind {
     Add,
     Subtract,
     Multiply,
-    Divide
+    Divide,
+
+    Equal,
+    NotEqual,
+    Greater,
+    GreaterEqual,
+    Less,
+    LessEqual
 }
 
 #[derive(Debug, Clone)]
@@ -280,6 +287,15 @@ pub struct MultiAssignment {
     pub span: Span,
 }
 
+#[derive(Debug, Clone)]
+pub struct IfStmt {
+    pub condition: Expr,
+    pub if_branch: Vec<Stmt>,
+    pub elif_branches: Vec<(Expr, Vec<Stmt>)>,
+    pub else_branch: Option<Vec<Stmt>>,
+    pub span: Span
+}
+
 
 #[derive(Debug, Clone)]
 pub enum Stmt {
@@ -291,7 +307,8 @@ pub enum Stmt {
     Lock(Vec<Expr>),
     Unlock(Vec<Expr>),
     Return(Vec<Expr>),
-    Func(Function), // is this even needed? 
+    If(IfStmt),
+    Func(Function), 
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -428,79 +445,225 @@ fn parse_function(lines: &Vec<&str>, start_i: usize) -> Result<(Function, usize)
         }
     }
 
-    // parse body: everything until matching closing brace
+    // parse body
     let mut body: Vec<Stmt> = vec![];
     let mut idx = start_i + 1;
-    let mut brace_balance = 1; // we saw the opening brace in header
+
     while idx < lines.len() {
         let raw = lines[idx];
-        let t = helpers::strip_inline_comment(raw);
-        let t = t.trim();
+        let t = helpers::strip_inline_comment(raw).trim().to_string();
 
-        // Reject braces attached to other code on the same line.
-        let (opens, closes) = helpers::count_braces_outside_strings(t);
-
-        if opens > 0 || closes > 0 {
-            // Allow only a line that is exactly "{" or exactly "}".
-            // NOTE: Im keeping this rule for block delimiters.
-            let brace_only = t == "{" || t == "}";
-
-            if !brace_only {
-                return Err(HolyError::Parse(format!(
-                    "Brace must appear on its own line at line {}: `{}`",
-                    idx + 1,
-                    raw
-                )));
-            }
-        }
-
-        // Opening brace inside body
-        if t == "{" {
-            brace_balance += 1;
+        if t.is_empty() || t.starts_with('#') {
             idx += 1;
             continue;
         }
 
-        // Closing brace inside body ends the function
         if t == "}" {
-            brace_balance -= 1;
-            if brace_balance == 0 {
-                return Ok((
-                    Function {
-                        name,
-                        params,
-                        return_type,
-                        body,
-                        span,
-                    },
-                    idx + 1,
-                ));
-            }
-            idx += 1;
-            continue;
+            return Ok((
+                Function { name, params, return_type, body, span },
+                idx + 1,
+            ));
         }
 
-        // otherwise parse statements inside function
-        if !t.is_empty() && !t.starts_with('#') {
-            let stmt = parse_stmt(t, idx + 1)?;
-            body.push(stmt);
-        }
-
-        idx += 1;
-     }
+        let (stmt, next_idx) = parse_stmt_at(lines, idx)?;
+        body.push(stmt);
+        idx = next_idx;
+    }
 
     Err(HolyError::Parse(format!(
         "Unterminated function starting at line {}: `{}`",
         start_i + 1,
         lines[start_i]
     )))
+
 }
 
 
 
+fn parse_block(lines: &Vec<&str>, mut idx: usize) -> Result<(Vec<Stmt>, usize), HolyError> {
+    let mut body = Vec::new();
+    let mut brace_balance = 1usize;
+
+    while idx < lines.len() {
+        let raw = lines[idx];
+        let t = helpers::strip_inline_comment(raw).trim().to_string();
+
+        if t.is_empty() || t.starts_with('#') {
+            idx += 1;
+            continue;
+        }
+
+        // Lines starting with `}` close the current block level.
+        // They may have a trailing `else {` or `elif <cond> {`.
+        if t.starts_with('}') {
+            let after_close = t[1..].trim();
+
+            // Reject anything that isn't a known continuation
+            if !after_close.is_empty()
+                && after_close != "else {"
+                && !(after_close.starts_with("elif ") && after_close.ends_with('{'))
+            {
+                return Err(HolyError::Parse(format!(
+                    "Unexpected content after '}}' at line {}: {}",
+                    idx + 1,
+                    raw
+                )));
+            }
+
+            brace_balance -= 1;
+            if brace_balance == 0 {
+                return if after_close.is_empty() {
+                    Ok((body, idx + 1)) // past the lone `}`
+                } else {
+                    Ok((body, idx))     // AT the `} else {` / `} elif {` line
+                };
+            }
+            idx += 1;
+            continue;
+        }
+
+        // Let block-opening statements through before the brace guard.
+        // NOTE to self: any statement that legitimately ends with `{` must be listed here.
+        let is_block_opener = t.starts_with("if ")
+            || t.starts_with("elif ")
+            || t.starts_with("else ");
+
+        if !is_block_opener {
+            // Reject stray braces in the middle of a line (standalone `{` is still allowed)
+            let (opens, closes) = helpers::count_braces_outside_strings(&t);
+            if (opens > 0 || closes > 0) && t != "{" {
+                return Err(HolyError::Parse(format!(
+                    "Brace must appear on its own line at line {}: {}",
+                    idx + 1,
+                    raw
+                )));
+            }
+
+            if t == "{" {
+                brace_balance += 1;
+                idx += 1;
+                continue;
+            }
+        }
+
+        let (stmt, next_idx) = parse_stmt_at(lines, idx)?;
+        body.push(stmt);
+        idx = next_idx;
+    }
+
+    Err(HolyError::Parse("Unterminated block".to_string()))
+}
+
+
+fn parse_if_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), HolyError> {
+    let raw = lines[start_i];
+    let line = helpers::strip_inline_comment(raw);
+    let line = line.trim();
+    let span = Span { line: start_i + 1, column: 0 };
+
+    if !line.ends_with('{') {
+        return Err(HolyError::Parse(format!(
+            "If statement must end with {{ at line {}: {}",
+            span.line, raw
+        )));
+    }
+
+    let cond_str = line["if ".len()..].trim_end_matches('{').trim();
+    if cond_str.is_empty() {
+        return Err(HolyError::Parse(format!(
+            "Missing if condition at line {}",
+            span.line
+        )));
+    }
+
+    let condition = parse_expr::parse_expr(cond_str, span)?;
+    let (if_branch, mut next_i) = parse_block(lines, start_i + 1)?;
+
+    let mut elif_branches: Vec<(Expr, Vec<Stmt>)> = Vec::new();
+    let mut else_branch = None;
+
+    // Consume any number of elif chains, then an optional else.
+    // Accepts both:
+    //   `} elif cond {`  (same line as closing brace)
+    //   `elif cond {`    (own line, for when you keep old style)
+    // and both:
+    //   `} else {`
+    //   `else {`
+    loop {
+        if next_i >= lines.len() {
+            break;
+        }
+
+        let cur_raw = lines[next_i];
+        let cur_line = helpers::strip_inline_comment(cur_raw).trim().to_string();
+
+        // This is else branch
+        if cur_line == "} else {" {
+            let (body, after) = parse_block(lines, next_i + 1)?;
+            else_branch = Some(body);
+            next_i = after;
+            break; // else is always last
+        }
+
+        // This is elif (else if) branch
+        let elif_tail: Option<&str> = if cur_line.starts_with("} elif ") {
+            Some(&cur_line["} elif ".len()..])
+        } else {
+            None
+        };
+
+        if let Some(tail) = elif_tail {
+            if !tail.ends_with('{') {
+                return Err(HolyError::Parse(format!(
+                    "elif must end with {{ at line {}: {}",
+                    next_i + 1,
+                    cur_raw
+                )));
+            }
+            let elif_cond_str = tail.trim_end_matches('{').trim();
+            if elif_cond_str.is_empty() {
+                return Err(HolyError::Parse(format!(
+                    "Missing elif condition at line {}",
+                    next_i + 1
+                )));
+            }
+            let elif_span = Span { line: next_i + 1, column: 0 };
+            let cond = parse_expr::parse_expr(elif_cond_str, elif_span)?;
+            let (body, after) = parse_block(lines, next_i + 1)?;
+            elif_branches.push((cond, body));
+            next_i = after;
+        } else {
+            break; // not an elif/else continuation — done
+        }
+    }
+
+    Ok((
+        Stmt::If(IfStmt {
+            condition,
+            if_branch,
+            elif_branches,
+            else_branch,
+            span,
+        }),
+        next_i,
+    ))
+}
+
+fn parse_stmt_at(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), HolyError> {
+    let raw = lines[start_i];
+    let line = helpers::strip_inline_comment(raw).trim().to_string();
+    let span = Span { line: start_i + 1, column: 0 };
+
+    if line.starts_with("if ") {
+        return parse_if_stmt(lines, start_i);
+    }
+
+    let stmt = parse_stmt_line(&line, start_i + 1)?;
+    Ok((stmt, start_i + 1))
+}
 
 /// Parse a single statement from a trimmed line. `line_no` used for error messages.
-fn parse_stmt(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
+fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
     let span = Span { line: line_no, column: 0 };
 
     // Return statement

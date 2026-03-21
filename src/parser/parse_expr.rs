@@ -242,9 +242,9 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
     
     
     // Binary plus handling: split on the first operator
-    if let Some((pos, op)) = helpers::find_top_level_op_any(s, &['+', '-', '*', '/']) {
-        let left = &s[..pos].trim();
-        let right = &s[pos + 1..].trim();
+    if let Some((pos, op)) = helpers::find_top_level_op_any(s, &['+', '-', '*', '/', '!', '=', '>', '<']) {
+        let left = s[..pos].trim();
+        let mut right = s[pos + 1..].trim();
         if left.is_empty() {
             return Err(HolyError::Parse(format!(
                 "Expected expression before '{}' at line {} column {}",
@@ -263,9 +263,54 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
             '-' => BinOpKind::Subtract,
             '*' => BinOpKind::Multiply,
             '/' => BinOpKind::Divide,
+            '=' => {
+                if right.starts_with('=') {
+                    right = right[1..].trim();
+                    BinOpKind::Equal
+
+                } else {
+                    return Err(HolyError::Parse(format!(
+                        "Invalid binary operation '{}' at line {} column {}",
+                        &s[pos..pos + 2], span.line, span.column
+                    )));
+
+                }
+            },
+            '!' => {
+                if right.starts_with('=') {
+                    right = right[1..].trim();
+                    BinOpKind::NotEqual
+
+                } else {
+                    return Err(HolyError::Parse(format!(
+                        "Invalid binary operation '{}' at line {} column {}",
+                        &s[pos..pos + 2], span.line, span.column
+                    )));
+
+                }
+            },
+
+            '>' => {
+                if right.starts_with('=') {
+                    right = right[1..].trim();
+                    BinOpKind::GreaterEqual
+                } else {
+                    BinOpKind::Greater
+                }
+            }
+
+            '<' => {
+                if right.starts_with('=') {
+                    right = right[1..].trim();
+                    BinOpKind::LessEqual
+                } else {
+                    BinOpKind::Less
+                }
+            }
+
             o => {
                 return Err(HolyError::Parse(format!(
-                    "Unknown operand {} (line {} column {})",
+                    "Unknown binary operand {} (line {} column {})",
                     o,
                     span.line, span.column
                 )));

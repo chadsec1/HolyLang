@@ -643,6 +643,29 @@ mod tests {
         check_semantics(&mut ast).unwrap();
     }
 
+
+    #[test]
+    fn test_array_valid_multiple_access_passes() {
+        let arr_lit = Expr::ArrayLiteral {
+            elements: vec![int32_lit(10), int32_lit(20), int32_lit(30)],
+            array_ty: Type::Int32,
+            span: span(),
+        };
+        let access = Expr::ArrayMultipleAccess {
+            array: Box::new(var_expr("arr")),
+            index: Box::new(usize_lit(2)),
+            span: span(),
+        };
+        let body = vec![
+            var_decl("arr", Type::Array(Box::new(Type::Int32)), Some(arr_lit)),
+            var_decl("x", Type::Int32, Some(access)),
+        ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        check_semantics(&mut ast).unwrap();
+    }
+
+
     #[test]
     fn test_array_slice_start_greater_than_end_errors() {
         let arr_lit = Expr::ArrayLiteral {
@@ -709,7 +732,7 @@ mod tests {
         ];
 
         for b in all {
-            // Strings may not be added with ANY BinOpKind, we use format() instead.
+            // Strings may not be ever wrapped in ANY BinOpKind, we use format() instead.
             let bin = Expr::BinOp {
                 left: Box::new(str_lit("hello")),
                 op: b,
