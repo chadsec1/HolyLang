@@ -6,7 +6,7 @@ HolyLang programming language: A mix between Go's readability, C's simplicity, a
 
 # Work-in-progress
 This only implements parser, and semantics.
-It still lacks: if conditions, for loops, infinte loops, and unsafe blocks.
+It still lacks: for loops, infinte loops, and unsafe blocks.
 
 
 
@@ -99,6 +99,22 @@ func main() {
     # Now these work fine! 
     x = 2
     own x = 3
+
+
+    # If statements example
+    own x = 1
+    own y = 2
+
+    if y > x {
+        x = 2
+
+        # Shadowing variables declared outside scope of if statement is an error
+        # this wont compile if i uncomment this
+        # own x = 3
+    }
+
+
+
 
 
 }
