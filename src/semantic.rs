@@ -328,8 +328,12 @@ fn check_stmts(func: Function, block: &mut Vec<Stmt>, locals: &mut HashMap<Strin
                     }
 
 
-                    // mark source as moved because ownership was transferred
-                    src.moved = true;
+                    // if source name is same as our variable name,
+                    // then we don't move. It's re-claiming ownership.
+                    if src_name != &assign.name {
+                        // mark source as moved because ownership was transferred
+                        src.moved = true;
+                    }
 
                     // We copy its length
                     value_len = src.len
