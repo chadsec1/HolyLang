@@ -607,13 +607,13 @@ fn check_stmts(func: Function, block: &mut Vec<Stmt>, locals: &mut HashMap<Strin
 
                 
                     let mut elif_locals_clone = locals.clone();
-                    check_stmts(func.clone(), &mut s.1, &mut locals.clone(), upstream.clone(), fun_sigs)?;
+                    check_stmts(func.clone(), &mut s.1, &mut elif_locals_clone, upstream.clone(), fun_sigs)?;
                     update_local_assignments_from_clone(locals, elif_locals_clone);
                 }
 
                 if let Some(else_stmts) = ifStmt.else_branch.as_mut() {
                     let mut else_locals_clone = locals.clone();
-                    check_stmts(func.clone(), else_stmts, locals, upstream, fun_sigs)?;
+                    check_stmts(func.clone(), else_stmts, &mut else_locals_clone, upstream, fun_sigs)?;
                     update_local_assignments_from_clone(locals, else_locals_clone);
                 }
                 
