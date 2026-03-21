@@ -286,7 +286,7 @@ fn check_stmts(func: Function, block: &mut Vec<Stmt>, locals: &mut HashMap<Strin
                 // because we don't give it any infer type hint and therefore no need for it to be
                 // reflected back in locals. I think.
 
-                let expr_ty = infer_expr_type(&mut assign.value.clone(), locals, fun_sigs, None)?;
+                let expr_ty = infer_expr_type(&mut assign.value.clone(), locals, fun_sigs, Some(varinfo.ty.clone()))?;
                 if !type_compatible(&expr_ty, &varinfo.ty) {
                     return Err(HolyError::Semantic(format!(
                         "Cannot assign `{}` to `{}` of type `{}` (line {} column {})",
