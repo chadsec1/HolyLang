@@ -11,6 +11,8 @@ pub fn stmt_span(s: &Stmt) -> Span {
         Stmt::Return(e) => expr_span(&e[0]), // First return element is always present
                                             // if there is a return
         Stmt::While(w) => w.span,
+        Stmt::Break(b) => b.span,
+        Stmt::Continue(c) => c.span,
         Stmt::If(i) => i.span,
         Stmt::Func(f) => f.span,
         Stmt::VarDeclMulti(_, v) => expr_span(v), 

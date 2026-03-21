@@ -635,8 +635,8 @@ mod tests {
         };
         let access = Expr::ArrayMultipleAccess {
             array: Box::new(var_expr("arr")),
-            start: Box::new(usize_lit(0)),
-            end: Box::new(usize_lit(4)),
+            start: Some(Box::new(usize_lit(0))),
+            end: Some(Box::new(usize_lit(4))),
             span: span(),
         };
         let body = vec![

@@ -1,5 +1,5 @@
 mod parser;
-// mod semantic;
+mod semantic;
 mod error;
 mod consts;
 
@@ -17,8 +17,8 @@ fn main() {
     println!("Pure AST: {:#?}\n\n\n", ast);
 
     // Run semantic checks, modify AST to remove inferred and replace with explicit types.
-    // semantic::check_semantics(&mut ast).expect("Semantic errors");
-    // println!("Checked AST: {:#?}\n\n\n", ast);
+    semantic::check_semantics(&mut ast).expect("Semantic errors");
+    println!("Checked AST: {:#?}\n\n\n", ast);
 
 
     // Transpile to Rust code

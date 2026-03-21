@@ -588,12 +588,18 @@ fn check_stmts(func: Function, block: &mut Vec<Stmt>, locals: &mut HashMap<Strin
                 }
                     
                 let mut locals_clone = locals.clone();
-                check_stmts(func.clone(), &mut whileStmt.block, &mut locals_clone, upstream.clone(), fun_sigs)?;
+                check_stmts(func.clone(), &mut whileStmt.branch, &mut locals_clone, upstream.clone(), fun_sigs)?;
                 update_local_assignments_from_clone(locals, locals_clone);
                 
             }
 
+            Stmt::Break(breakStmt) => {
 
+            }
+
+            Stmt::Continue(continueStmt) => {
+
+            }
 
             Stmt::If(ifStmt) => {
                 let main_expr_ty = infer_expr_type(&mut ifStmt.condition, locals, fun_sigs, Some(Type::Bool))?;
