@@ -89,13 +89,21 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
         }
     }
 
-    check_stmts(func.clone(), &mut func.body, &mut locals, upstream_var_names, fun_sigs)
+    check_stmts(func.clone(), &mut func.body, &mut locals, upstream_var_names, fun_sigs, false)
 
 
 }
 
 // Parse stmts in a block
-fn check_stmts(func: Function, block: &mut Vec<Stmt>, locals: &mut HashMap<String, VarInfo>, upstream_var_names: Vec<String>, fun_sigs: &HashMap<String, (Vec<Type>, Option<Vec<Type>>)>) -> Result<(), HolyError> {
+fn check_stmts(
+    func: Function, 
+    block: &mut Vec<Stmt>, 
+    locals: &mut HashMap<String, VarInfo>, 
+    upstream_var_names: Vec<String>, 
+    fun_sigs: &HashMap<String, (Vec<Type>, Option<Vec<Type>>)>,
+    in_loop: bool
+
+) -> Result<(), HolyError> {
     
     // Walk statements in order. 
     for stmt in block {
@@ -588,17 +596,28 @@ fn check_stmts(func: Function, block: &mut Vec<Stmt>, locals: &mut HashMap<Strin
                 }
                     
                 let mut locals_clone = locals.clone();
-                check_stmts(func.clone(), &mut whileStmt.branch, &mut locals_clone, upstream.clone(), fun_sigs)?;
+                check_stmts(func.clone(), &mut whileStmt.branch, &mut locals_clone, upstream.clone(), fun_sigs, true)?;
                 update_local_assignments_from_clone(locals, locals_clone);
                 
             }
 
             Stmt::Break(breakStmt) => {
+                if !in_loop {
+                    return Err(HolyError::Semantic(format!(
+                        "Break can only be used in loops! (line {} column {})",
+                        stmt_span.line, stmt_span.column,
+                    )));
+                }
 
             }
 
             Stmt::Continue(continueStmt) => {
-
+                if !in_loop {
+                    return Err(HolyError::Semantic(format!(
+                        "Continue can only be used in loops! (line {} column {})",
+                        stmt_span.line, stmt_span.column,
+                    )));
+                }
             }
 
             Stmt::If(ifStmt) => {
@@ -621,7 +640,7 @@ fn check_stmts(func: Function, block: &mut Vec<Stmt>, locals: &mut HashMap<Strin
 
                     
                 let mut main_locals_clone = locals.clone();
-                check_stmts(func.clone(), &mut ifStmt.if_branch, &mut main_locals_clone, upstream.clone(), fun_sigs)?;
+                check_stmts(func.clone(), &mut ifStmt.if_branch, &mut main_locals_clone, upstream.clone(), fun_sigs, in_loop)?;
                 update_local_assignments_from_clone(locals, main_locals_clone);
                 
 
@@ -637,13 +656,13 @@ fn check_stmts(func: Function, block: &mut Vec<Stmt>, locals: &mut HashMap<Strin
 
                 
                     let mut elif_locals_clone = locals.clone();
-                    check_stmts(func.clone(), &mut s.1, &mut elif_locals_clone, upstream.clone(), fun_sigs)?;
+                    check_stmts(func.clone(), &mut s.1, &mut elif_locals_clone, upstream.clone(), fun_sigs, in_loop)?;
                     update_local_assignments_from_clone(locals, elif_locals_clone);
                 }
 
                 if let Some(else_stmts) = ifStmt.else_branch.as_mut() {
                     let mut else_locals_clone = locals.clone();
-                    check_stmts(func.clone(), else_stmts, &mut else_locals_clone, upstream, fun_sigs)?;
+                    check_stmts(func.clone(), else_stmts, &mut else_locals_clone, upstream, fun_sigs, in_loop)?;
                     update_local_assignments_from_clone(locals, else_locals_clone);
                 }
                 
