@@ -170,10 +170,6 @@ fn check_stmts(func: Function, block: &mut Vec<Stmt>, locals: &mut HashMap<Strin
                         return Err(HolyError::Semantic(format!("Use of moved variable `{}` (line {} column {})", src_name, span.line, span.column)));
                     }
 
-                    if src.locked {
-                        return Err(HolyError::Semantic(format!("Moving locked variable `{}` is not allowed, either copy it or unlock to move. (line {} column {})", src_name, span.line, span.column)));
-                    }
-
 
                     // mark source as moved because ownership was transferred
                     src.moved = true;
@@ -325,9 +321,6 @@ fn check_stmts(func: Function, block: &mut Vec<Stmt>, locals: &mut HashMap<Strin
                         return Err(HolyError::Semantic(format!("Use of moved variable `{}` (line {} column {})", src_name, span.line, span.column)));
                     }
 
-                    if src.locked {
-                        return Err(HolyError::Semantic(format!("Moving locked variable `{}` is not allowed, either copy it or unlock to move. (line {} column {})", src_name, span.line, span.column)));
-                    }
 
 
                     // if source name is same as our variable name,
