@@ -10,6 +10,7 @@ pub fn stmt_span(s: &Stmt) -> Span {
         Stmt::Unlock(e) => expr_span(&e[0]),  // At least one unlock element is always present
         Stmt::Return(e) => expr_span(&e[0]), // First return element is always present
                                             // if there is a return
+        Stmt::For(f) => f.span,
         Stmt::While(w) => w.span,
         Stmt::Break(b) => b.span,
         Stmt::Continue(c) => c.span,

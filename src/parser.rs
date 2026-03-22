@@ -147,7 +147,6 @@ impl FloatLiteralValue {
         match self {
             FloatLiteralValue::Float32(_) => Type::Float32,
             FloatLiteralValue::Float64(_) => Type::Float64,
-
         }
     }
 }
@@ -288,6 +287,14 @@ pub struct MultiAssignment {
 }
 
 #[derive(Debug, Clone)]
+pub struct ForStmt {
+    pub holder_name: String,
+    pub array: Expr,
+    pub branch: Vec<Stmt>,
+    pub span: Span
+}
+
+#[derive(Debug, Clone)]
 pub struct WhileStmt {
     pub condition: Expr,
     pub branch: Vec<Stmt>,
@@ -324,6 +331,7 @@ pub enum Stmt {
     Lock(Vec<Expr>),
     Unlock(Vec<Expr>),
     Return(Vec<Expr>),
+    For(ForStmt),
     While(WhileStmt),
     Break(BreakStmt),
     Continue(ContinueStmt),
@@ -547,6 +555,7 @@ fn parse_block(lines: &Vec<&str>, mut idx: usize) -> Result<(Vec<Stmt>, usize), 
         let is_block_opener = t.starts_with("if ")
             || t.starts_with("elif ")
             || t.starts_with("else ")
+            || t.starts_with("for ")
             || t.starts_with("while ");
 
         if !is_block_opener {
@@ -670,6 +679,53 @@ fn parse_if_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), Hol
     ))
 }
 
+fn parse_for_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), HolyError> {
+    let raw = lines[start_i];
+    let line = helpers::strip_inline_comment(raw);
+    let line = line.trim();
+    let span = Span { line: start_i + 1, column: 0 };
+
+    if !line.ends_with('{') {
+        return Err(HolyError::Parse(format!(
+            "For loop statement must end with `{{`, instead we got `{}` (line {} column {})",
+            raw, span.line, span.column
+        )));
+    }
+
+    let for_str = line["for ".len()..].trim_end_matches('{').trim();
+
+
+    if for_str.is_empty() {
+        return Err(HolyError::Parse(format!(
+            "For loop statement construction cannot be empty! (line {} column {})",
+            span.line, span.column
+        )));
+    }
+
+    let parts: Vec<&str> = for_str.split(" in ").collect();
+    if parts.len() != 2 {
+        return Err(HolyError::Parse(format!(
+            "For loop statement is not constructed properly. (line {} column {})",
+            span.line, span.column
+        )));
+    }
+
+    let holder_name = parts[0].to_string();
+
+    let expr = parse_expr::parse_expr(parts[1], span)?;
+    let (branch, mut next_i) = parse_block(lines, start_i + 1)?;
+
+    Ok((
+        Stmt::For(ForStmt {
+            holder_name,
+            array: expr,
+            branch,
+            span,
+        }),
+        next_i,
+    ))
+}
+
 
 
 fn parse_while_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), HolyError> {
@@ -715,8 +771,12 @@ fn parse_stmt_at(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), Hol
 
     if line.starts_with("if ") {
         return parse_if_stmt(lines, start_i);
+
     } else if line.starts_with("while ") {
         return parse_while_stmt(lines, start_i);
+
+    } else if line.starts_with("for ") {
+        return parse_for_stmt(lines, start_i);
     }
 
     let stmt = parse_stmt_line(&line, start_i + 1)?;

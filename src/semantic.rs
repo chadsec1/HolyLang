@@ -578,6 +578,69 @@ fn check_stmts(
             }
 
 
+            Stmt::For(forStmt) => {
+                let expr_ty = infer_expr_type(&mut forStmt.array, locals, fun_sigs, None)?;
+
+                if !matches!(expr_ty, Type::Array(_)) {
+                    return Err(HolyError::Semantic(format!(
+                        "For loop statement require an expression to be evaulatable to any `Array` type, instead we got `{}` (line {} column {})",
+                        expr_ty, stmt_span.line, stmt_span.column,
+                    )));
+                }
+
+
+                if let Some(_) = locals.get(&forStmt.holder_name) {
+                    return Err(HolyError::Semantic(format!(
+                        "Cannot use variable name `{}` in for loop statement as it is already declared. (line {} column {})",
+                        forStmt.holder_name, stmt_span.line, stmt_span.column,
+                    )));
+
+                }
+
+
+                let mut locals_clone = locals.clone();
+
+                // We inject the holder variable into the locals. It is "fake" variable that does
+                // not exist in the AST, but we need it in locals to make analysis work.
+                //
+                if let Type::Array(inner_ty) = expr_ty {
+
+                    // NOTE: Out-of-bounds access protection here is non-existent, but thats fine because Rust
+                    // will catch at transpile layer
+                    // However it would be nicer if we can do better job of catching out of bounds
+                    // for literals at compile time.
+                    locals_clone.insert(
+                        forStmt.holder_name.clone(),
+                        VarInfo {
+                            ty: *inner_ty,
+                            value: None,
+                            moved: false,
+                            locked: true, // the holder is locked by default.
+                            len: None
+                        }
+                    );
+
+                }
+
+
+                
+                // This gets all upstream variable names, and passes it to check stmts to ensure
+                // you cannot overshadow them (because it makes reading code confusing).
+                let mut upstream = upstream_var_names.clone();
+                for var_name in locals_clone.keys() {
+                    upstream.push(var_name.to_string());
+                }
+
+                // We also add holder_name to the list to prevent programmer overshadowing the
+                // variable within the loop.
+                upstream.push(forStmt.holder_name.clone());
+
+                    
+                check_stmts(func.clone(), &mut forStmt.branch, &mut locals_clone, upstream.clone(), fun_sigs, true)?;
+                update_local_assignments_from_clone(locals, locals_clone);
+            }
+
+
             Stmt::While(whileStmt) => {
                 let expr_ty = infer_expr_type(&mut whileStmt.condition, locals, fun_sigs, Some(Type::Bool))?;
                 
@@ -834,7 +897,7 @@ fn infer_expr_type(
         }
         
         Expr::ArrayLiteral { elements, array_ty,  span } => {
-            // all elements must have same type
+            // all elements must have same type as the array type
             for e in elements.iter_mut() {
                 let ety = infer_expr_type(e, locals, fun_sigs, Some(array_ty.clone()))?;
                 if !type_compatible(&ety, &array_ty) {
@@ -868,16 +931,18 @@ fn infer_expr_type(
 
 
                     if !matches!(&info.ty, Type::Array(_)) {
-                        return Err(HolyError::Semantic(format!("Array access on non-array variable `{}` (line {} column {})", name, span.line, span.column)));
+                        return Err(HolyError::Semantic(format!("Array access on non-array variable `{}` of type `{}` (line {} column {})", name, info.ty, span.line, span.column)));
                     }
 
-                    // If info length is none, then this must not be an array.
-                    if info.len.is_none() {
-                        panic!("(Compiler bug) this shouldnt ever happen, but it happened. We expected an info.len to be a usize, but we got None. This shouldve been handled by variable declaration/assignment, but apparently not: {:?}", locals);
+                    // We only do the basic out-of-bounds checks if possible
+                    // This is fine, because Rust is the one handling the actual safety down hood
+                    //
+                    // TODO: Though it'd still be nice if we improve upon this 
+                    //
+                    if info.len.is_some() {
+                        check_usize_literal_to_src(&**index, info.len.unwrap(), span.clone(), locals.clone())?;
                     }
 
-                    check_usize_literal_to_src(&**index, info.len.unwrap(), span.clone(), locals.clone())?;
-                   
                     // Because we are accessing (or shall I say copying) a single element of an array
                     // we only care about the inner type, not the outer array type.
                     if let Type::Array(unarrayed_ty) = &info.ty {
@@ -885,6 +950,7 @@ fn infer_expr_type(
                     } else {
                         panic!("(Compiler bug) Expected array type, instead we got: {:?}", info.ty);
                     }
+
                 } else {
                     Err(HolyError::Semantic(format!("Array access on undeclared variable `{}` (line {} column {})", name, span.line, span.column)))
                 }
@@ -916,38 +982,40 @@ fn infer_expr_type(
                         return Err(HolyError::Semantic(format!("Array access on non-array variable `{}` (line {} column {})", name, span.line, span.column)));
                     }
 
-                    // If info length is none, then this must not be an array.
-                    if info.len.is_none() {
-                        panic!("(Compiler bug) this shouldnt ever happen, but it happened. We expected an info.len to be a usize, but we got None. This shouldve been handled by variable declaration/assignment, but apparently not: {:?}", locals);
-                    }
 
+                    // We only do the basic out-of-bounds checks if possible
+                    // This is fine, because Rust is the one handling the actual safety down hood
+                    //
+                    // TODO: Though it'd still be nice if we improve upon this 
+                    //
+                    if info.len.is_some() {
+                        if let Some(s) = &mut *start {
+                            // Ensure that the type of the start index expression is usize, and try to
+                            // convert it if possible.
+                            let start_ety = infer_expr_type(s, locals, fun_sigs, Some(Type::Usize))?;
+                            if !type_compatible(&start_ety, &Type::Usize) {
+                                return Err(HolyError::Semantic(format!(
+                                            "Expected start index to be of type `usize` for array `{}`, instead we got `{}` (line {} column {})", 
+                                            start_ety, name, span.line, span.column
+                                        )));
+                            }
 
-                    if let Some(s) = &mut *start {
-                        // Ensure that the type of the start index expression is usize, and try to
-                        // convert it if possible.
-                        let start_ety = infer_expr_type(s, locals, fun_sigs, Some(Type::Usize))?;
-                        if !type_compatible(&start_ety, &Type::Usize) {
-                            return Err(HolyError::Semantic(format!(
-                                        "Expected start index to be of type `usize` for array `{}`, instead we got `{}` (line {} column {})", 
-                                        start_ety, name, span.line, span.column
-                                    )));
+                            check_usize_literal_to_src(&s, info.len.unwrap(), span.clone(), locals.clone())?;
                         }
+     
+                        if let Some(e) = &mut *end {
+                            // Same as above, for end index.
+                            let end_ety = infer_expr_type(e, locals, fun_sigs, Some(Type::Usize))?;
+                            if !type_compatible(&end_ety, &Type::Usize) {
+                                return Err(HolyError::Semantic(format!(
+                                            "Expected end index to be of type `usize` for array `{}`, instead we got `{}` (line {} column {})", 
+                                            end_ety, name, span.line, span.column
+                                        )));
+                            }
 
-                        check_usize_literal_to_src(&s, info.len.unwrap(), span.clone(), locals.clone())?;
-                    }
- 
-                    if let Some(e) = &mut *end {
-                        // Same as above, for end index.
-                        let end_ety = infer_expr_type(e, locals, fun_sigs, Some(Type::Usize))?;
-                        if !type_compatible(&end_ety, &Type::Usize) {
-                            return Err(HolyError::Semantic(format!(
-                                        "Expected end index to be of type `usize` for array `{}`, instead we got `{}` (line {} column {})", 
-                                        end_ety, name, span.line, span.column
-                                    )));
+
+                            check_usize_literal_to_src(&e, info.len.unwrap(), span.clone(), locals.clone())?;
                         }
-
-
-                        check_usize_literal_to_src(&e, info.len.unwrap(), span.clone(), locals.clone())?;
                     }
 
 
