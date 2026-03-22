@@ -32,14 +32,14 @@ func main() {
     own x int32[] = int32[1, 2, 3, 4, 5]
 
     # They can be type inferred as well
-    own x = int32[1, 2, 3, 4, 55]
+    own x = int32[1, 2, 3, 4, 5]
 
 
     # Array access example (array accessing is always a copy)
     own y = x[0] # This is equal to 1st element in array x, which is 1
 
     # Array slicing example (array slicing is always a copy)
-    own y = x[1:3] # this creates new array starting from x's end element up to 4th element
+    own y = x[1:3] # this creates new array starting from x's 2nd element up to 4th element
 
 
     # Nested arrays example
