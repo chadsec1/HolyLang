@@ -179,6 +179,14 @@ fn check_stmts(
                     }
 
 
+                    // Error if we are in loop, and we tried to take ownership of an upstream variable
+                    if in_loop && upstream_var_names.contains(&src_name) {
+                        return Err(HolyError::Semantic(format!(
+                                    "Upstream variable `{}` is potentially moved multiple times, because you are in a loop. Consider using `copy()` (line {} column {})", 
+                                    &src_name, var.span.line, var.span.column
+                                )));
+                    }
+
                     // mark source as moved because ownership was transferred
                     src.moved = true;
 
@@ -331,9 +339,18 @@ fn check_stmts(
 
 
 
+                    // Error if we are in loop, and we tried to take ownership of an upstream variable
+                    if in_loop && upstream_var_names.contains(&src_name) {
+                        return Err(HolyError::Semantic(format!(
+                                    "Upstream variable `{}` is potentially moved multiple times, because you are in a loop. Consider using `copy()` (line {} column {})", 
+                                    &src_name, span.line, span.column
+                                )));
+                    }
+
+
                     // if source name is same as our variable name,
                     // then we don't move. It's re-claiming ownership.
-                    if src_name != &assign.name {
+                    if src_name != &assign.name { 
                         // mark source as moved because ownership was transferred
                         src.moved = true;
                     }
@@ -1165,6 +1182,7 @@ fn infer_expr_type(
 
             // Catch the "makes no sense" calls (like nested copying, or copying of a literal,  or
             // array access, or a binary op where left and right are both literals)
+            // and print helpful error messages
             // Basically, copy call only works on variables.
             match &mut **e {
                 Expr::CopyCall {span: inner_span, ..} => {
