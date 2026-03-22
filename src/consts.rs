@@ -3,8 +3,8 @@
 /// No variables, or function names, can use them.
 /// case-insensitive.
 pub const RESERVED_KEYWORDS: &[&str] = &[
-    "func", "own", "return", "for", "forever", "if", "else", "true", "false",
+    "func", "own", "return", "for", "if", "elif", "else", "true", "false",
     "int8", "int16", "int32", "int64", "int128", "byte", "uint16", "uint32", "uint64",
     "uint128", "float32", "float64", "usize", "bool", "string", "copy", "format",
-    "lock", "unlock", "if", "elif", "else", "while", "break", "continue"
+    "lock", "unlock", "while", "break", "continue"
 ];

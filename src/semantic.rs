@@ -678,7 +678,7 @@ fn check_stmts(
             Some(Stmt::Return(_)) => {},
             _ => {
                 return Err(HolyError::Semantic(format!(
-                    "Function `{}` declares return type {:?} but does not end with a `return` (line {} column {})",
+                    "Function `{}` declares return type(s) `{:?}`, but does not end with a return statement (line {} column {})",
                     func.name,
                     ret_ty,
                     func.span.line,
@@ -1043,19 +1043,13 @@ fn infer_expr_type(
                         span.line, span.column)))
             }
 
-            if lty == Type::Infer {
-                panic!("(Compiler bug) lty and rty are of type Infer even after we tried to infer: Left: {:?} Right: {:?}", **left, **right);
-            }
-
-            // Ensure binary operations resolve to same type.
-            if lty != rty {
-                return Err(HolyError::Semantic(format!("Type mismatch in binary operation: `{}` vs `{}` (line {} column {})", lty, rty, span.line, span.column)));
+            if lty == Type::Infer || rty == Type::Infer {
+                panic!("(Compiler bug) lty and or rty are of type Infer even after we tried to infer: Left: {:?} Right: {:?}", **left, **right);
             }
 
             
-            // Since we already know both lty and rty equal same type, we can do our operations on
-            // lty, and is safe to assume both are equal.
-            if matches!(lty, Type::String | Type::Bool | Type::Array(_) ) {
+            // D ouble check
+            if matches!(lty, Type::String | Type::Bool | Type::Array(_) ) || matches!(rty, Type::String | Type::Bool | Type::Array(_) ) {
                 if matches!(op, BinOpKind::Add | BinOpKind::Subtract | BinOpKind::Multiply | BinOpKind::Divide | BinOpKind::Greater | BinOpKind::GreaterEqual | BinOpKind::Less | BinOpKind::LessEqual) {
                     return Err(HolyError::Semantic(format!("You cannot perform arithmetic on type `{}`. (line {} column {})", lty, span.line, span.column)));
                 } 
@@ -1063,7 +1057,8 @@ fn infer_expr_type(
 
             // arthmetic
             if matches!(op, BinOpKind::Add | BinOpKind::Subtract | BinOpKind::Multiply | BinOpKind::Divide ) {
-                Ok(lty)
+                let t = resolve_binary_op_types_numeric(&lty, &rty, span)?;
+                Ok(t)
 
             // boolean comparison
             } else if matches!(op, BinOpKind::Equal | BinOpKind::NotEqual | BinOpKind::Greater | BinOpKind::GreaterEqual | BinOpKind::Less | BinOpKind::LessEqual ) {
@@ -1515,6 +1510,42 @@ fn type_compatible(a: &Type, b: &Type) -> bool {
     a == b
 }
 
+
+/// Resolve binary operation types. Rules:
+/// - both must be numeric and same kind (int/int or float/float)
+/// - mixing signed and unsigned is an error
+/// - return the resulting type
+fn resolve_binary_op_types_numeric(a: &Type, b: &Type, span: &Span) -> Result<Type, HolyError> {
+    use Type::*;
+    match (a, b) {
+        (Int8, Int8) => Ok(Int8),
+        (Int16, Int16) => Ok(Int16),
+        (Int32, Int32) => Ok(Int32),
+        (Int64, Int64) => Ok(Int64),
+        (Int128, Int128) => Ok(Int128),
+
+        (Usize, Usize) => Ok(Usize),
+
+        (Byte, Byte) => Ok(Byte),
+        (Uint16, Uint16) => Ok(Uint16),
+        (Uint32, Uint32) => Ok(Uint32),
+        (Uint64, Uint64) => Ok(Uint64),
+        (Uint128, Uint128) => Ok(Uint128),
+
+        (Float32, Float32) => Ok(Float32),
+        (Float64, Float64) => Ok(Float64),
+
+        // If one side is Infer, prefer the other side if concrete
+        (Infer, t @ _) if *t != Infer => Ok(t.clone()),
+        (t @ _, Infer) if *t != Infer => Ok(t.clone()),
+
+        // both infer, we default to default to Int32
+        (Infer, Infer) => Ok(Int32),
+
+        // mixed signed/unsigned or int/float combos -> error
+        _ => Err(HolyError::Semantic(format!("Type mismatch in binary operation: `{}` vs `{}` (line {} column {})", a, b, span.line, span.column))),
+    }
+}
 
 
 
