@@ -1048,7 +1048,7 @@ fn infer_expr_type(
             }
 
             
-            // D ouble check
+            // Check if lty or rty are of types that cannot have arithmetic performed on.
             if matches!(lty, Type::String | Type::Bool | Type::Array(_) ) || matches!(rty, Type::String | Type::Bool | Type::Array(_) ) {
                 if matches!(op, BinOpKind::Add | BinOpKind::Subtract | BinOpKind::Multiply | BinOpKind::Divide | BinOpKind::Greater | BinOpKind::GreaterEqual | BinOpKind::Less | BinOpKind::LessEqual) {
                     return Err(HolyError::Semantic(format!("You cannot perform arithmetic on type `{}`. (line {} column {})", lty, span.line, span.column)));
