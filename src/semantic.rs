@@ -447,6 +447,13 @@ fn check_stmts(
                                 )))
                             }
 
+                            if upstream_var_names.contains(&name) {
+                                return Err(HolyError::Semantic(format!(
+                                            "You cannot lock variable `{}` because it is declared upstream (line {} column {})", 
+                                            name, span.line, span.column
+                                        )));
+                            }
+
                             var_names_to_lock.push(name.to_string());
 
 
@@ -499,6 +506,14 @@ fn check_stmts(
                                     name, span.line, span.column
                                 )))
                             }
+
+                            if upstream_var_names.contains(&name) {
+                                return Err(HolyError::Semantic(format!(
+                                            "You cannot unlock variable `{}` because it is declared upstream (line {} column {})", 
+                                            name, span.line, span.column
+                                        )));
+                            }
+
 
                             var_names_to_unlock.push(name.to_string());
 
@@ -700,9 +715,14 @@ fn check_stmts(
                     upstream.push(var_name.to_string());
                 }
 
+                // This is for elif, because elif is run many times we want single copy from clean
+                // state.
+                let locals_clone = locals.clone();
 
                     
                 let mut main_locals_clone = locals.clone();
+                let mut else_locals_clone = locals.clone();
+
                 check_stmts(func.clone(), &mut ifStmt.if_branch, &mut main_locals_clone, upstream.clone(), fun_sigs, in_loop)?;
                 update_local_assignments_from_clone(locals, main_locals_clone);
                 
@@ -718,13 +738,12 @@ fn check_stmts(
                     }
 
                 
-                    let mut elif_locals_clone = locals.clone();
+                    let mut elif_locals_clone = locals_clone.clone();
                     check_stmts(func.clone(), &mut s.1, &mut elif_locals_clone, upstream.clone(), fun_sigs, in_loop)?;
                     update_local_assignments_from_clone(locals, elif_locals_clone);
                 }
 
                 if let Some(else_stmts) = ifStmt.else_branch.as_mut() {
-                    let mut else_locals_clone = locals.clone();
                     check_stmts(func.clone(), else_stmts, &mut else_locals_clone, upstream, fun_sigs, in_loop)?;
                     update_local_assignments_from_clone(locals, else_locals_clone);
                 }
@@ -756,10 +775,16 @@ fn check_stmts(
 }
 
 fn update_local_assignments_from_clone(upstream: &mut HashMap<String, VarInfo>, downstream: HashMap<String, VarInfo> ) {
-    // We loop over the locals, to update our corresponding locals
+    // We loop over the downstream locals, to update our 
+    // corresponding upstream locals
     // like variable assignments, length change, ownership change, etc
     for (n, vi) in downstream {
         if let Some(info) = upstream.get_mut(&n) {
+            // If variable is already moved, we don't care about its assignments no more, we just
+            // skip.
+            if info.moved == true {
+                continue
+            }
             *info = vi.clone();
         }
 
