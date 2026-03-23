@@ -630,43 +630,29 @@ fn check_stmts(
                 }
 
 
+                // println!("Nigga {:?}", expr_ty);
+
                 let mut locals_clone = locals.clone();
 
                 // We inject the holder variable into the locals. It is "fake" variable that does
                 // not exist in the AST, but we need it in locals to make analysis work.
                 //
-
-                let mut decided_ty: Type;
-
                 if let Type::Array(inner_ty) = expr_ty {
-                    decided_ty = *inner_ty;
-
-                    
-                } else if expr_ty.is_integer_type() {
-                    decided_ty = expr_ty;
-                } else {
-                    panic!(
-                        "(Compiler bug) Expected for loop expression to either be an array or an integer (more precisely an integer cuz programmer used range()), instead we got: {:?} {:?}", 
-                        forStmt.value, expr_ty);
+                    // NOTE: Out-of-bounds access protection here is non-existent, but thats fine because Rust
+                    // will catch at transpile layer
+                    // However it would be nicer if we can do better job of catching out of bounds
+                    // for literals at compile time.
+                    locals_clone.insert(
+                        forStmt.holder_name.clone(),
+                        VarInfo {
+                            ty: *inner_ty,
+                            value: None,
+                            moved: false,
+                            locked: true, // the holder is locked by default.
+                            len: None
+                        }
+                    );
                 }
-
-
-                // NOTE only specific if decided_ty is an Array: 
-                //      Out-of-bounds access protection here is non-existent, but thats fine because Rust
-                //      will catch at transpile layer
-                //      However it would be nicer if we can do better job of catching out of bounds
-                //      for literals at compile time.
-                //
-                locals_clone.insert(
-                    forStmt.holder_name.clone(),
-                    VarInfo {
-                        ty: decided_ty,
-                        value: None,
-                        moved: false,
-                        locked: true, // the holder variable is locked by default.
-                        len: None
-                    }
-                );
 
 
                 
@@ -1208,18 +1194,14 @@ fn infer_expr_type(
             }
 
 
-            if (!start_ty.is_integer_type()) || (!end_ty.is_integer_type()) {
-                return Err(HolyError::Semantic(format!(
-                        "Expected range arguments to be any Integer type, instead we got: `{}` and `{}` (line {} column {})", 
-                        start_ty, end_ty, span.line, span.column)))
-
+            if start_ty.is_integer_type() {
             }
 
 
 
+            println!("Guacamole nigga penis {:?} {:?} {:?} {:?}", start_expr, end_expr, start_ty, end_ty);
             
-            // start_ty is same as end_ty
-            Ok(start_ty)
+            Ok(Type::Bool)
         }
 
         Expr::CopyCall { expr: e, span: span } => {

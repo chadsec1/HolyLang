@@ -34,9 +34,10 @@ fn expr_span(e: &Expr) -> Span {
         Expr::Var { span, .. } => *span,
         Expr::BinOp { span, .. } => *span,
         Expr::UnaryOp { span, .. } => *span,
+        Expr::Call { span, .. } => *span,
         Expr::CopyCall { span, .. } => *span,
         Expr::FormatCall { span, .. } => *span,
-        Expr::Call { span, .. } => *span,
+        Expr::RangeCall { span, .. } => *span,
     }
 }
 

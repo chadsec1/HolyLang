@@ -66,6 +66,7 @@ impl fmt::Display for Expr {
             Expr::ArrayMultipleAccess { .. } => "Array Slice Access",
             Expr::CopyCall { .. } => "Copy Call",
             Expr::FormatCall { .. } => "Format Call",
+            Expr::RangeCall { .. } => "Range Call",
         };
         write!(f, "{}", name)
     }

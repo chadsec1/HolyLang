@@ -40,6 +40,29 @@ pub enum Type {
     Infer,
 }
 
+impl Type {
+    pub fn is_integer_type(&self) -> bool {
+        match self {
+            Type::Int8 |
+            Type::Int16 |
+            Type::Int32 |
+            Type::Int64 |
+            Type::Int128 |
+
+            Type::Byte |
+            Type::Uint16 |
+            Type::Uint32 |
+            Type::Uint64 |
+            Type::Uint128 |
+            
+            Type::Usize => true,
+
+            _ => false
+        }
+    }
+}
+
+
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum IntLiteralValue {
     Int8(i8),
@@ -222,6 +245,11 @@ pub enum Expr {
         expressions: Vec<Expr>,
         span: Span,
     },
+    RangeCall {
+        start: Box<Expr>,
+        end: Box<Expr>,
+        span: Span,
+    }
 
 }
 
@@ -289,7 +317,7 @@ pub struct MultiAssignment {
 #[derive(Debug, Clone)]
 pub struct ForStmt {
     pub holder_name: String,
-    pub array: Expr,
+    pub value: Expr,
     pub branch: Vec<Stmt>,
     pub span: Span
 }
@@ -712,13 +740,43 @@ fn parse_for_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), Ho
 
     let holder_name = parts[0].to_string();
 
-    let expr = parse_expr::parse_expr(parts[1], span)?;
+
+
+    let mut expr: Expr;
+
+
+    // A very ugly hack, to only allow "RangeCall" expression to be used within for loop statements.
+    // I would love to shove this in parse_expr, but, if I do, programmer would be able to assign
+    // `rangecall` to any variable. 
+    //
+    if parts[1].starts_with("range(") && parts[1].ends_with(")") {
+        let range_str = parts[1]["range(".len()..].strip_suffix(")").unwrap();
+
+        let split_args = helpers::split_comma_top_level(range_str)
+            .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+
+        if split_args.len() != 2 {
+            return Err(HolyError::Parse(format!(
+                "For loop range statement takes exactly 2 integer arguments. (line {} column {})",
+                span.line, span.column
+            )));
+
+        }
+
+        let start_expr = parse_expr::parse_expr(split_args[0], span)?;
+        let end_expr = parse_expr::parse_expr(split_args[1], span)?;
+
+        expr = Expr::RangeCall{ start: Box::new(start_expr), end: Box::new(end_expr), span: span };
+    } else {
+        expr = parse_expr::parse_expr(parts[1], span)?;
+    }
+
     let (branch, mut next_i) = parse_block(lines, start_i + 1)?;
 
     Ok((
         Stmt::For(ForStmt {
             holder_name,
-            array: expr,
+            value: expr,
             branch,
             span,
         }),
