@@ -14,6 +14,7 @@ pub fn stmt_span(s: &Stmt) -> Span {
         Stmt::While(w) => w.span,
         Stmt::Break(b) => b.span,
         Stmt::Continue(c) => c.span,
+        Stmt::Forever(f) => f.span,
         Stmt::If(i) => i.span,
         Stmt::Func(f) => f.span,
         Stmt::VarDeclMulti(_, v) => expr_span(v), 

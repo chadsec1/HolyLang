@@ -78,6 +78,7 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
     }
     
     // Ensure that no code exists after return
+    // NOTE:: This is very weak and fragile check, might need replacing.
     if let Some(last_ret_pos) = func.body.iter().rposition(|s| matches!(s, Stmt::Return(_))) {
         if last_ret_pos + 1 < func.body.len() {
             
@@ -89,10 +90,94 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
         }
     }
 
-    check_stmts(func.clone(), &mut func.body, &mut locals, upstream_var_names, fun_sigs, false)
+    // TODO: remove passing func from check_stmts
+    //
+    check_stmts(func.clone(), &mut func.body, &mut locals, upstream_var_names, fun_sigs, false)?;
 
+
+    // Branch analysis to determine if function returns in all branches
+    //
+
+    let last_func_stmt = func.body.last();
+    if last_func_stmt.is_none() {
+        return Err(HolyError::Semantic(format!(
+                        "Function `{}` has no statements, empty functions are not allowed! (line {} column {})",
+                        func.name, func.span.line, func.span.column,
+                    )));
+    }
+
+
+    if let Some(ret_ty) = &func.return_type {
+        return_branch_analysis(&func.clone(), last_func_stmt.cloned(), func.span, &locals)?;
+    }
+
+    Ok(())
 
 }
+
+
+fn return_branch_analysis(
+    func: &Function,
+    last_stmt: Option<Stmt>,
+    span: Span,
+    locals: &HashMap<String, VarInfo>,
+) -> Result<(), HolyError> {
+    let ret_ty = func.return_type.clone().unwrap();
+
+    match last_stmt {
+        Some(Stmt::Return(_)) => {},
+        Some(Stmt::While(whileStmt)) => return Err(HolyError::Semantic(format!(
+                    "While loops may or may not execute at all, therefore you need a return statement outside the loop scope, or consider using `forever` infinite loops instead. (line {} column {})",
+                    whileStmt.span.line, whileStmt.span.column,
+                ))),
+        
+        Some(Stmt::For(forStmt)) => return Err(HolyError::Semantic(format!(
+                    "For loops may or may not execute at all, therefore you need a return statement outside the loop scope. (line {} column {})",
+                    forStmt.span.line, forStmt.span.column,
+                ))),
+        
+
+        Some(Stmt::If(ifStmt)) => {
+            let stmt = ifStmt.if_branch.last();
+            return_branch_analysis(func, stmt.cloned(), ifStmt.span, locals)?;
+
+            if ifStmt.else_branch.is_none() {
+                return Err(HolyError::Semantic(format!(
+                    "Function `{}` only returns in if statement branches, which might not always execute. Add an `else` branch (line {} column {})",
+                    func.name, ifStmt.span.line, ifStmt.span.column,
+                )));
+            }
+
+            let stmt = ifStmt.else_branch.as_ref().unwrap().last();
+
+            return_branch_analysis(func, stmt.cloned(), ifStmt.span, locals)?;
+
+
+            for s_vec in &ifStmt.elif_branches {
+                let body = &s_vec.1;
+
+                let stmt = body.last();
+                return_branch_analysis(func, stmt.cloned(), ifStmt.span, locals)?;
+            }
+
+        },
+        Some(other) => {
+            let branch_span = helpers::stmt_span(&other);
+
+            return Err(HolyError::Semantic(format!(
+                "Function `{}` declares return type(s) `{:?}`, but statement branch body does not end with a return statement (line {} column {})",
+                func.name, ret_ty, branch_span.line, branch_span.column,
+            ))) 
+        },
+
+
+        _ => panic!("(Compiler bug) check_stmts should've errored when it encounterd an empty block, but it didn't:\nFunc: {:?}\nlast_stmt: {:?}\nlocals: {:?}", func, last_stmt, locals)
+    }
+
+
+    Ok(())
+}
+
 
 // Parse stmts in a block
 fn check_stmts(
@@ -104,6 +189,13 @@ fn check_stmts(
     in_loop: bool
 
 ) -> Result<(), HolyError> {
+
+    if block.len() == 0 {
+        return Err(HolyError::Semantic(format!(
+                "Function `{}` has empty branches, which are not allowed. (line {} column {})",
+                func.name, func.span.line, func.span.column,
+            )));
+    }
     
     // Walk statements in order. 
     for stmt in block {
@@ -710,6 +802,22 @@ fn check_stmts(
                 
             }
 
+            Stmt::Forever(foreverStmt) => {
+                // This gets all upstream variable names, and passes it to check stmts to ensure
+                // you cannot overshadow them.
+                let mut upstream = upstream_var_names.clone();
+                for var_name in locals.keys() {
+                    upstream.push(var_name.to_string());
+                }
+                    
+                let mut locals_clone = locals.clone();
+                check_stmts(func.clone(), &mut foreverStmt.branch, &mut locals_clone, upstream.clone(), fun_sigs, true)?;
+                update_local_assignments_from_clone(locals, locals_clone);
+                
+            }
+
+
+
             Stmt::Break(breakStmt) => {
                 if !in_loop {
                     return Err(HolyError::Semantic(format!(
@@ -784,23 +892,6 @@ fn check_stmts(
             Stmt::Func(_) => {}
         }
     }
-
-
-    if let Some(ret_ty) = &func.return_type {
-        match func.body.last() {
-            Some(Stmt::Return(_)) => {},
-            _ => {
-                return Err(HolyError::Semantic(format!(
-                    "Function `{}` declares return type(s) `{:?}`, but does not end with a return statement (line {} column {})",
-                    func.name,
-                    ret_ty,
-                    func.span.line,
-                    func.span.column,
-                )));
-            }
-        }
-    }
-
 
     Ok(())
 }

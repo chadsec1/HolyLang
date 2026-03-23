@@ -340,6 +340,13 @@ pub struct IfStmt {
 }
 
 #[derive(Debug, Clone)]
+pub struct ForeverStmt {
+    pub branch: Vec<Stmt>,
+    pub span: Span
+}
+
+
+#[derive(Debug, Clone)]
 pub struct BreakStmt {
     pub span: Span
 }
@@ -364,6 +371,7 @@ pub enum Stmt {
     Break(BreakStmt),
     Continue(ContinueStmt),
     If(IfStmt),
+    Forever(ForeverStmt),
     Func(Function), 
 }
 
@@ -580,7 +588,8 @@ fn parse_block(lines: &Vec<&str>, mut idx: usize) -> Result<(Vec<Stmt>, usize), 
 
         // Let block-opening statements through before the brace guard.
         // NOTE to self: any statement that legitimately ends with `{` must be listed here.
-        let is_block_opener = t.starts_with("if ")
+        let is_block_opener = t.starts_with("forever ")
+            || t.starts_with("if ")
             || t.starts_with("elif ")
             || t.starts_with("else ")
             || t.starts_with("for ")
@@ -784,6 +793,30 @@ fn parse_for_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), Ho
     ))
 }
 
+fn parse_forever_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), HolyError> {
+    let raw = lines[start_i];
+    let line = helpers::strip_inline_comment(raw);
+    let line = line.replace(" ", "");
+    let span = Span { line: start_i + 1, column: 0 };
+
+    if line != "forever{" {
+        return Err(HolyError::Parse(format!(
+            "Invalid forever loop syntax {{ at line {}: {}",
+            span.line, raw
+        )));
+    }
+
+    let (branch, mut next_i) = parse_block(lines, start_i + 1)?;
+
+    Ok((
+        Stmt::Forever(ForeverStmt {
+            branch,
+            span,
+        }),
+        next_i,
+    ))
+}
+
 
 
 fn parse_while_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), HolyError> {
@@ -827,7 +860,10 @@ fn parse_stmt_at(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), Hol
     let line = helpers::strip_inline_comment(raw).trim().to_string();
     let span = Span { line: start_i + 1, column: 0 };
 
-    if line.starts_with("if ") {
+    if line.starts_with("forever ") {
+        return parse_forever_stmt(lines, start_i);
+
+    } else if line.starts_with("if ") {
         return parse_if_stmt(lines, start_i);
 
     } else if line.starts_with("while ") {
@@ -836,7 +872,7 @@ fn parse_stmt_at(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), Hol
     } else if line.starts_with("for ") {
         return parse_for_stmt(lines, start_i);
     }
-
+    
     let stmt = parse_stmt_line(&line, start_i + 1)?;
     Ok((stmt, start_i + 1))
 }
