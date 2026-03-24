@@ -22,7 +22,12 @@ mod tests {
     }
 
     /// Build a void function (no return type) with the given body.
-    fn void_func(name: &str, params: Vec<Param>, body: Vec<Stmt>) -> Function {
+    fn void_func(name: &str, params: Vec<Param>, mut body: Vec<Stmt>) -> Function {
+        if body.len() == 0 {
+            // Dummy body because empty branches are not allowed.
+            body = vec![var_decl("x", Type::Int8, Some(int32_lit(69)))];
+        }
+
         Function {
             name: name.to_string(),
             params,
@@ -82,6 +87,17 @@ mod tests {
         Expr::IntLiteral { value: IntLiteralValue::Usize(n), span: span() }
     }
 
+
+    fn float32_lit(f: f32) -> Expr {
+        Expr::FloatLiteral { value: FloatLiteralValue::Float32(f), span: span() }
+    }
+
+
+    fn float64_lit(f: f64) -> Expr {
+        Expr::FloatLiteral { value: FloatLiteralValue::Float64(f), span: span() }
+    }
+
+
     fn bool_lit(b: bool) -> Expr {
         Expr::BoolLiteral { value: b, span: span() }
     }
@@ -140,7 +156,7 @@ mod tests {
         let mut ast = ast_one(func);
         let result = check_semantics(&mut ast);
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("does not end with a `return`"));
+        assert!(result.unwrap_err().to_string().starts_with("Semantic error: Function `foo` declares return type(s) `[Int32]`, but statement branch body does not end with a return statement"));
     }
 
     #[test]
@@ -877,11 +893,11 @@ mod tests {
     // binary operation type mismatch 
 
     #[test]
-    fn test_binop_mixed_int_types_errors() {
-        // int32 + int64 is not allowed (we don't allow any different types mixing in expressions)
+    fn test_binop_mixed_types_errors() {
+        // intliteral + float_literal is not allowed (we don't allow any different types mixing in expressions)
         let bin = Expr::BinOp {
             left: Box::new(int32_lit(1)),
-            right: Box::new(int64_lit(2)),
+            right: Box::new(float32_lit(2.0)),
             op: crate::parser::BinOpKind::Add,
             span: span(),
         };
