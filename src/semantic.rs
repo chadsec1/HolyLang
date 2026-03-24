@@ -91,14 +91,11 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
         }
     }
 
-    // TODO: remove passing func from check_stmts
-    //
     check_stmts(func.clone(), &mut func.body, &mut locals, upstream_var_names, fun_sigs, false)?;
 
 
     // Branch analysis to determine if function returns in all branches
     //
-
     let last_func_stmt = func.body.last();
     if last_func_stmt.is_none() {
         return Err(HolyError::Semantic(format!(
@@ -107,6 +104,8 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
                     )));
     }
 
+
+    branch_analysis::dead_code_analysis(&func.body)?;
 
     if let Some(ret_ty) = &func.return_type {
         branch_analysis::return_branch_analysis(&func.clone(), last_func_stmt.cloned(), func.span, false, false)?;
@@ -314,8 +313,8 @@ fn check_stmts(
                     }
                 } else {
                     return Err(HolyError::Semantic(format!(
-                        "Multi-declarement requires only a single function call on the right-hand side",
-                        // call_expr.span.line, call_expr.span.column
+                        "Multi-declarement requires only a single function call on the right-hand side (line {} column {})",
+                        stmt_span.line, stmt_span.column
                     )));
                 }
             }
@@ -611,8 +610,8 @@ fn check_stmts(
                         return Err(HolyError::Semantic(format!(
                             "Function `{}` contains return but has no declared return type (line {} column {})",
                             func.name,
-                            func.span.line,
-                            func.span.column,
+                            stmt_span.line,
+                            stmt_span.column,
                         )));
                     }
                     Some(declared_ty_vec) => {
@@ -620,7 +619,7 @@ fn check_stmts(
                         if declared_ty_vec.len() != expr_vec.len() {
                             return Err(HolyError::Semantic(format!(
                                     "Return length mismatch in `{}`: got `{}` expressions, expected `{}` expressions (line {} column {})",
-                                    func.name, expr_vec.len(), declared_ty_vec.len(), func.span.line, func.span.column,
+                                    func.name, expr_vec.len(), declared_ty_vec.len(), stmt_span.line, stmt_span.column,
                                 )));
                         
                         }
@@ -632,7 +631,7 @@ fn check_stmts(
                             if !type_compatible(&expr_ty, &declared_ty) {
                                 return Err(HolyError::Semantic(format!(
                                     "Return type mismatch in `{}`: got `{}`, expected `{}` (line {} column {})",
-                                    func.name, expr_ty, declared_ty_vec[i], func.span.line, func.span.column,
+                                    func.name, expr_ty, declared_ty_vec[i], stmt_span.line, stmt_span.column,
                                 )));
                             }
                             

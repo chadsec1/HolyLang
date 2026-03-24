@@ -1,6 +1,43 @@
 use super::*;
 
 
+pub fn dead_code_analysis(body: &Vec<Stmt>) -> Result<(), HolyError> {
+
+    let mut end_detected = false;
+    
+    for stmt in body {
+        if end_detected {
+            let stmt_span = helpers::stmt_span(&stmt);
+
+            return Err(HolyError::Semantic(format!(
+                        "Dead code detected starting from line `{}` up to the end of the scope",
+                        stmt_span.line,
+                    )));
+
+        }
+
+        match stmt {
+            Stmt::Break(_) => {
+                end_detected = true; 
+            }
+            
+            Stmt::Return(_) => {
+                end_detected = true; 
+            }
+
+            Stmt::Forever(foreverStmt) => {
+                dead_code_analysis(&foreverStmt.branch)?;
+            }
+            
+
+            _ => {}
+        }
+        
+    }
+
+    Ok(())
+}
+
 pub fn return_branch_analysis(
     func: &Function,
     last_stmt: Option<Stmt>,
