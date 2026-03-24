@@ -87,7 +87,7 @@ pub fn assign_default_value_for_type(expr: &mut Option<Expr>, ty: &Type, span: S
 
 
 /// Decide whether two types are compatible for assignment / matching.
-/// For now: exact match only (no implicit widening/narrowing).
+/// so we don't have to dereference types all times.
 pub fn type_compatible(a: &Type, b: &Type) -> bool {
     a == b
 }

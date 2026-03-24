@@ -4,6 +4,13 @@ use crate::parser::{
 };
 
 
+const AllBinOpKindArth: [BinOpKind; 4] = [
+            BinOpKind::Add,
+            BinOpKind::Subtract,
+            BinOpKind::Multiply,
+            BinOpKind::Divide,
+        ];
+
 
 
 #[cfg(test)]
@@ -819,14 +826,7 @@ mod tests {
     //
     #[test]
     fn test_string_binop_errors() {
-        const all: [BinOpKind; 4] = [
-            BinOpKind::Add,
-            BinOpKind::Subtract,
-            BinOpKind::Multiply,
-            BinOpKind::Divide,
-        ];
-
-        for b in all {
+        for b in AllBinOpKindArth {
             // Strings may not be ever wrapped in ANY BinOpKind, we use format() instead.
             let bin = Expr::BinOp {
                 left: Box::new(str_lit("hello")),
@@ -893,22 +893,80 @@ mod tests {
     // binary operation type mismatch 
 
     #[test]
-    fn test_binop_mixed_types_errors() {
-        // intliteral + float_literal is not allowed (we don't allow any different types mixing in expressions)
-        let bin = Expr::BinOp {
-            left: Box::new(int32_lit(1)),
-            right: Box::new(float32_lit(2.0)),
-            op: crate::parser::BinOpKind::Add,
-            span: span(),
-        };
-        let body = vec![var_decl("x", Type::Infer, Some(bin))];
-        let func = void_func("foo", vec![], body);
-        let mut ast = ast_one(func);
-        let result = check_semantics(&mut ast);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Type mismatch"));
+    fn test_binop_int_mixed_types_errors() {
+        // int_literals is not allowed (we don't allow any different types mixing in expressions)
+        
+        let int_literals = [
+            int8_lit(1),
+            int16_lit(1),
+            int32_lit(1),
+            int64_lit(1),
+            int128_lit(1),
+        ];
+
+
+        let non_int_literals = [
+            float32_lit(1.0),
+            float64_lit(1.0),
+            bool_lit(false),
+            str_lit("Hi")
+        ];
+
+
+
+        for int in &int_literals {
+            for non_int in &non_int_literals {
+                for b in AllBinOpKindArth {
+                    let bin = Expr::BinOp {
+                        left: Box::new(int.clone()),
+                        right: Box::new(non_int.clone()),
+                        op: b,
+                        span: span(),
+                    };
+                    let body = vec![var_decl("x", Type::Infer, Some(bin))];
+                    let func = void_func("foo", vec![], body);
+                    let mut ast = ast_one(func);
+                    let result = check_semantics(&mut ast);
+                    assert!(result.is_err());
+                    let assert_condition = result.unwrap_err().to_string();
+                    let assert_condition = assert_condition.starts_with("Semantic error: Type mismatch in binary operation: ") 
+                                           || assert_condition.starts_with("Semantic error: You cannot perform arithmetic on type ");
+
+                    assert!(assert_condition);
+                }
+            }
+        }
+        
+
+
+        for int in &int_literals {
+            for non_int in &non_int_literals {
+                for b in AllBinOpKindArth {
+                    let bin = Expr::BinOp {
+                        left: Box::new(non_int.clone()),
+                        right: Box::new(int.clone()),
+                        op: b,
+                        span: span(),
+                    };
+                    let body = vec![var_decl("x", Type::Infer, Some(bin))];
+                    let func = void_func("foo", vec![], body);
+                    let mut ast = ast_one(func);
+                    let result = check_semantics(&mut ast);
+                    assert!(result.is_err());
+                    let assert_condition = result.unwrap_err().to_string();
+                    let assert_condition = assert_condition.starts_with("Semantic error: Type mismatch in binary operation: ") 
+                                           || assert_condition.starts_with("Semantic error: You cannot perform arithmetic on type ");
+
+                    assert!(assert_condition);
+                }
+            }
+        }
+
+
     }
 
+
+        
     // copy call guards 
 
     #[test]
