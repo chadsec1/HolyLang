@@ -1189,8 +1189,43 @@ fn infer_expr_type(
 
         Expr::BinOp { left: left, op: op, right: right, span: span } => {
             // infer both sides
-            let lty = infer_expr_type(left, locals, fun_sigs, infer_hint.clone())?;
-            let rty = infer_expr_type(right, locals, fun_sigs, infer_hint.clone())?;
+            //
+            let mut lty = infer_expr_type(left, locals, fun_sigs, infer_hint.clone())?;
+
+            let mut rty = infer_expr_type(right, locals, fun_sigs, infer_hint.clone())?;
+            
+            if infer_hint.is_none() {
+                // Integer literal inferrence
+                if matches!(**left, Expr::IntLiteral {..}) && !matches!(**right, Expr::IntLiteral {..}) {
+                    lty = infer_expr_type(left, locals, fun_sigs, Some(rty.clone()))?;
+
+                } else if matches!(**right, Expr::IntLiteral {..}) && !matches!(**left, Expr::IntLiteral {..}) {
+                    rty = infer_expr_type(right, locals, fun_sigs, Some(lty.clone()))?;
+                
+                } else if matches!(**left, Expr::IntLiteral {..}) && matches!(**right, Expr::IntLiteral {..}) {
+
+                    let bigger_type = helpers::get_bigger_type_of_two(lty.clone(), rty.clone());
+
+                    rty = infer_expr_type(right, locals, fun_sigs, Some(bigger_type.clone()))?;
+                    lty = infer_expr_type(left, locals, fun_sigs, Some(bigger_type.clone()))?;
+                }
+
+                // Float literal inferrence
+                if matches!(**left, Expr::FloatLiteral {..}) && !matches!(**right, Expr::FloatLiteral {..}) {
+                    lty = infer_expr_type(left, locals, fun_sigs, Some(rty.clone()))?;
+
+                } else if matches!(**right, Expr::FloatLiteral {..}) && !matches!(**left, Expr::FloatLiteral {..}) {
+                    rty = infer_expr_type(right, locals, fun_sigs, Some(lty.clone()))?;
+                
+                } else if matches!(**left, Expr::FloatLiteral {..}) && matches!(**right, Expr::FloatLiteral {..}) {
+                    let bigger_type = Type::Float64;
+
+                    rty = infer_expr_type(right, locals, fun_sigs, Some(bigger_type.clone()))?;
+                    lty = infer_expr_type(left, locals, fun_sigs, Some(bigger_type.clone()))?;
+                }
+
+            }
+
 
                 
             if matches!(**left, Expr::CopyCall { .. }) || matches!(**right, Expr::CopyCall { .. }) {
@@ -1729,11 +1764,15 @@ fn resolve_binary_op_types_numeric(a: &Type, b: &Type, span: &Span) -> Result<Ty
         // Perhaps it is wiser to panic here as a compiler bug ? It make no sense that any side is infer
         // because it should've been assigned a type by now. 
         //
+        /*
         (Infer, t @ _) if *t != Infer => Ok(t.clone()),
         (t @ _, Infer) if *t != Infer => Ok(t.clone()),
 
         // both infer, we default to default to Int32
         (Infer, Infer) => Ok(Int32),
+        */
+
+        (t1 @ _, t2 @ _) if (*t1 == Infer || *t2 == Infer) => panic!("(Compiler bug) We received a numeric binary operation with at least one side being of type infer. A: {:?}, B: {:?}", a, b),
 
         // mixed signed/unsigned or int/float combos -> error
         _ => Err(HolyError::Semantic(format!("Type mismatch in binary operation: `{}` vs `{}` (line {} column {})", a, b, span.line, span.column))),

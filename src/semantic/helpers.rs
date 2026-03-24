@@ -1,5 +1,61 @@
 use super::*;
 
+
+pub fn get_bigger_type_of_two(t_1: Type, t_2: Type) -> Type {
+    if !t_1.is_integer_type() || !t_2.is_integer_type() {
+        panic!("(Compiler bug) you should not call this function unless you are sure both types are integer type. We got {:?} {:?}", t_1, t_2);
+    }
+
+
+    let t_1_score = match t_1 {
+            Type::Int8 => 1,
+            Type::Int16 => 3,
+            Type::Int32 => 5,
+            Type::Int64 => 7,
+            Type::Int128 => 9,
+
+            Type::Byte => 2,
+            Type::Uint16 => 4,
+            Type::Uint32 => 6,
+            Type::Uint64 => 8,
+            Type::Uint128 => 10,
+            
+            Type::Usize => 8,
+
+            other => panic!("Shouldve been an integer, instead its {:?}", other)
+    };
+
+    let t_2_score = match t_2 {
+            Type::Int8 => 1,
+            Type::Int16 => 3,
+            Type::Int32 => 5,
+            Type::Int64 => 7,
+            Type::Int128 => 9,
+
+            Type::Byte => 2,
+            Type::Uint16 => 4,
+            Type::Uint32 => 6,
+            Type::Uint64 => 8,
+            Type::Uint128 => 10,
+            
+            Type::Usize => 8,
+
+            other => panic!("Shouldve been an integer, instead its {:?}", other)
+    };
+
+
+    if t_1_score > t_2_score {
+        return t_1
+    }
+
+    return t_2
+
+}
+
+
+
+
+
 // helper to get the span of a statement (so we can point to offending code)
 pub fn stmt_span(s: &Stmt) -> Span {
     match s {
