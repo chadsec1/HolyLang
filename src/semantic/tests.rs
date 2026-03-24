@@ -90,6 +90,27 @@ mod tests {
 
 
 
+    fn byte_lit(b: u8) -> Expr {
+        Expr::IntLiteral { value: IntLiteralValue::Byte(b), span: span() }
+    }
+
+    fn uint16_lit(n: u16) -> Expr {
+        Expr::IntLiteral { value: IntLiteralValue::Uint16(n), span: span() }
+    }
+
+    fn uint32_lit(n: u32) -> Expr {
+        Expr::IntLiteral { value: IntLiteralValue::Uint32(n), span: span() }
+    }
+
+    fn uint64_lit(n: u64) -> Expr {
+        Expr::IntLiteral { value: IntLiteralValue::Uint64(n), span: span() }
+    }
+
+    fn uint128_lit(n: u128) -> Expr {
+        Expr::IntLiteral { value: IntLiteralValue::Uint128(n), span: span() }
+    }
+
+
     fn usize_lit(n: usize) -> Expr {
         Expr::IntLiteral { value: IntLiteralValue::Usize(n), span: span() }
     }
@@ -902,6 +923,14 @@ mod tests {
             int32_lit(1),
             int64_lit(1),
             int128_lit(1),
+
+            byte_lit(1),
+            uint16_lit(1),
+            uint32_lit(1),
+            uint64_lit(1),
+            uint128_lit(1),
+
+            usize_lit(1),
         ];
 
 
@@ -970,14 +999,38 @@ mod tests {
     // copy call guards 
 
     #[test]
-    fn test_copy_of_literal_errors() {
-        let copy_lit = Expr::CopyCall { expr: Box::new(int32_lit(5)), span: span() };
-        let body = vec![var_decl("x", Type::Int32, Some(copy_lit))];
-        let func = void_func("foo", vec![], body);
-        let mut ast = ast_one(func);
-        let result = check_semantics(&mut ast);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Copying a literal"));
+    fn test_copy_of_literals_errors() {
+        let literals = [
+            int8_lit(1),
+            int16_lit(1),
+            int32_lit(1),
+            int64_lit(1),
+            int128_lit(1),
+
+            byte_lit(1),
+            uint16_lit(1),
+            uint32_lit(1),
+            uint64_lit(1),
+            uint128_lit(1),
+
+            usize_lit(1),
+
+            float32_lit(1.0),
+            float64_lit(1.0),
+
+            bool_lit(false),
+            str_lit("Hi")
+        ];
+
+        for l in &literals {
+            let copy_lit = Expr::CopyCall { expr: Box::new(l.clone()), span: span() };
+            let body = vec![var_decl("x", Type::Infer, Some(copy_lit))];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Copying a literal"));
+        }
     }
 
     #[test]
