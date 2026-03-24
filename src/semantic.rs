@@ -1219,6 +1219,9 @@ fn infer_expr_type(
 
             // boolean comparison
             } else if matches!(op, BinOpKind::Equal | BinOpKind::NotEqual | BinOpKind::Greater | BinOpKind::GreaterEqual | BinOpKind::Less | BinOpKind::LessEqual ) {
+                if lty != rty {
+                    return Err(HolyError::Semantic(format!("Type mismatch in binary operation: `{}` vs `{}` (line {} column {})", lty, rty, span.line, span.column)));
+                }
                 Ok(Type::Bool)
             } else {
                 panic!("(Compiler bug) We got an unexpected BinOpKind: {:?}", op)
@@ -1696,7 +1699,7 @@ fn type_compatible(a: &Type, b: &Type) -> bool {
 }
 
 
-/// Resolve binary operation types. Rules:
+/// Resolve binary operation for numeric types and operations. Rules:
 /// - both must be numeric and same kind (int/int or float/float)
 /// - mixing signed and unsigned is an error
 /// - return the resulting type
