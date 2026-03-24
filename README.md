@@ -127,10 +127,17 @@ func main() {
 
     # For loops
 
-    own x = int32["john", "jane", "jeffrey", "epstein"]
+    own x = string["john", "jane", "jeffrey", "epstein"]
     for s in x {
         if s == "epstein" {
             break
+        }
+    }
+
+
+    for i in range(1, 10) {
+        if i == 7 {
+            continue
         }
     }
 
