@@ -162,7 +162,7 @@ fn check_stmts(
 
                         // Now infer/check the expression type as usual.
                         let expr_ty = infer_expr_type(expr, locals, fun_sigs, Some(var.type_name.clone()))?;
-                        if !type_compatible(&expr_ty, &var.type_name) {
+                        if !helpers::type_compatible(&expr_ty, &var.type_name) {
                             return Err(HolyError::Semantic(format!(
                                 "Type mismatch assigning to `{}`: got `{}`, expected `{}` (line {} column {})",
                                 var.name, expr_ty, var.type_name, var.span.line, var.span.column
@@ -170,7 +170,7 @@ fn check_stmts(
                         }
 
                     } else {
-                        assign_default_value_for_type(&mut var.value, &var.type_name, var.span)?;
+                        helpers::assign_default_value_for_type(&mut var.value, &var.type_name, var.span)?;
                     }
                 }
 
@@ -272,7 +272,7 @@ fn check_stmts(
                     for (var, ret_ty) in var_list.iter_mut().zip(ret_vec.iter()) {
                         if var.type_name == Type::Infer {
                             var.type_name = ret_ty.clone();
-                        } else if !type_compatible(&var.type_name, ret_ty) {
+                        } else if !helpers::type_compatible(&var.type_name, ret_ty) {
                             return Err(HolyError::Semantic(format!(
                                 "Type mismatch for variable `{}`: declared `{}` but call returns `{}` (line {} column {})",
                                 var.name, var.type_name, ret_ty, var.span.line, var.span.column
@@ -332,7 +332,7 @@ fn check_stmts(
                 // reflected back in locals. I think.
 
                 let expr_ty = infer_expr_type(&mut assign.value.clone(), locals, fun_sigs, Some(varinfo.ty.clone()))?;
-                if !type_compatible(&expr_ty, &varinfo.ty) {
+                if !helpers::type_compatible(&expr_ty, &varinfo.ty) {
                     return Err(HolyError::Semantic(format!(
                         "Cannot assign `{}` to `{}` of type `{}` (line {} column {})",
                         expr_ty, assign.name, varinfo.ty, assign.span.line, assign.span.column
@@ -453,7 +453,7 @@ fn check_stmts(
                         }
 
 
-                        if !type_compatible(&varinfo.ty, ret_ty) {
+                        if !helpers::type_compatible(&varinfo.ty, ret_ty) {
                             return Err(HolyError::Semantic(format!(
                                 "Type mismatch for variable `{}`: declared `{}` but call returns `{}` (line {} column {})",
                                 var_name, varinfo.ty, ret_ty, expr.span.line, expr.span.column
@@ -628,7 +628,7 @@ fn check_stmts(
                             let declared_ty = declared_ty_vec[i].clone();
                             let expr_ty = infer_expr_type(expr, locals, fun_sigs, Some(declared_ty.clone()))?;
 
-                            if !type_compatible(&expr_ty, &declared_ty) {
+                            if !helpers::type_compatible(&expr_ty, &declared_ty) {
                                 return Err(HolyError::Semantic(format!(
                                     "Return type mismatch in `{}`: got `{}`, expected `{}` (line {} column {})",
                                     func.name, expr_ty, declared_ty_vec[i], stmt_span.line, stmt_span.column,
@@ -890,7 +890,7 @@ fn check_call(
         if arg_ty == Type::Infer {
             // assign literal inference to param type when possible
             assign_infer_type_to_expr_value(arg_expr, param_ty.clone())?;
-        } else if !type_compatible(&arg_ty, param_ty) {
+        } else if !helpers::type_compatible(&arg_ty, param_ty) {
             return Err(HolyError::Semantic(format!(
                 "Argument number {} type mismatch in call to `{}`: expected `{}`, got `{}` (line {} column {})",
                 i + 1, name, param_ty, arg_ty, span.line, span.column,
@@ -986,7 +986,7 @@ fn infer_expr_type(
             // all elements must have same type as the array type
             for e in elements.iter_mut() {
                 let ety = infer_expr_type(e, locals, fun_sigs, Some(array_ty.clone()))?;
-                if !type_compatible(&ety, &array_ty) {
+                if !helpers::type_compatible(&ety, &array_ty) {
 
                     return Err(HolyError::Semantic(format!(
                         "Array element type mismatch: expected `{}` got `{}` (line {} column {})",
@@ -1011,7 +1011,7 @@ fn infer_expr_type(
                 
                     // Ensure that the type of the index expression is usize.
                     let ety = infer_expr_type(index, locals, fun_sigs, Some(Type::Usize))?;
-                    if !type_compatible(&ety, &Type::Usize) {
+                    if !helpers::type_compatible(&ety, &Type::Usize) {
                         return Err(HolyError::Semantic(format!("Expected array index to be of type `usize`, instead we got `{}` (line {} column {})", ety, span.line, span.column)));
                     }
 
@@ -1079,7 +1079,7 @@ fn infer_expr_type(
                             // Ensure that the type of the start index expression is usize, and try to
                             // convert it if possible.
                             let start_ety = infer_expr_type(s, locals, fun_sigs, Some(Type::Usize))?;
-                            if !type_compatible(&start_ety, &Type::Usize) {
+                            if !helpers::type_compatible(&start_ety, &Type::Usize) {
                                 return Err(HolyError::Semantic(format!(
                                             "Expected start index to be of type `usize` for array `{}`, instead we got `{}` (line {} column {})", 
                                             start_ety, name, span.line, span.column
@@ -1092,7 +1092,7 @@ fn infer_expr_type(
                         if let Some(e) = &mut *end {
                             // Same as above, for end index.
                             let end_ety = infer_expr_type(e, locals, fun_sigs, Some(Type::Usize))?;
-                            if !type_compatible(&end_ety, &Type::Usize) {
+                            if !helpers::type_compatible(&end_ety, &Type::Usize) {
                                 return Err(HolyError::Semantic(format!(
                                             "Expected end index to be of type `usize` for array `{}`, instead we got `{}` (line {} column {})", 
                                             end_ety, name, span.line, span.column
@@ -1249,7 +1249,7 @@ fn infer_expr_type(
             // arthmetic
             if matches!(op, BinOpKind::Add | BinOpKind::Subtract | BinOpKind::Multiply | BinOpKind::Divide ) {
                 // This checks type equality, etc.
-                let t = resolve_binary_op_types_numeric(&lty, &rty, span)?;
+                let t = helpers::resolve_binary_op_types_numeric(&lty, &rty, span)?;
                 Ok(t)
 
             // boolean comparison
@@ -1639,146 +1639,6 @@ fn assign_infer_type_to_expr_value(expr: &mut Expr, ty: Type) -> Result<(), Holy
 
     Ok(())
 }
-
-
-// When variable is declared like
-// own x int32
-// its value is None, so we need to set it to a default value based on its type.
-// ints default are 0, floats are 0.0, string is "", etc.
-// Only primitives listed above though. Everything else needs a value.
-//
-// ty is the expression holder type (i.e. variable type)
-// expr is the value literal its self
-fn assign_default_value_for_type(expr: &mut Option<Expr>, ty: &Type, span: Span) -> Result<(), HolyError> {
-    if *ty == Type::Infer {
-        // To ensure that I dont do mistakes and call this function on things I am not supposed to.
-
-        panic!("(Compiler bug) Cannot assign default value for type `{}` because the expression holder type is Infer. Expression: {:?}\nDont call this on things of type Infer.", 
-                        ty, expr);
-    }
-    
-    match ty {
-        Type::Int8 => {
-            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Int8(0), span: span })
-        }
-        Type::Int16 => {
-            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Int16(0), span: span })
-        }
-        Type::Int32 => {
-            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Int32(0), span: span })
-        }
-        Type::Int64 => {
-            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Int64(0), span: span })
-        }
-        Type::Int128 => {
-            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Int128(0), span: span })
-        }
-       
-        Type::Usize => {
-            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Usize(0), span: span })
-        }
-        Type::Byte => {
-            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Byte(0), span: span })
-        }
-        Type::Uint16 => {
-            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Uint16(0), span: span })
-        }
-        Type::Uint32 => {
-            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Uint32(0), span: span })
-        }
-        Type::Uint64 => {
-            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Uint64(0), span: span })
-        }
-        Type::Uint128 => {
-            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Uint128(0), span: span })
-        }
-
-        Type::Float32 => {
-            *expr = Some(Expr::FloatLiteral { value: FloatLiteralValue::Float32(0.0), span: span })
-        }
-
-        Type::Float64 => {
-            *expr = Some(Expr::FloatLiteral { value: FloatLiteralValue::Float64(0.0), span: span })
-        }
-
-        Type::Bool => {
-            *expr = Some(Expr::BoolLiteral { value: false, span: span })
-        }
-
-        Type::Array(inner) => {
-            let inner_ty = inner.clone();
-            *expr = Some(Expr::ArrayLiteral { elements: Vec::new(), array_ty: *inner_ty, span: span })
-        }
-
-        Type::String => {
-            *expr = Some(Expr::StringLiteral { value: "".to_string(), span: span })
-        }
-
-
-
-
-        _ => {
-            panic!("(Compiler bug) Cannot assign default value for type `{}` because the expression holder type is Non-literal. Expression: {:?}\nDont call this on non-literals.", 
-                        ty, expr);
-        }
-    }
-
-    Ok(())
-}
-
-
-/// Decide whether two types are compatible for assignment / matching.
-/// For now: exact match only (no implicit widening/narrowing).
-fn type_compatible(a: &Type, b: &Type) -> bool {
-    a == b
-}
-
-
-/// Resolve binary operation for numeric types and operations. Rules:
-/// - both must be numeric and same kind (int/int or float/float)
-/// - mixing signed and unsigned is an error
-/// - return the resulting type
-fn resolve_binary_op_types_numeric(a: &Type, b: &Type, span: &Span) -> Result<Type, HolyError> {
-    use Type::*;
-    match (a, b) {
-        (Int8, Int8) => Ok(Int8),
-        (Int16, Int16) => Ok(Int16),
-        (Int32, Int32) => Ok(Int32),
-        (Int64, Int64) => Ok(Int64),
-        (Int128, Int128) => Ok(Int128),
-
-        (Usize, Usize) => Ok(Usize),
-
-        (Byte, Byte) => Ok(Byte),
-        (Uint16, Uint16) => Ok(Uint16),
-        (Uint32, Uint32) => Ok(Uint32),
-        (Uint64, Uint64) => Ok(Uint64),
-        (Uint128, Uint128) => Ok(Uint128),
-
-        (Float32, Float32) => Ok(Float32),
-        (Float64, Float64) => Ok(Float64),
-
-
-        // If one side is Infer, prefer the other side if concrete
-        // 
-        // Perhaps it is wiser to panic here as a compiler bug ? It make no sense that any side is infer
-        // because it should've been assigned a type by now. 
-        //
-        /*
-        (Infer, t @ _) if *t != Infer => Ok(t.clone()),
-        (t @ _, Infer) if *t != Infer => Ok(t.clone()),
-
-        // both infer, we default to default to Int32
-        (Infer, Infer) => Ok(Int32),
-        */
-
-        (t1 @ _, t2 @ _) if (*t1 == Infer || *t2 == Infer) => panic!("(Compiler bug) We received a numeric binary operation with at least one side being of type infer. A: {:?}, B: {:?}", a, b),
-
-        // mixed signed/unsigned or int/float combos -> error
-        _ => Err(HolyError::Semantic(format!("Type mismatch in binary operation: `{}` vs `{}` (line {} column {})", a, b, span.line, span.column))),
-    }
-}
-
 
 
 /*
