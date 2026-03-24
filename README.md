@@ -6,7 +6,7 @@ HolyLang programming language: A mix between Go's readability, C's simplicity, a
 
 # Work-in-progress
 This only implements parser, and semantics.
-It still lacks: for loops, infinte loops, and unsafe blocks.
+It still lacks: unsafe blocks, and actual binary generation phase.
 
 
 
@@ -120,6 +120,17 @@ func main() {
             break
         } else {
             x = x + 1
+        }
+    }
+
+
+
+    # For loops
+
+    own x = int32["john", "jane", "jeffrey", "epstein"]
+    for s in x {
+        if s == "epstein" {
+            break
         }
     }
 
