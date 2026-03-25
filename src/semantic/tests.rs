@@ -1174,29 +1174,42 @@ mod tests {
 
     #[test]
     fn test_full_valid_program() {
-        // fn add(a int32, b int32) -> int32 { return a + b }
-        // fn main() { own r int32 = add(3, 4) }
-        let add_body = vec![return_stmt(vec![
-            Expr::BinOp {
-                left: Box::new(var_expr("a")),
-                op: crate::parser::BinOpKind::Add,
-                right: Box::new(var_expr("b")),
-                span: span(),
+        // This program tests all integers / floating points and all arthemtic binary operations
+        // it also tests variable declaration, function declaration, and function calling 
+        let literals = get_all_literals_no_arr();
+
+        for b in AllBinOpKindArth {
+            let add_body = vec![return_stmt(vec![
+                Expr::BinOp {
+                    left: Box::new(var_expr("a")),
+                    op: b,
+                    right: Box::new(var_expr("b")),
+                    span: span(),
+                }
+            ])];
+            
+
+            for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+                if matches!(t.clone(), Type::Bool | Type::String) {
+                    continue;
+                }
+
+                let add = returning_func(
+                    "add",
+                    vec![param("a", t.clone()), param("b", t.clone())],
+                    vec![t.clone()],
+                    add_body.clone(),
+                );
+
+                let main_body = vec![
+                    var_decl("r", t.clone(), Some(call_expr("add", vec![l.clone(), l.clone()]))),
+                ];
+                let main = void_func("main", vec![], main_body);
+
+                let mut ast = AST { functions: vec![add, main] };
+                
+                assert!(check_semantics(&mut ast).is_ok());
             }
-        ])];
-        let add = returning_func(
-            "add",
-            vec![param("a", Type::Int32), param("b", Type::Int32)],
-            vec![Type::Int32],
-            add_body,
-        );
-
-        let main_body = vec![
-            var_decl("r", Type::Int32, Some(call_expr("add", vec![int32_lit(3), int32_lit(4)]))),
-        ];
-        let main = void_func("main", vec![], main_body);
-
-        let mut ast = AST { functions: vec![add, main] };
-        check_semantics(&mut ast).unwrap();
+        }
     }
 }
