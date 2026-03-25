@@ -12,7 +12,7 @@ const AllBinOpKindArth: [BinOpKind; 4] = [
         ];
 
 // No array type
-pub const ALL_TYPES_NO_ARR: &[Type] = &[
+const ALL_TYPES_NO_ARR: &[Type] = &[
     Type::Int8,
     Type::Int16,
     Type::Int32,

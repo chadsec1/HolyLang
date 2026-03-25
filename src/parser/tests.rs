@@ -3,6 +3,24 @@ use super::*;
 use crate::consts;
  
 
+const ALL_TYPES_NO_ARR_NO_INFER: &[Type] = &[
+    Type::Int8,
+    Type::Int16,
+    Type::Int32,
+    Type::Int64,
+    Type::Int128,
+    Type::Byte,
+    Type::Uint16,
+    Type::Uint32,
+    Type::Uint64,
+    Type::Uint128,
+    Type::Usize,
+    Type::Float32,
+    Type::Float64,
+    Type::Bool,
+    Type::String
+];
+
 // Test helper functions
 
 /// Wrap a statement in a minimal `func main() { … }` so `parse()` can accept it.
@@ -370,39 +388,44 @@ mod tests {
 
     #[test]
     fn var_decl_array_explicit_type() {
-        let stmts = parse_body("own x int32[] = int32[1, 2, 3]");
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            assert_eq!(v.type_name, Type::Array(Box::new(Type::Int32)));
-        } else {
-            panic!("Expected VarDecl");
+        for t in ALL_TYPES_NO_ARR_NO_INFER {
+            let stmts = parse_body(&format!("own x {}[] = {}[1, 2, 3]", t, t));
+            if let Stmt::VarDecl(v) = &stmts[0] {
+                assert_eq!(v.type_name, Type::Array(Box::new(t.clone())));
+            } else {
+                panic!("Expected VarDecl");
+            }
         }
     }
 
     #[test]
     fn var_decl_array_inferred() {
-        let stmts = parse_body("own x = int32[1, 2, 3]");
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            assert_eq!(v.type_name, Type::Infer);
-            if let Some(Expr::ArrayLiteral { array_ty, elements, .. }) = &v.value {
-                assert_eq!(*array_ty, Type::Int32);
-                assert_eq!(elements.len(), 3);
+        for t in ALL_TYPES_NO_ARR_NO_INFER {
+            let stmts = parse_body(&format!("own x = {}[1, 2, 3]", t));
+            if let Stmt::VarDecl(v) = &stmts[0] {
+                assert_eq!(v.type_name, Type::Infer);
+                if let Some(Expr::ArrayLiteral { array_ty, elements, .. }) = &v.value {
+                    assert_eq!(*array_ty, t.clone());
+                    assert_eq!(elements.len(), 3);
+                } else {
+                    panic!("Expected ArrayLiteral");
+                }
             } else {
-                panic!("Expected ArrayLiteral");
+                panic!("Expected VarDecl");
             }
-        } else {
-            panic!("Expected VarDecl");
         }
     }
 
     #[test]
     fn var_decl_empty_array() {
-        // own x = int32[] — empty typed array literal
-        let stmts = parse_body("own x = int32[]");
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            if let Some(Expr::ArrayLiteral { elements, .. }) = &v.value {
-                assert!(elements.is_empty());
-            } else {
-                panic!("Expected ArrayLiteral");
+        for t in ALL_TYPES_NO_ARR_NO_INFER {
+            let stmts = parse_body(&format!("own x = {}[]", t));
+            if let Stmt::VarDecl(v) = &stmts[0] {
+                if let Some(Expr::ArrayLiteral { elements, .. }) = &v.value {
+                    assert!(elements.is_empty());
+                } else {
+                    panic!("Expected ArrayLiteral");
+                }
             }
         }
     }
@@ -1228,9 +1251,14 @@ mod tests {
     // Empty expression / edge-case errors
 
     #[test]
-    fn untyped_bare_bracket_literal_errors() {
+    fn untyped_array_literal_edge_cases_errors() {
         // '[' without a type prefix is not allowed
         assert_parse_err(&wrap("own x = [1, 2, 3]"));
+        assert_parse_err(&wrap("own x = [[1, 2, 3]]"));
+        assert_parse_err(&wrap("own x = 1, 2, 3"));
+        
+        assert_parse_err(&wrap("own x = [int32[1, 2, 3]]"));
+        assert_parse_err(&wrap("own x = int32[[1, 2, 3]]"));
     }
 
     #[test]

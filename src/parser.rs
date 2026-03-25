@@ -1167,7 +1167,10 @@ fn parse_type(s: &str, span: &Span) -> Result<Type, HolyError> {
     let mut token = s.trim();
 
     if token.is_empty() {
-        panic!("(Compiler bug) Empty string to parse_type, ensure token is not empty before passing it.");
+        return Err(HolyError::Parse(format!(
+                    "Invalid type construction `{}` (line {} column {})",
+                    token, span.line, span.column
+                )))
     }
 
 
