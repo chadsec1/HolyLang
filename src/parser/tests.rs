@@ -748,7 +748,7 @@ mod tests {
 
     #[test]
     fn float_literal_f64_high_precision() {
-        // More than 8 significant digits → must be f64
+        // More than 8 significant digits, then it must be f64
         let stmts = parse_body("own x = 1.123456789");
         if let Stmt::VarDecl(v) = &stmts[0] {
             if let Some(Expr::FloatLiteral { value, .. }) = &v.value {
