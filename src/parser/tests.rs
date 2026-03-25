@@ -309,6 +309,11 @@ mod tests {
     }
 
     #[test]
+    fn parse_function_space_in_name_errors() {
+        assert_parse_err("func bad name() {own x = 1\n}\n");
+    }
+
+    #[test]
     fn parse_function_inline_statements_in_braces_errors() {
         assert_parse_err("func bad() {own x = 1\n}\n");
         
@@ -331,9 +336,38 @@ mod tests {
 
     #[test]
     fn parse_function_array_return_type() {
-        let ast = parse("func foo() int32[] {\n}\n").unwrap();
-        let f = &ast.functions[0];
-        assert_eq!(f.return_type, Some(vec![Type::Array(Box::new(Type::Int32))]));
+        for t in ALL_TYPES_NO_ARR_NO_INFER {
+            let ast = parse(&format!("func foo() {}[] {{\n}}\n", t)).unwrap();
+            let f = &ast.functions[0];
+            assert_eq!(f.return_type, Some(vec![Type::Array(Box::new(t.clone()))]));
+        }
+    }
+
+
+
+    #[test]
+    fn parse_function_nested_array_return_type() {
+        for t in ALL_TYPES_NO_ARR_NO_INFER {
+            for i in 1..100 {
+                let ast = parse(&format!("func foo() {}[]{} {{\n}}\n", t, "[]".repeat(i))).unwrap();
+                let f = &ast.functions[0];
+
+                assert_eq!(f.return_type.clone().unwrap().len(), 1);
+
+                let mut inner_ty = f.return_type.clone().unwrap()[0].clone();
+                
+                let mut arr_count = 0;
+
+                while let Type::Array(inner) = inner_ty {
+                    arr_count += 1;
+                    inner_ty = *inner;
+                }
+
+                assert_eq!(arr_count - 1, i, "Array count is different from source");
+                
+                assert_eq!(inner_ty, t.clone());
+            }
+        }
     }
 
     // Variable declarations
@@ -353,35 +387,33 @@ mod tests {
 
     #[test]
     fn var_decl_explicit_type() {
-        let stmts = parse_body("own x int32 = 2");
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            assert_eq!(v.type_name, Type::Int32);
-        } else {
-            panic!("Expected VarDecl");
+        for t in ALL_TYPES_NO_ARR_NO_INFER {
+            let stmts = parse_body(&format!("own x {} = 2", t));
+            if let Stmt::VarDecl(v) = &stmts[0] {
+                assert_eq!(v.type_name, t.clone());
+            } else {
+                panic!("Expected VarDecl");
+            }
         }
     }
 
     #[test]
     fn var_decl_no_value() {
-        let stmts = parse_body("own x int32");
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            assert_eq!(v.name, "x");
-            assert_eq!(v.type_name, Type::Int32);
-            assert!(v.value.is_none());
-        } else {
-            panic!("Expected VarDecl");
+        for t in ALL_TYPES_NO_ARR_NO_INFER {
+            let stmts = parse_body(&format!("own x {}", t));
+            if let Stmt::VarDecl(v) = &stmts[0] {
+                assert_eq!(v.name, "x");
+                assert_eq!(v.type_name, t.clone());
+                assert!(v.value.is_none());
+            } else {
+                panic!("Expected VarDecl");
+            }
         }
     }
 
-    #[test]
-    fn var_decl_all_integer_types() {
-        for ty in &["int8", "int16", "int32", "int64", "int128",
-                    "byte", "uint16", "uint32", "uint64", "uint128", "usize"] {
-            let src = format!("own x {} = 0", ty);
-            parse_body(&src); // should not panic
-        }
-    }
 
+    // Even though we do test all these types declarations, we never test them in whole with their
+    // respective literals. So it's worth double checking here again.
     #[test]
     fn var_decl_float_types() {
         parse_body("own x float32 = 1.0");
