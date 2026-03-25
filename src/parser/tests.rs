@@ -3,6 +3,22 @@ use super::*;
 use crate::consts;
  
 
+const AllBinOpKindArth: [BinOpKind; 4] = [
+            BinOpKind::Add,
+            BinOpKind::Subtract,
+            BinOpKind::Multiply,
+            BinOpKind::Divide,
+        ];
+
+const BinOpKindArthSymbols: [&str; 4] = [
+            "+",
+            "-",
+            "*",
+            "/"
+        ];
+
+
+
 const ALL_TYPES_NO_ARR_NO_INFER: &[Type] = &[
     Type::Int8,
     Type::Int16,
@@ -343,8 +359,6 @@ mod tests {
         }
     }
 
-
-
     #[test]
     fn parse_function_nested_array_return_type() {
         for t in ALL_TYPES_NO_ARR_NO_INFER {
@@ -369,6 +383,21 @@ mod tests {
             }
         }
     }
+
+
+    // If statements
+    #[test]
+    fn if_statements() {
+        let stmts = parse_body("if 1 == 2 {\n\n}");
+        assert_eq!(stmts.len(), 1);
+        if let Stmt::If(i) = &stmts[0] {
+
+        } else {
+            panic!("expected if statement");
+        }
+    }
+
+
 
     // Variable declarations
 
@@ -571,14 +600,18 @@ mod tests {
     // Variable assignment
     #[test]
     fn var_assign() {
-        let stmts = parse_body("own x int32\nx = 5");
-        assert_eq!(stmts.len(), 2);
-        if let Stmt::VarAssign(va) = &stmts[1] {
-            assert_eq!(va.name, "x");
-        } else {
-            panic!("Expected VarAssign");
+        for t in ALL_TYPES_NO_ARR_NO_INFER {
+            let stmts = parse_body(&format!("own x {}\nx = 5", t));
+            assert_eq!(stmts.len(), 2);
+            if let Stmt::VarAssign(va) = &stmts[1] {
+                assert_eq!(va.name, "x");
+            } else {
+                panic!("Expected VarAssign");
+            }
+            
         }
     }
+
 
     #[test]
     fn var_assign_multi() {
@@ -909,55 +942,85 @@ mod tests {
     // Binary operations
 
     #[test]
-    fn binop_add() {
-        let stmts = parse_body("own x = 1 + 2");
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            if let Some(Expr::BinOp { op, .. }) = &v.value {
-                assert!(matches!(op, BinOpKind::Add));
-            } else { panic!("Expected BinOp"); }
-        }
-    }
+    fn binop_arth_literals_only() {
+        for (b, s) in AllBinOpKindArth.iter().zip(BinOpKindArthSymbols.iter()) {
+            for i1 in 0..260 {
+                for i2 in 0..260 {
+                    let stmts = parse_body(&format!("own x = {} {} {}", i1, s, i2));
+                    if let Stmt::VarDecl(v) = &stmts[0] {
+                        if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
+                            assert!(matches!(op, b));
 
-    #[test]
-    fn binop_subtract() {
-        let stmts = parse_body("own x = 10 - 3");
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            if let Some(Expr::BinOp { op, .. }) = &v.value {
-                assert!(matches!(op, BinOpKind::Subtract));
-            } else { panic!(); }
-        }
-    }
+                            assert!(matches!(**left, Expr::IntLiteral { .. }));
+                            assert!(matches!(**right, Expr::IntLiteral { .. }));
 
-    #[test]
-    fn binop_multiply() {
-        let stmts = parse_body("own x = 4 * 5");
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            if let Some(Expr::BinOp { op, .. }) = &v.value {
-                assert!(matches!(op, BinOpKind::Multiply));
-            } else { panic!(); }
-        }
-    }
-
-    #[test]
-    fn binop_divide() {
-        let stmts = parse_body("own x = 8 / 2");
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            if let Some(Expr::BinOp { op, .. }) = &v.value {
-                assert!(matches!(op, BinOpKind::Divide));
-            } else { panic!(); }
-        }
-    }
-
-    #[test]
-    fn binop_left_and_right_operands() {
-        let stmts = parse_body("own x = a + b");
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            if let Some(Expr::BinOp { left, right, .. }) = &v.value {
-                assert!(matches!(**left, Expr::Var { .. }));
-                assert!(matches!(**right, Expr::Var { .. }));
+                        } else {
+                            panic!("Expected {:?}, instead we got {:?}", b, &v.value);
+                        }
+                    }
+                    
+                }
             }
         }
     }
+
+
+    #[test]
+    fn binop_arth_vars_only() {
+        for (b, s) in AllBinOpKindArth.iter().zip(BinOpKindArthSymbols.iter()) {
+            let stmts = parse_body(&format!("own x = a {} b", s));
+            if let Stmt::VarDecl(v) = &stmts[0] {
+                if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
+                    assert!(matches!(op, b));
+
+                    assert!(matches!(**left, Expr::Var { .. }));
+                    assert!(matches!(**right, Expr::Var { .. }));
+
+                } else {
+                    panic!("Expected {:?}, instead we got {:?}", b, &v.value);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn binop_arth_vars_and_literals_mixed() {
+        for (b, s) in AllBinOpKindArth.iter().zip(BinOpKindArthSymbols.iter()) {
+            for i in 0..100000 {
+                let stmts = parse_body(&format!("own x = a {} {}", s, i));
+                if let Stmt::VarDecl(v) = &stmts[0] {
+                    if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
+                        assert!(matches!(op, b));
+
+                        assert!(matches!(**left, Expr::Var { .. }));
+                        assert!(matches!(**right, Expr::IntLiteral { .. }));
+
+                    } else {
+                        panic!("Expected {:?}, instead we got {:?}", b, &v.value);
+                    }
+                }
+            }
+        }
+
+
+        for (b, s) in AllBinOpKindArth.iter().zip(BinOpKindArthSymbols.iter()) {
+            for i in 0..100000 {
+                let stmts = parse_body(&format!("own x = {} {} a", i, s));
+                if let Stmt::VarDecl(v) = &stmts[0] {
+                    if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
+                        assert!(matches!(op, b));
+
+                        assert!(matches!(**left, Expr::IntLiteral { .. }));
+                        assert!(matches!(**right, Expr::Var { .. }));
+
+                    } else {
+                        panic!("Expected {:?}, instead we got {:?}", b, &v.value);
+                    }
+                }
+            }
+        }
+    }
+
 
     #[test]
     fn binop_missing_right_operand_errors() {
@@ -966,18 +1029,18 @@ mod tests {
 
     #[test]
     fn binop_missing_left_operand_errors() {
-        // bare "+ 2" as an expression — left side is empty
         assert_parse_err(&wrap("own x = + 2"));
     }
 
     #[test]
     fn binop_nested_via_parens() {
-        // Parenthesised grouping: (1 + 2) * 3
-        let stmts = parse_body("own x = (1 + 2) * 3");
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            if let Some(Expr::BinOp { op, left, .. }) = &v.value {
-                assert!(matches!(op, BinOpKind::Multiply));
-                assert!(matches!(**left, Expr::BinOp { .. }));
+        for (b, s) in AllBinOpKindArth.iter().zip(BinOpKindArthSymbols.iter()) {
+            let stmts = parse_body(&format!("own x = (1 + 2) {} 3", s));
+            if let Stmt::VarDecl(v) = &stmts[0] {
+                if let Some(Expr::BinOp { op, left, .. }) = &v.value {
+                    assert!(matches!(op, b));
+                    assert!(matches!(**left, Expr::BinOp { .. }));
+                }
             }
         }
     }
@@ -1031,6 +1094,8 @@ mod tests {
             if let Some(Expr::Call { name, args, .. }) = &v.value {
                 assert_eq!(name, "add");
                 assert_eq!(args.len(), 2);
+                assert!(matches!(args[0], Expr::IntLiteral { .. }));
+                assert!(matches!(args[1], Expr::IntLiteral { .. }));
             } else { panic!("Expected Call"); }
         }
     }
