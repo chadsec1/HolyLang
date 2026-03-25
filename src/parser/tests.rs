@@ -432,17 +432,50 @@ mod tests {
 
     #[test]
     fn var_decl_nested_array() {
-        // own x = int32[][int32[1,2], int32[3,4]]
-        let stmts = parse_body("own x = int32[][int32[1,2], int32[3,4]]");
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            if let Some(Expr::ArrayLiteral { elements, .. }) = &v.value {
-                assert_eq!(elements.len(), 2);
-                assert!(matches!(elements[0], Expr::ArrayLiteral { .. }));
-            } else {
-                panic!("Expected ArrayLiteral");
+        for t in ALL_TYPES_NO_ARR_NO_INFER {
+            let stmts = parse_body(&format!("own x = {}[][{}[1,2], {}[3,4]]", t, t, t));
+            if let Stmt::VarDecl(v) = &stmts[0] {
+                if let Some(Expr::ArrayLiteral { elements, .. }) = &v.value {
+                    assert_eq!(elements.len(), 2);
+                    assert!(matches!(elements[0], Expr::ArrayLiteral { .. }));
+                } else {
+                    panic!("Expected ArrayLiteral");
+                }
             }
         }
     }
+
+    #[test]
+    fn var_decl_nested_array_empty() {
+        for t in ALL_TYPES_NO_ARR_NO_INFER {
+            let stmts = parse_body(&format!("own x = {}[][]", t));
+            if let Stmt::VarDecl(v) = &stmts[0] {
+                if let Some(Expr::ArrayLiteral { elements, .. }) = &v.value {
+                    assert_eq!(elements.len(), 0);
+                } else {
+                    panic!("Expected ArrayLiteral");
+                }
+            }
+        }
+    }
+
+
+    #[test]
+    fn var_decl_deeply_nested_array() {
+        for t in ALL_TYPES_NO_ARR_NO_INFER {
+            for i in 1..100 {
+                let stmts = parse_body(&format!("own x = {}[][]{}", t, "[]".repeat(i) ));
+                if let Stmt::VarDecl(v) = &stmts[0] {
+                    if let Some(Expr::ArrayLiteral { elements, .. }) = &v.value {
+                        assert_eq!(elements.len(), 0);
+                    } else {
+                        panic!("Expected ArrayLiteral");
+                    }
+                }
+            }
+        }
+    }
+
 
     #[test]
     fn var_decl_multi() {
@@ -469,10 +502,14 @@ mod tests {
 
     #[test]
     fn var_decl_keyword_name_errors() {
-        assert_parse_err(&wrap("own if = 1"));
-        assert_parse_err(&wrap("own return = 1"));
-    }
 
+        for kw in consts::RESERVED_KEYWORDS { 
+            for t in ALL_TYPES_NO_ARR_NO_INFER {
+                assert_parse_err(&wrap(&format!("own {} = 1", kw)));
+                assert_parse_err(&wrap(&format!("own {} {}", kw, t)));
+            }
+        }
+    }
     // Variable assignment
 
     #[test]
