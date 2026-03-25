@@ -183,6 +183,13 @@ mod tests {
             let result = helpers::split_comma_top_level(&f).unwrap();
             assert_eq!(result, vec![format!("{}[\"Hi\", \"There\"]", t), format!("{}[\"Lol\", \"xD\"]", t)]);
         }
+        
+        for t in ALL_TYPES_NO_ARR_NO_INFER {
+            let f = format!("{}[\"Hi,!!\", \"The,re\"], {}[\"Lo, l!\", \", xD\"]", t.clone(), t.clone());
+            let result = helpers::split_comma_top_level(&f).unwrap();
+            assert_eq!(result, vec![format!("{}[\"Hi,!!\", \"The,re\"]", t), format!("{}[\"Lo, l!\", \", xD\"]", t)]);
+        }
+            
 
     }
 
