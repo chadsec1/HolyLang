@@ -171,8 +171,19 @@ mod tests {
 
     #[test]
     fn split_nested_brackets_not_split() {
-        let result = helpers::split_comma_top_level("int32[1, 2], int32[3, 4]").unwrap();
-        assert_eq!(result, vec!["int32[1, 2]", "int32[3, 4]"]);
+        for t in ALL_TYPES_NO_ARR_NO_INFER {
+            let f = format!("{}[1, 2], {}[3, 4]", t.clone(), t.clone());
+            let result = helpers::split_comma_top_level(&f).unwrap();
+            assert_eq!(result, vec![format!("{}[1, 2]", t), format!("{}[3, 4]", t)]);
+        }
+
+
+        for t in ALL_TYPES_NO_ARR_NO_INFER {
+            let f = format!("{}[\"Hi\", \"There\"], {}[\"Lol\", \"xD\"]", t.clone(), t.clone());
+            let result = helpers::split_comma_top_level(&f).unwrap();
+            assert_eq!(result, vec![format!("{}[\"Hi\", \"There\"]", t), format!("{}[\"Lol\", \"xD\"]", t)]);
+        }
+
     }
 
     #[test]
