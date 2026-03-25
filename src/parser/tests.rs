@@ -492,6 +492,9 @@ mod tests {
     #[test]
     fn var_decl_unknown_type_errors() {
         assert_parse_err(&wrap("own x badtype = 1"));
+        assert_parse_err(&wrap("own x badtype"));
+        assert_parse_err(&wrap("own x x = 1"));
+        assert_parse_err(&wrap("own x x"));
     }
 
     #[test]
@@ -510,8 +513,8 @@ mod tests {
             }
         }
     }
-    // Variable assignment
 
+    // Variable assignment
     #[test]
     fn var_assign() {
         let stmts = parse_body("own x int32\nx = 5");
