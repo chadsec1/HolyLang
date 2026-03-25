@@ -33,32 +33,52 @@ fn assert_parse_err(src: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
-
     // validate_identifier_name
 
     #[test]
     fn identifier_valid() {
-        assert!(helpers::validate_identifier_name("foo").is_ok());
-        assert!(helpers::validate_identifier_name("_foo").is_ok());
-        assert!(helpers::validate_identifier_name("foo_bar").is_ok());
-        assert!(helpers::validate_identifier_name("FOO").is_ok());
-        assert!(helpers::validate_identifier_name("x123").is_ok());
-        assert!(helpers::validate_identifier_name("_").is_ok());
-        assert!(helpers::validate_identifier_name("_1").is_ok());
-        assert!(helpers::validate_identifier_name("foo_").is_ok());
+        let chars: Vec<char> = (b'0'..=b'9')
+            .chain(b'A'..=b'Z')
+            .chain(b'a'..=b'z')
+            .map(|b| b as char)
+            .collect();
+
+
+        assert!(helpers::validate_identifier_name(&format!("_")).is_ok());
+
+        for c in chars {
+            assert!(helpers::validate_identifier_name(&format!("_{c}")).is_ok());
+            assert!(helpers::validate_identifier_name(&format!("_{c}_")).is_ok());
+            assert!(helpers::validate_identifier_name(&format!("foo{c}")).is_ok());
+            assert!(helpers::validate_identifier_name(&format!("FOO{c}")).is_ok());
+            assert!(helpers::validate_identifier_name(&format!("_{c}foo")).is_ok());
+            assert!(helpers::validate_identifier_name(&format!("f{c}oo")).is_ok());
+            assert!(helpers::validate_identifier_name(&format!("fo{c}o")).is_ok());
+            assert!(helpers::validate_identifier_name(&format!("foo_{c}")).is_ok());
+            assert!(helpers::validate_identifier_name(&format!("_{c}_foo")).is_ok());
+            assert!(helpers::validate_identifier_name(&format!("a{c}")).is_ok());
+            assert!(helpers::validate_identifier_name(&format!("a{c}3")).is_ok());
+            assert!(helpers::validate_identifier_name(&format!("a2{c}")).is_ok());
+
+
+        }
+
     }
 
     #[test]
     fn identifier_empty() {
-        assert!(helpers::validate_identifier_name("").is_err());
-        assert!(helpers::validate_identifier_name(" ").is_err());
-        assert!(helpers::validate_identifier_name("    ").is_err());
+        for i in 0..100000 {
+            assert!(helpers::validate_identifier_name(&" ".repeat(i)).is_err());
+        }
     }
 
     #[test]
     fn identifier_starts_with_digit() {
         for i in 0..100000 {
             assert!(helpers::validate_identifier_name(&format!("{i}foo")).is_err());
+            assert!(helpers::validate_identifier_name(&format!("{i}_foo_")).is_err());
+            assert!(helpers::validate_identifier_name(&format!("{i}foo_")).is_err());
+            assert!(helpers::validate_identifier_name(&format!("{i}_foo")).is_err());
             assert!(helpers::validate_identifier_name(&format!("{i}_")).is_err());
             assert!(helpers::validate_identifier_name(&format!("{i}")).is_err());
             
