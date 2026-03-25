@@ -915,7 +915,8 @@ mod tests {
 
     #[test]
     fn test_binop_int_mixed_types_errors() {
-        // int_literals is not allowed (we don't allow any different types mixing in expressions)
+        // int literals are not allowed to mix with literals of non-int type
+        //
         
         let int_literals = [
             int8_lit(1),
@@ -1035,20 +1036,45 @@ mod tests {
 
     #[test]
     fn test_double_copy_errors() {
-        let body = vec![
-            var_decl("a", Type::Int32, Some(int32_lit(1))),
-            var_decl("b", Type::Int32, Some(
-                Expr::CopyCall {
-                    expr: Box::new(Expr::CopyCall { expr: Box::new(var_expr("a")), span: span() }),
-                    span: span(),
-                }
-            )),
+        let literals = [
+            int8_lit(1),
+            int16_lit(1),
+            int32_lit(1),
+            int64_lit(1),
+            int128_lit(1),
+
+            byte_lit(1),
+            uint16_lit(1),
+            uint32_lit(1),
+            uint64_lit(1),
+            uint128_lit(1),
+
+            usize_lit(1),
+
+            float32_lit(1.0),
+            float64_lit(1.0),
+
+            bool_lit(false),
+            str_lit("Hi")
         ];
-        let func = void_func("foo", vec![], body);
-        let mut ast = ast_one(func);
-        let result = check_semantics(&mut ast);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Double copying"));
+
+        for l in &literals {
+            let body = vec![
+                var_decl("a", Type::Infer, Some(l.clone())),
+                var_decl("b", Type::Infer, Some(
+                    Expr::CopyCall {
+                        expr: Box::new(Expr::CopyCall { expr: Box::new(var_expr("a")), span: span() }),
+                        span: span(),
+                    }
+                )),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().starts_with("Semantic error: Double copying is not needed. Remove the extra copy call. "));
+            
+        }
     }
 
     // undeclared variable usage tests

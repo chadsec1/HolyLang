@@ -388,7 +388,7 @@ pub fn infer_expr_type(
             // Basically, copy call only works on variables.
             match &mut **e {
                 Expr::CopyCall {span: inner_span, ..} => {
-                    return Err(HolyError::Semantic(format!("Double copying is not needed, Remove the extra copy call. (line {} column {})", inner_span.line, inner_span.column)))
+                    return Err(HolyError::Semantic(format!("Double copying is not needed. Remove the extra copy call. (line {} column {})", inner_span.line, inner_span.column)))
                 }
                 Expr::IntLiteral{span: inner_span, ..} | 
                 Expr::FloatLiteral{span: inner_span, ..} | 
