@@ -11,6 +11,26 @@ const AllBinOpKindArth: [BinOpKind; 4] = [
             BinOpKind::Divide,
         ];
 
+// No array type
+pub const ALL_TYPES_NO_ARR: &[Type] = &[
+    Type::Int8,
+    Type::Int16,
+    Type::Int32,
+    Type::Int64,
+    Type::Int128,
+    Type::Byte,
+    Type::Uint16,
+    Type::Uint32,
+    Type::Uint64,
+    Type::Uint128,
+    Type::Usize,
+    Type::Float32,
+    Type::Float64,
+    Type::Bool,
+    Type::String,
+    Type::Infer,
+];
+
 
 
 #[cfg(test)]
@@ -1080,14 +1100,33 @@ mod tests {
     // undeclared variable usage tests
 
     #[test]
-    fn test_use_of_undeclared_variable_errors() {
-        let body = vec![var_decl("x", Type::Int32, Some(var_expr("y")))]; // y not declared
-        let func = void_func("foo", vec![], body);
-        let mut ast = ast_one(func);
-        let result = check_semantics(&mut ast);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("undeclared variable"));
+    fn test_use_of_undeclared_variable_other_errors() {
+        // Try referencing non-existent variable "y"
+        for t in ALL_TYPES_NO_ARR {
+            let body = vec![var_decl("x", t.clone(), Some(var_expr("y")))]; // y not declared
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("undeclared variable"));
+        }
     }
+
+
+    #[test]
+    fn test_use_of_undeclared_variable_ourself_errors() {
+        // Try referencing non-existent variable "x" aka ourselves.
+        for t in ALL_TYPES_NO_ARR {
+            let body = vec![var_decl("x", t.clone(), Some(var_expr("x")))]; // x not declared
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("undeclared variable"));
+        }
+    }
+
+
 
     // params are in scope
 
