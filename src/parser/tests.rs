@@ -256,12 +256,14 @@ mod tests {
 
     #[test]
     fn parse_function_single_return_type() {
-        let ast = parse("func foo() int64 {\n}\n").unwrap();
-        let f = &ast.functions[0];
+        for t in ALL_TYPES_NO_ARR_NO_INFER {
+            let ast = parse(&format!("func foo() {} {{\n}}\n", t)).unwrap();
+            let f = &ast.functions[0];
 
-        assert_eq!(f.name, "foo");
-        assert_eq!(f.params.len(), 0);
-        assert_eq!(f.return_type, Some(vec![Type::Int64]));
+            assert_eq!(f.name, "foo");
+            assert_eq!(f.params.len(), 0);
+            assert_eq!(f.return_type, Some(vec![t.clone()]));
+        }
     }
 
     #[test]
@@ -301,7 +303,9 @@ mod tests {
 
     #[test]
     fn parse_function_keyword_name_errors() {
-        assert_parse_err("func own() {\n}\n");
+        for kw in consts::RESERVED_KEYWORDS { 
+            assert_parse_err(&format!("func {}() {{\n}}\n", kw));
+        }
     }
 
     #[test]
