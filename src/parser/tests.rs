@@ -1102,13 +1102,15 @@ mod tests {
         assert_eq!(IntLiteralValue::Int32(100).as_i128(), 100i128);
         assert_eq!(IntLiteralValue::Int64(-1).as_i128(), -1i128);
         assert_eq!(IntLiteralValue::Int64(100).as_i128(), 100i128);
-        assert_eq!(IntLiteralValue::Int128(i128::MAX).as_i128(), i128::MAX);
+        assert_eq!(IntLiteralValue::Int128(-1).as_i128(), -1i128);
         assert_eq!(IntLiteralValue::Int128(100).as_i128(), 100i128);
     }
 
     #[test]
     fn int_literal_as_u128_unsafe_unsigned() {
         assert_eq!(IntLiteralValue::Byte(255).as_u128_UNSAFE(), 255u128);
+        assert_eq!(IntLiteralValue::Uint16(u16::MAX).as_u128_UNSAFE(), u16::MAX as u128);
+        assert_eq!(IntLiteralValue::Uint32(u32::MAX).as_u128_UNSAFE(), u32::MAX as u128);
         assert_eq!(IntLiteralValue::Uint64(u64::MAX).as_u128_UNSAFE(), u64::MAX as u128);
         assert_eq!(IntLiteralValue::Uint128(u128::MAX).as_u128_UNSAFE(), u128::MAX);
     }
