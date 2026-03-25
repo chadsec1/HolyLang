@@ -1115,6 +1115,7 @@ mod tests {
         assert_eq!(IntLiteralValue::Uint128(u128::MAX).as_u128_UNSAFE(), u128::MAX);
     }
 
+    // Signed literals casted as u128 should trigger a safety panic
     #[test]
     #[should_panic]
     fn int_literal_int8_as_u128_unsafe_panics_on_negative_signed() {
@@ -1145,6 +1146,37 @@ mod tests {
         IntLiteralValue::Int128(-5).as_u128_UNSAFE();
     }
 
+
+    // Unsigned literals casted as i128 should trigger a safety panic
+    #[test]
+    #[should_panic]
+    fn int_literal_byte_as_i128_panics_on_unsigned() {
+        IntLiteralValue::Byte(5).as_i128();
+    }
+
+    #[test]
+    #[should_panic]
+    fn int_literal_uint16_as_i128_panics_on_unsigned() {
+        IntLiteralValue::Uint16(5).as_i128();
+    }
+
+    #[test]
+    #[should_panic]
+    fn int_literal_uint32_as_i128_panics_on_unsigned() {
+        IntLiteralValue::Uint32(5).as_i128();
+    }
+
+    #[test]
+    #[should_panic]
+    fn int_literal_uint64_as_i128_panics_on_unsigned() {
+        IntLiteralValue::Uint64(5).as_i128();
+    }
+
+    #[test]
+    #[should_panic]
+    fn int_literal_uint128_as_i128_panics_on_unsigned() {
+        IntLiteralValue::Uint128(5).as_i128();
+    }
 
 
 
