@@ -1095,8 +1095,15 @@ mod tests {
     #[test]
     fn int_literal_as_i128() {
         assert_eq!(IntLiteralValue::Int8(-1).as_i128(), -1i128);
+        assert_eq!(IntLiteralValue::Int8(100).as_i128(), 100i128);
+        assert_eq!(IntLiteralValue::Int16(-1).as_i128(), -1i128);
+        assert_eq!(IntLiteralValue::Int16(100).as_i128(), 100i128);
+        assert_eq!(IntLiteralValue::Int32(-1).as_i128(), -1i128);
         assert_eq!(IntLiteralValue::Int32(100).as_i128(), 100i128);
+        assert_eq!(IntLiteralValue::Int64(-1).as_i128(), -1i128);
+        assert_eq!(IntLiteralValue::Int64(100).as_i128(), 100i128);
         assert_eq!(IntLiteralValue::Int128(i128::MAX).as_i128(), i128::MAX);
+        assert_eq!(IntLiteralValue::Int128(100).as_i128(), 100i128);
     }
 
     #[test]
@@ -1177,6 +1184,7 @@ mod tests {
     #[test]
     fn variable_shadowing_allowed() {
         // Declaring the same name twice should produce two VarDecl nodes without error
+        // as long as its in the same scope
         let stmts = parse_body("own x = 1\nown x = 2");
         assert_eq!(stmts.len(), 2);
         assert!(matches!(stmts[0], Stmt::VarDecl(_)));
