@@ -37,7 +37,36 @@ pub const ALL_TYPES_NO_ARR: &[Type] = &[
 mod tests {
     use super::*;
 
+
+    
+
     // helper functions
+    
+    fn get_all_literals_no_arr() -> [Expr; 15] {
+        let literals = [
+            int8_lit(1),
+            int16_lit(1),
+            int32_lit(1),
+            int64_lit(1),
+            int128_lit(1),
+
+            byte_lit(1),
+            uint16_lit(1),
+            uint32_lit(1),
+            uint64_lit(1),
+            uint128_lit(1),
+
+            usize_lit(1),
+
+            float32_lit(1.0),
+            float64_lit(1.0),
+
+            bool_lit(false),
+            str_lit("Hi")
+        ];
+
+        return literals;
+    }
 
     fn span() -> Span {
         Span { line: 1, column: 0 }
@@ -1021,27 +1050,7 @@ mod tests {
 
     #[test]
     fn test_copy_of_literals_errors() {
-        let literals = [
-            int8_lit(1),
-            int16_lit(1),
-            int32_lit(1),
-            int64_lit(1),
-            int128_lit(1),
-
-            byte_lit(1),
-            uint16_lit(1),
-            uint32_lit(1),
-            uint64_lit(1),
-            uint128_lit(1),
-
-            usize_lit(1),
-
-            float32_lit(1.0),
-            float64_lit(1.0),
-
-            bool_lit(false),
-            str_lit("Hi")
-        ];
+        let literals = get_all_literals_no_arr();
 
         for l in &literals {
             let copy_lit = Expr::CopyCall { expr: Box::new(l.clone()), span: span() };
@@ -1056,27 +1065,7 @@ mod tests {
 
     #[test]
     fn test_double_copy_errors() {
-        let literals = [
-            int8_lit(1),
-            int16_lit(1),
-            int32_lit(1),
-            int64_lit(1),
-            int128_lit(1),
-
-            byte_lit(1),
-            uint16_lit(1),
-            uint32_lit(1),
-            uint64_lit(1),
-            uint128_lit(1),
-
-            usize_lit(1),
-
-            float32_lit(1.0),
-            float64_lit(1.0),
-
-            bool_lit(false),
-            str_lit("Hi")
-        ];
+        let literals = get_all_literals_no_arr();
 
         for l in &literals {
             let body = vec![
@@ -1127,49 +1116,58 @@ mod tests {
     }
 
 
-
-    // params are in scope
-
+    // function parameters
+    //
     #[test]
-    fn test_params_are_in_scope() {
-        // fn foo(n int32) -> int32 { return n }
-        let body = vec![return_stmt(vec![var_expr("n")])];
-        let func = returning_func("foo", vec![param("n", Type::Int32)], vec![Type::Int32], body);
-        let mut ast = ast_one(func);
-        check_semantics(&mut ast).unwrap();
+    fn test_params_are_in_scope_basic() {
+        // Checks if function parameters are in scope, without testing for inner scopes.
+        for t in ALL_TYPES_NO_ARR {
+            let body = vec![return_stmt(vec![var_expr("n")])];
+            let func = returning_func("foo", vec![param("n", t.clone())], vec![t.clone()], body);
+            let mut ast = ast_one(func);
+            check_semantics(&mut ast).unwrap();
+        }
     }
 
     // format call guards 
     #[test]
     fn test_format_call_with_literal_errors() {
-        let fmt = Expr::FormatCall {
-            template: "value: {}".to_string(),
-            expressions: vec![int32_lit(42)], // plain literal not allowed
-            span: span(),
-        };
-        let body = vec![var_decl("s", Type::String, Some(fmt))];
-        let func = void_func("foo", vec![], body);
-        let mut ast = ast_one(func);
-        let result = check_semantics(&mut ast);
+        let literals = get_all_literals_no_arr();
 
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Plain literals are not allowed"));
+        for l in &literals {
+            let fmt = Expr::FormatCall {
+                template: "value: {}".to_string(),
+                expressions: vec![l.clone()], // plain literals not allowed
+                span: span(),
+            };
+            let body = vec![var_decl("s", Type::String, Some(fmt))];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().starts_with("Semantic error: Plain literals are not allowed in formating! Remove the format placeholders and use the literal directly!"));
+        }
     }
 
     #[test]
     fn test_format_call_with_variable_passes() {
-        let fmt = Expr::FormatCall {
-            template: "value: {}".to_string(),
-            expressions: vec![var_expr("n")],
-            span: span(),
-        };
-        let body = vec![
-            var_decl("n", Type::Int32, Some(int32_lit(7))),
-            var_decl("s", Type::String, Some(fmt)),
-        ];
-        let func = void_func("foo", vec![], body);
-        let mut ast = ast_one(func);
-        check_semantics(&mut ast).unwrap();
+        let literals = get_all_literals_no_arr();
+
+        for l in &literals {
+            let fmt = Expr::FormatCall {
+                template: "value: {}".to_string(),
+                expressions: vec![var_expr("n")],
+                span: span(),
+            };
+            let body = vec![
+                var_decl("n", Type::Infer, Some(l.clone())),
+                var_decl("s", Type::String, Some(fmt)),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            check_semantics(&mut ast).unwrap();
+        }
     }
 
     // happy-path integration 
