@@ -261,7 +261,7 @@ pub enum UnaryOpKind {
     Negate,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum BinOpKind {
     Add,
     Subtract,

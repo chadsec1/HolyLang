@@ -17,6 +17,25 @@ const BinOpKindArthSymbols: [&str; 4] = [
             "/"
         ];
 
+const AllBinOpKindComp: [BinOpKind; 6] = [
+            BinOpKind::Equal,
+            BinOpKind::NotEqual,
+            BinOpKind::Greater,
+            BinOpKind::GreaterEqual,
+            BinOpKind::Less,
+            BinOpKind::LessEqual,
+            
+        ];
+
+const BinOpKindCompSymbols: [&str; 6] = [
+            "==",
+            "!=",
+            ">",
+            ">=",
+            "<",
+            "<="
+        ];
+
 
 
 const ALL_TYPES_NO_ARR_NO_INFER: &[Type] = &[
@@ -388,15 +407,112 @@ mod tests {
     // If statements
     #[test]
     fn if_statements() {
-        let stmts = parse_body("if 1 == 2 {\n\n}");
-        assert_eq!(stmts.len(), 1);
-        if let Stmt::If(i) = &stmts[0] {
+        for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
+            let stmts = parse_body(&format!("if 1 {} 2 {{\n\n}}", s));
+            assert_eq!(stmts.len(), 1);
+            if let Stmt::If(i) = &stmts[0] {
 
-        } else {
-            panic!("expected if statement");
+                if let Expr::BinOp { left, right, op, .. } = &i.condition {
+
+                    assert_eq!(op, b);
+                    
+                    if let Expr::IntLiteral { value, .. } = **left {
+                        assert!(matches!(value, IntLiteralValue::Int8(1)));
+                    } else { panic!(); }
+
+                    if let Expr::IntLiteral { value, .. } = **right {
+                        assert!(matches!(value, IntLiteralValue::Int8(2)));
+                    } else { panic!(); }
+
+                }
+                
+                assert_eq!(i.if_branch.len(), 0);
+                assert_eq!(i.elif_branches.len(), 0);
+                assert!(i.else_branch.is_none());
+            } else {
+                panic!("expected if statement");
+            }
         }
     }
 
+    #[test]
+    fn if_statements_with_else() {
+        for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
+            let stmts = parse_body(&format!("if 1 {} 2 {{\n\n}} else {{\n\n}}", s));
+            assert_eq!(stmts.len(), 1);
+            if let Stmt::If(i) = &stmts[0] {
+
+                if let Expr::BinOp { left, right, op, .. } = &i.condition {
+
+                    assert_eq!(op, b);
+                    
+                    if let Expr::IntLiteral { value, .. } = **left {
+                        assert!(matches!(value, IntLiteralValue::Int8(1)));
+                    } else { panic!(); }
+
+                    if let Expr::IntLiteral { value, .. } = **right {
+                        assert!(matches!(value, IntLiteralValue::Int8(2)));
+                    } else { panic!(); }
+
+                }
+                
+                assert_eq!(i.if_branch.len(), 0);
+                assert_eq!(i.elif_branches.len(), 0);
+                assert!(i.else_branch.is_some());
+            } else {
+                panic!("expected if statement");
+            }
+        }
+    }
+
+    #[test]
+    fn if_statements_with_elif() {
+        for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
+            let stmts = parse_body(&format!("if 1 {} 2 {{\n\n}} elif 5 {} 3 {{\n\n}}", s, s));
+            assert_eq!(stmts.len(), 1);
+            if let Stmt::If(i) = &stmts[0] {
+                if let Expr::BinOp { left, right, op, .. } = &i.condition {
+
+                    assert_eq!(op, b);
+                    
+                    if let Expr::IntLiteral { value, .. } = **left {
+                        assert!(matches!(value, IntLiteralValue::Int8(1)));
+                    } else { panic!(); }
+
+                    if let Expr::IntLiteral { value, .. } = **right {
+                        assert!(matches!(value, IntLiteralValue::Int8(2)));
+                    } else { panic!(); }
+
+                } else { panic!("Expected BinOp") }
+
+                
+                assert_eq!(i.if_branch.len(), 0);
+                assert_eq!(i.elif_branches.len(), 1);
+
+
+                let elif_cond = &i.elif_branches[0].0;
+                if let Expr::BinOp { left, right, op, .. } = elif_cond {
+
+                    assert_eq!(op, b);
+                    
+                    if let Expr::IntLiteral { value, .. } = **left {
+                        assert!(matches!(value, IntLiteralValue::Int8(5)));
+                    } else { panic!(); }
+
+                    if let Expr::IntLiteral { value, .. } = **right {
+                        assert!(matches!(value, IntLiteralValue::Int8(3)));
+                    } else { panic!(); }
+
+                } else { panic!("Expected BinOp") }
+
+
+
+                assert!(i.else_branch.is_none());
+            } else {
+                panic!("expected if statement");
+            }
+        }
+    }
 
 
     // Variable declarations
@@ -1167,7 +1283,7 @@ mod tests {
         assert_eq!(stmts.len(), 1);
         if let Stmt::VarDecl(v) = &stmts[0] {
             assert!(matches!(v.value, Some(Expr::CopyCall { .. })));
-        }
+        } else { panic!("Expected VarDecl"); }
     }
 
     #[test]
@@ -1183,7 +1299,8 @@ mod tests {
         let stmts = parse_body(r#"own s = format("Your age is {17 + 1}")"#);
         if let Stmt::VarDecl(v) = &stmts[0] {
             assert!(matches!(v.value, Some(Expr::FormatCall { .. })));
-        }
+        } else { panic!("Expected VarDecl"); }
+
     }
 
 
@@ -1192,7 +1309,8 @@ mod tests {
         let stmts = parse_body("own x = \"World\"\n own s = format(\"Hello, {x}!\")");
         if let Stmt::VarDecl(v) = &stmts[1] {
             assert!(matches!(v.value, Some(Expr::FormatCall { .. })));
-        }
+        } else { panic!("Expected VarDecl"); }
+
     }
 
     #[test]
@@ -1215,8 +1333,8 @@ mod tests {
     fn array_single_access() {
         let stmts = parse_body("own v = arr[0]");
         if let Stmt::VarDecl(v) = &stmts[0] {
-    assert!(matches!(v.value, Some(Expr::ArraySingleAccess { .. })));
-        }
+            assert!(matches!(v.value, Some(Expr::ArraySingleAccess { .. })));
+        } else { panic!("Expected VarDecl"); }
     }
 
     #[test]
@@ -1261,7 +1379,8 @@ mod tests {
                 assert!(start.is_some());
                 assert!(end.is_none());
             } else { panic!(); }
-        }
+        
+        } else { panic!("Expected VarDecl"); }
     }
 
     #[test]
@@ -1284,6 +1403,12 @@ mod tests {
     fn hash_inside_string_not_comment() {
         let stmts = parse_body(r#"own x = "val # not comment""#);
         assert_eq!(stmts.len(), 1);
+        if let Stmt::VarDecl(v) = &stmts[0] {
+            assert_eq!(v.name, "x");
+            if let Expr::StringLiteral { value, .. } = v.value.clone().unwrap() {
+                assert_eq!(value, "val # not comment");
+            } else { panic!("Expected Var Expression"); }
+        } else { panic!("Expected VarDecl"); }
     }
 
     // Span tracking
