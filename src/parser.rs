@@ -752,6 +752,9 @@ fn parse_for_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), Ho
 
     let holder_name = parts[0].to_string();
 
+    helpers::validate_identifier_name(&holder_name)
+        .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+
 
 
     let mut expr: Expr;
