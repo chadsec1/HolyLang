@@ -1088,17 +1088,45 @@ mod tests {
     }
 
     #[test]
-    fn call_with_args() {
-        let stmts = parse_body("own x = add(1, 2)");
+    fn call_with_args_literals_only() {
+        let stmts = parse_body("own x = add(1, \"Hi!1\\\"\")");
         if let Stmt::VarDecl(v) = &stmts[0] {
             if let Some(Expr::Call { name, args, .. }) = &v.value {
                 assert_eq!(name, "add");
                 assert_eq!(args.len(), 2);
                 assert!(matches!(args[0], Expr::IntLiteral { .. }));
+                assert!(matches!(args[1], Expr::StringLiteral { .. }));
+            } else { panic!("Expected Call"); }
+        }
+    }
+
+    #[test]
+    fn call_with_args_vars_only() {
+        let stmts = parse_body("own x = add(a, b)");
+        if let Stmt::VarDecl(v) = &stmts[0] {
+            if let Some(Expr::Call { name, args, .. }) = &v.value {
+                assert_eq!(name, "add");
+                assert_eq!(args.len(), 2);
+                assert!(matches!(args[0], Expr::Var { .. }));
+                assert!(matches!(args[1], Expr::Var { .. }));
+            } else { panic!("Expected Call"); }
+        }
+    }
+
+
+    #[test]
+    fn call_with_args_mixed() {
+        let stmts = parse_body("own x = add(a, 69)");
+        if let Stmt::VarDecl(v) = &stmts[0] {
+            if let Some(Expr::Call { name, args, .. }) = &v.value {
+                assert_eq!(name, "add");
+                assert_eq!(args.len(), 2);
+                assert!(matches!(args[0], Expr::Var { .. }));
                 assert!(matches!(args[1], Expr::IntLiteral { .. }));
             } else { panic!("Expected Call"); }
         }
     }
+
 
     #[test]
     fn call_nested_args() {
@@ -1107,8 +1135,13 @@ mod tests {
             if let Some(Expr::Call { name, args, .. }) = &v.value {
                 assert_eq!(name, "outer");
                 assert_eq!(args.len(), 2);
-                assert!(matches!(args[0], Expr::Call { .. }));
-            }
+            
+                assert!(matches!(args[1], Expr::IntLiteral { .. }));
+                if let Expr::Call { name, args, .. } = &args[0] {
+                    assert!(matches!(args[0], Expr::IntLiteral { .. }));
+                    assert!(matches!(args[1], Expr::IntLiteral { .. }));
+                } else { panic!("Expected Call"); }
+            } else { panic!("Expected Call"); }
         }
     }
 
@@ -1116,7 +1149,14 @@ mod tests {
     fn call_as_statement() {
         let stmts = parse_body("do_thing()");
         assert_eq!(stmts.len(), 1);
-        assert!(matches!(stmts[0], Stmt::Expr(Expr::Call { .. })));
+        
+        if let Stmt::Expr(e) = &stmts[0] {
+            if let Expr::Call { name, args, .. } = e {
+                assert_eq!(args.len(), 0);
+
+            } else { panic!("Expected Call"); }
+        
+        } else { panic!("Expected Expression"); }
     }
 
     // Built-in: copy()
@@ -1124,6 +1164,7 @@ mod tests {
     #[test]
     fn copy_call() {
         let stmts = parse_body("own z = copy(y)");
+        assert_eq!(stmts.len(), 1);
         if let Stmt::VarDecl(v) = &stmts[0] {
             assert!(matches!(v.value, Some(Expr::CopyCall { .. })));
         }
