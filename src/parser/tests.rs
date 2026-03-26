@@ -409,7 +409,6 @@ mod tests {
         let stmts = parse_body("for i in x {\n\n}");
         assert_eq!(stmts.len(), 1);
         if let Stmt::For(f) = &stmts[0] {
-
             assert_eq!(f.holder_name, "i");
             assert_eq!(f.branch.len(), 0);
 
@@ -439,8 +438,9 @@ mod tests {
     }
 
     // While statements
+    
     #[test]
-    fn while_statements() {
+    fn while_statements_literals() {
         for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
             let stmts = parse_body(&format!("while 1 {} 2 {{\n\n}}", s));
             assert_eq!(stmts.len(), 1);
@@ -467,6 +467,88 @@ mod tests {
     }
 
     #[test]
+    fn while_statements_vars() {
+        for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
+            let stmts = parse_body(&format!("while x {} y {{\n\n}}", s));
+            assert_eq!(stmts.len(), 1);
+            if let Stmt::While(w) = &stmts[0] {
+
+                if let Expr::BinOp { left, right, op, .. } = &w.condition {
+                    assert_eq!(op, b);
+
+                    if let Expr::Var { name, .. } = &**left {
+                        assert_eq!(name, "x"); 
+                    } else { panic!("Expected Var expression") }
+
+                    if let Expr::Var { name, .. } = &**right {
+                        assert_eq!(name, "y"); 
+                    } else { panic!("Expected Var expression") }
+                }
+                
+                assert_eq!(w.branch.len(), 0);
+            } else {
+                panic!("expected while statement");
+            }
+        }
+    }
+
+    #[test]
+    fn while_statements_vars_and_literals() {
+        for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
+            let stmts = parse_body(&format!("while 69 {} y {{\n\n}}", s));
+            assert_eq!(stmts.len(), 1);
+            if let Stmt::While(w) = &stmts[0] {
+
+                if let Expr::BinOp { left, right, op, .. } = &w.condition {
+                    assert_eq!(op, b);
+
+                    if let Expr::IntLiteral { value, .. } = **left {
+                        assert!(matches!(value, IntLiteralValue::Int8(69)));
+                    } else { panic!(); }
+
+                    if let Expr::Var { name, .. } = &**right {
+                        assert_eq!(name, "y"); 
+                    } else { panic!("Expected Var expression") }
+                }
+                
+                assert_eq!(w.branch.len(), 0);
+            } else {
+                panic!("expected while statement");
+            }
+        }
+
+
+        for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
+            let stmts = parse_body(&format!("while x {} 67 {{\n\n}}", s));
+            assert_eq!(stmts.len(), 1);
+            if let Stmt::While(w) = &stmts[0] {
+
+                if let Expr::BinOp { left, right, op, .. } = &w.condition {
+                    assert_eq!(op, b);
+
+                    if let Expr::Var { name, .. } = &**left {
+                        assert_eq!(name, "x"); 
+                    } else { panic!("Expected Var expression") }
+
+                    if let Expr::IntLiteral { value, .. } = **right {
+                        assert!(matches!(value, IntLiteralValue::Int8(67)));
+                    } else { panic!(); }
+                } else { panic!() }
+                
+                assert_eq!(w.branch.len(), 0);
+            } else {
+                panic!("expected while statement");
+            }
+        }
+
+
+
+    }
+
+
+
+
+    #[test]
     fn while_statements_no_condition_errors() {
         for i in 0..10000 {
             assert_parse_err(&wrap(&format!("while {}{{\n\n}}", " ".repeat(i))));    
@@ -478,7 +560,7 @@ mod tests {
     // If statements 
 
     #[test]
-    fn if_statements() {
+    fn if_statements_literals() {
         for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
             let stmts = parse_body(&format!("if 1 {} 2 {{\n\n}}", s));
             assert_eq!(stmts.len(), 1);
@@ -495,8 +577,8 @@ mod tests {
                     if let Expr::IntLiteral { value, .. } = **right {
                         assert!(matches!(value, IntLiteralValue::Int8(2)));
                     } else { panic!(); }
-
-                }
+ 
+                } else { panic!() }
                 
                 assert_eq!(i.if_branch.len(), 0);
                 assert_eq!(i.elif_branches.len(), 0);
@@ -506,6 +588,98 @@ mod tests {
             }
         }
     }
+
+
+    #[test]
+    fn if_statements_vars() {
+        for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
+            let stmts = parse_body(&format!("if x {} y {{\n\n}}", s));
+            assert_eq!(stmts.len(), 1);
+            if let Stmt::If(i) = &stmts[0] {
+
+                if let Expr::BinOp { left, right, op, .. } = &i.condition {
+
+                    assert_eq!(op, b);
+                    
+                    if let Expr::Var { name, .. } = &**left {
+                        assert_eq!(name, "x"); 
+                    } else { panic!("Expected Var expression") }
+
+                    if let Expr::Var { name, .. } = &**right {
+                        assert_eq!(name, "y"); 
+                    } else { panic!("Expected Var expression") }
+                } else { panic!() }
+                
+                assert_eq!(i.if_branch.len(), 0);
+                assert_eq!(i.elif_branches.len(), 0);
+                assert!(i.else_branch.is_none());
+            } else {
+                panic!("expected if statement");
+            }
+        }
+    }
+
+
+    #[test]
+    fn if_statements_vars_and_literals() {
+        for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
+            let stmts = parse_body(&format!("if x {} 10 {{\n\n}}", s));
+            assert_eq!(stmts.len(), 1);
+            if let Stmt::If(i) = &stmts[0] {
+
+                if let Expr::BinOp { left, right, op, .. } = &i.condition {
+                    assert_eq!(op, b);
+                    
+                    if let Expr::Var { name, .. } = &**left {
+                        assert_eq!(name, "x"); 
+                    } else { panic!("Expected Var expression") }
+
+                    if let Expr::IntLiteral { value, .. } = **right {
+                        assert!(matches!(value, IntLiteralValue::Int8(10)));
+                    } else { panic!(); }
+
+                } else { panic!() }
+                
+                
+                assert_eq!(i.if_branch.len(), 0);
+                assert_eq!(i.elif_branches.len(), 0);
+                assert!(i.else_branch.is_none());
+            } else {
+                panic!("expected if statement");
+            }
+        }
+
+
+        for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
+            let stmts = parse_body(&format!("if 10 {} x {{\n\n}}", s));
+            assert_eq!(stmts.len(), 1);
+            if let Stmt::If(i) = &stmts[0] {
+
+                if let Expr::BinOp { left, right, op, .. } = &i.condition {
+                    assert_eq!(op, b);
+                    
+                    if let Expr::IntLiteral { value, .. } = **left {
+                        assert!(matches!(value, IntLiteralValue::Int8(10)));
+                    } else { panic!(); }
+ 
+                    if let Expr::Var { name, .. } = &**right {
+                        assert_eq!(name, "x"); 
+                    } else { panic!("Expected Var expression") }
+                
+                } else { panic!() }
+                
+                assert_eq!(i.if_branch.len(), 0);
+                assert_eq!(i.elif_branches.len(), 0);
+                assert!(i.else_branch.is_none());
+            } else {
+                panic!("expected if statement");
+            }
+        }
+
+
+    }
+
+
 
     #[test]
     fn if_statements_with_else() {
@@ -525,8 +699,7 @@ mod tests {
                     if let Expr::IntLiteral { value, .. } = **right {
                         assert!(matches!(value, IntLiteralValue::Int8(2)));
                     } else { panic!(); }
-
-                }
+                } else { panic!() }
                 
                 assert_eq!(i.if_branch.len(), 0);
                 assert_eq!(i.elif_branches.len(), 0);
@@ -538,7 +711,7 @@ mod tests {
     }
 
     #[test]
-    fn if_statements_with_elif() {
+    fn if_statements_with_elif_literals() {
         for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
             let stmts = parse_body(&format!("if 1 {} 2 {{\n\n}} elif 5 {} 3 {{\n\n}}", s, s));
             assert_eq!(stmts.len(), 1);
@@ -577,7 +750,52 @@ mod tests {
 
                 } else { panic!("Expected BinOp") }
 
+                assert!(i.else_branch.is_none());
+            } else {
+                panic!("expected if statement");
+            }
+        }
+    }
 
+
+    fn if_statements_with_elif_vars() {
+        for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
+            let stmts = parse_body(&format!("if x {} y {{\n\n}} elif e {} a {{\n\n}}", s, s));
+            assert_eq!(stmts.len(), 1);
+            if let Stmt::If(i) = &stmts[0] {
+                if let Expr::BinOp { left, right, op, .. } = &i.condition {
+                    assert_eq!(op, b);
+
+                    if let Expr::Var { name, .. } = &**left {
+                        assert_eq!(name, "x"); 
+                    } else { panic!("Expected Var expression") }
+
+                    if let Expr::Var { name, .. } = &**right {
+                        assert_eq!(name, "y"); 
+                    } else { panic!("Expected Var expression") }
+
+                } else { panic!("Expected BinOp") }
+
+                
+                assert_eq!(i.if_branch.len(), 0);
+                assert_eq!(i.elif_branches.len(), 1);
+
+
+                let elif_cond = &i.elif_branches[0].0;
+                if let Expr::BinOp { left, right, op, .. } = elif_cond {
+
+                    assert_eq!(op, b);
+
+
+                    if let Expr::Var { name, .. } = &**left {
+                        assert_eq!(name, "e"); 
+                    } else { panic!("Expected Var expression") }
+
+                    if let Expr::Var { name, .. } = &**right {
+                        assert_eq!(name, "a"); 
+                    } else { panic!("Expected Var expression") }
+
+                } else { panic!("Expected BinOp") }
 
                 assert!(i.else_branch.is_none());
             } else {
@@ -585,6 +803,100 @@ mod tests {
             }
         }
     }
+
+
+    fn if_statements_with_elif_vars_and_literals() {
+        for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
+            let stmts = parse_body(&format!("if 2 {} y {{\n\n}} elif 5 {} a {{\n\n}}", s, s));
+            assert_eq!(stmts.len(), 1);
+            if let Stmt::If(i) = &stmts[0] {
+                if let Expr::BinOp { left, right, op, .. } = &i.condition {
+                    assert_eq!(op, b);
+
+                    if let Expr::IntLiteral { value, .. } = **left {
+                        assert!(matches!(value, IntLiteralValue::Int8(2)));
+                    } else { panic!(); }
+
+                    if let Expr::Var { name, .. } = &**right {
+                        assert_eq!(name, "y"); 
+                    } else { panic!("Expected Var expression") }
+
+                } else { panic!("Expected BinOp") }
+
+                
+                assert_eq!(i.if_branch.len(), 0);
+                assert_eq!(i.elif_branches.len(), 1);
+
+
+                let elif_cond = &i.elif_branches[0].0;
+                if let Expr::BinOp { left, right, op, .. } = elif_cond {
+
+                    assert_eq!(op, b);
+
+                    if let Expr::IntLiteral { value, .. } = **left {
+                        assert!(matches!(value, IntLiteralValue::Int8(5)));
+                    } else { panic!(); }
+
+                    if let Expr::Var { name, .. } = &**right {
+                        assert_eq!(name, "a"); 
+                    } else { panic!("Expected Var expression") }
+
+                } else { panic!("Expected BinOp") }
+
+                assert!(i.else_branch.is_none());
+            } else {
+                panic!("expected if statement");
+            }
+        }
+
+
+
+        for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
+            let stmts = parse_body(&format!("if x {} 6 {{\n\n}} elif a {} 9 {{\n\n}}", s, s));
+            assert_eq!(stmts.len(), 1);
+            if let Stmt::If(i) = &stmts[0] {
+                if let Expr::BinOp { left, right, op, .. } = &i.condition {
+                    assert_eq!(op, b);
+
+                    if let Expr::Var { name, .. } = &**right {
+                        assert_eq!(name, "x"); 
+                    } else { panic!("Expected Var expression") }
+
+                    if let Expr::IntLiteral { value, .. } = **left {
+                        assert!(matches!(value, IntLiteralValue::Int8(6)));
+                    } else { panic!(); }
+
+                } else { panic!("Expected BinOp") }
+
+                
+                assert_eq!(i.if_branch.len(), 0);
+                assert_eq!(i.elif_branches.len(), 1);
+
+
+                let elif_cond = &i.elif_branches[0].0;
+                if let Expr::BinOp { left, right, op, .. } = elif_cond {
+
+                    assert_eq!(op, b);
+
+                    if let Expr::Var { name, .. } = &**right {
+                        assert_eq!(name, "a"); 
+                    } else { panic!("Expected Var expression") }
+
+                    if let Expr::IntLiteral { value, .. } = **left {
+                        assert!(matches!(value, IntLiteralValue::Int8(9)));
+                    } else { panic!(); }
+
+                } else { panic!("Expected BinOp") }
+
+                assert!(i.else_branch.is_none());
+            } else {
+                panic!("expected if statement");
+            }
+        }
+
+    }
+
+
 
 
 
