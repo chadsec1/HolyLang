@@ -403,6 +403,40 @@ mod tests {
         }
     }
 
+    // For statements
+    #[test]
+    fn for_statements() {
+        let stmts = parse_body("for i in x {\n\n}");
+        assert_eq!(stmts.len(), 1);
+        if let Stmt::For(f) = &stmts[0] {
+
+            assert_eq!(f.holder_name, "i");
+            assert_eq!(f.branch.len(), 0);
+
+            if let Expr::Var { name, .. } = &f.value {
+                assert_eq!(name, "x"); 
+            } else { panic!("Expected Var expression") }
+        } else {
+            panic!("expected while statement");
+        }
+    }
+
+    #[test]
+    fn for_statements_no_value_errors() {
+        assert_parse_err(&wrap("for i in {\n\n}"));    
+    }
+
+
+    #[test]
+    fn for_statements_no_holder_errors() {
+        assert_parse_err(&wrap("for in x {\n\n}"));    
+    }
+
+
+    #[test]
+    fn for_statements_no_holder_no_value_errors() {
+        assert_parse_err(&wrap("for {\n\n}"));    
+    }
 
     // While statements
     #[test]
