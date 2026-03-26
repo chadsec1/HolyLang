@@ -496,115 +496,142 @@ mod tests {
 
     #[test]
     fn test_copy_call_allows_reuse() {
-        // own a int32 = 5
-        // own b int32 = copy(a)  (copies, does not move)
-        // own c int32 = a        (valid, because no moves happened)
-        let copy_a = Expr::CopyCall { expr: Box::new(var_expr("a")), span: span() };
-        let body = vec![
-            var_decl("a", Type::Int32, Some(int32_lit(5))),
-            var_decl("b", Type::Int32, Some(copy_a)),
-            var_decl("c", Type::Int32, Some(var_expr("a"))),
-        ];
-        let func = void_func("foo", vec![], body);
-        let mut ast = ast_one(func);
-        check_semantics(&mut ast).unwrap();
+        // own a T = Some Literal
+        // own b T = copy(a)  (copies, does not move)
+        // own c T = a        (valid, because no moves happened)
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let copy_a = Expr::CopyCall { expr: Box::new(var_expr("a")), span: span() };
+            let body = vec![
+                var_decl("a", t.clone(), Some(l.clone())),
+                var_decl("b", t.clone(), Some(copy_a)),
+                var_decl("c", t.clone(), Some(var_expr("a"))),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            check_semantics(&mut ast).unwrap();
+        }
     }
 
     #[test]
     fn test_pass_variable_to_call_marks_it_moved() {
         // bar takes one int32.
-        // own a int32 = 0
+        // own a T = Some Literal
         // bar(a)       (moves a)
-        // own b int32 = a  (error)
-        let bar = void_func("bar", vec![param("p", Type::Int32)], vec![]);
-        let body = vec![
-            var_decl("a", Type::Int32, Some(int32_lit(0))),
-            Stmt::Expr(call_expr("bar", vec![var_expr("a")])),
-            var_decl("b", Type::Int32, Some(var_expr("a"))),
-        ];
-        let caller = void_func("main", vec![], body);
-        let mut ast = AST { functions: vec![bar, caller] };
-        let result = check_semantics(&mut ast);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("moved"));
+        // own b T = a  (error)
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let bar = void_func("bar", vec![param("p", t.clone())], vec![]);
+            let body = vec![
+                var_decl("a", t.clone(), Some(l.clone())),
+                Stmt::Expr(call_expr("bar", vec![var_expr("a")])),
+                var_decl("b", t.clone(), Some(var_expr("a"))),
+            ];
+            let caller = void_func("main", vec![], body);
+            let mut ast = AST { functions: vec![bar, caller] };
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("moved"));
+            
+        }
     }
 
     // locking / unlocking variables
 
     #[test]
     fn test_assign_to_locked_variable_errors() {
-        let body = vec![
-            var_decl("x", Type::Int32, Some(int32_lit(1))),
-            Stmt::Lock(vec![var_expr("x")]),
-            Stmt::VarAssign(VariableAssignment {
-                name: "x".to_string(),
-                value: int32_lit(2),
-                span: span(),
-            }),
-        ];
-        let func = void_func("foo", vec![], body);
-        let mut ast = ast_one(func);
-        let result = check_semantics(&mut ast);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("locked"));
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                var_decl("x", t.clone(), Some(l.clone())),
+                Stmt::Lock(vec![var_expr("x")]),
+                Stmt::VarAssign(VariableAssignment {
+                    name: "x".to_string(),
+                    value: l.clone(),
+                    span: span(),
+                }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("locked"));
+        }
     }
 
     #[test]
     fn test_unlock_allows_reassign() {
-        let body = vec![
-            var_decl("x", Type::Int32, Some(int32_lit(1))),
-            Stmt::Lock(vec![var_expr("x")]),
-            Stmt::Unlock(vec![var_expr("x")]),
-            Stmt::VarAssign(VariableAssignment {
-                name: "x".to_string(),
-                value: int32_lit(99),
-                span: span(),
-            }),
-        ];
-        let func = void_func("foo", vec![], body);
-        let mut ast = ast_one(func);
-        check_semantics(&mut ast).unwrap();
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                var_decl("x", t.clone(), Some(l.clone())),
+                Stmt::Lock(vec![var_expr("x")]),
+                Stmt::Unlock(vec![var_expr("x")]),
+                Stmt::VarAssign(VariableAssignment {
+                    name: "x".to_string(),
+                    value: l.clone(),
+                    span: span(),
+                }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            check_semantics(&mut ast).unwrap();
+        }
     }
+
 
     #[test]
     fn test_double_lock_errors() {
-        let body = vec![
-            var_decl("x", Type::Int32, Some(int32_lit(0))),
-            Stmt::Lock(vec![var_expr("x")]),
-            Stmt::Lock(vec![var_expr("x")]),
-        ];
-        let func = void_func("foo", vec![], body);
-        let mut ast = ast_one(func);
-        let result = check_semantics(&mut ast);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("already locked"));
+        let literals = get_all_literals_no_arr();
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                var_decl("x", t.clone(), Some(l.clone())),
+                Stmt::Lock(vec![var_expr("x")]),
+                Stmt::Lock(vec![var_expr("x")]),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("already locked"));
+        }
     }
 
     #[test]
     fn test_unlock_unlocked_variable_errors() {
-        let body = vec![
-            var_decl("x", Type::Int32, Some(int32_lit(0))),
-            Stmt::Unlock(vec![var_expr("x")]),
-        ];
-        let func = void_func("foo", vec![], body);
-        let mut ast = ast_one(func);
-        let result = check_semantics(&mut ast);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("already unlocked"));
+        let literals = get_all_literals_no_arr();
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                var_decl("x", t.clone(), Some(l.clone())),
+                Stmt::Unlock(vec![var_expr("x")]),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("is already unlocked"));
+        }
     }
 
     #[test]
     fn test_shadowing_locked_variable_errors() {
-        let body = vec![
-            var_decl("x", Type::Int32, Some(int32_lit(1))),
-            Stmt::Lock(vec![var_expr("x")]),
-            var_decl("x", Type::Int32, Some(int32_lit(2))),
-        ];
-        let func = void_func("foo", vec![], body);
-        let mut ast = ast_one(func);
-        let result = check_semantics(&mut ast);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("locked"));
+        let literals = get_all_literals_no_arr();
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                var_decl("x", t.clone(), Some(l.clone())),
+                Stmt::Lock(vec![var_expr("x")]),
+                var_decl("x", t.clone(), Some(l.clone())),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("is locked, therefore you cannot overshadow it"));
+        }
     }
 
     // function calls 
@@ -621,13 +648,15 @@ mod tests {
 
     #[test]
     fn test_call_wrong_arity_errors() {
-        let callee = void_func("bar", vec![param("a", Type::Int32)], vec![]);
-        let body = vec![Stmt::Expr(call_expr("bar", vec![]))]; // 0 args instead of 1
-        let caller = void_func("main", vec![], body);
-        let mut ast = AST { functions: vec![callee, caller] };
-        let result = check_semantics(&mut ast);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("expects 1 arguments, got 0"));
+        for t in ALL_TYPES_NO_ARR {
+            let callee = void_func("bar", vec![param("a", t.clone())], vec![]);
+            let body = vec![Stmt::Expr(call_expr("bar", vec![]))]; // 0 args instead of 1
+            let caller = void_func("main", vec![], body);
+            let mut ast = AST { functions: vec![callee, caller] };
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("expects 1 arguments, got 0"));
+        }
     }
 
     #[test]
