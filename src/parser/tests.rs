@@ -434,7 +434,9 @@ mod tests {
 
     #[test]
     fn while_statements_no_condition_errors() {
-        assert_parse_err(&wrap("while {\n\n}"));
+        for i in 0..10000 {
+            assert_parse_err(&wrap(&format!("while {}{{\n\n}}", " ".repeat(i))));    
+        }
     }
 
 
@@ -604,12 +606,17 @@ mod tests {
 
     #[test]
     fn if_statements_no_condition_errors() {
-        assert_parse_err(&wrap("if {\n\n}"));
+        for i in 0..10000 {
+            assert_parse_err(&wrap(&format!("if {}{{\n\n}}", " ".repeat(i))));    
+        }
     }
 
     #[test]
     fn if_statements_elif_no_condition_errors() {
-        assert_parse_err(&wrap("if 1 == 2 {\n\n} elif {\n\n}"));
+        for i in 0..10000 {
+            assert_parse_err(&wrap(&format!("if 1 == 2 {{\n\n}} elif {}{{\n\n}}", " ".repeat(i))));    
+        }
+
     }
 
 
@@ -655,7 +662,7 @@ mod tests {
     }
 
 
-    // Even though we do test all these types declarations, we never test them in whole with their
+    // Even though we do test all these types declarations, we never tested them in whole with their
     // respective literals. So it's worth double checking here again.
     #[test]
     fn var_decl_float_types() {
