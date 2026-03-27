@@ -63,8 +63,9 @@ func main() {
 
     # All basic primitive types have a default value 
     # (0 for integers, 0.0 for floats, false for booleans, empty arrays for arrays, "" for string)
+    #
     own x int32
-
+    # x has value of 0
 
 
     # 1 and 2 are integer literals and evaluated as expressions to determine their 
