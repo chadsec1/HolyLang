@@ -31,7 +31,27 @@ const ALL_TYPES_NO_ARR: &[Type] = &[
     Type::Infer,
 ];
 
+const ALL_SIGNED_TYPES_NO_ARR: &[Type] = &[
+    Type::Int8,
+    Type::Int16,
+    Type::Int32,
+    Type::Int64,
+    Type::Int128,
+    Type::Float32,
+    Type::Float64,
+    Type::Infer,
+];
 
+
+const ALL_UNSIGNED_TYPES_NO_ARR: &[Type] = &[
+    Type::Byte,
+    Type::Uint16,
+    Type::Uint32,
+    Type::Uint64,
+    Type::Uint128,
+    Type::Usize,
+    Type::Infer,
+];
 
 #[cfg(test)]
 mod tests {
@@ -42,6 +62,34 @@ mod tests {
 
     // helper functions
     
+    fn get_all_signed_literals_no_arr() -> [Expr; 7] {
+        let literals = [
+            int8_lit(1),
+            int16_lit(1),
+            int32_lit(1),
+            int64_lit(1),
+            int128_lit(1),
+
+            float32_lit(1.0),
+            float64_lit(1.0),
+        ];
+
+        return literals;
+    }
+
+    fn get_all_unsigned_literals_no_arr() -> [Expr; 6] {
+        let literals = [
+            byte_lit(1),
+            uint16_lit(1),
+            uint32_lit(1),
+            uint64_lit(1),
+            uint128_lit(1),
+            usize_lit(1)
+        ];
+
+        return literals;
+    }
+
     fn get_all_literals_no_arr() -> [Expr; 15] {
         let literals = [
             int8_lit(1),
@@ -925,30 +973,39 @@ mod tests {
 
     #[test]
     fn test_negate_unsigned_errors() {
-        let neg = Expr::UnaryOp {
-            op: UnaryOpKind::Negate,
-            expr: Box::new(Expr::IntLiteral { value: IntLiteralValue::Usize(5), span: span() }),
-            span: span(),
-        };
-        let body = vec![var_decl("x", Type::Usize, Some(neg))];
-        let func = void_func("foo", vec![], body);
-        let mut ast = ast_one(func);
-        let result = check_semantics(&mut ast);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("negate"));
+
+        let unsigned_literals = get_all_unsigned_literals_no_arr();
+
+        for (ul, t) in unsigned_literals.iter().zip(ALL_UNSIGNED_TYPES_NO_ARR.iter()) {
+            let neg = Expr::UnaryOp {
+                op: UnaryOpKind::Negate,
+                expr: Box::new(ul.clone()),
+                span: span(),
+            };
+            let body = vec![var_decl("x", t.clone(), Some(neg))];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("negate"));
+        }
     }
 
     #[test]
     fn test_negate_signed_passes() {
-        let neg = Expr::UnaryOp {
-            op: UnaryOpKind::Negate,
-            expr: Box::new(int32_lit(7)),
-            span: span(),
-        };
-        let body = vec![var_decl("x", Type::Int32, Some(neg))];
-        let func = void_func("foo", vec![], body);
-        let mut ast = ast_one(func);
-        check_semantics(&mut ast).unwrap();
+        let signed_literals = get_all_signed_literals_no_arr();
+
+        for (sl, t) in signed_literals.iter().zip(ALL_SIGNED_TYPES_NO_ARR.iter()) {
+            let neg = Expr::UnaryOp {
+                op: UnaryOpKind::Negate,
+                expr: Box::new(sl.clone()),
+                span: span(),
+            };
+            let body = vec![var_decl("x", t.clone(), Some(neg))];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            check_semantics(&mut ast).unwrap();
+        }
     }
 
     #[test]
@@ -958,7 +1015,7 @@ mod tests {
             let bin = Expr::BinOp {
                 left: Box::new(str_lit("hello")),
                 op: b,
-                right: Box::new(str_lit(" world")),
+                right: Box::new(str_lit("world")),
                 span: span(),
             };
             let body = vec![var_decl("s", Type::String, Some(bin))];
