@@ -31,6 +31,29 @@ const ALL_TYPES_NO_ARR: &[Type] = &[
     Type::Infer,
 ];
 
+const ALL_TYPES_NO_ARR_SCATTERED: &[Type] = &[
+    Type::Int128,
+    Type::Int8,
+    Type::Uint64,
+    Type::Int64,
+    Type::Float32,
+    Type::Byte,
+    Type::Uint16,
+    Type::String,
+    Type::Uint128,
+    Type::Float64,
+    Type::Uint32,
+    Type::Int16,
+    Type::Bool,
+    Type::Int32,
+    Type::Usize,
+
+    Type::Infer,
+];
+
+
+
+
 const ALL_SIGNED_TYPES_NO_ARR: &[Type] = &[
     Type::Int8,
     Type::Int16,
@@ -761,40 +784,61 @@ mod tests {
 
     #[test]
     fn test_multi_return_decl_correct() {
-        // fn pair() -> (int32, bool) { return 1, true }
-        // fn main() { own a int32, b bool = pair() }
-        let pair_body = vec![return_stmt(vec![int32_lit(1), bool_lit(true)])];
-        let pair = returning_func("pair", vec![], vec![Type::Int32, Type::Bool], pair_body);
+        // func pair() (t1, t2,) { return l1, l2 }
+        // func main() { own a, b = pair() }
 
-        let vars = vec![
-            Variable { name: "a".to_string(), type_name: Type::Int32, value: None, span: span() },
-            Variable { name: "b".to_string(), type_name: Type::Bool, value: None, span: span() },
-        ];
-        let body = vec![Stmt::VarDeclMulti(vars, call_expr("pair", vec![]))];
-        let main = void_func("main", vec![], body);
+        let literals = get_all_literals_no_arr();
+        let literals_scattered = get_all_literals_no_arr_scattered_order();
 
-        let mut ast = AST { functions: vec![pair, main] };
-        check_semantics(&mut ast).unwrap();
+        
+        for (((l1, t1), l2), t2) in literals.iter()
+            .zip(ALL_TYPES_NO_ARR.iter())
+            .zip(literals_scattered.iter())
+            .zip(ALL_TYPES_NO_ARR_SCATTERED)
+        {
+            let pair_body = vec![return_stmt(vec![l1.clone(), l2.clone()])];
+            let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
+
+            let vars = vec![
+                Variable { name: "a".to_string(), type_name: t1.clone(), value: None, span: span() },
+                Variable { name: "b".to_string(), type_name: t2.clone(), value: None, span: span() },
+            ];
+            let body = vec![Stmt::VarDeclMulti(vars, call_expr("pair", vec![]))];
+            let main = void_func("main", vec![], body);
+
+            let mut ast = AST { functions: vec![pair, main] };
+            check_semantics(&mut ast).unwrap();
+        }
     }
 
     #[test]
     fn test_multi_return_count_mismatch_errors() {
-        // pair returns 2 values; we only bind 1
-        let pair_body = vec![return_stmt(vec![int32_lit(1), bool_lit(true)])];
-        let pair = returning_func("pair", vec![], vec![Type::Int32, Type::Bool], pair_body);
+        // pair returns 2 values, but programmer only binds 1 variable
 
-        let vars = vec![
-            Variable { name: "a".to_string(), type_name: Type::Int32, value: None, span: span() },
-        ];
-        let body = vec![Stmt::VarDeclMulti(vars, call_expr("pair", vec![]))];
-        let main = void_func("main", vec![], body);
+        let literals = get_all_literals_no_arr();
+        let literals_scattered = get_all_literals_no_arr_scattered_order();
 
-        let mut ast = AST { functions: vec![pair, main] };
-        let result = check_semantics(&mut ast);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Return length mismatch"));
+        
+        for (((l1, t1), l2), t2) in literals.iter()
+            .zip(ALL_TYPES_NO_ARR.iter())
+            .zip(literals_scattered.iter())
+            .zip(ALL_TYPES_NO_ARR_SCATTERED)
+        {
+            let pair_body = vec![return_stmt(vec![l1.clone(), l2.clone()])];
+            let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
+
+            let vars = vec![
+                Variable { name: "a".to_string(), type_name: t1.clone(), value: None, span: span() },
+            ];
+            let body = vec![Stmt::VarDeclMulti(vars, call_expr("pair", vec![]))];
+            let main = void_func("main", vec![], body);
+
+            let mut ast = AST { functions: vec![pair, main] };
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Return length mismatch"));
+        }
     }
-
     // basic array out-of-bounds checks
 
     #[test]
@@ -947,33 +991,62 @@ mod tests {
 
     #[test]
     fn test_array_slice_start_greater_than_end_errors() {
-        let arr_lit = Expr::ArrayLiteral {
-            elements: vec![int32_lit(1), int32_lit(2), int32_lit(3), int32_lit(4)],
-            array_ty: Type::Int32,
-            span: span(),
-        };
-        let slice = Expr::ArrayMultipleAccess {
-            array: Box::new(var_expr("arr")),
-            start: Some(Box::new(usize_lit(3))),
-            end: Some(Box::new(usize_lit(1))),
-            span: span(),
-        };
-        let body = vec![
-            var_decl("arr", Type::Array(Box::new(Type::Int32)), Some(arr_lit)),
-            var_decl("s", Type::Array(Box::new(Type::Int32)), Some(slice)),
-        ];
-        let func = void_func("foo", vec![], body);
-        let mut ast = ast_one(func);
-        let result = check_semantics(&mut ast);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Start index"));
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let arr_lit = Expr::ArrayLiteral {
+                elements: vec![l.clone(), l.clone(), l.clone(), l.clone()],
+                array_ty: t.clone(),
+                span: span(),
+            };
+            let slice = Expr::ArrayMultipleAccess {
+                array: Box::new(var_expr("arr")),
+                start: Some(Box::new(usize_lit(3))),
+                end: Some(Box::new(usize_lit(1))),
+                span: span(),
+            };
+            let body = vec![
+                var_decl("arr", Type::Array(Box::new(t.clone())), Some(arr_lit)),
+                var_decl("s", Type::Array(Box::new(t.clone())), Some(slice)),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Start index"));
+        }
+
+
+        // Same test but for arrays of infer
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let arr_lit = Expr::ArrayLiteral {
+                elements: vec![l.clone(), l.clone(), l.clone(), l.clone()],
+                array_ty: t.clone(),
+                span: span(),
+            };
+            let slice = Expr::ArrayMultipleAccess {
+                array: Box::new(var_expr("arr")),
+                start: Some(Box::new(usize_lit(3))),
+                end: Some(Box::new(usize_lit(1))),
+                span: span(),
+            };
+            let body = vec![
+                var_decl("arr", Type::Infer, Some(arr_lit)),
+                var_decl("s", Type::Infer, Some(slice)),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Start index"));
+        }
+
     }
 
     // unary operations 
 
     #[test]
     fn test_negate_unsigned_errors() {
-
         let unsigned_literals = get_all_unsigned_literals_no_arr();
 
         for (ul, t) in unsigned_literals.iter().zip(ALL_UNSIGNED_TYPES_NO_ARR.iter()) {
@@ -1063,7 +1136,7 @@ mod tests {
     }
 
     #[test]
-    fn test_float32_cannot_accept_float64_literal_errors() {
+    fn test_float32_cannot_accept_float64_errors() {
         let lit = Expr::FloatLiteral { value: FloatLiteralValue::Float64(3.14), span: span() };
         let body = vec![var_decl("f", Type::Float32, Some(lit))];
         let func = void_func("foo", vec![], body);
@@ -1072,6 +1145,7 @@ mod tests {
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("float64"));
     }
+
 
     // binary operation type mismatch 
 
@@ -1103,8 +1177,6 @@ mod tests {
             bool_lit(false),
             str_lit("Hi")
         ];
-
-
 
         for int in &int_literals {
             for non_int in &non_int_literals {
