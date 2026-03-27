@@ -15,37 +15,42 @@ pub fn advanced_infer_2_types(
 
     let mut rty = infer_expr_type(right, locals, fun_sigs, infer_hint.clone())?;
     
-    if infer_hint.is_none() {
-        // Integer literal inferrence
-        if matches!(*left, Expr::IntLiteral {..}) && !matches!(*right, Expr::IntLiteral {..}) {
-            lty = infer_expr_type(left, locals, fun_sigs, Some(rty.clone()))?;
+    
+    // IMPORTANT NOTE: If any weird binary operations bugs shall arise, 
+    // it's probably this fucker
+    //
+    // if infer_hint.is_none() {
 
-        } else if matches!(*right, Expr::IntLiteral {..}) && !matches!(*left, Expr::IntLiteral {..}) {
-            rty = infer_expr_type(right, locals, fun_sigs, Some(lty.clone()))?;
-        
-        } else if matches!(*left, Expr::IntLiteral {..}) && matches!(*right, Expr::IntLiteral {..}) {
+    // Integer literal inferrence
+    if matches!(*left, Expr::IntLiteral {..}) && !matches!(*right, Expr::IntLiteral {..}) {
+        lty = infer_expr_type(left, locals, fun_sigs, Some(rty.clone()))?;
 
-            let bigger_type = helpers::get_bigger_type_of_two(lty.clone(), rty.clone());
+    } else if matches!(*right, Expr::IntLiteral {..}) && !matches!(*left, Expr::IntLiteral {..}) {
+        rty = infer_expr_type(right, locals, fun_sigs, Some(lty.clone()))?;
+    
+    } else if matches!(*left, Expr::IntLiteral {..}) && matches!(*right, Expr::IntLiteral {..}) {
 
-            rty = infer_expr_type(right, locals, fun_sigs, Some(bigger_type.clone()))?;
-            lty = infer_expr_type(left, locals, fun_sigs, Some(bigger_type.clone()))?;
-        }
+        let bigger_type = helpers::get_bigger_type_of_two(lty.clone(), rty.clone());
 
-        // Float literal inferrence
-        if matches!(*left, Expr::FloatLiteral {..}) && !matches!(*right, Expr::FloatLiteral {..}) {
-            lty = infer_expr_type(left, locals, fun_sigs, Some(rty.clone()))?;
-
-        } else if matches!(*right, Expr::FloatLiteral {..}) && !matches!(*left, Expr::FloatLiteral {..}) {
-            rty = infer_expr_type(right, locals, fun_sigs, Some(lty.clone()))?;
-        
-        } else if matches!(*left, Expr::FloatLiteral {..}) && matches!(*right, Expr::FloatLiteral {..}) {
-            let bigger_type = Type::Float64;
-
-            rty = infer_expr_type(right, locals, fun_sigs, Some(bigger_type.clone()))?;
-            lty = infer_expr_type(left, locals, fun_sigs, Some(bigger_type.clone()))?;
-        }
-
+        rty = infer_expr_type(right, locals, fun_sigs, Some(bigger_type.clone()))?;
+        lty = infer_expr_type(left, locals, fun_sigs, Some(bigger_type.clone()))?;
     }
+
+    // Float literal inferrence
+    if matches!(*left, Expr::FloatLiteral {..}) && !matches!(*right, Expr::FloatLiteral {..}) {
+        lty = infer_expr_type(left, locals, fun_sigs, Some(rty.clone()))?;
+
+    } else if matches!(*right, Expr::FloatLiteral {..}) && !matches!(*left, Expr::FloatLiteral {..}) {
+        rty = infer_expr_type(right, locals, fun_sigs, Some(lty.clone()))?;
+    
+    } else if matches!(*left, Expr::FloatLiteral {..}) && matches!(*right, Expr::FloatLiteral {..}) {
+        let bigger_type = Type::Float64;
+
+        rty = infer_expr_type(right, locals, fun_sigs, Some(bigger_type.clone()))?;
+        lty = infer_expr_type(left, locals, fun_sigs, Some(bigger_type.clone()))?;
+    }
+
+    // }
 
     Ok((lty, rty))
 
@@ -332,7 +337,7 @@ pub fn infer_expr_type(
             // Check if lty or rty are of types that cannot have arithmetic performed on.
             if matches!(lty, Type::String | Type::Bool | Type::Array(_) ) || matches!(rty, Type::String | Type::Bool | Type::Array(_) ) {
                 if matches!(op, BinOpKind::Add | BinOpKind::Subtract | BinOpKind::Multiply | BinOpKind::Divide | BinOpKind::Greater | BinOpKind::GreaterEqual | BinOpKind::Less | BinOpKind::LessEqual) {
-                    return Err(HolyError::Semantic(format!("You cannot perform arithmetic on type `{}`. (line {} column {})", lty, span.line, span.column)));
+                    return Err(HolyError::Semantic(format!("You cannot perform arithmetic on types: `{}` vs `{}`. (line {} column {})", lty, rty, span.line, span.column)));
                 } 
             }
 

@@ -141,10 +141,6 @@ func main() {
         }
     }
 
-
-
-
-
 }
 
 
@@ -156,14 +152,12 @@ func add(a int32, b int32) int32 {
 
 
 # Function that returns 3 numbers
-
 func give_3_numbers() (int32, int32, int32) {
     own a int32 = 1
     own b int32 = 2
     own c int32 = 3
 
     return a, b, c
-
 }
 
 ```
