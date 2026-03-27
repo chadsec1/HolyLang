@@ -951,10 +951,8 @@ mod tests {
         check_semantics(&mut ast).unwrap();
     }
 
-    // string concatantion via binary operation
-    //
     #[test]
-    fn test_string_binop_errors() {
+    fn test_string_binop_arth_errors() {
         for b in AllBinOpKindArth {
             // Strings may not be ever wrapped in ANY BinOpKind, we use format() instead.
             let bin = Expr::BinOp {
@@ -968,8 +966,7 @@ mod tests {
             let mut ast = ast_one(func);
             let result = check_semantics(&mut ast);
             assert!(result.is_err());
-            assert!(result.unwrap_err().to_string().starts_with("Semantic error: You cannot perform arithmetic on type `string`"));
-
+            assert!(result.unwrap_err().to_string().starts_with("Semantic error: You cannot perform arithmetic on types: `string` vs `string`"));
         }
     }
 
@@ -1068,7 +1065,7 @@ mod tests {
                     assert!(result.is_err());
                     let assert_condition = result.unwrap_err().to_string();
                     let assert_condition = assert_condition.starts_with("Semantic error: Type mismatch in binary operation: ") 
-                                           || assert_condition.starts_with("Semantic error: You cannot perform arithmetic on type ");
+                                           || assert_condition.starts_with("Semantic error: You cannot perform arithmetic on types: ");
 
                     assert!(assert_condition);
                 }
@@ -1093,7 +1090,7 @@ mod tests {
                     assert!(result.is_err());
                     let assert_condition = result.unwrap_err().to_string();
                     let assert_condition = assert_condition.starts_with("Semantic error: Type mismatch in binary operation: ") 
-                                           || assert_condition.starts_with("Semantic error: You cannot perform arithmetic on type ");
+                                           || assert_condition.starts_with("Semantic error: You cannot perform arithmetic on types: ");
 
                     assert!(assert_condition);
                 }
