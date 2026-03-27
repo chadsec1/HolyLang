@@ -839,59 +839,77 @@ mod tests {
             assert!(result.unwrap_err().to_string().contains("Return length mismatch"));
         }
     }
-    // basic array out-of-bounds checks
 
+    // array invalid access patterns errors checks
     #[test]
     fn test_array_out_of_bounds_single_access_errors() {
-        // own arr int32[] = [0, 1]
-        // own x int32 = arr[3]  (out of bounds)
-        let arr_lit = Expr::ArrayLiteral {
-            elements: vec![int32_lit(0), int32_lit(1), int32_lit(2)],
-            array_ty: Type::Int32,
-            span: span(),
-        };
-        let access = Expr::ArraySingleAccess {
-            array: Box::new(var_expr("arr")),
-            index: Box::new(usize_lit(5)),
-            span: span(),
-        };
-        let body = vec![
-            var_decl("arr", Type::Array(Box::new(Type::Int32)), Some(arr_lit)),
-            var_decl("x", Type::Int32, Some(access)),
-        ];
-        let func = void_func("foo", vec![], body);
-        let mut ast = ast_one(func);
-        let result = check_semantics(&mut ast);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("out-of-bounds"));
+        // own arr t[] = [l, l, l]
+        // own x t = arr[i]  (out of bounds)
+        // i starts from 3 up to 100k
+
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for i in 3..100000 {
+                let arr_lit = Expr::ArrayLiteral {
+                    elements: vec![l.clone(), l.clone(), l.clone()],
+                    array_ty: t.clone(),
+                    span: span(),
+                };
+                let access = Expr::ArraySingleAccess {
+                    array: Box::new(var_expr("arr")),
+                    index: Box::new(usize_lit(i)),
+                    span: span(),
+                };
+                let body = vec![
+                    var_decl("arr", Type::Array(Box::new(t.clone())), Some(arr_lit)),
+                    var_decl("x", t.clone(), Some(access)),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("out-of-bounds"));
+            }
+            
+        }
     }
 
 
 
     #[test]
     fn test_array_out_of_bounds_multiple_access_errors() {
-        // own arr int32[] = [0, 1]
-        // own x int32 = arr[3]  (out of bounds)
-        let arr_lit = Expr::ArrayLiteral {
-            elements: vec![int32_lit(0), int32_lit(1), int32_lit(2)],
-            array_ty: Type::Int32,
-            span: span(),
-        };
-        let access = Expr::ArrayMultipleAccess {
-            array: Box::new(var_expr("arr")),
-            start: Some(Box::new(usize_lit(0))),
-            end: Some(Box::new(usize_lit(4))),
-            span: span(),
-        };
-        let body = vec![
-            var_decl("arr", Type::Array(Box::new(Type::Int32)), Some(arr_lit)),
-            var_decl("x", Type::Int32, Some(access)),
-        ];
-        let func = void_func("foo", vec![], body);
-        let mut ast = ast_one(func);
-        let result = check_semantics(&mut ast);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("out-of-bounds"));
+        // own arr t[] = [l, l, l]
+        // own x t = arr[0:i]  (out of bounds)
+        // i starts from 3 up to 100k
+
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for i in 3..100000 {
+                let arr_lit = Expr::ArrayLiteral {
+                    elements: vec![l.clone(), l.clone(), l.clone()],
+                    array_ty: t.clone(),
+                    span: span(),
+                };
+
+                let access = Expr::ArrayMultipleAccess {
+                    array: Box::new(var_expr("arr")),
+                    start: Some(Box::new(usize_lit(0))),
+                    end: Some(Box::new(usize_lit(i))),
+                    span: span(),
+                };
+                let body = vec![
+                    var_decl("arr", Type::Array(Box::new(t.clone())), Some(arr_lit)),
+                    var_decl("x", t.clone(), Some(access)),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("out-of-bounds"));
+            }
+        }
     }
 
 
