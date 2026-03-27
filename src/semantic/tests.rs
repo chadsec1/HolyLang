@@ -11,6 +11,22 @@ const AllBinOpKindArth: [BinOpKind; 4] = [
             BinOpKind::Divide,
         ];
 
+const AllBinOpKindComp: [BinOpKind; 6] = [
+            BinOpKind::Equal,
+            BinOpKind::NotEqual,
+            BinOpKind::Greater,
+            BinOpKind::GreaterEqual,
+            BinOpKind::Less,
+            BinOpKind::LessEqual,
+        ];
+
+
+const AllBinOpKindCompEq: [BinOpKind; 2] = [
+            BinOpKind::Equal,
+            BinOpKind::NotEqual,
+        ];
+
+
 // No array type
 const ALL_TYPES_NO_ARR: &[Type] = &[
     Type::Int8,
@@ -112,6 +128,59 @@ mod tests {
 
         return literals;
     }
+    
+
+    fn get_all_literals_no_arr_str_bool() -> [Expr; 13] {
+        let literals = [
+            int8_lit(1),
+            int16_lit(1),
+            int32_lit(1),
+            int64_lit(1),
+            int128_lit(1),
+
+            byte_lit(1),
+            uint16_lit(1),
+            uint32_lit(1),
+            uint64_lit(1),
+            uint128_lit(1),
+
+            usize_lit(1),
+
+            float32_lit(1.0),
+            float64_lit(1.0),
+        ];
+
+        return literals;
+    }
+
+
+
+    fn get_all_literals_no_arr_str_bool_scattered() -> [Expr; 13] {
+        let literals = [
+            uint32_lit(1),
+            int8_lit(1),
+            int64_lit(1),
+            uint128_lit(1),
+            float32_lit(1.0),
+
+            uint16_lit(1),
+            usize_lit(1),
+            int16_lit(1),
+            byte_lit(1),
+            float64_lit(1.0),
+            uint64_lit(1),
+            int128_lit(1),
+            int32_lit(1),
+
+        ];
+
+        return literals;
+    }
+
+
+
+
+
 
     fn get_all_literals_no_arr() -> [Expr; 15] {
         let literals = [
@@ -1103,7 +1172,6 @@ mod tests {
     }
 
     // unary operations 
-
     #[test]
     fn test_negate_unsigned_errors() {
         let unsigned_literals = get_all_unsigned_literals_no_arr();
@@ -1143,7 +1211,7 @@ mod tests {
     #[test]
     fn test_string_binop_arth_errors() {
         for b in AllBinOpKindArth {
-            // Strings may not be ever wrapped in ANY BinOpKind, we use format() instead.
+            // Strings may not be ever wrapped in ANY BinOpKind (except *some* comparison operators like == and !=), we use format() instead.
             let bin = Expr::BinOp {
                 left: Box::new(str_lit("hello")),
                 op: b,
@@ -1156,6 +1224,46 @@ mod tests {
             let result = check_semantics(&mut ast);
             assert!(result.is_err());
             assert!(result.unwrap_err().to_string().starts_with("Semantic error: You cannot perform arithmetic on types: `string` vs `string`"));
+        }
+    }
+
+
+
+    #[test]
+    fn test_string_binop_comp_eq_passes() {
+        for b in AllBinOpKindCompEq {
+            let bin = Expr::BinOp {
+                left: Box::new(str_lit("hello")),
+                op: b,
+                right: Box::new(str_lit("world")),
+                span: span(),
+            };
+            let body = vec![var_decl("s", Type::Bool, Some(bin))];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_ok());
+        }
+    }
+
+    #[test]
+    fn test_integers_and_floats_binop_arth_passes() {
+        let literals_ints_floats = get_all_literals_no_arr_str_bool();
+        
+        for (l, t) in literals_ints_floats.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for b in AllBinOpKindArth {
+                let bin = Expr::BinOp {
+                    left: Box::new(l.clone()),
+                    op: b,
+                    right: Box::new(l.clone()),
+                    span: span(),
+                };
+                let body = vec![var_decl("s", t.clone(), Some(bin))];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+                assert!(result.is_ok());
+            }
         }
     }
 
@@ -1209,7 +1317,7 @@ mod tests {
     // binary operation type mismatch 
 
     #[test]
-    fn test_binop_int_mixed_types_errors() {
+    fn test_binop_int_non_int_mixed_types_errors() {
         // int literals are not allowed to mix with literals of non-int type
         //
         
@@ -1284,9 +1392,45 @@ mod tests {
                 }
             }
         }
-
-
     }
+
+
+    // Mixing int32, int16, float32, float64, etc should always return an error.
+    //
+    #[test]
+    fn test_binop_arth_mixed_types_errors() {
+        let literals_ints_floats = get_all_literals_no_arr_str_bool();
+
+        let literals_ints_floats_scat = get_all_literals_no_arr_str_bool_scattered();
+
+        for (l1, l2) in literals_ints_floats.iter().zip(literals_ints_floats_scat.iter()) {
+            for b in AllBinOpKindArth {
+                // We declare variables here, because had we used literals, it would get inferred
+                // in the binary operation expression
+                //
+                let bin = Expr::BinOp {
+                    left: Box::new(var_expr("x")),
+                    right: Box::new(var_expr("y")),
+                    op: b,
+                    span: span(),
+                };
+                let body = vec![
+                    var_decl("x", Type::Infer, Some(l1.clone())),
+                    var_decl("y", Type::Infer, Some(l2.clone())),
+                    var_decl("z", Type::Infer, Some(bin))
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+                assert!(result.is_err());
+                let assert_condition = result.unwrap_err().to_string();
+                let assert_condition = assert_condition.starts_with("Semantic error: Type mismatch in binary operation: ");
+
+                assert!(assert_condition);
+            }
+        }
+    }
+
 
 
         
