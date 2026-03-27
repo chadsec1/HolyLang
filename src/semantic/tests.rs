@@ -953,73 +953,98 @@ mod tests {
 
     #[test]
     fn test_array_valid_multiple_access_both_ends_passes() {
-        let arr_lit = Expr::ArrayLiteral {
-            elements: vec![int32_lit(10), int32_lit(20), int32_lit(30)],
-            array_ty: Type::Int32,
-            span: span(),
-        };
-        let access = Expr::ArrayMultipleAccess {
-            array: Box::new(var_expr("arr")),
-            start: Some(Box::new(usize_lit(1))),
-            end: Some(Box::new(usize_lit(2))),
-            span: span(),
-        };
-        let body = vec![
-            var_decl("arr", Type::Array(Box::new(Type::Int32)), Some(arr_lit)),
-            var_decl("x", Type::Infer, Some(access)),
-        ];
-        let func = void_func("foo", vec![], body);
-        let mut ast = ast_one(func);
-        check_semantics(&mut ast).unwrap();
+
+        // This is no black magic voodooo.. not too much of if..
+        // This is just creating an array of dynamic sizes, and testing slicing it aka multiple
+        // access
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for i in 2..100 {
+                let mut elements = vec![];
+
+                for _ in 0..i+1 {
+                    elements.push(l.clone());
+                }
+                
+                let arr_lit = Expr::ArrayLiteral {
+                    elements: elements,
+                    array_ty: t.clone(),
+                    span: span(),
+                };
+
+                for i2 in 0..i-1 {
+                    let access = Expr::ArrayMultipleAccess {
+                        array: Box::new(var_expr("arr")),
+                        start: Some(Box::new(usize_lit(1))),
+                        end: Some(Box::new(usize_lit(i2+1))),
+                        span: span(),
+                    };
+                    let body = vec![
+                        var_decl("arr", Type::Array(Box::new(t.clone())), Some(arr_lit.clone())),
+                        var_decl("x", Type::Array(Box::new(t.clone())), Some(access)),
+                    ];
+                    let func = void_func("foo", vec![], body);
+                    let mut ast = ast_one(func);
+                    check_semantics(&mut ast).unwrap();
+                }       
+            }
+        }
     }
 
 
     #[test]
     fn test_array_valid_multiple_access_start_only_passes() {
-        let arr_lit = Expr::ArrayLiteral {
-            elements: vec![int32_lit(10), int32_lit(20), int32_lit(30)],
-            array_ty: Type::Int32,
-            span: span(),
-        };
-        let access = Expr::ArrayMultipleAccess {
-            array: Box::new(var_expr("arr")),
-            start: Some(Box::new(usize_lit(1))),
-            end: None,
-            span: span(),
-        };
-        let body = vec![
-            var_decl("arr", Type::Array(Box::new(Type::Int32)), Some(arr_lit)),
-            var_decl("x", Type::Infer, Some(access)),
-        ];
-        let func = void_func("foo", vec![], body);
-        let mut ast = ast_one(func);
-        check_semantics(&mut ast).unwrap();
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let arr_lit = Expr::ArrayLiteral {
+                elements: vec![l.clone(), l.clone(), l.clone()],
+                array_ty: t.clone(),
+                span: span(),
+            };
+            let access = Expr::ArrayMultipleAccess {
+                array: Box::new(var_expr("arr")),
+                start: Some(Box::new(usize_lit(1))),
+                end: None,
+                span: span(),
+            };
+            let body = vec![
+                var_decl("arr", Type::Array(Box::new(t.clone())), Some(arr_lit)),
+                var_decl("x", Type::Array(Box::new(t.clone())), Some(access)),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            check_semantics(&mut ast).unwrap();
+        }
     }
 
     #[test]
     fn test_array_valid_multiple_access_end_only_passes() {
-        let arr_lit = Expr::ArrayLiteral {
-            elements: vec![int32_lit(10), int32_lit(20), int32_lit(30)],
-            array_ty: Type::Int32,
-            span: span(),
-        };
-        let access = Expr::ArrayMultipleAccess {
-            array: Box::new(var_expr("arr")),
-            start: None,
-            end: Some(Box::new(usize_lit(1))),
-            span: span(),
-        };
-        let body = vec![
-            var_decl("arr", Type::Array(Box::new(Type::Int32)), Some(arr_lit)),
-            var_decl("x", Type::Infer, Some(access)),
-        ];
-        let func = void_func("foo", vec![], body);
-        let mut ast = ast_one(func);
-        check_semantics(&mut ast).unwrap();
+
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let arr_lit = Expr::ArrayLiteral {
+                elements: vec![l.clone(), l.clone(), l.clone()],
+                array_ty: t.clone(),
+                span: span(),
+            };
+            let access = Expr::ArrayMultipleAccess {
+                array: Box::new(var_expr("arr")),
+                start: None,
+                end: Some(Box::new(usize_lit(1))),
+                span: span(),
+            };
+            let body = vec![
+                var_decl("arr", Type::Array(Box::new(t.clone())), Some(arr_lit)),
+                var_decl("x", Type::Array(Box::new(t.clone())), Some(access)),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            check_semantics(&mut ast).unwrap();
+        }
     }
-
-
-
 
 
 
