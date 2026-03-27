@@ -60,6 +60,17 @@ impl Type {
             _ => false
         }
     }
+
+    pub fn is_floating_type(&self) -> bool {
+        match self {
+            Type::Float32 |
+            Type::Float64 => true,
+
+            _ => false
+        }
+    }
+
+
 }
 
 

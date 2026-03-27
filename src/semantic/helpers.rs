@@ -138,10 +138,40 @@ pub fn resolve_binary_op_types_numeric(a: &Type, b: &Type, span: &Span) -> Resul
     }
 }
 
+pub fn get_bigger_type_of_two_floatings(t_1: Type, t_2: Type) -> Type {
+    if !t_1.is_floating_type() || !t_2.is_floating_type() {
+        panic!("(Compiler bug) you should not call this function unless you are sure both types are floating type. We got {:?} {:?}", t_1, t_2);
+    }
+
+
+    let t_1_score = match t_1 {
+            Type::Float32 => 1,
+            Type::Float64 => 2,
+
+            other => panic!("Shouldve been a float, instead its {:?}", other)
+    };
 
 
 
-pub fn get_bigger_type_of_two(t_1: Type, t_2: Type) -> Type {
+    let t_2_score = match t_2 {
+            Type::Float32 => 1,
+            Type::Float64 => 2,
+
+            other => panic!("Shouldve been a float, instead its {:?}", other)
+    };
+
+    if t_1_score > t_2_score {
+        return t_1
+    }
+
+    return t_2
+
+}
+
+
+
+
+pub fn get_bigger_type_of_two_integers(t_1: Type, t_2: Type) -> Type {
     if !t_1.is_integer_type() || !t_2.is_integer_type() {
         panic!("(Compiler bug) you should not call this function unless you are sure both types are integer type. We got {:?} {:?}", t_1, t_2);
     }

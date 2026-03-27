@@ -61,6 +61,12 @@ func main() {
 
 
 
+    # All basic primitive types have a default value 
+    # (0 for integers, 0.0 for floats, false for booleans, empty arrays for arrays, "" for string)
+    own x int32
+
+
+
     # 1 and 2 are integer literals and evaluated as expressions to determine their 
     # type, with infer hint of the function arguments list
     own x = add(1, 2)
@@ -138,6 +144,19 @@ func main() {
     for i in range(1, 10) {
         if i == 7 {
             continue
+        }
+    }
+
+
+
+    # Infinite loops
+    own x int32
+    forever {
+        x = add(x + 1, x + 2)
+
+
+        if x >= 1000 {
+            break
         }
     }
 

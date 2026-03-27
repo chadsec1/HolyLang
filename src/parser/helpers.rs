@@ -24,6 +24,47 @@ pub fn find_constructor_bracket(s: &str) -> Option<usize> {
 }
 
 
+pub fn find_top_level_op_any(s: &str, ops: &[char]) -> Option<(usize, char)> {
+    fn precedence(c: char, next: Option<char>) -> u8 {
+        match c {
+            '=' if next == Some('=') => 1,
+            '!' if next == Some('=') => 1,
+            '>' | '<'               => 1,  // handles >= and <= too
+            '+' | '-'               => 2,
+            '*' | '/'               => 3,
+            _                       => u8::MAX,
+        }
+    }
+
+    let chars: Vec<(usize, char)> = s.char_indices().collect();
+    let mut depth    = 0usize;
+    let mut best: Option<(usize, char)> = None;
+    let mut best_prec = u8::MAX;
+
+    let mut i = 0;
+    while i < chars.len() {
+        let (idx, c) = chars[i];
+        match c {
+            '(' => depth += 1,
+            ')' => { if depth > 0 { depth -= 1; } }
+            _ if depth == 0 && ops.contains(&c) => {
+                let next = chars.get(i + 1).map(|(_, nc)| *nc);
+                let prec = precedence(c, next);
+                // <= gives us rightmost of lowest precedence (left-associativity)
+                if prec <= best_prec {
+                    best_prec = prec;
+                    best = Some((idx, c));
+                }
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+
+    best
+}
+
+/*
 /// Find the first top-level operator from `ops` (not inside parentheses).
 /// Returns Some((index, operator_char)) if found.
 pub fn find_top_level_op_any(s: &str, ops: &[char]) -> Option<(usize, char)> {
@@ -40,6 +81,7 @@ pub fn find_top_level_op_any(s: &str, ops: &[char]) -> Option<(usize, char)> {
     }
     None
 }
+*/
 
 
 

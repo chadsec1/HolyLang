@@ -16,10 +16,6 @@ pub fn advanced_infer_2_types(
     let mut rty = infer_expr_type(right, locals, fun_sigs, infer_hint.clone())?;
     
     
-    // IMPORTANT NOTE: If any weird binary operations bugs shall arise, 
-    // it's probably this fucker
-    //
-    // if infer_hint.is_none() {
 
     // Integer literal inferrence
     if matches!(*left, Expr::IntLiteral {..}) && !matches!(*right, Expr::IntLiteral {..}) {
@@ -28,29 +24,32 @@ pub fn advanced_infer_2_types(
     } else if matches!(*right, Expr::IntLiteral {..}) && !matches!(*left, Expr::IntLiteral {..}) {
         rty = infer_expr_type(right, locals, fun_sigs, Some(lty.clone()))?;
     
-    } else if matches!(*left, Expr::IntLiteral {..}) && matches!(*right, Expr::IntLiteral {..}) {
-
-        let bigger_type = helpers::get_bigger_type_of_two(lty.clone(), rty.clone());
-
-        rty = infer_expr_type(right, locals, fun_sigs, Some(bigger_type.clone()))?;
-        lty = infer_expr_type(left, locals, fun_sigs, Some(bigger_type.clone()))?;
-    }
-
     // Float literal inferrence
-    if matches!(*left, Expr::FloatLiteral {..}) && !matches!(*right, Expr::FloatLiteral {..}) {
+    } else if matches!(*left, Expr::FloatLiteral {..}) && !matches!(*right, Expr::FloatLiteral {..}) {
         lty = infer_expr_type(left, locals, fun_sigs, Some(rty.clone()))?;
 
     } else if matches!(*right, Expr::FloatLiteral {..}) && !matches!(*left, Expr::FloatLiteral {..}) {
         rty = infer_expr_type(right, locals, fun_sigs, Some(lty.clone()))?;
     
-    } else if matches!(*left, Expr::FloatLiteral {..}) && matches!(*right, Expr::FloatLiteral {..}) {
-        let bigger_type = Type::Float64;
+    // IMPORTANT NOTE: What about floats?
+    //
+    } else if lty.is_integer_type() && rty.is_integer_type() {
+        // If lty and rty are both integer types, we get the bigger type of them, and try force it
+        // upon both lty and rty.
+        let bigger_type = helpers::get_bigger_type_of_two_integers(lty.clone(), rty.clone());
 
         rty = infer_expr_type(right, locals, fun_sigs, Some(bigger_type.clone()))?;
         lty = infer_expr_type(left, locals, fun_sigs, Some(bigger_type.clone()))?;
-    }
 
-    // }
+
+    } else if lty.is_floating_type() && rty.is_floating_type() {
+        // Same thing as above, except its for floating points.
+        let bigger_type = helpers::get_bigger_type_of_two_floatings(lty.clone(), rty.clone());
+
+        rty = infer_expr_type(right, locals, fun_sigs, Some(bigger_type.clone()))?;
+        lty = infer_expr_type(left, locals, fun_sigs, Some(bigger_type.clone()))?;
+
+    }
 
     Ok((lty, rty))
 
@@ -337,8 +336,10 @@ pub fn infer_expr_type(
             // Check if lty or rty are of types that cannot have arithmetic performed on.
             if matches!(lty, Type::String | Type::Bool | Type::Array(_) ) || matches!(rty, Type::String | Type::Bool | Type::Array(_) ) {
                 if matches!(op, BinOpKind::Add | BinOpKind::Subtract | BinOpKind::Multiply | BinOpKind::Divide | BinOpKind::Greater | BinOpKind::GreaterEqual | BinOpKind::Less | BinOpKind::LessEqual) {
-                    return Err(HolyError::Semantic(format!("You cannot perform arithmetic on types: `{}` vs `{}`. (line {} column {})", lty, rty, span.line, span.column)));
-                } 
+                    
+            
+                        return Err(HolyError::Semantic(format!("You cannot perform arithmetic on types: `{}` vs `{}`. (line {} column {})", lty, rty, span.line, span.column)));
+                }
             }
 
             // arthmetic
@@ -350,7 +351,7 @@ pub fn infer_expr_type(
             // boolean comparison
             } else if matches!(op, BinOpKind::Equal | BinOpKind::NotEqual | BinOpKind::Greater | BinOpKind::GreaterEqual | BinOpKind::Less | BinOpKind::LessEqual ) {
                 if lty != rty {
-                    return Err(HolyError::Semantic(format!("Type mismatch in binary operation: `{}` vs `{}` (line {} column {})", lty, rty, span.line, span.column)));
+                    return Err(HolyError::Semantic(format!("Type mismatch in binary comparison operation: `{}` vs `{}` (line {} column {})", lty, rty, span.line, span.column)));
                 }
                 Ok(Type::Bool)
             } else {
