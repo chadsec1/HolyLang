@@ -68,6 +68,28 @@ mod tests {
         return literals;
     }
 
+    fn get_all_literals_no_arr_scattered_order() -> [Expr; 15] {
+        let literals = [
+            int128_lit(1),
+            int8_lit(1),
+            uint64_lit(1),
+            int64_lit(1),
+            float32_lit(1.0),
+            byte_lit(1),
+            uint16_lit(1),
+            str_lit("Hi"),
+            uint128_lit(1),
+            float64_lit(1.0),
+            uint32_lit(1),
+            int16_lit(1),
+            bool_lit(false),
+            int32_lit(1),
+            usize_lit(1)
+        ];
+
+        return literals;
+    }
+
     fn span() -> Span {
         Span { line: 1, column: 0 }
     }
@@ -238,29 +260,37 @@ mod tests {
 
     #[test]
     fn test_return_in_void_function_errors() {
-        // Void function that tries to return a value.
-        let body = vec![return_stmt(vec![int32_lit(42)])];
-        let func = void_func("foo", vec![], body);
-        let mut ast = ast_one(func);
-        let result = check_semantics(&mut ast);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("no declared return type"));
+        let literals = get_all_literals_no_arr();
+        
+        for l in literals {
+            // Void function that tries to return a value.
+            let body = vec![return_stmt(vec![l.clone()])];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("no declared return type"));
+        }
     }
 
     // type inference tests
 
     #[test]
-    fn test_infer_type_from_int32_literal() {
-        // an Int32 literal with infer type should be inferred correctly as Int32
-        let body = vec![var_decl("x", Type::Infer, Some(int32_lit(5)))];
-        let func = void_func("foo", vec![], body);
-        let mut ast = ast_one(func);
-        check_semantics(&mut ast).unwrap();
-        // After check, the VarDecl type should be Int32
-        if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
-            assert_eq!(v.type_name, Type::Int32);
-        } else {
-            panic!("expected VarDecl");
+    fn test_infer_type_literal() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            // a literal of type T with infer type should be inferred correctly as T
+            let body = vec![var_decl("x", Type::Infer, Some(l.clone()))];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            check_semantics(&mut ast).unwrap();
+            // After check, the VarDecl type should be T
+            if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+                assert_eq!(v.type_name, t.clone());
+            } else {
+                panic!("expected VarDecl");
+            }
         }
     }
 
