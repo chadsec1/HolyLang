@@ -472,12 +472,17 @@ mod tests {
     #[test]
     fn test_return_count_mismatch_errors() {
         // Declares two return types but returns one value.
-        let body = vec![return_stmt(vec![int32_lit(1)])];
-        let func = returning_func("foo", vec![], vec![Type::Int32, Type::Int32], body);
-        let mut ast = ast_one(func);
-        let result = check_semantics(&mut ast);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Return length mismatch"));
+
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![return_stmt(vec![l.clone()])];
+            let func = returning_func("foo", vec![], vec![t.clone(), t.clone()], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Return length mismatch"));
+        }
     }
 
     // default values assigning tests
@@ -1023,7 +1028,7 @@ mod tests {
     #[test]
     fn test_array_valid_multiple_access_both_ends_passes() {
 
-        // This is no black magic voodooo.. not too much of if..
+        // This is no black magic voodooo.. not too much of it at least.. idk..
         // This is just creating an array of dynamic sizes, and testing slicing it aka multiple
         // access
         let literals = get_all_literals_no_arr();
