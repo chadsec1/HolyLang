@@ -253,7 +253,8 @@ pub fn stmt_span(s: &Stmt) -> Span {
     }
 }
 
-fn expr_span(e: &Expr) -> Span {
+// helper to get spanof a expr
+pub fn expr_span(e: &Expr) -> Span {
     match e {
         Expr::IntLiteral { span, .. } => *span,
         Expr::FloatLiteral { span, .. } => *span,

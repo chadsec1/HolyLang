@@ -67,7 +67,7 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
                 ty: p.type_name.clone(),
                 moved: false,
                 
-                // By default, arguments are locked to help reduce logic bugs.
+                // By default, function arguments are locked 
                 locked: true,
                 
                 // We do not know a parameter value.
@@ -81,6 +81,7 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
     
     // Ensure that no code exists after return
     // NOTE:: This is very weak and fragile check, might need replacing.
+    /*
     if let Some(last_ret_pos) = func.body.iter().rposition(|s| matches!(s, Stmt::Return(_))) {
         if last_ret_pos + 1 < func.body.len() {
             
@@ -91,11 +92,17 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
             )));
         }
     }
+    */
 
     check_stmts(func.clone(), &mut func.body, &mut locals, upstream_var_names, fun_sigs, false)?;
 
 
     // Branch analysis to determine if function returns in all branches
+    //
+
+    // This is just to check that function has at least one statement
+    // Reason it's here and not in dead_code_snalysis is because so
+    // dead code analysis can properly error with lines.
     //
     let last_func_stmt = func.body.last();
     if last_func_stmt.is_none() {
@@ -105,10 +112,15 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
                     )));
     }
 
-
+    // We call dead code analysis here after check_stmts, because we want checked semantics.
+    // Semantics take priority more than dead code
+    //
     branch_analysis::dead_code_analysis(&func.body)?;
 
+    // Return analysis only needs to check last statement which has return statements
+    // because dead code analysis should not let dead code pass.
     if let Some(ret_ty) = &func.return_type {
+        let last_func_stmt = func.body.last();
         branch_analysis::return_branch_analysis(&func.clone(), last_func_stmt.cloned(), func.span, false, false)?;
     }
 
@@ -119,7 +131,8 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
 
 
 
-// Parse stmts in a block
+/// Parse stmts in a block, it does:
+/// Enforce language semantics, resolve "infer" types, check calls, etc.
 fn check_stmts(
     func: Function, 
     block: &mut Vec<Stmt>, 
@@ -130,13 +143,6 @@ fn check_stmts(
 
 ) -> Result<(), HolyError> {
 
-    if block.len() == 0 {
-        return Err(HolyError::Semantic(format!(
-                "Function `{}` has empty branches, which are not allowed. (line {} column {})",
-                func.name, func.span.line, func.span.column,
-            )));
-    }
-    
     // Walk statements in order. 
     for stmt in block {
         let stmt_span = helpers::stmt_span(&stmt);
