@@ -25,8 +25,8 @@ pub fn dead_code_analysis(body: &Vec<Stmt>) -> Result<(), HolyError> {
                 end_detected = true; 
             }
 
-            Stmt::Forever(foreverStmt) => {
-                dead_code_analysis(&foreverStmt.branch)?;
+            Stmt::Infinite(infiniteStmt) => {
+                dead_code_analysis(&infiniteStmt.branch)?;
             }
             
 
@@ -61,7 +61,7 @@ pub fn return_branch_analysis(
 
         Some(Stmt::Return(_)) => {}
 
-        Some(Stmt::Forever(foreverStmt)) => {
+        Some(Stmt::Infinite(infiniteStmt)) => {
 
             // If we are in a loop, we dont care about breaks or whatever.
             if !is_loop {
@@ -71,7 +71,7 @@ pub fn return_branch_analysis(
                 // forever loop is last statement, you can't break out of it. You can only return, or
                 // you dont return but you don't break.
                 //
-                for s in &foreverStmt.branch {
+                for s in &infiniteStmt.branch {
                     match s {
                         Stmt::Break(breakStmt) => {
 
@@ -95,7 +95,7 @@ pub fn return_branch_analysis(
                             return_branch_analysis(func, Some(s.clone()), stmt.span, true, false)?;
                         }
 
-                        Stmt::Forever(stmt) => {
+                        Stmt::Infinite(stmt) => {
                             return_branch_analysis(func, Some(s.clone()), stmt.span, true, false)?;
                         }
 

@@ -1144,6 +1144,89 @@ mod tests {
 
 
 
+    // Test if statements with literals and variables mixed (left & right side), with elif. but no else, and no string/bool literals
+    #[test]
+    fn test_if_statements_with_elif_ints_floats_vars_literals_same_type() {
+        let literals_ints_floats = get_all_literals_no_arr_str_bool();
+
+        for (l, t) in literals_ints_floats.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for b in AllBinOpKindComp {
+                let condition = Expr::BinOp {
+                        left: Box::new(var_expr("x")),
+                        op: b,
+                        right: Box::new(l.clone()),
+                        span: span(),
+                    };
+
+                let elif_condition = condition.clone();
+
+                let body = vec![ 
+                    var_decl("x", t.clone(), Some(l.clone())),
+
+                    Stmt::If(IfStmt{
+                        condition: condition,
+                        if_branch: vec![
+                            // Just dummy declaration, so we don't get flagged by dead code because
+                            // of empty branch.
+                            var_decl("z", t.clone(), None),
+                        ],
+                        elif_branches: vec![(elif_condition, vec![
+                            // For above reason
+                            var_decl("e", t.clone(), None),
+                        ])],
+                        else_branch: None,
+                        span: span(),
+                    }),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+
+                assert!(result.is_ok());
+            }
+        }
+
+
+        for (l, t) in literals_ints_floats.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for b in AllBinOpKindComp {
+                let condition = Expr::BinOp {
+                        left: Box::new(l.clone()),
+                        op: b,
+                        right: Box::new(var_expr("y")),
+                        span: span(),
+                    };
+
+                let elif_condition = condition.clone();
+
+                let body = vec![ 
+                    var_decl("y", t.clone(), Some(l.clone())),
+
+                    Stmt::If(IfStmt{
+                        condition: condition,
+                        if_branch: vec![
+                            // Just dummy declaration, so we don't get flagged by dead code because
+                            // of empty branch.
+                            var_decl("z", t.clone(), None),
+                        ],
+                        elif_branches: vec![(elif_condition, vec![
+                            // For above reason
+                            var_decl("e", t.clone(), None),
+                        ])],
+                        else_branch: None,
+                        span: span(),
+                    }),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+
+                assert!(result.is_ok());
+            }
+        }
+    }
+
+
+
 
     ////////////////////////////// end /////////////////////
 

@@ -354,7 +354,7 @@ pub struct IfStmt {
 }
 
 #[derive(Debug, Clone)]
-pub struct ForeverStmt {
+pub struct InfiniteStmt {
     pub branch: Vec<Stmt>,
     pub span: Span
 }
@@ -385,7 +385,7 @@ pub enum Stmt {
     Break(BreakStmt),
     Continue(ContinueStmt),
     If(IfStmt),
-    Forever(ForeverStmt),
+    Infinite(InfiniteStmt),
     Func(Function), 
 }
 
@@ -602,7 +602,7 @@ fn parse_block(lines: &Vec<&str>, mut idx: usize) -> Result<(Vec<Stmt>, usize), 
 
         // Let block-opening statements through before the brace guard.
         // NOTE to self: any statement that legitimately ends with `{` must be listed here.
-        let is_block_opener = t.starts_with("forever ")
+        let is_block_opener = t.starts_with("infinite ")
             || t.starts_with("if ")
             || t.starts_with("elif ")
             || t.starts_with("else ")
@@ -810,15 +810,15 @@ fn parse_for_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), Ho
     ))
 }
 
-fn parse_forever_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), HolyError> {
+fn parse_infinite_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), HolyError> {
     let raw = lines[start_i];
     let line = helpers::strip_inline_comment(raw);
     let line = line.replace(" ", "");
     let span = Span { line: start_i + 1, column: 0 };
 
-    if line != "forever{" {
+    if line != "infinite{" {
         return Err(HolyError::Parse(format!(
-            "Invalid forever loop syntax {{ at line {}: {}",
+            "Invalid infinite loop syntax {{ at line {}: {}",
             span.line, raw
         )));
     }
@@ -826,7 +826,7 @@ fn parse_forever_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize)
     let (branch, mut next_i) = parse_block(lines, start_i + 1)?;
 
     Ok((
-        Stmt::Forever(ForeverStmt {
+        Stmt::Infinite(InfiniteStmt {
             branch,
             span,
         }),
@@ -877,8 +877,8 @@ fn parse_stmt_at(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), Hol
     let line = helpers::strip_inline_comment(raw).trim().to_string();
     let span = Span { line: start_i + 1, column: 0 };
 
-    if line.starts_with("forever ") {
-        return parse_forever_stmt(lines, start_i);
+    if line.starts_with("infinite ") {
+        return parse_infinite_stmt(lines, start_i);
 
     } else if line.starts_with("if ") {
         return parse_if_stmt(lines, start_i);

@@ -742,7 +742,7 @@ fn check_stmts(
                 
             }
 
-            Stmt::Forever(foreverStmt) => {
+            Stmt::Infinite(infiniteStmt) => {
                 // This gets all upstream variable names, and passes it to check stmts to ensure
                 // you cannot overshadow them.
                 let mut upstream = upstream_var_names.clone();
@@ -751,7 +751,7 @@ fn check_stmts(
                 }
                     
                 let mut locals_clone = locals.clone();
-                check_stmts(func.clone(), &mut foreverStmt.branch, &mut locals_clone, upstream.clone(), fun_sigs, true)?;
+                check_stmts(func.clone(), &mut infiniteStmt.branch, &mut locals_clone, upstream.clone(), fun_sigs, true)?;
                 update_local_assignments_from_clone(locals, locals_clone);
                 
             }

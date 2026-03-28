@@ -153,7 +153,7 @@ func main() {
 
     # Infinite loops
     own x int32
-    forever {
+    infinite {
         x = add(x + 1, x + 2)
 
 
