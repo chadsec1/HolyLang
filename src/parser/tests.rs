@@ -577,7 +577,7 @@ mod tests {
                         assert!(matches!(value, IntLiteralValue::Int8(2)));
                     } else { panic!(); }
 
-                }
+                } else { panic!("Expected BinOp"); }
                 
                 assert_eq!(w.branch.len(), 0);
             } else {
@@ -606,7 +606,7 @@ mod tests {
                             assert!(matches!(value, IntLiteralValue::Int8(2)));
                         } else { panic!(); }
 
-                    }
+                    } else { panic!("Expected BinOp"); }
                     
                     assert_eq!(w.branch.len(), 0);
                 } else {
@@ -639,7 +639,7 @@ mod tests {
                             assert!(matches!(value, IntLiteralValue::Int8(2)));
                         } else { panic!(); }
 
-                    }
+                    } else { panic!("Expected BinOp"); }
                     
                     assert_eq!(w.branch.len(), 0);
                 } else {
@@ -669,11 +669,73 @@ mod tests {
                     if let Expr::Var { name, .. } = &**right {
                         assert_eq!(name, "y"); 
                     } else { panic!("Expected Var expression") }
-                }
+                
+                } else { panic!("Expected BinOp"); }
                 
                 assert_eq!(w.branch.len(), 0);
             } else {
                 panic!("expected while statement");
+            }
+        }
+    }
+
+
+    // Same test as above, but before the expression, there is an `i` of spaces.
+    #[test]
+    fn while_statements_vars_spaces_before_expr() {
+        for i in 0..10000 {
+            for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
+                let stmts = parse_body(&format!("while{} x {} y {{\n\n}}", " ".repeat(i), s));
+                assert_eq!(stmts.len(), 1);
+                if let Stmt::While(w) = &stmts[0] {
+
+                    if let Expr::BinOp { left, right, op, .. } = &w.condition {
+                        assert_eq!(op, b);
+
+                        if let Expr::Var { name, .. } = &**left {
+                            assert_eq!(name, "x"); 
+                        } else { panic!("Expected Var expression") }
+
+                        if let Expr::Var { name, .. } = &**right {
+                            assert_eq!(name, "y"); 
+                        } else { panic!("Expected Var expression") }
+
+                    } else { panic!("Expected BinOp"); }
+                    
+                    assert_eq!(w.branch.len(), 0);
+                } else {
+                    panic!("expected while statement");
+                }
+            }
+        }
+    }
+
+    // Same test as above, but after the expression, there is an `i` of spaces.
+    #[test]
+    fn while_statements_vars_spaces_after_expr() {
+        for i in 0..10000 {
+            for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
+                let stmts = parse_body(&format!("while x {} y {}{{\n\n}}", s, " ".repeat(i)));
+                assert_eq!(stmts.len(), 1);
+                if let Stmt::While(w) = &stmts[0] {
+
+                    if let Expr::BinOp { left, right, op, .. } = &w.condition {
+                        assert_eq!(op, b);
+
+                        if let Expr::Var { name, .. } = &**left {
+                            assert_eq!(name, "x"); 
+                        } else { panic!("Expected Var expression") }
+
+                        if let Expr::Var { name, .. } = &**right {
+                            assert_eq!(name, "y"); 
+                        } else { panic!("Expected Var expression") }
+                    
+                    } else { panic!("Expected BinOp"); }
+                    
+                    assert_eq!(w.branch.len(), 0);
+                } else {
+                    panic!("expected while statement");
+                }
             }
         }
     }
@@ -695,7 +757,8 @@ mod tests {
                     if let Expr::Var { name, .. } = &**right {
                         assert_eq!(name, "y"); 
                     } else { panic!("Expected Var expression") }
-                }
+                
+                } else { panic!("Expected BinOp"); }
                 
                 assert_eq!(w.branch.len(), 0);
             } else {
@@ -708,7 +771,6 @@ mod tests {
             let stmts = parse_body(&format!("while x {} 67 {{\n\n}}", s));
             assert_eq!(stmts.len(), 1);
             if let Stmt::While(w) = &stmts[0] {
-
                 if let Expr::BinOp { left, right, op, .. } = &w.condition {
                     assert_eq!(op, b);
 
@@ -719,7 +781,7 @@ mod tests {
                     if let Expr::IntLiteral { value, .. } = **right {
                         assert!(matches!(value, IntLiteralValue::Int8(67)));
                     } else { panic!(); }
-                } else { panic!() }
+                } else { panic!("Expected BinOp"); }
                 
                 assert_eq!(w.branch.len(), 0);
             } else {
