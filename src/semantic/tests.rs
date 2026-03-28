@@ -373,7 +373,7 @@ mod tests {
 
     #[test]
     fn test_code_after_return_errors() {
-        // Use int32 returning func: return then another return.
+        // returning func: return then another return.
         //
         let literals = get_all_literals_no_arr();
 
@@ -395,12 +395,19 @@ mod tests {
     #[test]
     fn test_missing_return_in_typed_function_errors() {
         // Function declares return type but body has no return statement.
-        let body = vec![var_decl("x", Type::Int32, Some(int32_lit(5)))];
-        let func = returning_func("foo", vec![], vec![Type::Int32], body);
-        let mut ast = ast_one(func);
-        let result = check_semantics(&mut ast);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().starts_with("Semantic error: Function `foo` declares return type(s) `[Int32]`, but statement branch body does not end with a return statement"));
+
+        let literals = get_all_literals_no_arr();
+
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![var_decl("x", t.clone(), Some(l.clone()))];
+            let func = returning_func("foo", vec![], vec![t.clone()], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            let err = result.unwrap_err().to_string();
+            assert!(err.starts_with("Semantic error: Function `foo` declares return type(s)"));
+            assert!(err.contains("but statement branch body does not end with a return statement"));
+        }
     }
 
     #[test]
