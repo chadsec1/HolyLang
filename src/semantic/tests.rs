@@ -460,13 +460,15 @@ mod tests {
 
     // type mismatch tests
 
+
+    // This tests  integers / floats only, against Bool / String
     #[test]
     fn test_vardecl_type_mismatch_int_bool_errors() {
 
         let literals_ints_floats = get_all_literals_no_arr_str_bool();
 
-        for l in literals_ints_floats {
-            // Variables declared with explicit type of bool, but given an int32 literal is a type mismatch
+        for l in &literals_ints_floats {
+            // Variables declared with explicit type of bool, but given an non-bool literal is a type mismatch
             let body = vec![var_decl("x", Type::Bool, Some(l.clone()))];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
@@ -477,9 +479,25 @@ mod tests {
             let err = err.starts_with("Semantic error: Cannot assign integer literal to non-integer type `bool`")
                      || err.starts_with("Semantic error: Cannot assign float literal to non-float type `bool`");
 
-            assert!(err);
-                
+            assert!(err); 
         }
+
+
+        for l in literals_ints_floats {
+            // Variables declared with explicit type of string, but given an non-string literal is a type mismatch
+            let body = vec![var_decl("x", Type::String, Some(l.clone()))];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+
+            let err = result.unwrap_err().to_string();
+            let err = err.starts_with("Semantic error: Cannot assign integer literal to non-integer type `string`")
+                     || err.starts_with("Semantic error: Cannot assign float literal to non-float type `string`");
+
+            assert!(err);                
+        }
+
     }
 
     #[test]
