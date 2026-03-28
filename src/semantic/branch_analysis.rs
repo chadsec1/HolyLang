@@ -40,6 +40,10 @@ pub fn dead_code_analysis(block: &Vec<Stmt>) -> Result<(), HolyError> {
 
 
                 dead_code_analysis(body)?;
+                
+                if block_always_terminates(&infiniteStmt.branch) {
+                    end_detected = true;
+                }
             }
 
 
@@ -112,6 +116,8 @@ pub fn dead_code_analysis(block: &Vec<Stmt>) -> Result<(), HolyError> {
 }
 
 
+/// Recursive helper that tells us if a block of code terminates or not
+/// Like if it returns or breaks, then it terminates. 
 fn block_always_terminates(block: &Vec<Stmt>) -> bool {
     for stmt in block {
         match stmt {
@@ -134,6 +140,12 @@ fn block_always_terminates(block: &Vec<Stmt>) -> bool {
                     return true;
                 }
             }
+
+            Stmt::Infinite(infiniteStmt) => {
+                return block_always_terminates(&infiniteStmt.branch);
+            } 
+
+
             _ => {}
         }
     }
@@ -167,7 +179,10 @@ pub fn return_branch_analysis(
 
         Some(Stmt::Infinite(infiniteStmt)) => {
 
-            // If we are in a loop, we dont care about breaks or whatever.
+            // If we are in a nested loop(s), we dont care about breaks or whatever.
+            // We only care about upper most level infinite loop.
+            //
+            //
             if !is_loop {
                 // So, why do we error on break? can't programmer like break then return outside for
                 // loop?
