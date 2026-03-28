@@ -535,6 +535,10 @@ mod tests {
         assert_parse_err(&wrap("infinite {\n\n"));    
         assert_parse_err(&wrap("infinite {}"));    
         assert_parse_err(&wrap("infinite \n\n}"));    
+
+        for kw in consts::RESERVED_KEYWORDS { 
+            assert_parse_err(&wrap(&format!("infinite {} {{\n\n}}", kw)));    
+        }
     }
 
     #[test]
