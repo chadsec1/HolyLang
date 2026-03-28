@@ -31,8 +31,8 @@ pub fn advanced_infer_2_types(
     } else if matches!(*right, Expr::FloatLiteral {..}) && !matches!(*left, Expr::FloatLiteral {..}) {
         rty = infer_expr_type(right, locals, fun_sigs, Some(lty.clone()))?;
     
-    // IMPORTANT NOTE: What about floats?
-    //
+
+
     } else if lty.is_integer_type() && rty.is_integer_type() {
         // If lty and rty are both integer types, we get the bigger type of them, and try force it
         // upon both lty and rty.

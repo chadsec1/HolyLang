@@ -1,6 +1,6 @@
 use super::*;
 use crate::parser::{
-    BinOpKind, VariableAssignment
+    BinOpKind, VariableAssignment, IfStmt
 };
 
 
@@ -738,6 +738,91 @@ mod tests {
     }
 
     #[test]
+    fn test_overshadow_locked_variable_same_type_and_literal_errors() {
+        let literals = get_all_literals_no_arr();
+       
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                var_decl("x", t.clone(), Some(l.clone())),
+                Stmt::Lock(vec![var_expr("x")]),
+                var_decl("x", t.clone(), Some(l.clone())),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("locked"));
+        }
+    }
+
+    // Same test as above, but re-declartion use a different type and literal
+    #[test]
+    fn test_overshadow_locked_variable_different_type_and_literal_errors() {
+        let literals = get_all_literals_no_arr();
+        let literals_scattered = get_all_literals_no_arr_scattered_order();
+
+
+        for (((l1, t1), l2), t2) in literals.iter()
+            .zip(ALL_TYPES_NO_ARR.iter())
+            .zip(literals_scattered.iter())
+            .zip(ALL_TYPES_NO_ARR_SCATTERED)
+        {
+            let body = vec![
+                var_decl("x", t1.clone(), Some(l1.clone())),
+                Stmt::Lock(vec![var_expr("x")]),
+                var_decl("x", t2.clone(), Some(l2.clone())),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("locked"));
+        }
+    }
+
+
+    #[test]
+    fn test_unlock_allows_redeclare_same_type() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                var_decl("x", t.clone(), Some(l.clone())),
+                Stmt::Lock(vec![var_expr("x")]),
+                Stmt::Unlock(vec![var_expr("x")]),
+                var_decl("x", t.clone(), Some(l.clone())),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            check_semantics(&mut ast).unwrap();
+        }
+    }
+
+    // Same test as above, but re-declartion use a different type and literal
+    #[test]
+    fn test_unlock_allows_redeclare_different_type() {
+        let literals = get_all_literals_no_arr();
+        let literals_scattered = get_all_literals_no_arr_scattered_order();
+
+        for (((l1, t1), l2), t2) in literals.iter()
+            .zip(ALL_TYPES_NO_ARR.iter())
+            .zip(literals_scattered.iter())
+            .zip(ALL_TYPES_NO_ARR_SCATTERED)
+        {
+            let body = vec![
+                var_decl("x", t1.clone(), Some(l1.clone())),
+                Stmt::Lock(vec![var_expr("x")]),
+                Stmt::Unlock(vec![var_expr("x")]),
+                var_decl("x", t2.clone(), Some(l2.clone())),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            check_semantics(&mut ast).unwrap();
+        }
+    }
+
+
+    #[test]
     fn test_unlock_allows_reassign() {
         let literals = get_all_literals_no_arr();
         
@@ -755,6 +840,26 @@ mod tests {
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             check_semantics(&mut ast).unwrap();
+        }
+    }
+
+
+    #[test]
+    fn test_lock_unlock_lock_unlock_variable() {
+        let literals = get_all_literals_no_arr();
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                var_decl("x", t.clone(), Some(l.clone())),
+                Stmt::Lock(vec![var_expr("x")]),
+                Stmt::Unlock(vec![var_expr("x")]),
+                Stmt::Lock(vec![var_expr("x")]),
+                Stmt::Unlock(vec![var_expr("x")]),
+                var_decl("x", t.clone(), Some(l.clone())),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_ok());
         }
     }
 
@@ -808,6 +913,83 @@ mod tests {
             assert!(result.unwrap_err().to_string().contains("is locked, therefore you cannot overshadow it"));
         }
     }
+
+
+    // Test if statements with only literals, with no else, no elif, and no string/bool literals
+    #[test]
+    fn test_if_statements_ints_floats_literals_same_type() {
+        let literals_ints_floats = get_all_literals_no_arr_str_bool();
+
+        for (l, t) in literals_ints_floats.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for b in AllBinOpKindComp {
+                let condition = Expr::BinOp {
+                        left: Box::new(l.clone()),
+                        op: b,
+                        right: Box::new(l.clone()),
+                        span: span(),
+                    };
+
+                let body = vec![ 
+                    Stmt::If(IfStmt{
+                        condition: condition,
+                        if_branch: vec![
+                            // Just dummy declaration, so we don't get flagged by dead code because
+                            // of empty branch.
+                            var_decl("x", Type::Int32, None),
+                        ],
+                        elif_branches: vec![],
+                        else_branch: None,
+                        span: span(),
+                    }),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                assert!(check_semantics(&mut ast).is_ok());
+            }
+        }
+    }
+
+
+
+    // Test if statements with only variables with same type, with no else, no elif, and no string/bool variables
+    #[test]
+    fn test_if_statements_ints_floats_vars_same_type() {
+        let literals_ints_floats = get_all_literals_no_arr_str_bool();
+
+        for (l, t) in literals_ints_floats.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for b in AllBinOpKindComp {
+                let condition = Expr::BinOp {
+                        left: Box::new(var_expr("x")),
+                        op: b,
+                        right: Box::new(var_expr("y")),
+                        span: span(),
+                    };
+
+                let body = vec![ 
+                    var_decl("x", t.clone(), Some(l.clone())),
+                    var_decl("y", t.clone(), Some(l.clone())),
+
+                    Stmt::If(IfStmt{
+                        condition: condition,
+                        if_branch: vec![
+                            // Just dummy declaration, so we don't get flagged by dead code because
+                            // of empty branch.
+                            var_decl("z", Type::Int32, None),
+                        ],
+                        elif_branches: vec![],
+                        else_branch: None,
+                        span: span(),
+                    }),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                assert!(check_semantics(&mut ast).is_ok());
+            }
+        }
+    }
+
+
+
 
     // function calls 
 
