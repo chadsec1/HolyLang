@@ -526,17 +526,31 @@ mod tests {
         assert_parse_err(&wrap("infinite infinite {\n\n}"));    
         assert_parse_err(&wrap("infinite i in x {\n\n}"));    
         assert_parse_err(&wrap("infinite in x {\n\n}"));    
-        assert_parse_err(&wrap("infinite i in {\n\n}"));    
-        assert_parse_err(&wrap("infinite true {\n\n}"));    
+        assert_parse_err(&wrap("infinite i in {\n\n}"));
+        assert_parse_err(&wrap("infinite true {\n\n}"));
         assert_parse_err(&wrap("infinite false {\n\n}"));    
-        assert_parse_err(&wrap("infinite 1 {\n\n}"));    
-        assert_parse_err(&wrap("infinite 1.0 {\n\n}"));    
+        assert_parse_err(&wrap("infinite 1 {\n\n}")); 
+        assert_parse_err(&wrap("infinite 1.0 {\n\n}")); 
         assert_parse_err(&wrap("infinite \"\" {\n\n}"));    
         assert_parse_err(&wrap("infinite {\n\n"));    
         assert_parse_err(&wrap("infinite {}"));    
         assert_parse_err(&wrap("infinite \n\n}"));    
     }
 
+    #[test]
+    fn infinite_statements_valid_construction() {
+        for i in 0..10000 {
+            let stmts = parse_body(&format!("infinite {} {{\n\n}}", " ".repeat(i)));
+            assert_eq!(stmts.len(), 1);
+            if let Stmt::Infinite(inf) = &stmts[0] {
+                assert_eq!(inf.branch.len(), 0);
+
+            } else {
+                panic!("Expected infinite statement");
+            }
+
+        }
+    }
 
 
     // While statements
@@ -567,6 +581,72 @@ mod tests {
             }
         }
     }
+
+    // Same test as above, but before the expression, there is an `i` of spaces.
+    #[test]
+    fn while_statements_literals_spaces_before_expr() {
+        for i in 0..10000 {
+            for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
+                let stmts = parse_body(&format!("while{} 1 {} 2 {{\n\n}}", " ".repeat(i), s));
+                assert_eq!(stmts.len(), 1);
+                if let Stmt::While(w) = &stmts[0] {
+
+                    if let Expr::BinOp { left, right, op, .. } = &w.condition {
+                        assert_eq!(op, b);
+                        
+                        if let Expr::IntLiteral { value, .. } = **left {
+                            assert!(matches!(value, IntLiteralValue::Int8(1)));
+                        } else { panic!(); }
+
+                        if let Expr::IntLiteral { value, .. } = **right {
+                            assert!(matches!(value, IntLiteralValue::Int8(2)));
+                        } else { panic!(); }
+
+                    }
+                    
+                    assert_eq!(w.branch.len(), 0);
+                } else {
+                    panic!("expected while statement");
+                }
+            }
+
+        }
+    }
+
+
+
+    // Same test as above, but after the expression, there is an `i` of spaces.
+    #[test]
+    fn while_statements_literals_spaces_after_expr() {
+        for i in 0..10000 {
+            for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
+                let stmts = parse_body(&format!("while 1 {} 2 {}{{\n\n}}", s, " ".repeat(i)));
+                assert_eq!(stmts.len(), 1);
+                if let Stmt::While(w) = &stmts[0] {
+
+                    if let Expr::BinOp { left, right, op, .. } = &w.condition {
+                        assert_eq!(op, b);
+                        
+                        if let Expr::IntLiteral { value, .. } = **left {
+                            assert!(matches!(value, IntLiteralValue::Int8(1)));
+                        } else { panic!(); }
+
+                        if let Expr::IntLiteral { value, .. } = **right {
+                            assert!(matches!(value, IntLiteralValue::Int8(2)));
+                        } else { panic!(); }
+
+                    }
+                    
+                    assert_eq!(w.branch.len(), 0);
+                } else {
+                    panic!("expected while statement");
+                }
+            }
+
+        }
+    }
+
+    
 
     #[test]
     fn while_statements_vars() {
