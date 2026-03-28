@@ -461,14 +461,25 @@ mod tests {
     // type mismatch tests
 
     #[test]
-    fn test_type_mismatch_int_bool_errors() {
-        // Variables declared with explicit type of bool, but given an int32 literal is a type mismatch
-        let body = vec![var_decl("x", Type::Bool, Some(int32_lit(5)))];
-        let func = void_func("foo", vec![], body);
-        let mut ast = ast_one(func);
-        let result = check_semantics(&mut ast);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().starts_with("Semantic error: Cannot assign integer literal to non-integer type `bool`"));
+    fn test_vardecl_type_mismatch_int_bool_errors() {
+
+        let literals_ints_floats = get_all_literals_no_arr_str_bool();
+
+        for l in literals_ints_floats {
+            // Variables declared with explicit type of bool, but given an int32 literal is a type mismatch
+            let body = vec![var_decl("x", Type::Bool, Some(l.clone()))];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+
+            let err = result.unwrap_err().to_string();
+            let err = err.starts_with("Semantic error: Cannot assign integer literal to non-integer type `bool`")
+                     || err.starts_with("Semantic error: Cannot assign float literal to non-float type `bool`");
+
+            assert!(err);
+                
+        }
     }
 
     #[test]
@@ -503,26 +514,26 @@ mod tests {
 
     #[test]
     fn test_default_int8_zero() {
-        // `own x int8` value should default to an Int literal with type Int32 and value of 0
+        // `own x int8` value should default to an Int literal with type Int8 and value of 0
         let body = vec![var_decl("x", Type::Int8, None)];
         let func = void_func("foo", vec![], body);
         let mut ast = ast_one(func);
         check_semantics(&mut ast).unwrap();
         if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
             assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Int8(0), .. })));
-        }
+        } else { panic!("expected VarDecl") }    
     }
 
     #[test]
     fn test_default_int16_zero() {
-        // `own x int16` value should default to an Int literal with type Int32 and value of 0
+        // `own x int16` value should default to an Int literal with type Int16 and value of 0
         let body = vec![var_decl("x", Type::Int16, None)];
         let func = void_func("foo", vec![], body);
         let mut ast = ast_one(func);
         check_semantics(&mut ast).unwrap();
         if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
             assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Int16(0), .. })));
-        }
+        } else { panic!("expected VarDecl") }    
     }
 
 
@@ -535,7 +546,7 @@ mod tests {
         check_semantics(&mut ast).unwrap();
         if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
             assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Int32(0), .. })));
-        }
+        } else { panic!("expected VarDecl") }    
     }
 
     #[test]
@@ -547,7 +558,7 @@ mod tests {
         check_semantics(&mut ast).unwrap();
         if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
             assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Int64(0), .. })));
-        }
+        } else { panic!("expected VarDecl") }    
     }
 
     #[test]
@@ -559,8 +570,93 @@ mod tests {
         check_semantics(&mut ast).unwrap();
         if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
             assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Int128(0), .. })));
-        }
+        } else { panic!("expected VarDecl") }    
     }
+
+
+//
+    
+    #[test]
+    fn test_default_byte_zero() {
+        // `own x byte` value should default to an Int literal with type Byte and value of 0
+        let body = vec![var_decl("x", Type::Byte, None)];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        check_semantics(&mut ast).unwrap();
+        if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+            assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Byte(0), .. })));
+        } else { panic!("expected VarDecl") }    
+    }
+
+
+    #[test]
+    fn test_default_uint16_zero() {
+        // `own x uint16` value should default to an Int literal with type Uint16 and value of 0
+        let body = vec![var_decl("x", Type::Uint16, None)];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        check_semantics(&mut ast).unwrap();
+        if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+            assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Uint16(0), .. })));
+        } else { panic!("expected VarDecl") }    
+    }
+
+    #[test]
+    fn test_default_uint32_zero() {
+        // `own x uint32` value should default to an Int literal with type Uint32 and value of 0
+        let body = vec![var_decl("x", Type::Uint32, None)];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        check_semantics(&mut ast).unwrap();
+        if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+            assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Uint32(0), .. })));
+        } else { panic!("expected VarDecl") }    
+    }
+
+    #[test]
+    fn test_default_uint64_zero() {
+        // `own x uint64` value should default to an Int literal with type Uint64 and value of 0
+        let body = vec![var_decl("x", Type::Uint64, None)];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        check_semantics(&mut ast).unwrap();
+        if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+            assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Uint64(0), .. })));
+        } else { panic!("expected VarDecl") }    
+    }
+
+
+    #[test]
+    fn test_default_uint128_zero() {
+        // `own x uint128` value should default to an Int literal with type Uint128 and value of 0
+        let body = vec![var_decl("x", Type::Uint128, None)];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        check_semantics(&mut ast).unwrap();
+        if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+            assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Uint128(0), .. })));
+        } else { panic!("expected VarDecl") }    
+    }
+
+
+    #[test]
+    fn test_default_usize_zero() {
+        // `own x usize` value should default to an Int literal with type Usize and value of 0
+        let body = vec![var_decl("x", Type::Usize, None)];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        check_semantics(&mut ast).unwrap();
+        if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+            assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Usize(0), .. })));
+        
+        } else { panic!("expected VarDecl") }    
+    }
+
+
+
+
+
+
 
     #[test]
     fn test_default_bool_false() {
