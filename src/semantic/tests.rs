@@ -374,15 +374,20 @@ mod tests {
     #[test]
     fn test_code_after_return_errors() {
         // Use int32 returning func: return then another return.
-        let body = vec![
-            return_stmt(vec![int32_lit(1)]),
-            var_decl("x", Type::Int32, None),
-        ];
-        let func = returning_func("foo", vec![], vec![Type::Int32], body);
-        let mut ast = ast_one(func);
-        let result = check_semantics(&mut ast);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Code after `return`"));
+        //
+        let literals = get_all_literals_no_arr();
+
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                return_stmt(vec![l.clone()]),
+                var_decl("x", t.clone(), None),
+            ];
+            let func = returning_func("foo", vec![], vec![t.clone()], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Dead code detected"));
+        }
     }
 
     // missing return
