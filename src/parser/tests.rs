@@ -514,6 +514,31 @@ mod tests {
         assert_parse_err(&wrap("for {\n\n}"));    
     }
 
+
+    // Infinite statements
+
+    #[test]
+    fn infinite_statements_invalid_construction_errors() {
+        assert_parse_err(&wrap("infinite x {\n\n}"));    
+        assert_parse_err(&wrap("infinite range(1, 10) {\n\n}"));    
+        assert_parse_err(&wrap("infinite range() {\n\n}"));    
+        assert_parse_err(&wrap("infinite range {\n\n}"));    
+        assert_parse_err(&wrap("infinite infinite {\n\n}"));    
+        assert_parse_err(&wrap("infinite i in x {\n\n}"));    
+        assert_parse_err(&wrap("infinite in x {\n\n}"));    
+        assert_parse_err(&wrap("infinite i in {\n\n}"));    
+        assert_parse_err(&wrap("infinite true {\n\n}"));    
+        assert_parse_err(&wrap("infinite false {\n\n}"));    
+        assert_parse_err(&wrap("infinite 1 {\n\n}"));    
+        assert_parse_err(&wrap("infinite 1.0 {\n\n}"));    
+        assert_parse_err(&wrap("infinite \"\" {\n\n}"));    
+        assert_parse_err(&wrap("infinite {\n\n"));    
+        assert_parse_err(&wrap("infinite {}"));    
+        assert_parse_err(&wrap("infinite \n\n}"));    
+    }
+
+
+
     // While statements
     
     #[test]
