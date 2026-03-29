@@ -6,6 +6,8 @@ use crate::error::HolyError;
 #[cfg(test)]
 mod blackbox_tests;
 
+#[cfg(test)]
+mod parse_expr_tests;
 
 #[cfg(test)]
 mod helpers_tests;
@@ -117,6 +119,20 @@ impl IntLiteralValue {
         }
     }
 
+    pub fn is_signed(self) -> bool {
+        match self {
+            IntLiteralValue::Int8(_) |
+            IntLiteralValue::Int16(_) |
+            IntLiteralValue::Int32(_) |
+            IntLiteralValue::Int64(_) |
+            IntLiteralValue::Int128(_) => true,
+
+            _ => false
+        }
+    }
+
+
+
     pub fn as_i128(self) -> i128 {
         match self {
             IntLiteralValue::Int8(v) => v as i128,
@@ -132,40 +148,8 @@ impl IntLiteralValue {
     }
 
 
-    // Since we dont store numbers with negative sign, only wrapped in a negate node, we can
-    // actually skip type check and happily infer signed numbers as unsigned if need be.
-    //
-    // And since u128 can represent all signed numbers assuming no -, that's handled by upper
-    // negate node, it should be safe to cast as u128 regardless.
-    //
-    // But I am still keeping the "UNSAFE" label because it's still surprsing behavior. hopefully
-    // makes me think twice before using this.
-    //
-    pub fn as_u128_UNSAFE(self) -> u128 {
+    pub fn as_u128(self) -> u128 {
         match self {
-            // Signed types: check for negative before casting
-            IntLiteralValue::Int8(v) => {
-                if v < 0 { panic!("Cannot cast negative Int8 ({}) to u128", v); }
-                v as u128
-            }
-            IntLiteralValue::Int16(v) => {
-                if v < 0 { panic!("Cannot cast negative Int16 ({}) to u128", v); }
-                v as u128
-            }
-            IntLiteralValue::Int32(v) => {
-                if v < 0 { panic!("Cannot cast negative Int32 ({}) to u128", v); }
-                v as u128
-            }
-            IntLiteralValue::Int64(v) => {
-                if v < 0 { panic!("Cannot cast negative Int64 ({}) to u128", v); }
-                v as u128
-            }
-            IntLiteralValue::Int128(v) => {
-                if v < 0 { panic!("Cannot cast negative Int128 ({}) to u128", v); }
-                v as u128
-            }
-
-            // Unsigned types are always safe
             IntLiteralValue::Usize(v) => v as u128,
             IntLiteralValue::Byte(v) => v as u128,
             IntLiteralValue::Uint16(v) => v as u128,
@@ -174,7 +158,7 @@ impl IntLiteralValue {
             IntLiteralValue::Uint128(v) => v,
             
             other => {
-                panic!("(Compiler bug) Safety code prevented you from casting an unspported literal as signed u128. {:?}", other);
+                panic!("(Compiler bug) Safety code prevented you from casting a signed literal as an unsigned u128. {:?}", other);
             }
         }
     }

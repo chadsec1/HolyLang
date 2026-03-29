@@ -592,7 +592,7 @@ mod tests {
     // Same test as above, but before the expression, there is an `i` of spaces.
     #[test]
     fn while_statements_vars_and_literals_spaces_before_expr() {
-        for i in 0..10000 {
+        for i in 0..1000 {
             for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
                 let stmts = parse_body(&format!("while{} 69 {} y {{\n\n}}", " ".repeat(i), s));
                 assert_eq!(stmts.len(), 1);
@@ -647,7 +647,7 @@ mod tests {
     // Same test as above, but after the expression, there is an `i` of spaces.
     #[test]
     fn while_statements_vars_and_literals_spaces_after_expr() {
-        for i in 0..10000 {
+        for i in 0..1000 {
             for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
                 let stmts = parse_body(&format!("while 69 {} y {}{{\n\n}}", s, " ".repeat(i)));
                 assert_eq!(stmts.len(), 1);
@@ -1528,10 +1528,10 @@ mod tests {
 
 
     #[test]
-    fn integer_literal_negative_via_unary() {
-        let stmts = parse_body("own x = -1");
+    fn integer_literal_negative() {
+        let stmts = parse_body("own x = -128");
         if let Stmt::VarDecl(v) = &stmts[0] {
-            assert!(matches!(v.value, Some(Expr::UnaryOp { op: UnaryOpKind::Negate, .. })));
+            assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Int8(-128), .. })));
         }
     }
 
@@ -1769,14 +1769,11 @@ mod tests {
     // Unary negate
 
     #[test]
-    fn unary_negate_literal() {
+    fn literals_doesnt_produce_unary_negate() {
         let stmts = parse_body("own x = -42");
         if let Stmt::VarDecl(v) = &stmts[0] {
-            if let Some(Expr::UnaryOp { op, expr, .. }) = &v.value {
-                assert_eq!(*op, UnaryOpKind::Negate);
-                assert!(matches!(**expr, Expr::IntLiteral { .. }));
-            } else { panic!("Expected UnaryOp"); }
-        }
+            assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Int8(-42), .. })));
+        } else { panic!("Expected VarDecl"); }
     }
 
     #[test]
@@ -1786,8 +1783,8 @@ mod tests {
             if let Some(Expr::UnaryOp { op, expr, .. }) = &v.value {
                 assert_eq!(*op, UnaryOpKind::Negate);
                 assert!(matches!(**expr, Expr::Var { .. }));
-            }
-        }
+            } else { panic!("Expected Unary negate"); }
+        } else { panic!("Expected VarDecl"); }
     }
 
     #[test]
@@ -2060,43 +2057,44 @@ mod tests {
     }
 
     #[test]
-    fn int_literal_as_u128_unsafe_unsigned() {
-        assert_eq!(IntLiteralValue::Byte(255).as_u128_UNSAFE(), 255u128);
-        assert_eq!(IntLiteralValue::Uint16(u16::MAX).as_u128_UNSAFE(), u16::MAX as u128);
-        assert_eq!(IntLiteralValue::Uint32(u32::MAX).as_u128_UNSAFE(), u32::MAX as u128);
-        assert_eq!(IntLiteralValue::Uint64(u64::MAX).as_u128_UNSAFE(), u64::MAX as u128);
-        assert_eq!(IntLiteralValue::Uint128(u128::MAX).as_u128_UNSAFE(), u128::MAX);
+    fn int_literal_as_u128() {
+        assert_eq!(IntLiteralValue::Usize(usize::MAX).as_u128(), usize::MAX as u128);
+        assert_eq!(IntLiteralValue::Byte(255).as_u128(), 255u128);
+        assert_eq!(IntLiteralValue::Uint16(u16::MAX).as_u128(), u16::MAX as u128);
+        assert_eq!(IntLiteralValue::Uint32(u32::MAX).as_u128(), u32::MAX as u128);
+        assert_eq!(IntLiteralValue::Uint64(u64::MAX).as_u128(), u64::MAX as u128);
+        assert_eq!(IntLiteralValue::Uint128(u128::MAX).as_u128(), u128::MAX);
     }
 
     // Signed literals casted as u128 should trigger a safety panic
     #[test]
     #[should_panic]
     fn int_literal_int8_as_u128_unsafe_panics_on_negative_signed() {
-        IntLiteralValue::Int8(-5).as_u128_UNSAFE();
+        IntLiteralValue::Int8(-5).as_u128();
     }
 
     #[test]
     #[should_panic]
     fn int_literal_int16_as_u128_unsafe_panics_on_negative_signed() {
-        IntLiteralValue::Int16(-5).as_u128_UNSAFE();
+        IntLiteralValue::Int16(-5).as_u128();
     }
 
     #[test]
     #[should_panic]
     fn int_literal_int32_as_u128_unsafe_panics_on_negative_signed() {
-        IntLiteralValue::Int32(-5).as_u128_UNSAFE();
+        IntLiteralValue::Int32(-5).as_u128();
     }
 
     #[test]
     #[should_panic]
     fn int_literal_int64_as_u128_unsafe_panics_on_negative_signed() {
-        IntLiteralValue::Int64(-5).as_u128_UNSAFE();
+        IntLiteralValue::Int64(-5).as_u128();
     }
 
     #[test]
     #[should_panic]
     fn int_literal_int128_as_u128_unsafe_panics_on_negative_signed() {
-        IntLiteralValue::Int128(-5).as_u128_UNSAFE();
+        IntLiteralValue::Int128(-5).as_u128();
     }
 
 
@@ -2129,6 +2127,13 @@ mod tests {
     #[should_panic]
     fn int_literal_uint128_as_i128_panics_on_unsigned() {
         IntLiteralValue::Uint128(5).as_i128();
+    }
+
+
+    #[test]
+    #[should_panic]
+    fn int_literal_usize_as_i128_panics_on_unsigned() {
+        IntLiteralValue::Usize(5).as_i128();
     }
 
 

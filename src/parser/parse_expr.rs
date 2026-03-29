@@ -25,32 +25,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
                 "Array literal requires an explicit type on right-hand side, e.g. `own x = int32[1,2,3]` (line {} column {})",
                 span.line, span.column
             )));
-    }
-
-
-    // Unary negate support.
-    if s.starts_with('-') {
-        let rest = s[1..].trim();
-
-        if rest.is_empty() {
-            return Err(HolyError::Parse(format!(
-                "Expected expression before '-' at line {} column {}",
-                span.line, span.column
-            )));
-        }
-
-        // Parse inner expression
-        let inner = parse_expr(rest, span)?;
-
-        // Return the expression wrapped in Unary of operation negate.
-        return Ok(Expr::UnaryOp {
-            op: UnaryOpKind::Negate, 
-            expr: Box::new(inner), 
-            span: span
-        });
-    }
-
-    
+    }    
 
     // String Literal ?
     if s.starts_with('"') {
@@ -253,10 +228,173 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
         }
     }
 
+    // integer literal (int8) ?
+    if let Ok(i) = s.parse::<i8>() {
+        return Ok(Expr::IntLiteral { value: IntLiteralValue::Int8(i), span: span });
+    }
+
+    // integer literal (int16) ?
+    if let Ok(i) = s.parse::<i16>() {
+        return Ok(Expr::IntLiteral { value: IntLiteralValue::Int16(i), span: span });
+    }
+
+    // integer literal (int32) ?
+    if let Ok(i) = s.parse::<i32>() {
+        return Ok(Expr::IntLiteral { value: IntLiteralValue::Int32(i), span: span });
+    }
+
+    // integer literal (int64) ?
+    if let Ok(i) = s.parse::<i64>() {
+        return Ok(Expr::IntLiteral { value: IntLiteralValue::Int64(i), span: span });
+    }
+
+    // integer literal (int128) ?
+    if let Ok(i) = s.parse::<i128>() {
+        return Ok(Expr::IntLiteral { value: IntLiteralValue::Int128(i), span: span });
+    }
+
+
+    // integer literal (byte, aka uint8) ?
+    if let Ok(i) = s.parse::<u8>() {
+        return Ok(Expr::IntLiteral { value: IntLiteralValue::Byte(i), span: span });
+    }
+
+    if let Ok(i) = s.parse::<u16>() {
+        return Ok(Expr::IntLiteral { value: IntLiteralValue::Uint16(i), span: span });
+    }
+
+    if let Ok(i) = s.parse::<u32>() {
+        return Ok(Expr::IntLiteral { value: IntLiteralValue::Uint32(i), span: span });
+    }
+
+    if let Ok(i) = s.parse::<u64>() {
+        return Ok(Expr::IntLiteral { value: IntLiteralValue::Uint64(i), span: span });
+    }
+
+    if let Ok(i) = s.parse::<u128>() {
+        return Ok(Expr::IntLiteral { value: IntLiteralValue::Uint128(i), span: span });
+
+    } else if let Err(e) = s.parse::<u128>() {
+        if matches!(e.kind(), IntErrorKind::PosOverflow) {
+            // Return error only if we sure expression is not meant as a float
+            if !s.contains('.') {
+                return Err(HolyError::Parse(format!(
+                    "Literal is an integer but is too big to fit even as an uint128, consider using a float literal (line {} column {})",
+                    span.line, span.column
+                )));
+                
+            }
+        }
+    }
 
     
-    
-    // Binary plus handling: split on the first operator
+
+    // float literal?
+    if let Ok(f64_val) = s.parse::<f64>() {
+        if f64_val.is_nan() {
+            return Err(HolyError::Parse(format!(
+                "Floating point literal `{}` is Nan (line {} column {})",
+                s, span.line, span.column
+            )));
+        }
+
+        if f64_val.is_infinite() {
+            return Err(HolyError::Parse(format!(
+                "Floating point literal `{}` is Infinite (line {} column {})",
+                s, span.line, span.column
+            )));
+        }
+
+        if s.chars().enumerate().any(|(i, c)| !c.is_ascii_digit() && c != '.' && !(c == '-' && i == 0)) {
+            return Err(HolyError::Parse(format!(
+                "Floating point literal `{}` is invalid (line {} column {})",
+                s, span.line, span.column
+            )));
+
+        }
+
+        let sig_trimmed = s.trim_start_matches('0');
+        let sig_count = sig_trimmed.len();
+
+        
+        // f32 has about 7 decimal digits of precision (log10(2^24) = 7.22).
+        // Use 1 for the dot, that makes 8 a conservative threshold.
+        // It's reasonable for us to check inprecision and just use float64 if sig_count is higher
+        // than 8.
+        //
+        if sig_count <= 8 {
+            let f32_val = f64_val as f32;
+
+            if (!f32_val.is_infinite()) && (!f32_val.is_nan()) {
+                let roundtrip = f32_val as f64;
+                let diff = (f64_val - roundtrip).abs();
+
+                // compute next representable f32 (neighbor) by bit-twiddling
+                let bits = f32_val.to_bits();
+                // increment/decrement to get the neighbor toward +
+                let next_bits = if f32_val >= 0.0 { bits.wrapping_add(1) } else { bits.wrapping_sub(1) };
+                let next_up = f32::from_bits(next_bits);
+                let ulp = (next_up as f64 - roundtrip).abs();
+
+                // fallback: if ulp is zero (shouldn't happen for normals/subnormals), use EPSILON heuristic
+                let ok = if ulp > 0.0 {
+                    diff <= (ulp / 2.0)
+                } else {
+                    diff <= (f32::EPSILON as f64) * roundtrip.abs().max(1.0)
+                };
+
+
+                if ok {
+                    return Ok(Expr::FloatLiteral { value: FloatLiteralValue::Float32(f32_val), span: span });
+                }
+            }
+        }
+
+        return Ok(Expr::FloatLiteral { value: FloatLiteralValue::Float64(f64_val), span: span });
+
+
+    } else {
+        // Check to see if parsing as float failed due to it having more than one dot
+        let cleaned_s = s.replace(".", "");
+        if let Ok(f) = cleaned_s.parse::<f64>() {
+            return Err(HolyError::Parse(format!(
+                "Floating point literal `{}` must have only one `.` (line {} column {})",
+                s, span.line, span.column
+            )));
+         
+        }
+    }
+
+    // bool literal ? (true / false) 
+    if let Ok(b) = s.parse::<bool>() {
+        return Ok(Expr::BoolLiteral { value: b, span: span });
+    }
+
+
+    // Unary negate support.
+    if s.starts_with('-') {
+        let rest = s[1..].trim();
+
+        if rest.is_empty() {
+            return Err(HolyError::Parse(format!(
+                "Expected expression before '-' at line {} column {}",
+                span.line, span.column
+            )));
+        }
+
+        // Parse inner expression
+        let inner = parse_expr(rest, span)?;
+
+        // Return the expression wrapped in Unary of operation negate.
+        return Ok(Expr::UnaryOp {
+            op: UnaryOpKind::Negate, 
+            expr: Box::new(inner), 
+            span: span
+        });
+    }
+
+
+    // Binary operations handling: split on the first operator
     if let Some((pos, op)) = helpers::find_top_level_op_any(s, &['+', '-', '*', '/', '!', '=', '>', '<']) {
         let left = s[..pos].trim();
         let mut right = s[pos + 1..].trim();
@@ -341,6 +479,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
             span: span,
         });
     }
+
 
     // Function call: name(arg1, arg2)
     if let Some(open) = s.find('(') {
@@ -427,147 +566,9 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
         }
     }
 
-    // integer literal (int8) ?
-    if let Ok(i) = s.parse::<i8>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Int8(i), span: span });
-    }
-
-    // integer literal (int16) ?
-    if let Ok(i) = s.parse::<i16>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Int16(i), span: span });
-    }
-
-    // integer literal (int32) ?
-    if let Ok(i) = s.parse::<i32>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Int32(i), span: span });
-    }
-
-    // integer literal (int64) ?
-    if let Ok(i) = s.parse::<i64>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Int64(i), span: span });
-    }
-
-    // integer literal (int128) ?
-    if let Ok(i) = s.parse::<i128>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Int128(i), span: span });
-    }
 
 
-    // integer literal (byte, aka uint8) ?
-    if let Ok(i) = s.parse::<u8>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Byte(i), span: span });
-    }
 
-    if let Ok(i) = s.parse::<u16>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Uint16(i), span: span });
-    }
-
-    if let Ok(i) = s.parse::<u32>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Uint32(i), span: span });
-    }
-
-    if let Ok(i) = s.parse::<u64>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Uint64(i), span: span });
-    }
-
-    if let Ok(i) = s.parse::<u128>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Uint128(i), span: span });
-
-    } else if let Err(e) = s.parse::<u128>() {
-        if matches!(e.kind(), IntErrorKind::PosOverflow) {
-            // Return error only if we sure expression is not meant as a float
-            if !s.contains('.') {
-                return Err(HolyError::Parse(format!(
-                    "Literal is an integer but is too big to fit even as an uint128, consider using a float literal (line {} column {})",
-                    span.line, span.column
-                )));
-                
-            }
-        }
-    }
-
-    
-
-    // float literal?
-    if let Ok(f64_val) = s.parse::<f64>() {
-        if f64_val.is_nan() {
-            return Err(HolyError::Parse(format!(
-                "Floating point literal `{}` is Nan (line {} column {})",
-                s, span.line, span.column
-            )));
-        }
-
-        if f64_val.is_infinite() {
-            return Err(HolyError::Parse(format!(
-                "Floating point literal `{}` is Infinite (line {} column {})",
-                s, span.line, span.column
-            )));
-        }
-
-        if s.chars().any(|c| !c.is_ascii_digit() && c != '.') {
-            return Err(HolyError::Parse(format!(
-                "Floating point literal `{}` is invalid (line {} column {})",
-                s, span.line, span.column
-            )));
-
-        }
-
-        let sig_trimmed = s.trim_start_matches('0');
-        let sig_count = sig_trimmed.len();
-
-        
-        // f32 has about 7 decimal digits of precision (log10(2^24) = 7.22).
-        // Use 1 for the dot, that makes 8 a conservative threshold.
-        // It's reasonable for us to check inprecision and just use float64 if sig_count is higher
-        // than 8.
-        //
-        if sig_count <= 8 {
-            let f32_val = f64_val as f32;
-
-            if (!f32_val.is_infinite()) && (!f32_val.is_nan()) {
-                let roundtrip = f32_val as f64;
-                let diff = (f64_val - roundtrip).abs();
-
-                // compute next representable f32 (neighbor) by bit-twiddling
-                let bits = f32_val.to_bits();
-                // increment/decrement to get the neighbor toward +∞
-                let next_bits = if f32_val >= 0.0 { bits.wrapping_add(1) } else { bits.wrapping_sub(1) };
-                let next_up = f32::from_bits(next_bits);
-                let ulp = (next_up as f64 - roundtrip).abs();
-
-                // fallback: if ulp is zero (shouldn't happen for normals/subnormals), use EPSILON heuristic
-                let ok = if ulp > 0.0 {
-                    diff <= (ulp / 2.0)
-                } else {
-                    diff <= (f32::EPSILON as f64) * roundtrip.abs().max(1.0)
-                };
-
-
-                if ok {
-                    return Ok(Expr::FloatLiteral { value: FloatLiteralValue::Float32(f32_val), span: span });
-                }
-            }
-        }
-
-        return Ok(Expr::FloatLiteral { value: FloatLiteralValue::Float64(f64_val), span: span });
-
-
-    } else {
-        // Check to see if parsing as float failed due to it having more than one dot
-        let cleaned_s = s.replace(".", "");
-        if let Ok(f) = cleaned_s.parse::<f64>() {
-            return Err(HolyError::Parse(format!(
-                "Floating point literal `{}` must have only one `.` (line {} column {})",
-                s, span.line, span.column
-            )));
-         
-        }
-    }
-
-    // bool literal ? (true / false) 
-    if let Ok(b) = s.parse::<bool>() {
-        return Ok(Expr::BoolLiteral { value: b, span: span });
-    }
 
     // otherwise a variable name
 
