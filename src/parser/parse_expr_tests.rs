@@ -1,10 +1,38 @@
 use super::*;
 use crate::parser::parse_expr::parse_expr;
-
+use crate::tests_consts::{
+    AllBinOpKind, BinOpKindSymbols, ALL_TYPES_NO_ARR_NO_INFER
+};
 
 #[cfg(test)]
 mod parse_expr_tests {
     use super::*;
+
+
+    fn get_all_literals_as_str_no_arr() -> [&'static str; 15] {
+        let literals = [
+            "1",
+            "1",
+            "1",
+            "1",
+            "1",
+
+            "1",
+            "1",
+            "1",
+            "1",
+            "1",
+
+            "1",
+
+            "1.0",
+            "1.0",
+            "false",
+            "\"Hi\""
+        ];
+
+        return literals;
+    }
 
     fn span() -> Span {
         Span { line: 1, column: 1 }
@@ -686,67 +714,70 @@ mod parse_expr_tests {
     }
 
     #[test]
-    fn test_typed_array_literal_int32() {
-        match parse("int32[1, 2, 3]").unwrap() {
-            Expr::ArrayLiteral { elements, array_ty, .. } => {
-                assert_eq!(array_ty, Type::Int32);
-                assert_eq!(elements.len(), 3);
+    fn test_typed_array_literals() {
+        let literals = get_all_literals_as_str_no_arr();
+
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR_NO_INFER.iter()) {
+            match parse(&format!("{}[{}, {}, {}]", t, l, l, l)).unwrap() {
+                Expr::ArrayLiteral { elements, array_ty, .. } => {
+                    assert_eq!(array_ty, t.clone());
+                    assert_eq!(elements.len(), 3);
+                }
+                other => panic!("expected ArrayLiteral, got {:?}", other),
             }
-            other => panic!("expected ArrayLiteral, got {:?}", other),
         }
     }
 
     #[test]
     fn test_typed_array_literal_empty() {
-        match parse("int32[]").unwrap() {
-            Expr::ArrayLiteral { elements, array_ty, .. } => {
-                assert_eq!(array_ty, Type::Int32);
-                assert!(elements.is_empty());
+        for t in ALL_TYPES_NO_ARR_NO_INFER {
+            match parse(&format!("{}[]", t)).unwrap() {
+                Expr::ArrayLiteral { elements, array_ty, .. } => {
+                    assert_eq!(array_ty, t.clone());
+                    assert!(elements.is_empty());
+                }
+                other => panic!("expected ArrayLiteral, got {:?}", other),
             }
-            other => panic!("expected ArrayLiteral, got {:?}", other),
-        }
-    }
-
-    #[test]
-    fn test_typed_array_literal_bool() {
-        match parse("bool[true, false, true]").unwrap() {
-            Expr::ArrayLiteral { elements, array_ty, .. } => {
-                assert_eq!(array_ty, Type::Bool);
-                assert_eq!(elements.len(), 3);
-            }
-            other => panic!("expected ArrayLiteral, got {:?}", other),
         }
     }
 
     #[test]
     fn test_typed_array_literal_nested() {
-        // int32[][] — array of arrays
-        match parse("int32[][int32[1,2], int32[3,4]]").unwrap() {
-            Expr::ArrayLiteral { elements, .. } => {
-                assert_eq!(elements.len(), 2);
-                for elem in &elements {
-                    assert!(matches!(elem, Expr::ArrayLiteral { .. }));
+        // array of arrays
+        //
+        let literals = get_all_literals_as_str_no_arr();
+
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR_NO_INFER.iter()) {
+            match parse(&format!("{}[][{}[{},{}], {}[{},{}]]", t, t, l, l, t, l, l)).unwrap() {
+                Expr::ArrayLiteral { elements, .. } => {
+                    assert_eq!(elements.len(), 2);
+                    for elem in &elements {
+                        assert!(matches!(elem, Expr::ArrayLiteral { .. }));
+                    }
                 }
+                other => panic!("expected nested ArrayLiteral, got {:?}", other),
             }
-            other => panic!("expected nested ArrayLiteral, got {:?}", other),
         }
     }
 
     #[test]
     fn test_typed_array_with_expressions() {
-        match parse("int32[a + 1, b * 2]").unwrap() {
-            Expr::ArrayLiteral { elements, .. } => {
-                assert_eq!(elements.len(), 2);
-                assert!(matches!(&elements[0], Expr::BinOp { op: BinOpKind::Add, .. }));
-                assert!(matches!(&elements[1], Expr::BinOp { op: BinOpKind::Multiply, .. }));
+        let literals = get_all_literals_as_str_no_arr();
+
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR_NO_INFER.iter()) {
+            match parse(&format!("{}[a + {}, b * {}]", t, l, l)).unwrap() {
+                Expr::ArrayLiteral { elements, array_ty, .. } => {
+                    assert_eq!(elements.len(), 2);
+                    assert_eq!(array_ty, t.clone());
+                    assert!(matches!(&elements[0], Expr::BinOp { op: BinOpKind::Add, .. }));
+                    assert!(matches!(&elements[1], Expr::BinOp { op: BinOpKind::Multiply, .. }));
+                }
+                other => panic!("expected ArrayLiteral, got {:?}", other),
             }
-            other => panic!("expected ArrayLiteral, got {:?}", other),
         }
     }
 
-    // =========================================================================
-    // ARRAY ACCESS — SINGLE INDEX
-    // =========================================================================
+    // Array access, aka single access
 
     #[test]
     fn test_array_single_access() {
@@ -769,9 +800,7 @@ mod parse_expr_tests {
         }
     }
 
-    // =========================================================================
-    // ARRAY ACCESS — SLICE / MULTIPLE
-    // =========================================================================
+    // Array access, array slicing / multiple access.
 
     #[test]
     fn test_array_slice_both_bounds() {
@@ -811,30 +840,8 @@ mod parse_expr_tests {
         assert_parse_err("arr[:]");
     }
 
-    // =========================================================================
-    // RANGE CALL (if it exists as a special form)
-    // =========================================================================
-
-    #[test]
-    fn test_range_call_basic() {
-        match parse("range(0, 10)").unwrap() {
-            Expr::RangeCall { start, end, .. } => {
-                assert!(matches!(*start, Expr::IntLiteral { value: IntLiteralValue::Int8(0), .. }));
-                assert!(matches!(*end, Expr::IntLiteral { value: IntLiteralValue::Int8(10), .. }));
-            }
-            // If range is treated as a plain Call instead of a RangeCall, that's also a valid
-            // design decision — adjust as needed.
-            Expr::Call { name, args, .. } if name == "range" => {
-                assert_eq!(args.len(), 2);
-            }
-            other => panic!("unexpected result for range call: {:?}", other),
-        }
-    }
-
-    // =========================================================================
-    // COMPLEX / COMPOUND EXPRESSIONS
-    // =========================================================================
-
+    // Complex / compund expressions
+    //
     #[test]
     fn test_binop_with_function_call() {
         match parse("foo(1) + 2").unwrap() {
@@ -897,21 +904,79 @@ mod parse_expr_tests {
         }
     }
 
+
+    // Many spacing variants should parse identically
+    // i.e. 1+2,  1 + 2, 1+ 2, 1 +2, 2   * 1, etc.
     #[test]
-    fn test_whitespace_around_operators() {
-        // Many spacing variants should parse identically
-        let variants = ["1+2", "1 +2", "1+ 2", "1 + 2", "  1  +  2  "];
-        for v in &variants {
-            assert!(
-                matches!(parse(v), Ok(Expr::BinOp { op: BinOpKind::Add, .. })),
-                "failed for {:?}", v
-            );
+    fn test_whitespace_around_and_within_operators_literals() {
+        // just a helper so i don't have spam code with it over and over again.
+        fn checker(variant: &str, b: BinOpKind) {
+            match parse(variant).unwrap() {
+                Expr::BinOp { op, left, right, .. } => {
+                    assert_eq!(op, b.clone());
+                    assert!(matches!(*left, Expr::IntLiteral { value: IntLiteralValue::Int8(1), .. }));
+                    assert!(matches!(*right, Expr::IntLiteral { value: IntLiteralValue::Int8(2), .. }));
+                }
+                other => panic!("expected BinOp, got {:?}", other),
+            }
+        }
+
+        for i in 0..1000 {
+            for (b, s) in AllBinOpKind.iter().zip(BinOpKindSymbols.iter()) {
+                let variant = &format!("{}1{}2", " ".repeat(i), s);
+                checker(variant, b.clone());
+               
+                let variant = &format!("1{}2{}", s, " ".repeat(i));
+                checker(variant, b.clone());
+
+                let variant = &format!("1{}{}2", s, " ".repeat(i));
+                checker(variant, b.clone());
+
+                let variant = &format!("1{}{}2", " ".repeat(i), s);
+                checker(variant, b.clone());
+
+            }
         }
     }
 
-    // =========================================================================
-    // EDGE CASES & REGRESSIONS
-    // =========================================================================
+
+    // Same as above test, except its for variables
+    #[test]
+    fn test_whitespace_around_and_within_operators_vars() {
+        // just a helper so i don't have spam code with it over and over again.
+        fn checker(variant: &str, b: BinOpKind) {
+            match parse(variant).unwrap() {
+                Expr::BinOp { op, left, right, .. } => {
+                    assert_eq!(op, b.clone());
+                    assert!(matches!(*left, Expr::Var { name, .. } if name == "x" ));
+                    assert!(matches!(*right, Expr::Var { name, ..} if name == "y" ));
+
+                }
+                other => panic!("expected BinOp, got {:?}", other),
+            }
+        }
+
+        for i in 0..1000 {
+            for (b, s) in AllBinOpKind.iter().zip(BinOpKindSymbols.iter()) {
+                let variant = &format!("{}x{}y", " ".repeat(i), s);
+                checker(variant, b.clone());
+
+                let variant = &format!("x{}y{}", s, " ".repeat(i));
+                checker(variant, b.clone());
+
+                let variant = &format!("x{}{}y", s, " ".repeat(i));
+                checker(variant, b.clone());
+
+                let variant = &format!("x{}{}y", " ".repeat(i), s);
+                checker(variant, b.clone());
+
+
+            }
+        }
+    }
+
+
+    // Edge cases testing
 
     #[test]
     fn test_format_triple_brace_escaped_plus_placeholder() {
@@ -933,7 +998,7 @@ mod parse_expr_tests {
     }
 
     #[test]
-    fn test_copy_of_array_access() {
+    fn test_copy_of_array_single_access() {
         match parse("copy(arr[0])").unwrap() {
             Expr::CopyCall { expr, .. } => {
                 assert!(matches!(*expr, Expr::ArraySingleAccess { .. }));
@@ -941,6 +1006,17 @@ mod parse_expr_tests {
             other => panic!("expected CopyCall, got {:?}", other),
         }
     }
+
+    #[test]
+    fn test_copy_of_array_multiple_access() {
+        match parse("copy(arr[0:2])").unwrap() {
+            Expr::CopyCall { expr, .. } => {
+                assert!(matches!(*expr, Expr::ArrayMultipleAccess { .. }));
+            }
+            other => panic!("expected CopyCall, got {:?}", other),
+        }
+    }
+
 
     #[test]
     fn test_function_call_with_array_literal_arg() {

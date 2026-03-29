@@ -1,6 +1,27 @@
 use crate::parser::{
-    BinOpKind, Type
+    BinOpKind, Type, Expr, IntLiteralValue, FloatLiteralValue, Span
 };
+
+// Order of these consts matters for tests.
+
+
+// This array order must match BinOpKindSymbols order
+pub const AllBinOpKind: [BinOpKind; 10] = [
+    BinOpKind::Equal,
+    BinOpKind::NotEqual,
+    BinOpKind::Greater,
+    BinOpKind::GreaterEqual,
+    BinOpKind::Less,
+    BinOpKind::LessEqual, 
+    BinOpKind::Add,
+    BinOpKind::Subtract,
+    BinOpKind::Multiply,
+    BinOpKind::Divide,
+
+];
+
+
+
 
 pub const AllBinOpKindArth: [BinOpKind; 4] = [
     BinOpKind::Add,
@@ -17,6 +38,22 @@ pub const AllBinOpKindComp: [BinOpKind; 6] = [
     BinOpKind::Less,
     BinOpKind::LessEqual, 
 ];
+
+
+pub const BinOpKindSymbols: [&str; 10] = [
+    "==",
+    "!=",
+    ">",
+    ">=",
+    "<",
+    "<=",
+    "+",
+    "-",
+    "*",
+    "/"
+
+];
+
 
 pub const BinOpKindCompSymbols: [&str; 6] = [
     "==",
@@ -53,5 +90,6 @@ pub const ALL_TYPES_NO_ARR_NO_INFER: &[Type] = &[
     Type::Bool,
     Type::String
 ];
+
 
 

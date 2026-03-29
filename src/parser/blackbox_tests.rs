@@ -2069,32 +2069,42 @@ mod tests {
     // Signed literals casted as u128 should trigger a safety panic
     #[test]
     #[should_panic]
-    fn int_literal_int8_as_u128_unsafe_panics_on_negative_signed() {
-        IntLiteralValue::Int8(-5).as_u128();
+    fn int_literal_int8_as_u128_unsafe_panics_on_signed() {
+        for i in i8::MIN..=i8::MAX {
+            IntLiteralValue::Int8(i).as_u128();
+        }
     }
 
     #[test]
     #[should_panic]
-    fn int_literal_int16_as_u128_unsafe_panics_on_negative_signed() {
-        IntLiteralValue::Int16(-5).as_u128();
+    fn int_literal_int16_as_u128_unsafe_panics_on_signed() {
+        for i in i16::MIN..=i16::MAX {
+            IntLiteralValue::Int16(i).as_u128();
+        }
     }
 
     #[test]
     #[should_panic]
-    fn int_literal_int32_as_u128_unsafe_panics_on_negative_signed() {
-        IntLiteralValue::Int32(-5).as_u128();
+    fn int_literal_int32_as_u128_unsafe_panics_on_signed() {
+        for i in i32::MIN..=i32::MAX {
+            IntLiteralValue::Int32(i).as_u128();
+        }
     }
 
     #[test]
     #[should_panic]
-    fn int_literal_int64_as_u128_unsafe_panics_on_negative_signed() {
-        IntLiteralValue::Int64(-5).as_u128();
+    fn int_literal_int64_as_u128_unsafe_panics_on_signed() {
+        for i in i64::MIN..=i64::MAX {
+            IntLiteralValue::Int64(i).as_u128();
+        }
     }
 
     #[test]
     #[should_panic]
-    fn int_literal_int128_as_u128_unsafe_panics_on_negative_signed() {
-        IntLiteralValue::Int128(-5).as_u128();
+    fn int_literal_int128_as_u128_unsafe_panics_on_signed() {
+        for i in i128::MIN..=i128::MAX {
+            IntLiteralValue::Int128(i).as_u128();
+        }
     }
 
 
@@ -2102,38 +2112,50 @@ mod tests {
     #[test]
     #[should_panic]
     fn int_literal_byte_as_i128_panics_on_unsigned() {
-        IntLiteralValue::Byte(5).as_i128();
+        for i in u8::MIN..=u8::MAX {
+            IntLiteralValue::Byte(i).as_i128();
+        }
     }
 
     #[test]
     #[should_panic]
     fn int_literal_uint16_as_i128_panics_on_unsigned() {
-        IntLiteralValue::Uint16(5).as_i128();
+        for i in u16::MIN..=u16::MAX {
+            IntLiteralValue::Uint16(i).as_i128();
+        }
     }
 
     #[test]
     #[should_panic]
     fn int_literal_uint32_as_i128_panics_on_unsigned() {
-        IntLiteralValue::Uint32(5).as_i128();
+        for i in u32::MIN..=u32::MAX {
+            IntLiteralValue::Uint32(i).as_i128();
+        }
     }
 
     #[test]
     #[should_panic]
     fn int_literal_uint64_as_i128_panics_on_unsigned() {
-        IntLiteralValue::Uint64(5).as_i128();
+        for i in u64::MIN..=u64::MAX {
+            IntLiteralValue::Uint64(i).as_i128();
+        }
     }
 
     #[test]
     #[should_panic]
     fn int_literal_uint128_as_i128_panics_on_unsigned() {
-        IntLiteralValue::Uint128(5).as_i128();
+        for i in u128::MIN..=u128::MAX {
+            IntLiteralValue::Uint128(i).as_i128();
+        }
     }
 
 
     #[test]
     #[should_panic]
     fn int_literal_usize_as_i128_panics_on_unsigned() {
-        IntLiteralValue::Usize(5).as_i128();
+        for i in usize::MIN..=usize::MAX {
+            IntLiteralValue::Usize(i).as_i128();
+        }
     }
 
 
