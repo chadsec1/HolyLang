@@ -64,25 +64,6 @@ pub fn find_top_level_op_any(s: &str, ops: &[char]) -> Option<(usize, char)> {
     best
 }
 
-/*
-/// Find the first top-level operator from `ops` (not inside parentheses).
-/// Returns Some((index, operator_char)) if found.
-pub fn find_top_level_op_any(s: &str, ops: &[char]) -> Option<(usize, char)> {
-    let mut depth = 0usize;
-    for (i, c) in s.char_indices() {
-        match c {
-            '(' => depth += 1,
-            ')' => if depth > 0 { depth -= 1 },
-            _ => {}
-        }
-        if depth == 0 && ops.contains(&c) {
-            return Some((i, c));
-        }
-    }
-    None
-}
-*/
-
 
 
 
@@ -369,16 +350,8 @@ pub fn parse_format_string(s: &str) -> Result<(String, Vec<String>), HolyError> 
 
                 while let Some(nc) = chars.next() {
                     if nc == '}' {
-                        // literal }} inside the placeholder text
-                        if let Some('}') = chars.peek() {
-                            chars.next();
-                            inner.push('}');
-                            inner.push('}');
-                            continue;
-                        } else {
-                            closed = true;
-                            break;
-                        }
+                        closed = true;
+                        break;
                     } else {
                         inner.push(nc);
                     }
