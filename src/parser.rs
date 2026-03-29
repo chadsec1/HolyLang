@@ -4,7 +4,14 @@ use std::num::IntErrorKind;
 use crate::error::HolyError;
 
 #[cfg(test)]
-mod tests;
+mod blackbox_tests;
+
+
+#[cfg(test)]
+mod helpers_tests;
+
+
+
 
 mod fmt_display;
 mod helpers;
