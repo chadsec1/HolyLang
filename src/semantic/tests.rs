@@ -1,362 +1,279 @@
 use super::*;
 use crate::parser::{
-    BinOpKind, Param, Variable, VariableAssignment, 
+    Param, Variable, VariableAssignment, 
     IfStmt, WhileStmt
 };
 
 
-const AllBinOpKindArth: [BinOpKind; 4] = [
-            BinOpKind::Add,
-            BinOpKind::Subtract,
-            BinOpKind::Multiply,
-            BinOpKind::Divide,
-        ];
-
-const AllBinOpKindComp: [BinOpKind; 6] = [
-            BinOpKind::Equal,
-            BinOpKind::NotEqual,
-            BinOpKind::Greater,
-            BinOpKind::GreaterEqual,
-            BinOpKind::Less,
-            BinOpKind::LessEqual,
-        ];
+use crate::tests_consts::{
+    ALL_TYPES_NO_ARR, ALL_TYPES_NO_ARR_SCATTERED, ALL_UNSIGNED_TYPES_NO_ARR, ALL_SIGNED_TYPES_NO_ARR,
+    ALL_BIN_OP_KIND_ARTH, ALL_BIN_OP_KIND_COMP, ALL_BIN_OP_KIND_COMP_EQ,
+};
 
 
-const AllBinOpKindCompEq: [BinOpKind; 2] = [
-            BinOpKind::Equal,
-            BinOpKind::NotEqual,
-        ];
+// helper functions
+
+fn get_all_signed_literals_no_arr() -> [Expr; 7] {
+    let literals = [
+        int8_lit(1),
+        int16_lit(1),
+        int32_lit(1),
+        int64_lit(1),
+        int128_lit(1),
+
+        float32_lit(1.0),
+        float64_lit(1.0),
+    ];
+
+    return literals;
+}
+
+fn get_all_unsigned_literals_no_arr() -> [Expr; 6] {
+    let literals = [
+        byte_lit(1),
+        uint16_lit(1),
+        uint32_lit(1),
+        uint64_lit(1),
+        uint128_lit(1),
+        usize_lit(1)
+    ];
+
+    return literals;
+}
 
 
-// No array type
-const ALL_TYPES_NO_ARR: &[Type] = &[
-    Type::Int8,
-    Type::Int16,
-    Type::Int32,
-    Type::Int64,
-    Type::Int128,
-    Type::Byte,
-    Type::Uint16,
-    Type::Uint32,
-    Type::Uint64,
-    Type::Uint128,
-    Type::Usize,
-    Type::Float32,
-    Type::Float64,
-    Type::Bool,
-    Type::String,
-    Type::Infer,
-];
+fn get_all_literals_no_arr_str_bool() -> [Expr; 13] {
+    let literals = [
+        int8_lit(1),
+        int16_lit(1),
+        int32_lit(1),
+        int64_lit(1),
+        int128_lit(1),
 
-const ALL_TYPES_NO_ARR_SCATTERED: &[Type] = &[
-    Type::Int128,
-    Type::Int8,
-    Type::Uint64,
-    Type::Int64,
-    Type::Float32,
-    Type::Byte,
-    Type::Uint16,
-    Type::String,
-    Type::Uint128,
-    Type::Float64,
-    Type::Uint32,
-    Type::Int16,
-    Type::Bool,
-    Type::Int32,
-    Type::Usize,
+        byte_lit(1),
+        uint16_lit(1),
+        uint32_lit(1),
+        uint64_lit(1),
+        uint128_lit(1),
 
-    Type::Infer,
-];
+        usize_lit(1),
+
+        float32_lit(1.0),
+        float64_lit(1.0),
+    ];
+
+    return literals;
+}
 
 
 
+fn get_all_literals_no_arr_str_bool_scattered() -> [Expr; 13] {
+    let literals = [
+        uint32_lit(1),
+        int8_lit(1),
+        int64_lit(1),
+        uint128_lit(1),
+        float32_lit(1.0),
 
-const ALL_SIGNED_TYPES_NO_ARR: &[Type] = &[
-    Type::Int8,
-    Type::Int16,
-    Type::Int32,
-    Type::Int64,
-    Type::Int128,
-    Type::Float32,
-    Type::Float64,
-    Type::Infer,
-];
+        uint16_lit(1),
+        usize_lit(1),
+        int16_lit(1),
+        byte_lit(1),
+        float64_lit(1.0),
+        uint64_lit(1),
+        int128_lit(1),
+        int32_lit(1),
+
+    ];
+
+    return literals;
+}
 
 
-const ALL_UNSIGNED_TYPES_NO_ARR: &[Type] = &[
-    Type::Byte,
-    Type::Uint16,
-    Type::Uint32,
-    Type::Uint64,
-    Type::Uint128,
-    Type::Usize,
-    Type::Infer,
-];
+
+
+
+
+fn get_all_literals_no_arr() -> [Expr; 15] {
+    let literals = [
+        int8_lit(1),
+        int16_lit(1),
+        int32_lit(1),
+        int64_lit(1),
+        int128_lit(1),
+
+        byte_lit(1),
+        uint16_lit(1),
+        uint32_lit(1),
+        uint64_lit(1),
+        uint128_lit(1),
+
+        usize_lit(1),
+
+        float32_lit(1.0),
+        float64_lit(1.0),
+
+        bool_lit(false),
+        str_lit("Hi")
+    ];
+
+    return literals;
+}
+
+fn get_all_literals_no_arr_scattered_order() -> [Expr; 15] {
+    let literals = [
+        int128_lit(1),
+        int8_lit(1),
+        uint64_lit(1),
+        int64_lit(1),
+        float32_lit(1.0),
+        byte_lit(1),
+        uint16_lit(1),
+        str_lit("Hi"),
+        uint128_lit(1),
+        float64_lit(1.0),
+        uint32_lit(1),
+        int16_lit(1),
+        bool_lit(false),
+        int32_lit(1),
+        usize_lit(1)
+    ];
+
+    return literals;
+}
+
+fn span() -> Span {
+    Span { line: 1, column: 0 }
+}
+
+/// Build an AST that contains exactly one function.
+fn ast_one(func: Function) -> AST {
+    AST { functions: vec![func] }
+}
+
+/// Build a void function (no return type) with the given body.
+fn void_func(name: &str, params: Vec<Param>, mut body: Vec<Stmt>) -> Function {
+    if body.len() == 0 {
+        // Dummy body because empty branches are not allowed.
+        body = vec![var_decl("x", Type::Int8, Some(int32_lit(69)))];
+    }
+
+    Function {
+        name: name.to_string(),
+        params,
+        return_type: None,
+        body,
+        span: span(),
+    }
+}
+
+/// Build a function that returns a single type.
+fn returning_func(name: &str, params: Vec<Param>, ret: Vec<Type>, body: Vec<Stmt>) -> Function {
+    Function {
+        name: name.to_string(),
+        params,
+        return_type: Some(ret),
+        body,
+        span: span(),
+    }
+}
+
+fn param(name: &str, ty: Type) -> Param {
+    Param { name: name.to_string(), type_name: ty, span: span() }
+}
+
+fn var_decl(name: &str, ty: Type, value: Option<Expr>) -> Stmt {
+    Stmt::VarDecl(Variable {
+        name: name.to_string(),
+        type_name: ty,
+        value,
+        span: span(),
+    })
+}
+
+fn int8_lit(n: i8) -> Expr {
+    Expr::IntLiteral { value: IntLiteralValue::Int8(n), span: span() }
+}
+
+fn int16_lit(n: i16) -> Expr {
+    Expr::IntLiteral { value: IntLiteralValue::Int16(n), span: span() }
+}
+
+fn int32_lit(n: i32) -> Expr {
+    Expr::IntLiteral { value: IntLiteralValue::Int32(n), span: span() }
+}
+
+fn int64_lit(n: i64) -> Expr {
+    Expr::IntLiteral { value: IntLiteralValue::Int64(n), span: span() }
+}
+
+fn int128_lit(n: i128) -> Expr {
+    Expr::IntLiteral { value: IntLiteralValue::Int128(n), span: span() }
+}
+
+
+
+fn byte_lit(b: u8) -> Expr {
+    Expr::IntLiteral { value: IntLiteralValue::Byte(b), span: span() }
+}
+
+fn uint16_lit(n: u16) -> Expr {
+    Expr::IntLiteral { value: IntLiteralValue::Uint16(n), span: span() }
+}
+
+fn uint32_lit(n: u32) -> Expr {
+    Expr::IntLiteral { value: IntLiteralValue::Uint32(n), span: span() }
+}
+
+fn uint64_lit(n: u64) -> Expr {
+    Expr::IntLiteral { value: IntLiteralValue::Uint64(n), span: span() }
+}
+
+fn uint128_lit(n: u128) -> Expr {
+    Expr::IntLiteral { value: IntLiteralValue::Uint128(n), span: span() }
+}
+
+
+fn usize_lit(n: usize) -> Expr {
+    Expr::IntLiteral { value: IntLiteralValue::Usize(n), span: span() }
+}
+
+
+fn float32_lit(f: f32) -> Expr {
+    Expr::FloatLiteral { value: FloatLiteralValue::Float32(f), span: span() }
+}
+
+
+fn float64_lit(f: f64) -> Expr {
+    Expr::FloatLiteral { value: FloatLiteralValue::Float64(f), span: span() }
+}
+
+
+fn bool_lit(b: bool) -> Expr {
+    Expr::BoolLiteral { value: b, span: span() }
+}
+
+fn str_lit(s: &str) -> Expr {
+    Expr::StringLiteral { value: s.to_string(), span: span() }
+}
+
+fn var_expr(name: &str) -> Expr {
+    Expr::Var { name: name.to_string(), span: span() }
+}
+
+fn call_expr(name: &str, args: Vec<Expr>) -> Expr {
+    Expr::Call { name: name.to_string(), args, span: span() }
+}
+
+fn return_stmt(exprs: Vec<Expr>) -> Stmt {
+    Stmt::Return(exprs)
+}
+
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-
-    
-
-    // helper functions
-    
-    fn get_all_signed_literals_no_arr() -> [Expr; 7] {
-        let literals = [
-            int8_lit(1),
-            int16_lit(1),
-            int32_lit(1),
-            int64_lit(1),
-            int128_lit(1),
-
-            float32_lit(1.0),
-            float64_lit(1.0),
-        ];
-
-        return literals;
-    }
-
-    fn get_all_unsigned_literals_no_arr() -> [Expr; 6] {
-        let literals = [
-            byte_lit(1),
-            uint16_lit(1),
-            uint32_lit(1),
-            uint64_lit(1),
-            uint128_lit(1),
-            usize_lit(1)
-        ];
-
-        return literals;
-    }
-    
-
-    fn get_all_literals_no_arr_str_bool() -> [Expr; 13] {
-        let literals = [
-            int8_lit(1),
-            int16_lit(1),
-            int32_lit(1),
-            int64_lit(1),
-            int128_lit(1),
-
-            byte_lit(1),
-            uint16_lit(1),
-            uint32_lit(1),
-            uint64_lit(1),
-            uint128_lit(1),
-
-            usize_lit(1),
-
-            float32_lit(1.0),
-            float64_lit(1.0),
-        ];
-
-        return literals;
-    }
-
-
-
-    fn get_all_literals_no_arr_str_bool_scattered() -> [Expr; 13] {
-        let literals = [
-            uint32_lit(1),
-            int8_lit(1),
-            int64_lit(1),
-            uint128_lit(1),
-            float32_lit(1.0),
-
-            uint16_lit(1),
-            usize_lit(1),
-            int16_lit(1),
-            byte_lit(1),
-            float64_lit(1.0),
-            uint64_lit(1),
-            int128_lit(1),
-            int32_lit(1),
-
-        ];
-
-        return literals;
-    }
-
-
-
-
-
-
-    fn get_all_literals_no_arr() -> [Expr; 15] {
-        let literals = [
-            int8_lit(1),
-            int16_lit(1),
-            int32_lit(1),
-            int64_lit(1),
-            int128_lit(1),
-
-            byte_lit(1),
-            uint16_lit(1),
-            uint32_lit(1),
-            uint64_lit(1),
-            uint128_lit(1),
-
-            usize_lit(1),
-
-            float32_lit(1.0),
-            float64_lit(1.0),
-
-            bool_lit(false),
-            str_lit("Hi")
-        ];
-
-        return literals;
-    }
-
-    fn get_all_literals_no_arr_scattered_order() -> [Expr; 15] {
-        let literals = [
-            int128_lit(1),
-            int8_lit(1),
-            uint64_lit(1),
-            int64_lit(1),
-            float32_lit(1.0),
-            byte_lit(1),
-            uint16_lit(1),
-            str_lit("Hi"),
-            uint128_lit(1),
-            float64_lit(1.0),
-            uint32_lit(1),
-            int16_lit(1),
-            bool_lit(false),
-            int32_lit(1),
-            usize_lit(1)
-        ];
-
-        return literals;
-    }
-
-    fn span() -> Span {
-        Span { line: 1, column: 0 }
-    }
-
-    /// Build an AST that contains exactly one function.
-    fn ast_one(func: Function) -> AST {
-        AST { functions: vec![func] }
-    }
-
-    /// Build a void function (no return type) with the given body.
-    fn void_func(name: &str, params: Vec<Param>, mut body: Vec<Stmt>) -> Function {
-        if body.len() == 0 {
-            // Dummy body because empty branches are not allowed.
-            body = vec![var_decl("x", Type::Int8, Some(int32_lit(69)))];
-        }
-
-        Function {
-            name: name.to_string(),
-            params,
-            return_type: None,
-            body,
-            span: span(),
-        }
-    }
-
-    /// Build a function that returns a single type.
-    fn returning_func(name: &str, params: Vec<Param>, ret: Vec<Type>, body: Vec<Stmt>) -> Function {
-        Function {
-            name: name.to_string(),
-            params,
-            return_type: Some(ret),
-            body,
-            span: span(),
-        }
-    }
-
-    fn param(name: &str, ty: Type) -> Param {
-        Param { name: name.to_string(), type_name: ty, span: span() }
-    }
-
-    fn var_decl(name: &str, ty: Type, value: Option<Expr>) -> Stmt {
-        Stmt::VarDecl(Variable {
-            name: name.to_string(),
-            type_name: ty,
-            value,
-            span: span(),
-        })
-    }
-
-    fn int8_lit(n: i8) -> Expr {
-        Expr::IntLiteral { value: IntLiteralValue::Int8(n), span: span() }
-    }
-
-    fn int16_lit(n: i16) -> Expr {
-        Expr::IntLiteral { value: IntLiteralValue::Int16(n), span: span() }
-    }
-
-    fn int32_lit(n: i32) -> Expr {
-        Expr::IntLiteral { value: IntLiteralValue::Int32(n), span: span() }
-    }
-
-    fn int64_lit(n: i64) -> Expr {
-        Expr::IntLiteral { value: IntLiteralValue::Int64(n), span: span() }
-    }
-
-    fn int128_lit(n: i128) -> Expr {
-        Expr::IntLiteral { value: IntLiteralValue::Int128(n), span: span() }
-    }
-
-
-
-    fn byte_lit(b: u8) -> Expr {
-        Expr::IntLiteral { value: IntLiteralValue::Byte(b), span: span() }
-    }
-
-    fn uint16_lit(n: u16) -> Expr {
-        Expr::IntLiteral { value: IntLiteralValue::Uint16(n), span: span() }
-    }
-
-    fn uint32_lit(n: u32) -> Expr {
-        Expr::IntLiteral { value: IntLiteralValue::Uint32(n), span: span() }
-    }
-
-    fn uint64_lit(n: u64) -> Expr {
-        Expr::IntLiteral { value: IntLiteralValue::Uint64(n), span: span() }
-    }
-
-    fn uint128_lit(n: u128) -> Expr {
-        Expr::IntLiteral { value: IntLiteralValue::Uint128(n), span: span() }
-    }
-
-
-    fn usize_lit(n: usize) -> Expr {
-        Expr::IntLiteral { value: IntLiteralValue::Usize(n), span: span() }
-    }
-
-
-    fn float32_lit(f: f32) -> Expr {
-        Expr::FloatLiteral { value: FloatLiteralValue::Float32(f), span: span() }
-    }
-
-
-    fn float64_lit(f: f64) -> Expr {
-        Expr::FloatLiteral { value: FloatLiteralValue::Float64(f), span: span() }
-    }
-
-
-    fn bool_lit(b: bool) -> Expr {
-        Expr::BoolLiteral { value: b, span: span() }
-    }
-
-    fn str_lit(s: &str) -> Expr {
-        Expr::StringLiteral { value: s.to_string(), span: span() }
-    }
-
-    fn var_expr(name: &str) -> Expr {
-        Expr::Var { name: name.to_string(), span: span() }
-    }
-
-    fn call_expr(name: &str, args: Vec<Expr>) -> Expr {
-        Expr::Call { name: name.to_string(), args, span: span() }
-    }
-
-    fn return_stmt(exprs: Vec<Expr>) -> Stmt {
-        Stmt::Return(exprs)
-    }
 
     // duplicate functions are not allowed
     #[test]
@@ -1047,7 +964,7 @@ mod tests {
         let literals_ints_floats = get_all_literals_no_arr_str_bool();
 
         for (l, t) in literals_ints_floats.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            for b in AllBinOpKindComp {
+            for b in ALL_BIN_OP_KIND_COMP {
                 let condition = Expr::BinOp {
                         left: Box::new(l.clone()),
                         op: b,
@@ -1080,7 +997,7 @@ mod tests {
         let literals_ints_floats = get_all_literals_no_arr_str_bool();
 
         for (l, t) in literals_ints_floats.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            for b in AllBinOpKindComp {
+            for b in ALL_BIN_OP_KIND_COMP {
                 let condition = Expr::BinOp {
                         left: Box::new(var_expr("x")),
                         op: b,
@@ -1117,7 +1034,7 @@ mod tests {
 
         // Variable left side, Literal right side
         for (l, t) in literals_ints_floats.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            for b in AllBinOpKindComp {
+            for b in ALL_BIN_OP_KIND_COMP {
                 let condition = Expr::BinOp {
                         left: Box::new(var_expr("x")),
                         op: b,
@@ -1146,7 +1063,7 @@ mod tests {
 
         // Literal left side, Variable right side
         for (l, t) in literals_ints_floats.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            for b in AllBinOpKindComp {
+            for b in ALL_BIN_OP_KIND_COMP {
                 let condition = Expr::BinOp {
                         left: Box::new(l.clone()),
                         op: b,
@@ -1187,7 +1104,7 @@ mod tests {
         let literals_ints_floats = get_all_literals_no_arr_str_bool();
 
         for (l, t) in literals_ints_floats.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            for b in AllBinOpKindComp {
+            for b in ALL_BIN_OP_KIND_COMP {
                 let condition = Expr::BinOp {
                         left: Box::new(l.clone()),
                         op: b,
@@ -1223,7 +1140,7 @@ mod tests {
         let literals_ints_floats = get_all_literals_no_arr_str_bool();
 
         for (l, t) in literals_ints_floats.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            for b in AllBinOpKindComp {
+            for b in ALL_BIN_OP_KIND_COMP {
                 let condition = Expr::BinOp {
                         left: Box::new(var_expr("x")),
                         op: b,
@@ -1262,7 +1179,7 @@ mod tests {
 
         // Variable left side, Literal right side
         for (l, t) in literals_ints_floats.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            for b in AllBinOpKindComp {
+            for b in ALL_BIN_OP_KIND_COMP {
                 let condition = Expr::BinOp {
                         left: Box::new(var_expr("x")),
                         op: b,
@@ -1292,7 +1209,7 @@ mod tests {
 
         // Literal left side, Variable right side
         for (l, t) in literals_ints_floats.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            for b in AllBinOpKindComp {
+            for b in ALL_BIN_OP_KIND_COMP {
                 let condition = Expr::BinOp {
                         left: Box::new(l.clone()),
                         op: b,
@@ -1329,7 +1246,7 @@ mod tests {
         let literals_ints_floats = get_all_literals_no_arr_str_bool();
 
         for (l, t) in literals_ints_floats.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            for b in AllBinOpKindComp {
+            for b in ALL_BIN_OP_KIND_COMP {
                 let condition = Expr::BinOp {
                         left: Box::new(l.clone()),
                         op: b,
@@ -1369,7 +1286,7 @@ mod tests {
         let literals_ints_floats = get_all_literals_no_arr_str_bool();
 
         for (l, t) in literals_ints_floats.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            for b in AllBinOpKindComp {
+            for b in ALL_BIN_OP_KIND_COMP {
                 let condition = Expr::BinOp {
                         left: Box::new(var_expr("x")),
                         op: b,
@@ -1416,7 +1333,7 @@ mod tests {
         let literals_ints_floats = get_all_literals_no_arr_str_bool();
 
         for (l, t) in literals_ints_floats.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            for b in AllBinOpKindComp {
+            for b in ALL_BIN_OP_KIND_COMP {
                 let condition = Expr::BinOp {
                         left: Box::new(var_expr("x")),
                         op: b,
@@ -1454,7 +1371,7 @@ mod tests {
 
 
         for (l, t) in literals_ints_floats.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            for b in AllBinOpKindComp {
+            for b in ALL_BIN_OP_KIND_COMP {
                 let condition = Expr::BinOp {
                         left: Box::new(l.clone()),
                         op: b,
@@ -1507,7 +1424,7 @@ mod tests {
         let literals_ints_floats = get_all_literals_no_arr_str_bool();
 
         for (l, t) in literals_ints_floats.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            for b in AllBinOpKindComp {
+            for b in ALL_BIN_OP_KIND_COMP {
                 let condition = Expr::BinOp {
                         left: Box::new(l.clone()),
                         op: b,
@@ -1545,7 +1462,7 @@ mod tests {
         let literals_ints_floats = get_all_literals_no_arr_str_bool();
 
         for (l, t) in literals_ints_floats.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            for b in AllBinOpKindComp {
+            for b in ALL_BIN_OP_KIND_COMP {
                 let condition = Expr::BinOp {
                         left: Box::new(var_expr("x")),
                         op: b,
@@ -1587,7 +1504,7 @@ mod tests {
 
         // Variable left side, Literal right side
         for (l, t) in literals_ints_floats.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            for b in AllBinOpKindComp {
+            for b in ALL_BIN_OP_KIND_COMP {
                 let condition = Expr::BinOp {
                         left: Box::new(var_expr("x")),
                         op: b,
@@ -1620,7 +1537,7 @@ mod tests {
 
         // Literal left side, Variable right side
         for (l, t) in literals_ints_floats.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            for b in AllBinOpKindComp {
+            for b in ALL_BIN_OP_KIND_COMP {
                 let condition = Expr::BinOp {
                         left: Box::new(l.clone()),
                         op: b,
@@ -2062,7 +1979,7 @@ mod tests {
 
     #[test]
     fn test_string_binop_arth_errors() {
-        for b in AllBinOpKindArth {
+        for b in ALL_BIN_OP_KIND_ARTH {
             // Strings may not be ever wrapped in ANY BinOpKind (except *some* comparison operators like == and !=), we use format() instead.
             let bin = Expr::BinOp {
                 left: Box::new(str_lit("hello")),
@@ -2083,7 +2000,7 @@ mod tests {
 
     #[test]
     fn test_string_binop_comp_eq_passes() {
-        for b in AllBinOpKindCompEq {
+        for b in ALL_BIN_OP_KIND_COMP_EQ {
             let bin = Expr::BinOp {
                 left: Box::new(str_lit("hello")),
                 op: b,
@@ -2103,7 +2020,7 @@ mod tests {
         let literals_ints_floats = get_all_literals_no_arr_str_bool();
         
         for (l, t) in literals_ints_floats.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            for b in AllBinOpKindArth {
+            for b in ALL_BIN_OP_KIND_ARTH {
                 let bin = Expr::BinOp {
                     left: Box::new(l.clone()),
                     op: b,
@@ -2199,7 +2116,7 @@ mod tests {
 
         for int in &int_literals {
             for non_int in &non_int_literals {
-                for b in AllBinOpKindArth {
+                for b in ALL_BIN_OP_KIND_ARTH {
                     let bin = Expr::BinOp {
                         left: Box::new(int.clone()),
                         right: Box::new(non_int.clone()),
@@ -2224,7 +2141,7 @@ mod tests {
 
         for int in &int_literals {
             for non_int in &non_int_literals {
-                for b in AllBinOpKindArth {
+                for b in ALL_BIN_OP_KIND_ARTH {
                     let bin = Expr::BinOp {
                         left: Box::new(non_int.clone()),
                         right: Box::new(int.clone()),
@@ -2256,7 +2173,7 @@ mod tests {
         let literals_ints_floats_scat = get_all_literals_no_arr_str_bool_scattered();
 
         for (l1, l2) in literals_ints_floats.iter().zip(literals_ints_floats_scat.iter()) {
-            for b in AllBinOpKindArth {
+            for b in ALL_BIN_OP_KIND_ARTH {
                 // We declare variables here, because had we used literals, it would get inferred
                 // in the binary operation expression
                 //
@@ -2418,7 +2335,7 @@ mod tests {
         // it also tests variable declaration, function declaration, and function calling 
         let literals = get_all_literals_no_arr();
 
-        for b in AllBinOpKindArth {
+        for b in ALL_BIN_OP_KIND_ARTH {
             let add_body = vec![return_stmt(vec![
                 Expr::BinOp {
                     left: Box::new(var_expr("a")),

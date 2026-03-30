@@ -164,11 +164,11 @@ pub fn return_branch_analysis(
 
     match last_stmt {
 
-        Some(Stmt::Break(breakStmt)) => {
+        Some(Stmt::Break(break_stmt)) => {
             if forbid_break {
                 return Err(HolyError::Semantic(format!(
                         "You cannot `break` out of a forever loop if its the last statement in a function that returns. Use a return statement instead. (line {} column {})",
-                        breakStmt.span.line, breakStmt.span.column,
+                        break_stmt.span.line, break_stmt.span.column,
                     )));
             }
 

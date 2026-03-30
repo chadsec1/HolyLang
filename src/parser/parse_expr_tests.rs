@@ -1,7 +1,7 @@
 use super::*;
 use crate::parser::parse_expr::parse_expr;
 use crate::tests_consts::{
-    AllBinOpKind, BinOpKindSymbols, ALL_TYPES_NO_ARR_NO_INFER
+    ALL_BIN_OP_KIND, BIN_OP_KIND_SYMBOLS, ALL_TYPES_NO_ARR_NO_INFER
 };
 
 #[cfg(test)]
@@ -922,7 +922,7 @@ mod parse_expr_tests {
         }
 
         for i in 0..1000 {
-            for (b, s) in AllBinOpKind.iter().zip(BinOpKindSymbols.iter()) {
+            for (b, s) in ALL_BIN_OP_KIND.iter().zip(BIN_OP_KIND_SYMBOLS.iter()) {
                 let variant = &format!("{}1{}2", " ".repeat(i), s);
                 checker(variant, b.clone());
                
@@ -957,7 +957,7 @@ mod parse_expr_tests {
         }
 
         for i in 0..1000 {
-            for (b, s) in AllBinOpKind.iter().zip(BinOpKindSymbols.iter()) {
+            for (b, s) in ALL_BIN_OP_KIND.iter().zip(BIN_OP_KIND_SYMBOLS.iter()) {
                 let variant = &format!("{}x{}y", " ".repeat(i), s);
                 checker(variant, b.clone());
 

@@ -6,5 +6,5 @@ fn main() {
     let source = fs::read_to_string(&path)
         .expect("Failed to read file");
 
-    HolyLang::compile(&source);
+    holylang::compile(&source);
 }

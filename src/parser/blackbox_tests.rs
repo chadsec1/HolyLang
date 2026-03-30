@@ -2,7 +2,9 @@ use super::*;
 
 use crate::consts;
 use crate::tests_consts::{
-    AllBinOpKindArth, AllBinOpKindComp, BinOpKindArthSymbols, BinOpKindCompSymbols, ALL_TYPES_NO_ARR_NO_INFER
+    ALL_TYPES_NO_ARR_NO_INFER,
+    ALL_BIN_OP_KIND, ALL_BIN_OP_KIND_COMP, ALL_BIN_OP_KIND_ARTH,
+    BIN_OP_KIND_ARTH_SYMBOLS, BIN_OP_KIND_COMP_SYMBOLS
 };
  
 
@@ -359,7 +361,7 @@ mod tests {
     
     #[test]
     fn while_statements_literals() {
-        for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
+        for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
             let stmts = parse_body(&format!("while 1 {} 2 {{\n\n}}", s));
             assert_eq!(stmts.len(), 1);
             if let Stmt::While(w) = &stmts[0] {
@@ -388,7 +390,7 @@ mod tests {
     #[test]
     fn while_statements_literals_spaces_before_expr() {
         for i in 0..5000 {
-            for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
+            for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
                 let stmts = parse_body(&format!("while{} 1 {} 2 {{\n\n}}", " ".repeat(i), s));
                 assert_eq!(stmts.len(), 1);
                 if let Stmt::While(w) = &stmts[0] {
@@ -421,7 +423,7 @@ mod tests {
     #[test]
     fn while_statements_literals_spaces_after_expr() {
         for i in 0..5000 {
-            for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
+            for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
                 let stmts = parse_body(&format!("while 1 {} 2 {}{{\n\n}}", s, " ".repeat(i)));
                 assert_eq!(stmts.len(), 1);
                 if let Stmt::While(w) = &stmts[0] {
@@ -452,7 +454,7 @@ mod tests {
 
     #[test]
     fn while_statements_vars() {
-        for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
+        for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
             let stmts = parse_body(&format!("while x {} y {{\n\n}}", s));
             assert_eq!(stmts.len(), 1);
             if let Stmt::While(w) = &stmts[0] {
@@ -482,7 +484,7 @@ mod tests {
     #[test]
     fn while_statements_vars_spaces_before_expr() {
         for i in 0..5000 {
-            for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
+            for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
                 let stmts = parse_body(&format!("while{} x {} y {{\n\n}}", " ".repeat(i), s));
                 assert_eq!(stmts.len(), 1);
                 if let Stmt::While(w) = &stmts[0] {
@@ -512,7 +514,7 @@ mod tests {
     #[test]
     fn while_statements_vars_spaces_after_expr() {
         for i in 0..5000 {
-            for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
+            for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
                 let stmts = parse_body(&format!("while x {} y {}{{\n\n}}", s, " ".repeat(i)));
                 assert_eq!(stmts.len(), 1);
                 if let Stmt::While(w) = &stmts[0] {
@@ -540,7 +542,7 @@ mod tests {
 
     #[test]
     fn while_statements_vars_and_literals() {
-        for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
+        for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
             let stmts = parse_body(&format!("while 69 {} y {{\n\n}}", s));
             assert_eq!(stmts.len(), 1);
             if let Stmt::While(w) = &stmts[0] {
@@ -565,7 +567,7 @@ mod tests {
         }
 
 
-        for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
+        for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
             let stmts = parse_body(&format!("while x {} 67 {{\n\n}}", s));
             assert_eq!(stmts.len(), 1);
             if let Stmt::While(w) = &stmts[0] {
@@ -593,7 +595,7 @@ mod tests {
     #[test]
     fn while_statements_vars_and_literals_spaces_before_expr() {
         for i in 0..5000 {
-            for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
+            for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
                 let stmts = parse_body(&format!("while{} 69 {} y {{\n\n}}", " ".repeat(i), s));
                 assert_eq!(stmts.len(), 1);
                 if let Stmt::While(w) = &stmts[0] {
@@ -618,7 +620,7 @@ mod tests {
             }
 
 
-            for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
+            for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
                 let stmts = parse_body(&format!("while{} x {} 67 {{\n\n}}", " ".repeat(i), s));
                 assert_eq!(stmts.len(), 1);
                 if let Stmt::While(w) = &stmts[0] {
@@ -648,7 +650,7 @@ mod tests {
     #[test]
     fn while_statements_vars_and_literals_spaces_after_expr() {
         for i in 0..5000 {
-            for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
+            for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
                 let stmts = parse_body(&format!("while 69 {} y {}{{\n\n}}", s, " ".repeat(i)));
                 assert_eq!(stmts.len(), 1);
                 if let Stmt::While(w) = &stmts[0] {
@@ -673,7 +675,7 @@ mod tests {
             }
 
 
-            for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
+            for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
                 let stmts = parse_body(&format!("while x {} 67 {}{{\n\n}}", s, " ".repeat(i)));
                 assert_eq!(stmts.len(), 1);
                 if let Stmt::While(w) = &stmts[0] {
@@ -715,7 +717,7 @@ mod tests {
 
     #[test]
     fn if_statements_literals() {
-        for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
+        for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
             let stmts = parse_body(&format!("if 1 {} 2 {{\n\n}}", s));
             assert_eq!(stmts.len(), 1);
             if let Stmt::If(i) = &stmts[0] {
@@ -746,7 +748,7 @@ mod tests {
 
     #[test]
     fn if_statements_vars() {
-        for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
+        for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
             let stmts = parse_body(&format!("if x {} y {{\n\n}}", s));
             assert_eq!(stmts.len(), 1);
             if let Stmt::If(i) = &stmts[0] {
@@ -776,7 +778,7 @@ mod tests {
 
     #[test]
     fn if_statements_vars_and_literals() {
-        for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
+        for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
             let stmts = parse_body(&format!("if x {} 10 {{\n\n}}", s));
             assert_eq!(stmts.len(), 1);
             if let Stmt::If(i) = &stmts[0] {
@@ -804,7 +806,7 @@ mod tests {
         }
 
 
-        for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
+        for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
             let stmts = parse_body(&format!("if 10 {} x {{\n\n}}", s));
             assert_eq!(stmts.len(), 1);
             if let Stmt::If(i) = &stmts[0] {
@@ -837,7 +839,7 @@ mod tests {
 
     #[test]
     fn if_statements_with_else() {
-        for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
+        for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
             let stmts = parse_body(&format!("if 1 {} 2 {{\n\n}} else {{\n\n}}", s));
             assert_eq!(stmts.len(), 1);
             if let Stmt::If(i) = &stmts[0] {
@@ -866,7 +868,7 @@ mod tests {
 
     #[test]
     fn if_statements_with_elif_literals() {
-        for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
+        for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
             let stmts = parse_body(&format!("if 1 {} 2 {{\n\n}} elif 5 {} 3 {{\n\n}}", s, s));
             assert_eq!(stmts.len(), 1);
             if let Stmt::If(i) = &stmts[0] {
@@ -913,7 +915,7 @@ mod tests {
 
 
     fn if_statements_with_elif_vars() {
-        for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
+        for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
             let stmts = parse_body(&format!("if x {} y {{\n\n}} elif e {} a {{\n\n}}", s, s));
             assert_eq!(stmts.len(), 1);
             if let Stmt::If(i) = &stmts[0] {
@@ -960,7 +962,7 @@ mod tests {
 
 
     fn if_statements_with_elif_vars_and_literals() {
-        for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
+        for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
             let stmts = parse_body(&format!("if 2 {} y {{\n\n}} elif 5 {} a {{\n\n}}", s, s));
             assert_eq!(stmts.len(), 1);
             if let Stmt::If(i) = &stmts[0] {
@@ -1005,7 +1007,7 @@ mod tests {
 
 
 
-        for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
+        for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
             let stmts = parse_body(&format!("if x {} 6 {{\n\n}} elif a {} 9 {{\n\n}}", s, s));
             assert_eq!(stmts.len(), 1);
             if let Stmt::If(i) = &stmts[0] {
@@ -1056,7 +1058,7 @@ mod tests {
 
     #[test]
     fn if_statements_with_else_elif() {
-        for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
+        for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
             let stmts = parse_body(&format!("if 1 {} 2 {{\n\n}} elif 5 {} 3 {{\n\n}} else {{\n\n}}", s, s));
             assert_eq!(stmts.len(), 1);
             if let Stmt::If(i) = &stmts[0] {
@@ -1664,7 +1666,7 @@ mod tests {
 
     #[test]
     fn binop_arth_literals_only() {
-        for (b, s) in AllBinOpKindArth.iter().zip(BinOpKindArthSymbols.iter()) {
+        for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
             for i1 in 0..260 {
                 for i2 in 0..260 {
                     let stmts = parse_body(&format!("own x = {} {} {}", i1, s, i2));
@@ -1678,7 +1680,7 @@ mod tests {
                         } else {
                             panic!("Expected {:?}, instead we got {:?}", b, &v.value);
                         }
-                    }
+                    } else { panic!("Expected VarDecl, instead we got {:?}", &stmts[0]) }
                     
                 }
             }
@@ -1688,7 +1690,7 @@ mod tests {
 
     #[test]
     fn binop_arth_vars_only() {
-        for (b, s) in AllBinOpKindArth.iter().zip(BinOpKindArthSymbols.iter()) {
+        for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
             let stmts = parse_body(&format!("own x = a {} b", s));
             if let Stmt::VarDecl(v) = &stmts[0] {
                 if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
@@ -1700,13 +1702,13 @@ mod tests {
                 } else {
                     panic!("Expected {:?}, instead we got {:?}", b, &v.value);
                 }
-            }
+            } else { panic!("Expected VarDecl, instead we got {:?}", &stmts[0]) }
         }
     }
 
     #[test]
     fn binop_arth_vars_and_literals_mixed() {
-        for (b, s) in AllBinOpKindArth.iter().zip(BinOpKindArthSymbols.iter()) {
+        for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
             for i in 0..100000 {
                 let stmts = parse_body(&format!("own x = a {} {}", s, i));
                 if let Stmt::VarDecl(v) = &stmts[0] {
@@ -1719,12 +1721,12 @@ mod tests {
                     } else {
                         panic!("Expected {:?}, instead we got {:?}", b, &v.value);
                     }
-                }
+                } else { panic!("Expected VarDecl, instead we got {:?}", &stmts[0]) }
             }
         }
 
 
-        for (b, s) in AllBinOpKindArth.iter().zip(BinOpKindArthSymbols.iter()) {
+        for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
             for i in 0..100000 {
                 let stmts = parse_body(&format!("own x = {} {} a", i, s));
                 if let Stmt::VarDecl(v) = &stmts[0] {
@@ -1737,7 +1739,7 @@ mod tests {
                     } else {
                         panic!("Expected {:?}, instead we got {:?}", b, &v.value);
                     }
-                }
+                } else { panic!("Expected VarDecl, instead we got {:?}", &stmts[0]) }
             }
         }
     }
@@ -1755,14 +1757,16 @@ mod tests {
 
     #[test]
     fn binop_nested_via_parens() {
-        for (b, s) in AllBinOpKindArth.iter().zip(BinOpKindArthSymbols.iter()) {
+        for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
             let stmts = parse_body(&format!("own x = (1 + 2) {} 3", s));
             if let Stmt::VarDecl(v) = &stmts[0] {
                 if let Some(Expr::BinOp { op, left, .. }) = &v.value {
                     assert!(matches!(op, b));
                     assert!(matches!(**left, Expr::BinOp { .. }));
+                } else {
+                    panic!("Expected {:?}, instead we got {:?}", b, &v.value);
                 }
-            }
+            } else { panic!("Expected VarDecl, instead we got {:?}", &stmts[0]) }
         }
     }
 

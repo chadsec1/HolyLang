@@ -1,7 +1,7 @@
 use super::*;
 use crate::consts;
 use crate::tests_consts::{
-    AllBinOpKindArth, AllBinOpKindComp, BinOpKindArthSymbols, BinOpKindCompSymbols, ALL_TYPES_NO_ARR_NO_INFER
+    ALL_TYPES_NO_ARR_NO_INFER
 };
 
 #[cfg(test)]

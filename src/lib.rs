@@ -1,7 +1,9 @@
+
 pub mod parser;
 pub mod semantic;
 pub mod error;
 pub mod consts;
+#[cfg(test)]
 mod tests_consts;
 
 pub fn compile(source: &str) {
