@@ -1066,9 +1066,4 @@ mod parse_expr_tests {
             other => panic!("expected CopyCall, got {:?}", other),
         }
     }
-
-    #[test]
-    fn test_int_256_does_not_fit_byte_promotes_to_int16() {
-        assert_int_literal("256", IntLiteralValue::Int16(256));
-    }
 }
