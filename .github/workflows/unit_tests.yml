@@ -24,8 +24,17 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
+
+      - name: Cache cargo-tarpaulin
+        id: cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.cargo/bin/cargo-tarpaulin
+          key: cargo-tarpaulin-${{ runner.os }}
+
       - name: Install cargo-tarpaulin
         run: cargo install cargo-tarpaulin
+        if: steps.cache.outputs.cache-hit != 'true'
 
       - name: Run unit tests and generate tarpaulin report
         run: cargo tarpaulin --verbose --lib --out Xml --output-dir ./coverage
