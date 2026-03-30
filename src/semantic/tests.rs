@@ -1,6 +1,6 @@
 use super::*;
 use crate::parser::{
-    BinOpKind, VariableAssignment, 
+    BinOpKind, Param, Variable, VariableAssignment, 
     IfStmt, WhileStmt
 };
 
