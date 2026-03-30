@@ -118,22 +118,9 @@ pub fn resolve_binary_op_types_numeric(a: &Type, b: &Type, span: &Span) -> Resul
         (Float64, Float64) => Ok(Float64),
 
 
-        // If one side is Infer, prefer the other side if concrete
-        // 
-        // Perhaps it is wiser to panic here as a compiler bug ? It make no sense that any side is infer
-        // because it should've been assigned a type by now. 
-        //
-        /*
-        (Infer, t @ _) if *t != Infer => Ok(t.clone()),
-        (t @ _, Infer) if *t != Infer => Ok(t.clone()),
-
-        // both infer, we default to default to Int32
-        (Infer, Infer) => Ok(Int32),
-        */
-
         (t1 @ _, t2 @ _) if (*t1 == Infer || *t2 == Infer) => panic!("(Compiler bug) We received a numeric binary operation with at least one side being of type infer. A: {:?}, B: {:?}", a, b),
 
-        // mixed signed/unsigned or int/float combos -> error
+        // mixed signed/unsigned or int/float combos is not allowed
         _ => Err(HolyError::Semantic(format!("Type mismatch in binary operation: `{}` vs `{}` (line {} column {})", a, b, span.line, span.column))),
     }
 }
@@ -148,19 +135,19 @@ pub fn get_bigger_type_of_two_floatings(t_1: Type, t_2: Type) -> Type {
 
 
     let t_1_score = match t_1 {
-            Type::Float32 => 1,
-            Type::Float64 => 2,
+        Type::Float32 => 1,
+        Type::Float64 => 2,
 
-            other => panic!("Shouldve been a float, instead its {:?}", other)
+        other => panic!("Shouldve been a float, instead its {:?}", other)
     };
 
 
 
     let t_2_score = match t_2 {
-            Type::Float32 => 1,
-            Type::Float64 => 2,
+        Type::Float32 => 1,
+        Type::Float64 => 2,
 
-            other => panic!("Shouldve been a float, instead its {:?}", other)
+        other => panic!("Shouldve been a float, instead its {:?}", other)
     };
 
     if t_1_score > t_2_score {

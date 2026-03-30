@@ -8,7 +8,7 @@ use crate::parser::{
 };
 
 #[cfg(test)]
-mod tests;
+mod blackbox_tests;
 
 mod branch_analysis;
 mod infer;
