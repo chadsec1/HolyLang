@@ -148,6 +148,7 @@ mod test_block_always_terminates {
 
 
 
+    // Same as the above test, except else branch now contains Some() but is empty inside.
     #[test]
     fn empty_if_statement_branch_and_empty_else_branch() {
         let literals = get_all_literals_no_arr();
@@ -170,8 +171,8 @@ mod test_block_always_terminates {
     }
 
 
-    // Main if branch terminates via return, but it has no else branch therefore the block does not
-    // always terminate.
+    // Main if branch terminates via `return` statement, but it has no else branch 
+    // therefore the block does not always terminate.
     #[test]
     fn if_statement_main_branch_return_not_terminates() {
         let literals = get_all_literals_no_arr();
@@ -197,7 +198,133 @@ mod test_block_always_terminates {
 
 
 
-    // Same as the above test, but this terminates via break
+   
+    // else branch terminates via `return` statement, but main branch does not 
+    // terminate, therefore the block does not always terminate.
+    #[test]
+    fn if_statement_else_branch_return_not_terminates() {
+        let literals = get_all_literals_no_arr();
+
+        for l in literals {
+            let stmts: Vec<Stmt> = vec![
+                Stmt::If(IfStmt{
+                    condition: l.clone(),
+                    if_branch: vec![], 
+                    elif_branches: vec![],
+                    else_branch: Some(vec![
+                        make_return_stmt(vec![l])
+                    ]),
+                    span: span(),
+                })
+            ];
+
+            let result: bool = block_always_terminates(&stmts);
+            // Branch does not terminate
+            assert_eq!(result, false);
+        }
+    }
+
+
+
+    // elif branch terminates via `return` statement, but main branch and else does not 
+    // terminate, therefore the block does not always terminate.
+    #[test]
+    fn if_statement_elif_branch_return_not_terminates() {
+        let literals = get_all_literals_no_arr();
+
+        for l in literals {
+            let stmts: Vec<Stmt> = vec![
+                Stmt::If(IfStmt{
+                    condition: l.clone(),
+                    if_branch: vec![], 
+                    elif_branches: vec![(l.clone(), vec![
+                        make_return_stmt(vec![l])
+                    ])],
+                    else_branch: None,
+                    span: span(),
+                })
+            ];
+
+            let result: bool = block_always_terminates(&stmts);
+            // Branch does not terminate
+            assert_eq!(result, false);
+        }
+    }
+
+
+    // main and else branches terminates via `return` statement, but elif branches are not empty,
+    // and do not terminate, therefore the block does not always terminate.
+    #[test]
+    fn if_statement_main_branch_and_else_branch_return_not_terminates() {
+        let literals = get_all_literals_no_arr();
+
+        for l in literals {
+            let stmts: Vec<Stmt> = vec![
+                Stmt::If(IfStmt{
+                    condition: l.clone(),
+                    if_branch: vec![
+                        make_return_stmt(vec![l.clone()])
+                    ], 
+
+                    elif_branches: vec![(l.clone(), vec![])],
+                    else_branch: Some(vec![
+                        make_return_stmt(vec![l])
+                    ]),
+                    span: span(),
+                })
+            ];
+
+            let result: bool = block_always_terminates(&stmts);
+            // Branch does not terminate
+            assert_eq!(result, false);
+        }
+    }
+
+
+
+
+
+
+    // if statement main branch terminates via `return` statement, and so does the else branch,
+    // and there are no elif branches, therefore the block always terminates.
+    #[test]
+    fn if_statement_main_and_else_branch_return_terminates() {
+        let literals = get_all_literals_no_arr();
+
+        for l1 in &literals {
+            for l2 in &literals {
+                let stmts: Vec<Stmt> = vec![
+                    Stmt::If(IfStmt{
+                        condition: l1.clone(),
+                        if_branch: vec![
+                            make_return_stmt(vec![l1.clone()])
+                        ],
+                        elif_branches: vec![],
+                        else_branch: Some(vec![
+                            make_return_stmt(vec![l2.clone()])
+                        ]),
+                        span: span(),
+                    })
+                ];
+
+                let result: bool = block_always_terminates(&stmts);
+                // Branch does terminate
+                assert_eq!(result, true);
+            }
+        }
+    }
+
+
+    
+
+
+
+
+
+
+
+    // Same as the above tests, but these variants terminates via a `break` statement instead.
+    //
     #[test]
     fn if_statement_main_branch_break_not_terminates() {
         let literals = get_all_literals_no_arr();
@@ -221,31 +348,6 @@ mod test_block_always_terminates {
         }
     }
 
-
-    // else branch terminates via return, but main branch does not terminate, therefore the block does not
-    // always terminate.
-    #[test]
-    fn if_statement_else_branch_return_not_terminates() {
-        let literals = get_all_literals_no_arr();
-
-        for l in literals {
-            let stmts: Vec<Stmt> = vec![
-                Stmt::If(IfStmt{
-                    condition: l.clone(),
-                    if_branch: vec![], 
-                    elif_branches: vec![],
-                    else_branch: Some(vec![
-                        make_return_stmt(vec![l])
-                    ]),
-                    span: span(),
-                })
-            ];
-
-            let result: bool = block_always_terminates(&stmts);
-            // Branch does not terminate
-            assert_eq!(result, false);
-        }
-    }
 
 
 }
