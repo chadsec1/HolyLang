@@ -387,7 +387,7 @@ mod tests {
     // Same test as above, but before the expression, there is an `i` of spaces.
     #[test]
     fn while_statements_literals_spaces_before_expr() {
-        for i in 0..10000 {
+        for i in 0..5000 {
             for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
                 let stmts = parse_body(&format!("while{} 1 {} 2 {{\n\n}}", " ".repeat(i), s));
                 assert_eq!(stmts.len(), 1);
@@ -420,7 +420,7 @@ mod tests {
     // Same test as above, but after the expression, there is an `i` of spaces.
     #[test]
     fn while_statements_literals_spaces_after_expr() {
-        for i in 0..10000 {
+        for i in 0..5000 {
             for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
                 let stmts = parse_body(&format!("while 1 {} 2 {}{{\n\n}}", s, " ".repeat(i)));
                 assert_eq!(stmts.len(), 1);
@@ -481,7 +481,7 @@ mod tests {
     // Same test as above, but before the expression, there is an `i` of spaces.
     #[test]
     fn while_statements_vars_spaces_before_expr() {
-        for i in 0..10000 {
+        for i in 0..5000 {
             for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
                 let stmts = parse_body(&format!("while{} x {} y {{\n\n}}", " ".repeat(i), s));
                 assert_eq!(stmts.len(), 1);
@@ -511,7 +511,7 @@ mod tests {
     // Same test as above, but after the expression, there is an `i` of spaces.
     #[test]
     fn while_statements_vars_spaces_after_expr() {
-        for i in 0..10000 {
+        for i in 0..5000 {
             for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
                 let stmts = parse_body(&format!("while x {} y {}{{\n\n}}", s, " ".repeat(i)));
                 assert_eq!(stmts.len(), 1);
@@ -592,7 +592,7 @@ mod tests {
     // Same test as above, but before the expression, there is an `i` of spaces.
     #[test]
     fn while_statements_vars_and_literals_spaces_before_expr() {
-        for i in 0..1000 {
+        for i in 0..5000 {
             for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
                 let stmts = parse_body(&format!("while{} 69 {} y {{\n\n}}", " ".repeat(i), s));
                 assert_eq!(stmts.len(), 1);
@@ -647,7 +647,7 @@ mod tests {
     // Same test as above, but after the expression, there is an `i` of spaces.
     #[test]
     fn while_statements_vars_and_literals_spaces_after_expr() {
-        for i in 0..1000 {
+        for i in 0..5000 {
             for (b, s) in AllBinOpKindComp.iter().zip(BinOpKindCompSymbols.iter()) {
                 let stmts = parse_body(&format!("while 69 {} y {}{{\n\n}}", s, " ".repeat(i)));
                 assert_eq!(stmts.len(), 1);

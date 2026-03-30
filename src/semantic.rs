@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::error::HolyError;
 use crate::parser::{
-    AST, Expr, Function, Param, Stmt, Type, Variable, Span, IntLiteralValue, FloatLiteralValue, UnaryOpKind, BinOpKind,
+    AST, Expr, Function, Stmt, Type, Span, IntLiteralValue, FloatLiteralValue, UnaryOpKind, BinOpKind,
 
     validate_identifier_name
 };
@@ -121,9 +121,9 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
     // because dead code analysis should not let dead code pass.
     // last statement should be always be the one actualy always returning.
     //
-    if let Some(ret_ty) = &func.return_type {
+    if func.return_type.is_some() {
         let last_func_stmt = func.body.last();
-        branch_analysis::return_branch_analysis(&func.clone(), last_func_stmt.cloned(), func.span, false, false)?;
+        branch_analysis::return_branch_analysis(&func.clone(), last_func_stmt.cloned(), false, false)?;
     }
 
     Ok(())
@@ -235,7 +235,7 @@ fn check_stmts(
                 }
 
                 match var.value.clone().unwrap() {
-                    Expr::ArrayLiteral{elements: elements, array_ty: _, span: _} => {
+                    Expr::ArrayLiteral{elements, array_ty: _, span: _} => {
                         value_len = Some(elements.len())
                     }
 
@@ -401,7 +401,7 @@ fn check_stmts(
                 }
 
                 match assign.value.clone() {
-                    Expr::ArrayLiteral{elements: elements, array_ty: _, span: _} => {
+                    Expr::ArrayLiteral{elements, array_ty: _, span: _} => {
                         value_len = Some(elements.len());
                     }
 
@@ -496,7 +496,7 @@ fn check_stmts(
 
                 for expr in expr_vec.iter_mut() {
                     match expr {
-                        Expr::Var { name: name, span: span} => {
+                        Expr::Var { name, span} => {
                             if var_names_to_lock.contains(name) {
                                 return Err(HolyError::Semantic(format!(
                                     "Lock arguments have duplicated variable `{}` (line {} column {})",
@@ -556,7 +556,7 @@ fn check_stmts(
 
                 for expr in expr_vec.iter_mut() {
                     match expr {
-                        Expr::Var { name: name, span: span} => {
+                        Expr::Var { name, span} => {
                             if var_names_to_unlock.contains(name) {
                                 return Err(HolyError::Semantic(format!(
                                     "Unlock arguments have duplicated variable `{}` (line {} column {})",
@@ -650,10 +650,10 @@ fn check_stmts(
             }
 
 
-            Stmt::For(forStmt) => {
-                let expr_ty = infer::infer_expr_type(&mut forStmt.value, locals, fun_sigs, None)?;
+            Stmt::For(for_stmt) => {
+                let expr_ty = infer::infer_expr_type(&mut for_stmt.value, locals, fun_sigs, None)?;
 
-                if (!matches!(expr_ty, Type::Array(_))) && (!matches!(forStmt.value, Expr::RangeCall{ .. })) {
+                if (!matches!(expr_ty, Type::Array(_))) && (!matches!(for_stmt.value, Expr::RangeCall{ .. })) {
                     return Err(HolyError::Semantic(format!(
                         "For loop statement require an expression to be evaulatable to any `Array` type, or `range(expr1, expr2)`, instead we got `{}` (line {} column {})",
                         expr_ty, stmt_span.line, stmt_span.column,
@@ -661,10 +661,10 @@ fn check_stmts(
                 }
 
 
-                if let Some(_) = locals.get(&forStmt.holder_name) {
+                if let Some(_) = locals.get(&for_stmt.holder_name) {
                     return Err(HolyError::Semantic(format!(
                         "Cannot use variable name `{}` in for loop statement as it is already declared. (line {} column {})",
-                        forStmt.holder_name, stmt_span.line, stmt_span.column,
+                        for_stmt.holder_name, stmt_span.line, stmt_span.column,
                     )));
 
                 }
@@ -676,7 +676,7 @@ fn check_stmts(
                 // not exist in the AST, but we need it in locals to make analysis work.
                 //
 
-                let mut decided_ty: Type;
+                let decided_ty: Type;
 
                 if let Type::Array(inner_ty) = expr_ty {
                     decided_ty = *inner_ty;
@@ -687,7 +687,7 @@ fn check_stmts(
                 } else {
                     panic!(
                         "(Compiler bug) Expected for loop expression to either be an array or an integer (more precisely an integer cuz programmer used range()), instead we got: {:?} {:?}", 
-                        forStmt.value, expr_ty);
+                        for_stmt.value, expr_ty);
                 }
 
 
@@ -698,7 +698,7 @@ fn check_stmts(
                 //      for literals at compile time.
                 //
                 locals_clone.insert(
-                    forStmt.holder_name.clone(),
+                    for_stmt.holder_name.clone(),
                     VarInfo {
                         ty: decided_ty,
                         value: None,
@@ -719,16 +719,16 @@ fn check_stmts(
 
                 // We also add holder_name to the list to prevent programmer overshadowing the
                 // variable within the loop.
-                upstream.push(forStmt.holder_name.clone());
+                upstream.push(for_stmt.holder_name.clone());
 
                     
-                check_stmts(func.clone(), &mut forStmt.branch, &mut locals_clone, upstream.clone(), fun_sigs, true)?;
+                check_stmts(func.clone(), &mut for_stmt.branch, &mut locals_clone, upstream.clone(), fun_sigs, true)?;
                 update_local_assignments_from_clone(locals, locals_clone);
             }
 
 
-            Stmt::While(whileStmt) => {
-                let expr_ty = infer::infer_expr_type(&mut whileStmt.condition, locals, fun_sigs, Some(Type::Bool))?;
+            Stmt::While(while_stmt) => {
+                let expr_ty = infer::infer_expr_type(&mut while_stmt.condition, locals, fun_sigs, Some(Type::Bool))?;
                 
                 if expr_ty != Type::Bool {
                     return Err(HolyError::Semantic(format!(
@@ -745,12 +745,12 @@ fn check_stmts(
                 }
                     
                 let mut locals_clone = locals.clone();
-                check_stmts(func.clone(), &mut whileStmt.branch, &mut locals_clone, upstream.clone(), fun_sigs, true)?;
+                check_stmts(func.clone(), &mut while_stmt.branch, &mut locals_clone, upstream.clone(), fun_sigs, true)?;
                 update_local_assignments_from_clone(locals, locals_clone);
                 
             }
 
-            Stmt::Infinite(infiniteStmt) => {
+            Stmt::Infinite(infinite_stmt) => {
                 // This gets all upstream variable names, and passes it to check stmts to ensure
                 // you cannot overshadow them.
                 let mut upstream = upstream_var_names.clone();
@@ -759,34 +759,34 @@ fn check_stmts(
                 }
                     
                 let mut locals_clone = locals.clone();
-                check_stmts(func.clone(), &mut infiniteStmt.branch, &mut locals_clone, upstream.clone(), fun_sigs, true)?;
+                check_stmts(func.clone(), &mut infinite_stmt.branch, &mut locals_clone, upstream.clone(), fun_sigs, true)?;
                 update_local_assignments_from_clone(locals, locals_clone);
                 
             }
 
 
 
-            Stmt::Break(breakStmt) => {
+            Stmt::Break(break_stmt) => {
                 if !in_loop {
                     return Err(HolyError::Semantic(format!(
                         "Break can only be used in loops! (line {} column {})",
-                        stmt_span.line, stmt_span.column,
+                        break_stmt.span.line, break_stmt.span.column,
                     )));
                 }
 
             }
 
-            Stmt::Continue(continueStmt) => {
+            Stmt::Continue(continue_stmt) => {
                 if !in_loop {
                     return Err(HolyError::Semantic(format!(
                         "Continue can only be used in loops! (line {} column {})",
-                        stmt_span.line, stmt_span.column,
+                        continue_stmt.span.line, continue_stmt.span.column,
                     )));
                 }
             }
 
-            Stmt::If(ifStmt) => {
-                let main_expr_ty = infer::infer_expr_type(&mut ifStmt.condition, locals, fun_sigs, Some(Type::Bool))?;
+            Stmt::If(if_stmt) => {
+                let main_expr_ty = infer::infer_expr_type(&mut if_stmt.condition, locals, fun_sigs, Some(Type::Bool))?;
                 
                 if main_expr_ty != Type::Bool {
                     return Err(HolyError::Semantic(format!(
@@ -810,11 +810,11 @@ fn check_stmts(
                 let mut main_locals_clone = locals.clone();
                 let mut else_locals_clone = locals.clone();
 
-                check_stmts(func.clone(), &mut ifStmt.if_branch, &mut main_locals_clone, upstream.clone(), fun_sigs, in_loop)?;
+                check_stmts(func.clone(), &mut if_stmt.if_branch, &mut main_locals_clone, upstream.clone(), fun_sigs, in_loop)?;
                 update_local_assignments_from_clone(locals, main_locals_clone);
                 
 
-                for s in &mut ifStmt.elif_branches {
+                for s in &mut if_stmt.elif_branches {
                     let elif_expr_ty = infer::infer_expr_type(&mut s.0, locals, fun_sigs, Some(Type::Bool))?; 
 
                     if elif_expr_ty != Type::Bool {
@@ -830,7 +830,7 @@ fn check_stmts(
                     update_local_assignments_from_clone(locals, elif_locals_clone);
                 }
 
-                if let Some(else_stmts) = ifStmt.else_branch.as_mut() {
+                if let Some(else_stmts) = if_stmt.else_branch.as_mut() {
                     check_stmts(func.clone(), else_stmts, &mut else_locals_clone, upstream, fun_sigs, in_loop)?;
                     update_local_assignments_from_clone(locals, else_locals_clone);
                 }

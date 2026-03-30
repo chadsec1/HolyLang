@@ -1,5 +1,5 @@
 use crate::parser::{
-    BinOpKind, Type, Expr, IntLiteralValue, FloatLiteralValue, Span
+    BinOpKind, Type
 };
 
 // Order of these consts matters for tests.

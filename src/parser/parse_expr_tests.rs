@@ -993,7 +993,7 @@ mod parse_expr_tests {
 
     #[test]
     fn test_format_only_escaped_braces_no_placeholder_errors() {
-        // "{{x}}" is purely escaped — no actual placeholder
+        // "{{x}}" is purely escaped, with no actual placeholder
         assert_parse_err(r#"format("{{x}}")"#);
     }
 

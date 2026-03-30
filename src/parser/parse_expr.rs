@@ -356,7 +356,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
     } else {
         // Check to see if parsing as float failed due to it having more than one dot
         let cleaned_s = s.replace(".", "");
-        if let Ok(f) = cleaned_s.parse::<f64>() {
+        if let Ok(_) = cleaned_s.parse::<f64>() {
             return Err(HolyError::Parse(format!(
                 "Floating point literal `{}` must have only one `.` (line {} column {})",
                 s, span.line, span.column

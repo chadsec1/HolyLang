@@ -68,7 +68,7 @@ pub fn infer_expr_type(
     match expr {
 
         // Note: If infer hint is set, we alter the value to fit the hint, if we can.
-        Expr::IntLiteral { value: value, span: span } => {
+        Expr::IntLiteral { value, span } => {
             if infer_hint.is_some() {
                 let infer_hint = infer_hint.unwrap();
                 match infer_hint {
@@ -82,7 +82,7 @@ pub fn infer_expr_type(
             }
             Ok(value.get_type())
         }
-        Expr::FloatLiteral { value: value, span: span } => {
+        Expr::FloatLiteral { value, span } => {
             if infer_hint.is_some() {
                 match infer_hint.unwrap() {
                     Type::Float32 => {
@@ -278,7 +278,7 @@ pub fn infer_expr_type(
                     )));
             }
         }
-        Expr::Var{name: name, span: span} => {
+        Expr::Var{name, span} => {
             if let Some(info) = locals.get(name) {
                 if info.moved {
                     return Err(HolyError::Semantic(format!(
@@ -302,8 +302,8 @@ pub fn infer_expr_type(
         }
 
 
-        Expr::UnaryOp{ op: op, expr: e, span: span } => {
-            let ety = infer_expr_type(e, locals, fun_sigs, infer_hint)?;
+        Expr::UnaryOp{ op, expr, span } => {
+            let ety = infer_expr_type(expr, locals, fun_sigs, infer_hint)?;
             
             // Ensure that no negate unary operation is allowed on an unsigned integer.
             if *op == UnaryOpKind::Negate {
@@ -316,7 +316,7 @@ pub fn infer_expr_type(
         
         }
 
-        Expr::BinOp { left: left, op: op, right: right, span: span } => {
+        Expr::BinOp { left, op, right, span } => {
             // infer both sides and try to convert to each other if possible (for integers and
             // floats literals only)
             //
@@ -384,7 +384,7 @@ pub fn infer_expr_type(
             Ok(start_ty)
         }
 
-        Expr::CopyCall { expr: e, span: span } => {
+        Expr::CopyCall { expr: e, span } => {
 
             // Catch the "makes no sense" calls (like nested copying, or copying of a literal,  or
             // array access, or a binary op where left and right are both literals)
@@ -420,7 +420,7 @@ pub fn infer_expr_type(
 
         }
 
-        Expr::FormatCall { template: template, expressions: exprs_vec, span: span} => {
+        Expr::FormatCall { template, expressions: exprs_vec, span: _} => {
 
             if !template.contains("{}") {
                 panic!("(Compielr bug) We got a FormatCall Without any template placeholders, the parser should've not allowed this. template: `{:?}`, expressions: `{:?}`", template, exprs_vec);
@@ -463,7 +463,7 @@ pub fn infer_expr_type(
             Ok(Type::String)
 
         }
-        Expr::Call { name: name, args: args, span: span } => {
+        Expr::Call { name, args, span } => {
             let ret_opt = check_call(name, args, locals, fun_sigs, true, *span)?;
             match ret_opt {
                 Some(ret_vec) => {
@@ -544,7 +544,7 @@ pub fn check_usize_literal_to_src(expr: &Expr, len: usize, span: Span, locals: H
         // If it's not a literal, like, a function call, etc. We just assume it's within range
         // Rust will insert checks in the compiled binary that'd panic if you try to go
         // out-of-bounds.
-        other => Ok(())
+        _ => Ok(())
             
     }
 }
@@ -711,7 +711,7 @@ pub fn infer_integer_literal_helper(infer_ty: Type, value: IntLiteralValue, span
         }
 
         other => {
-            panic!("(Compiler bug) You must ensure type is an integer literal before passing it to this function");
+            panic!("(Compiler bug) You must ensure type is an integer literal before passing it to this function. we got: {:?}", other);
         }
     }
 }
@@ -721,7 +721,7 @@ pub fn infer_integer_literal_helper(infer_ty: Type, value: IntLiteralValue, span
 // expr is the value literal its self
 pub fn assign_infer_type_to_expr_value(expr: &mut Expr, ty: Type) -> Result<(), HolyError> {
     match expr {
-        Expr::IntLiteral { value: value, span: span } => {
+        Expr::IntLiteral { value, span } => {
             match ty {
                 Type::Int8 | Type::Int16 | Type::Int32 | Type::Int64 | Type::Int128 | Type::Byte | Type::Uint16 | Type::Uint32 | Type::Uint64 | Type::Uint128 | Type::Usize => {
                     *value = infer_integer_literal_helper(ty, *value, *span)?;
@@ -734,7 +734,7 @@ pub fn assign_infer_type_to_expr_value(expr: &mut Expr, ty: Type) -> Result<(), 
 
             return Ok(());
         }
-        Expr::FloatLiteral { value: value, span: span } => {
+        Expr::FloatLiteral { value, span } => {
             match ty {
                 Type::Float32 => {
                     if let FloatLiteralValue::Float64(_) = value {

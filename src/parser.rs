@@ -107,14 +107,14 @@ impl IntLiteralValue {
             IntLiteralValue::Int64(_) => Type::Int64,
             IntLiteralValue::Int128(_) => Type::Int128,
 
-            IntLiteralValue::Byte(v) => Type::Byte,
+            IntLiteralValue::Byte(_) => Type::Byte,
 
-            IntLiteralValue::Uint16(v) => Type::Uint16,
-            IntLiteralValue::Uint32(v) => Type::Uint32,
-            IntLiteralValue::Uint64(v) => Type::Uint64,
-            IntLiteralValue::Uint128(v) => Type::Uint128,
+            IntLiteralValue::Uint16(_) => Type::Uint16,
+            IntLiteralValue::Uint32(_) => Type::Uint32,
+            IntLiteralValue::Uint64(_) => Type::Uint64,
+            IntLiteralValue::Uint128(_) => Type::Uint128,
             
-            IntLiteralValue::Usize(v) => Type::Usize,
+            IntLiteralValue::Usize(_) => Type::Usize,
 
         }
     }
@@ -759,12 +759,14 @@ fn parse_for_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), Ho
 
 
 
-    let mut expr: Expr;
-
-
-    // A very ugly hack, to only allow "RangeCall" expression to be used within for loop statements.
+    let expr: Expr;
+    
+    // A hack, to only allow "RangeCall" expression to be used within for loop statements.
     // I would love to shove this in parse_expr, but, if I do, programmer would be able to assign
     // `rangecall` to any variable. 
+    // I could allow that and catch it in semantic phase, but, rangecall can only be used within
+    // for loops, so it's part of the syntax structure, not just semantics.
+    //
     //
     if parts[1].starts_with("range(") && parts[1].ends_with(")") {
         let range_str = parts[1]["range(".len()..].strip_suffix(")").unwrap();
@@ -788,7 +790,7 @@ fn parse_for_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), Ho
         expr = parse_expr::parse_expr(parts[1], span)?;
     }
 
-    let (branch, mut next_i) = parse_block(lines, start_i + 1)?;
+    let (branch, next_i) = parse_block(lines, start_i + 1)?;
 
     Ok((
         Stmt::For(ForStmt {
@@ -814,7 +816,7 @@ fn parse_infinite_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize
         )));
     }
 
-    let (branch, mut next_i) = parse_block(lines, start_i + 1)?;
+    let (branch, next_i) = parse_block(lines, start_i + 1)?;
 
     Ok((
         Stmt::Infinite(InfiniteStmt {
@@ -849,7 +851,7 @@ fn parse_while_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), 
     }
 
     let condition = parse_expr::parse_expr(cond_str, span)?;
-    let (branch, mut next_i) = parse_block(lines, start_i + 1)?;
+    let (branch, next_i) = parse_block(lines, start_i + 1)?;
 
     Ok((
         Stmt::While(WhileStmt {
@@ -866,7 +868,6 @@ fn parse_while_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), 
 fn parse_stmt_at(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), HolyError> {
     let raw = lines[start_i];
     let line = helpers::strip_inline_comment(raw).trim().to_string();
-    let span = Span { line: start_i + 1, column: 0 };
 
     if line.starts_with("infinite ") {
         return parse_infinite_stmt(lines, start_i);
@@ -1157,7 +1158,7 @@ fn parse_typed_array_literal(s: &str, span: Span) -> Result<Expr, HolyError> {
         }
 
         // If its not a type constructor, we gonna assume it's an expression (like an array access)
-        Err(e) => {     
+        Err(_) => {     
             let expr = parse_expr::parse_expr(s, span)?;
 
             Ok(expr)
