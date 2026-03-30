@@ -2,6 +2,7 @@ use super::*;
 
 use crate::tests_consts::{
     ALL_TYPES_NO_ARR,
+    ALL_TYPES_NO_ARR_NO_INFER,
     ALL_TYPES_NO_ARR_NO_FLOAT
 };
 
@@ -386,7 +387,7 @@ mod helpers_tests {
         assign_default_value_for_type(&mut expr, &Type::String, dummy_span()).unwrap();
         match expr.unwrap() {
             Expr::StringLiteral { value, .. } => {
-                assert_eq!(value, "", "Default string must be empty, instead we got: {:?}", value);
+                assert_eq!(value, "", "Default string must be empty");
             }
             other => panic!("Expected StringLiteral, got {:?}", other),
         }
@@ -394,31 +395,36 @@ mod helpers_tests {
 
     #[test]
     fn default_value_array_is_empty_with_correct_inner_type() {
-        let mut expr: Option<Expr> = None;
-        let ty = Type::Array(Box::new(Type::Int32));
-        assign_default_value_for_type(&mut expr, &ty, dummy_span()).unwrap();
-        match expr.unwrap() {
-            Expr::ArrayLiteral { elements, array_ty, .. } => {
-                assert!(elements.is_empty(), "Default array must be empty");
-                assert_eq!(array_ty, Type::Int32, "Inner type must be preserved");
+        for t in ALL_TYPES_NO_ARR_NO_INFER {
+            let mut expr: Option<Expr> = None;
+            let arr_t = Type::Array(Box::new(t.clone()));
+            assign_default_value_for_type(&mut expr, &arr_t, dummy_span()).unwrap();
+            match expr.unwrap() {
+                Expr::ArrayLiteral { elements, array_ty, .. } => {
+                    assert!(elements.is_empty(), "Default array must be empty");
+                    assert_eq!(array_ty, t.clone(), "Inner type must be preserved");
+                }
+                other => panic!("Expected ArrayLiteral, got {:?}", other),
             }
-            other => panic!("Expected ArrayLiteral, got {:?}", other),
+            
         }
     }
 
     // Nested array: inner type must also be preserved correctly
     #[test]
     fn default_value_nested_array_preserves_inner_type() {
-        let mut expr: Option<Expr> = None;
-        let ty = Type::Array(Box::new(Type::Array(Box::new(Type::Float64))));
-        assign_default_value_for_type(&mut expr, &ty, dummy_span()).unwrap();
-        match expr.unwrap() {
-            Expr::ArrayLiteral { elements, array_ty, .. } => {
-                assert!(elements.is_empty());
-                // inner type should be Array(Float64)
-                assert_eq!(array_ty, Type::Array(Box::new(Type::Float64)));
+        for t in ALL_TYPES_NO_ARR_NO_INFER {
+            let mut expr: Option<Expr> = None;
+            let arr_t = Type::Array(Box::new(Type::Array(Box::new(t.clone()))));
+            assign_default_value_for_type(&mut expr, &arr_t, dummy_span()).unwrap();
+            match expr.unwrap() {
+                Expr::ArrayLiteral { elements, array_ty, .. } => {
+                    assert!(elements.is_empty());
+                    // inner type should be Array(Float64)
+                    assert_eq!(array_ty, Type::Array(Box::new(t.clone())));
+                }
+                other => panic!("Expected nested ArrayLiteral, got {:?}", other),
             }
-            other => panic!("Expected nested ArrayLiteral, got {:?}", other),
         }
     }
 
@@ -438,7 +444,7 @@ mod helpers_tests {
         }
     }
 
-    // Infer must panic — this is a compiler bug guard
+    // Infer must panic, this is a compiler bug(s) guard
     #[test]
     #[should_panic(expected = "Compiler bug")]
     fn default_value_panics_on_infer() {

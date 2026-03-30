@@ -80,6 +80,20 @@ impl Type {
     }
 
 
+    pub fn get_array_inner_most_type(&self) -> &Type {
+        if !matches!(self, Type::Array(_)) {
+            panic!("(Compiler bug) Do not call get_inner_most_type unless you are sure Type is an array. Self: {:?}", self);
+        }
+        let mut current = self;
+
+        while let Type::Array(inner) = current {
+            current = inner;
+        }
+
+        current
+    }
+
+
 }
 
 

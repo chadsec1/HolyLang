@@ -9,12 +9,28 @@ use super::*;
 // ty is the expression holder type (i.e. variable type)
 // expr is the value literal its self
 pub fn assign_default_value_for_type(expr: &mut Option<Expr>, ty: &Type, span: Span) -> Result<(), HolyError> {
+        
+
+    // Guards to ensure that I dont do mistakes and call this function on things I am not supposed to.
+    // And to also catch compiler bugs.
+    //
     if *ty == Type::Infer {
-        // To ensure that I dont do mistakes and call this function on things I am not supposed to.
 
         panic!("(Compiler bug) Cannot assign default value for type `{}` because the expression holder type is Infer. Expression: {:?}\nDont call this on things of type Infer.", 
                         ty, expr);
     }
+        
+    if matches!(*ty, Type::Array(_)) {
+        let inner_most_type = ty.get_array_inner_most_type();
+
+        if *inner_most_type == Type::Infer {
+            panic!("(Compiler bug) Cannot assign default value for type `{}` because inner most type is Infer. Expression: {:?}.", 
+                        ty, expr);
+        }
+
+    }
+
+
     
     match ty {
         Type::Int8 => {
