@@ -1,4 +1,4 @@
-name: Unit Tests with codacy coverage
+name: Unit Tests
 
 permissions:
   contents: read
