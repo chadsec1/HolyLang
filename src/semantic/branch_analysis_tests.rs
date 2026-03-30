@@ -251,6 +251,39 @@ mod test_block_always_terminates {
         }
     }
 
+    // main and elif branch terminates via `return` statement, but else branch does not 
+    // terminate, therefore the block does not always terminate.
+    #[test]
+    fn if_statement_main_and_elif_branch_return_not_terminates() {
+        let literals = get_all_literals_no_arr();
+
+        for l1 in &literals {
+            for l2 in &literals {
+                let stmts: Vec<Stmt> = vec![
+                    Stmt::If(IfStmt{
+                        condition: l1.clone(),
+                        if_branch: vec![
+                            make_return_stmt(vec![l1.clone()])
+                        ], 
+                        elif_branches: vec![(l1.clone(), vec![
+                            make_return_stmt(vec![l2.clone()])
+                        ])],
+                        else_branch: None,
+                        span: span(),
+                    })
+                ];
+
+                let result: bool = block_always_terminates(&stmts);
+                // Branch does not terminate
+                assert_eq!(result, false);
+            }
+        }
+    }
+
+
+
+
+
 
     // main and else branches terminates via `return` statement, but elif branches are not empty,
     // and do not terminate, therefore the block does not always terminate.
@@ -279,9 +312,6 @@ mod test_block_always_terminates {
             assert_eq!(result, false);
         }
     }
-
-
-
 
 
 
