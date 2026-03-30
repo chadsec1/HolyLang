@@ -30,6 +30,10 @@ pub fn assign_default_value_for_type(expr: &mut Option<Expr>, ty: &Type, span: S
     }
 
 
+    // Reason why we don't just take a &mut Expr, is because variables values are defined as
+    // Option<Expr>.
+    //
+    // So this guard statement will be fine and will catch most misuse of this function.
     if expr.is_some() {
         panic!(
             "(Compiler bug) Cannot assign default value for an expression that already has a value. Expression: {:?}\nType: {:?}",

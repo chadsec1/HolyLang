@@ -14,6 +14,21 @@ use crate::semantic::helpers::{
     type_compatible
 };
 
+
+fn get_int_literals_value() -> [IntLiteralValue; 11] {
+    let literals = [
+        IntLiteralValue::Int8(0),   IntLiteralValue::Int16(0),
+        IntLiteralValue::Int32(0),  IntLiteralValue::Int64(0),
+        IntLiteralValue::Int128(0), IntLiteralValue::Byte(0),
+        IntLiteralValue::Uint16(0), IntLiteralValue::Uint32(0),
+        IntLiteralValue::Uint64(0), IntLiteralValue::Uint128(0),
+        IntLiteralValue::Usize(0)
+    ];
+
+    return literals;
+}
+
+
 #[cfg(test)]
 mod type_tests {
     use super::*;
@@ -107,19 +122,8 @@ mod type_tests {
     // get_type must not return Infer, ever.
     #[test]
     fn int_literal_get_type_never_returns_infer() {
-        let variants = vec![
-            IntLiteralValue::Int8(0),
-            IntLiteralValue::Int16(0),
-            IntLiteralValue::Int32(0),
-            IntLiteralValue::Int64(0),
-            IntLiteralValue::Int128(0),
-            IntLiteralValue::Byte(0),
-            IntLiteralValue::Uint16(0),
-            IntLiteralValue::Uint32(0),
-            IntLiteralValue::Uint64(0),
-            IntLiteralValue::Uint128(0),
-            IntLiteralValue::Usize(0),
-        ];
+        let variants = get_int_literals_value();
+
         for v in variants {
             assert_ne!(v.get_type(), Type::Infer, "{:?}.get_type() returned Infer", v);
         }
@@ -153,14 +157,7 @@ mod type_tests {
         let signed_types   = [Type::Int8, Type::Int16, Type::Int32, Type::Int64, Type::Int128];
         let unsigned_types = [Type::Byte, Type::Uint16, Type::Uint32, Type::Uint64, Type::Uint128, Type::Usize];
 
-        let variants = vec![
-            IntLiteralValue::Int8(0),   IntLiteralValue::Int16(0),
-            IntLiteralValue::Int32(0),  IntLiteralValue::Int64(0),
-            IntLiteralValue::Int128(0), IntLiteralValue::Byte(0),
-            IntLiteralValue::Uint16(0), IntLiteralValue::Uint32(0),
-            IntLiteralValue::Uint64(0), IntLiteralValue::Uint128(0),
-            IntLiteralValue::Usize(0),
-        ];
+        let variants = get_int_literals_value();
 
         for v in variants {
             let ty = v.get_type();
@@ -606,9 +603,7 @@ mod helpers_tests {
         let _ = resolve_binary_op_types_numeric(&Type::Infer, &Type::Infer, &dummy_span());
     }
 
-    // -------------------------------------------------------------------------
     // get_bigger_type_of_two_floatings
-    // -------------------------------------------------------------------------
 
     #[test]
     fn bigger_float_float64_beats_float32() {
@@ -641,9 +636,7 @@ mod helpers_tests {
         get_bigger_type_of_two_floatings(Type::Int32, Type::Int64);
     }
 
-    // -------------------------------------------------------------------------
     // get_bigger_type_of_two_integers
-    // -------------------------------------------------------------------------
 
     #[test]
     fn bigger_int_larger_signed_wins() {
@@ -669,7 +662,7 @@ mod helpers_tests {
         assert_eq!(get_bigger_type_of_two_integers(Type::Usize,   Type::Usize),   Type::Usize);
     }
 
-    // Usize scores 8 — same as Uint64. When scores tie, t_2 wins (falls through).
+    // Usize scores 8, same as Uint64. When scores tie, t_2 wins (falls through).
     // This documents current behavior so a future change to the scoring will be caught.
     #[test]
     fn bigger_int_usize_vs_uint64_tie_behavior_is_documented() {
