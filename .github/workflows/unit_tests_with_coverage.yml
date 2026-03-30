@@ -1,10 +1,9 @@
-name: Coverage
+name: Unit Tests with codacy coverage
 
 permissions:
   contents: read
   issues: read
   pull-requests: read
-
 
 on:
   push:
@@ -14,12 +13,13 @@ on:
     branches: [ "main" ]
 
 
-
 jobs:
-  coverage:
+  unit_tests:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout repo
+        uses: actions/checkout@v6
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -27,11 +27,14 @@ jobs:
       - name: Install cargo-tarpaulin
         run: cargo install cargo-tarpaulin
 
-      - name: Generate coverage report
-        run: cargo tarpaulin --out Xml --output-dir ./coverage
+      - name: Run unit tests and generate tarpaulin report
+        run: cargo tarpaulin --lib --out Xml --output-dir ./coverage
 
+    
       - name: Upload to Codacy
         uses: codacy/codacy-coverage-reporter-action@v1.3.0
         with:
           project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
           coverage-reports: coverage/cobertura.xml
+
+
