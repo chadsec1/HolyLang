@@ -118,7 +118,7 @@ pub fn dead_code_analysis(block: &Vec<Stmt>) -> Result<(), HolyError> {
 
 /// Recursive helper that tells us if a block of code terminates or not
 /// Like if it returns or breaks, then it terminates. 
-fn block_always_terminates(block: &Vec<Stmt>) -> bool {
+pub fn block_always_terminates(block: &Vec<Stmt>) -> bool {
     for stmt in block {
         match stmt {
             Stmt::Return(_) | Stmt::Break(_) => return true,
