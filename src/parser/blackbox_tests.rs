@@ -3,7 +3,7 @@ use super::*;
 use crate::consts;
 use crate::tests_consts::{
     ALL_TYPES_NO_ARR_NO_INFER,
-    ALL_BIN_OP_KIND, ALL_BIN_OP_KIND_COMP, ALL_BIN_OP_KIND_ARTH,
+    ALL_BIN_OP_KIND_COMP, ALL_BIN_OP_KIND_ARTH,
     BIN_OP_KIND_ARTH_SYMBOLS, BIN_OP_KIND_COMP_SYMBOLS
 };
  
@@ -914,6 +914,7 @@ mod tests {
     }
 
 
+    #[test]
     fn if_statements_with_elif_vars() {
         for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
             let stmts = parse_body(&format!("if x {} y {{\n\n}} elif e {} a {{\n\n}}", s, s));
@@ -961,6 +962,7 @@ mod tests {
     }
 
 
+    #[test]
     fn if_statements_with_elif_vars_and_literals() {
         for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
             let stmts = parse_body(&format!("if 2 {} y {{\n\n}} elif 5 {} a {{\n\n}}", s, s));
@@ -1672,7 +1674,7 @@ mod tests {
                     let stmts = parse_body(&format!("own x = {} {} {}", i1, s, i2));
                     if let Stmt::VarDecl(v) = &stmts[0] {
                         if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
-                            assert!(matches!(op, b));
+                            assert_eq!(op, b);
 
                             assert!(matches!(**left, Expr::IntLiteral { .. }));
                             assert!(matches!(**right, Expr::IntLiteral { .. }));
@@ -1694,7 +1696,7 @@ mod tests {
             let stmts = parse_body(&format!("own x = a {} b", s));
             if let Stmt::VarDecl(v) = &stmts[0] {
                 if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
-                    assert!(matches!(op, b));
+                    assert_eq!(op, b);
 
                     assert!(matches!(**left, Expr::Var { .. }));
                     assert!(matches!(**right, Expr::Var { .. }));
@@ -1713,7 +1715,7 @@ mod tests {
                 let stmts = parse_body(&format!("own x = a {} {}", s, i));
                 if let Stmt::VarDecl(v) = &stmts[0] {
                     if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
-                        assert!(matches!(op, b));
+                        assert_eq!(op, b);
 
                         assert!(matches!(**left, Expr::Var { .. }));
                         assert!(matches!(**right, Expr::IntLiteral { .. }));
@@ -1731,7 +1733,7 @@ mod tests {
                 let stmts = parse_body(&format!("own x = {} {} a", i, s));
                 if let Stmt::VarDecl(v) = &stmts[0] {
                     if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
-                        assert!(matches!(op, b));
+                        assert_eq!(op, b);
 
                         assert!(matches!(**left, Expr::IntLiteral { .. }));
                         assert!(matches!(**right, Expr::Var { .. }));
@@ -1761,7 +1763,7 @@ mod tests {
             let stmts = parse_body(&format!("own x = (1 + 2) {} 3", s));
             if let Stmt::VarDecl(v) = &stmts[0] {
                 if let Some(Expr::BinOp { op, left, .. }) = &v.value {
-                    assert!(matches!(op, b));
+                    assert_eq!(op, b);
                     assert!(matches!(**left, Expr::BinOp { .. }));
                 } else {
                     panic!("Expected {:?}, instead we got {:?}", b, &v.value);
@@ -1860,6 +1862,7 @@ mod tests {
             
                 assert!(matches!(args[1], Expr::IntLiteral { .. }));
                 if let Expr::Call { name, args, .. } = &args[0] {
+                    assert_eq!(name, "inner");
                     assert!(matches!(args[0], Expr::IntLiteral { .. }));
                     assert!(matches!(args[1], Expr::IntLiteral { .. }));
                 } else { panic!("Expected Call"); }
@@ -1874,6 +1877,7 @@ mod tests {
         
         if let Stmt::Expr(e) = &stmts[0] {
             if let Expr::Call { name, args, .. } = e {
+                assert_eq!(name, "do_thing");
                 assert_eq!(args.len(), 0);
 
             } else { panic!("Expected Call"); }
