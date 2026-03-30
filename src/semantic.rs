@@ -7,6 +7,10 @@ use crate::parser::{
     validate_identifier_name
 };
 
+
+#[cfg(test)]
+mod helpers_tests;
+
 #[cfg(test)]
 mod blackbox_tests;
 

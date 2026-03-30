@@ -271,7 +271,7 @@ fn return_stmt(exprs: Vec<Expr>) -> Stmt {
 
 
 #[cfg(test)]
-mod tests {
+mod blackbox_tests {
     use super::*;
 
 

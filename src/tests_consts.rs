@@ -97,6 +97,25 @@ pub const ALL_TYPES_NO_ARR_NO_INFER: &[Type] = &[
     Type::String
 ];
 
+// No array type, and no float types
+pub const ALL_TYPES_NO_ARR_NO_FLOAT: &[Type] = &[
+    Type::Int8,
+    Type::Int16,
+    Type::Int32,
+    Type::Int64,
+    Type::Int128,
+    Type::Byte,
+    Type::Uint16,
+    Type::Uint32,
+    Type::Uint64,
+    Type::Uint128,
+    Type::Usize,
+    Type::Bool,
+    Type::String,
+    Type::Infer,
+];
+
+
 
 // No array type
 pub const ALL_TYPES_NO_ARR: &[Type] = &[
