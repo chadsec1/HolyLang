@@ -28,7 +28,7 @@ jobs:
         run: cargo install cargo-tarpaulin
 
       - name: Run unit tests and generate tarpaulin report
-        run: cargo tarpaulin --lib --out Xml --output-dir ./coverage
+        run: cargo tarpaulin --verbose --lib --out Xml --output-dir ./coverage
 
     
       - name: Upload to Codacy
