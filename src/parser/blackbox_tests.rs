@@ -1016,11 +1016,11 @@ mod tests {
                 if let Expr::BinOp { left, right, op, .. } = &i.condition {
                     assert_eq!(op, b);
 
-                    if let Expr::Var { name, .. } = &**right {
+                    if let Expr::Var { name, .. } = &**left {
                         assert_eq!(name, "x"); 
                     } else { panic!("Expected Var expression") }
 
-                    if let Expr::IntLiteral { value, .. } = **left {
+                    if let Expr::IntLiteral { value, .. } = **right {
                         assert!(matches!(value, IntLiteralValue::Int8(6)));
                     } else { panic!(); }
 
@@ -1036,11 +1036,11 @@ mod tests {
 
                     assert_eq!(op, b);
 
-                    if let Expr::Var { name, .. } = &**right {
+                    if let Expr::Var { name, .. } = &**left {
                         assert_eq!(name, "a"); 
                     } else { panic!("Expected Var expression") }
 
-                    if let Expr::IntLiteral { value, .. } = **left {
+                    if let Expr::IntLiteral { value, .. } = **right {
                         assert!(matches!(value, IntLiteralValue::Int8(9)));
                     } else { panic!(); }
 
