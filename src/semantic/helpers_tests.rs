@@ -420,7 +420,7 @@ mod helpers_tests {
             match expr.unwrap() {
                 Expr::ArrayLiteral { elements, array_ty, .. } => {
                     assert!(elements.is_empty());
-                    // inner type should be Array(Float64)
+                    // inner type should be Array(t)
                     assert_eq!(array_ty, Type::Array(Box::new(t.clone())));
                 }
                 other => panic!("Expected nested ArrayLiteral, got {:?}", other),
@@ -428,7 +428,8 @@ mod helpers_tests {
         }
     }
 
-    // Calling on an existing Some(...) must overwrite it, not append or ignore
+    // Calling on an existing Some(...) value, should trigger a panic guard
+    #[should_panic(expected = "Compiler bug")]
     #[test]
     fn default_value_overwrites_existing_some() {
         let mut expr: Option<Expr> = Some(Expr::IntLiteral {
@@ -436,12 +437,6 @@ mod helpers_tests {
             span: dummy_span(),
         });
         assign_default_value_for_type(&mut expr, &Type::Int32, dummy_span()).unwrap();
-        match expr.unwrap() {
-            Expr::IntLiteral { value: IntLiteralValue::Int32(v), .. } => {
-                assert_eq!(v, 0, "Must overwrite previous value with default 0");
-            }
-            other => panic!("Unexpected: {:?}", other),
-        }
     }
 
     // Infer must panic, this is a compiler bug(s) guard

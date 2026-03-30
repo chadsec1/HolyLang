@@ -27,7 +27,14 @@ pub fn assign_default_value_for_type(expr: &mut Option<Expr>, ty: &Type, span: S
             panic!("(Compiler bug) Cannot assign default value for type `{}` because inner most type is Infer. Expression: {:?}.", 
                         ty, expr);
         }
+    }
 
+
+    if expr.is_some() {
+        panic!(
+            "(Compiler bug) Cannot assign default value for an expression that already has a value. Expression: {:?}\nType: {:?}",
+            expr, ty
+        );
     }
 
 
