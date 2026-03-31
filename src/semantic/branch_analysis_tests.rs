@@ -264,7 +264,7 @@ mod test_block_always_terminates {
 
 
 
-    // Same as the above test, except else branch now contains Some() but is empty inside.
+    // Same as the empty_if_statement_branch test, except else branch now contains Some() but is empty inside.
     #[test]
     fn empty_if_statement_branch_and_empty_else_branch() {
         let literals = get_all_literals_no_arr();
