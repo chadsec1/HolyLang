@@ -1754,8 +1754,10 @@ mod tests {
         }
     }
 
+
+    // Signed integer literals
     #[test]
-    fn binop_arth_vars_and_literals_mixed() {
+    fn binop_arth_vars_and_signed_integer_literals_mixed() {
         let edge_cases_numbers = [
             i8::MIN as i128, i8::MAX as i128, 
             i16::MIN as i128, i16::MAX as i128, 
@@ -1774,9 +1776,7 @@ mod tests {
         ];
 
 
-        for (en, _) in edge_cases_numbers.iter().zip(edge_cases_types.iter()) {    
-
-
+        for (en, et) in edge_cases_numbers.iter().zip(edge_cases_types.iter()) {    
             for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
                 let stmts = parse_body(&format!("own x = a {} {}", s, en));
                 if let Stmt::VarDecl(v) = &stmts[0] {
@@ -1784,7 +1784,16 @@ mod tests {
                         assert_eq!(op, b);
 
                         assert!(matches!(**left, Expr::Var { .. }));
-                        assert!(matches!(**right, Expr::IntLiteral { .. }));
+                        if let Expr::IntLiteral { value, .. } = **right {
+                            assert_eq!(value.get_type(), et.clone());
+
+                            if !value.is_signed() {
+                                panic!("We are in a signed testing function, but value is unsigned: {:?}", **right);
+                            }
+
+                            assert_eq!(value.as_i128(), *en);
+
+                        } else { panic!("Expected IntLiteral, instead got: {:?}", **right) }
 
                     } else {
                         panic!("Expected {:?}, instead we got {:?}", b, &v.value);
@@ -1799,7 +1808,15 @@ mod tests {
                     if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
                         assert_eq!(op, b);
 
-                        assert!(matches!(**left, Expr::IntLiteral { .. }));
+                        if let Expr::IntLiteral { value, .. } = **left {
+                            assert_eq!(value.get_type(), et.clone());
+                            if !value.is_signed() {
+                                panic!("We are in a signed testing function, but value is unsigned: {:?}", **right);
+                            }
+
+                            assert_eq!(value.as_i128(), *en);
+                        } else { panic!("Expected IntLiteral, instead got: {:?}", **left) }
+
                         assert!(matches!(**right, Expr::Var { .. }));
 
                     } else {
@@ -1809,6 +1826,97 @@ mod tests {
             }
         }
     }
+
+
+    // Unsigned integer literals
+    #[test]
+    fn binop_arth_vars_and_unsigned_integer_literals_mixed() {
+        let edge_cases_numbers = [
+            u8::MIN as u128, u8::MAX as u128, 
+            u16::MIN as u128, u16::MAX as u128, 
+            u32::MIN as u128, u32::MAX as u128, 
+            u64::MIN as u128, u64::MAX as u128, 
+            u128::MIN, u128::MAX, 
+
+            usize::MIN as u128, usize::MAX as u128
+        ];
+
+
+        // Because we default to signed integers literals, unless we go out of range, then we switch to
+        // unsigned literals types.
+        // so those expected types are correct.
+        // Int8 because unsigned::MIN is always 0, which can fit into int8
+        //
+        // I hope this test is not too much voodo for the reader, but it is what it is. It's good,
+        // it's correct, it works, and it catches most parser edge cases.
+        let edge_cases_types = [
+            Type::Int8, Type::Int16,
+            Type::Int8, Type::Int32,
+            Type::Int8, Type::Int64,
+            Type::Int8, Type::Int128,
+            Type::Int8, Type::Uint128,
+            
+            Type::Int8, Type::Int128,
+        ];
+
+
+        for (en, et) in edge_cases_numbers.iter().zip(edge_cases_types.iter()) {    
+            for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
+                let stmts = parse_body(&format!("own x = a {} {}", s, en));
+                if let Stmt::VarDecl(v) = &stmts[0] {
+                    if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
+                        assert_eq!(op, b);
+
+                        assert!(matches!(**left, Expr::Var { .. }));
+
+                        if let Expr::IntLiteral { value, .. } = **right {
+                            assert_eq!(value.get_type(), et.clone());
+
+                            if value.is_signed() {
+                                assert_eq!(value.as_i128(), *en as i128);
+                            } else {
+                                assert_eq!(value.as_u128(), *en);
+                            }   
+                            
+                        } else { panic!("Expected IntLiteral, instead got: {:?}", **right) }
+
+                    } else {
+                        panic!("Expected {:?}, instead we got {:?}", b, &v.value);
+                    }
+                } else { panic!("Expected VarDecl, instead we got {:?}", &stmts[0]) }
+            }
+
+
+            for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
+                let stmts = parse_body(&format!("own x = {} {} a", en, s));
+                if let Stmt::VarDecl(v) = &stmts[0] {
+                    if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
+                        assert_eq!(op, b);
+
+                        if let Expr::IntLiteral { value, .. } = **left {
+                            assert_eq!(value.get_type(), et.clone());
+
+                            if value.is_signed() {
+                                assert_eq!(value.as_i128(), *en as i128);
+                            } else {
+                                assert_eq!(value.as_u128(), *en);
+                            }   
+
+                        } else { panic!("Expected IntLiteral, instead got: {:?}", **left) }
+
+                        assert!(matches!(**right, Expr::Var { .. }));
+
+                    } else {
+                        panic!("Expected {:?}, instead we got {:?}", b, &v.value);
+                    }
+                } else { panic!("Expected VarDecl, instead we got {:?}", &stmts[0]) }
+            }
+        }
+    }
+
+
+
+
 
 
     #[test]
