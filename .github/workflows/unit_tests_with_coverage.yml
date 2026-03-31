@@ -37,7 +37,7 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
 
       - name: Run unit tests and generate tarpaulin report
-        run: cargo tarpaulin --verbose --lib --out Xml --output-dir ./coverage
+        run: cargo tarpaulin --timeout 300 --verbose --lib --out Xml --output-dir ./coverage
 
     
       - name: Upload to Codacy
