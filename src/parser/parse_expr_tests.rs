@@ -86,13 +86,27 @@ mod parse_expr_tests {
 
     #[test]
     fn test_whitespace_only_errors() {
-        for i in 1..10000 {
-            assert_parse_err(&" ".repeat(i));
-            assert_parse_err(&"\t".repeat(i));
-            assert_parse_err(&"\n".repeat(i));
-            assert_parse_err(&"\r".repeat(i));
-            assert_parse_err(&" \n\r".repeat(i));
-            assert_parse_err(&" \n\r\t".repeat(i));
+        let mut s1 = String::with_capacity(10000);
+        let mut s2 = String::with_capacity(10000);
+        let mut s3 = String::with_capacity(10000);
+        let mut s4 = String::with_capacity(10000);
+        let mut s5 = String::with_capacity(30000);
+        let mut s6 = String::with_capacity(40000);
+
+        for _ in 1..10000 {
+            s1.push(' ');
+            s2.push('\t');
+            s3.push('\n');
+            s4.push('\r');
+            s5.push_str(" \n\r");
+            s6.push_str(" \n\r\t");
+
+            assert_parse_err(&s1);
+            assert_parse_err(&s2);
+            assert_parse_err(&s3);
+            assert_parse_err(&s4);
+            assert_parse_err(&s5);
+            assert_parse_err(&s6);
         }
     }
 
@@ -110,15 +124,18 @@ mod parse_expr_tests {
 
     #[test]
     fn test_bool_leading_trailing_whitespace() {
+        const MAX_SPACES: usize = 10000;
+        
+        let mut spaces = String::with_capacity(MAX_SPACES);
+        for _ in 0..MAX_SPACES {
+            assert!(matches!(parse(&format!("{}true", spaces)), Ok(Expr::BoolLiteral { value: true, .. })));
+            assert!(matches!(parse(&format!("true{}", spaces)), Ok(Expr::BoolLiteral { value: true, .. })));
+            assert!(matches!(parse(&format!("{}true{}", spaces, spaces)), Ok(Expr::BoolLiteral { value: true, .. })));
 
-        for i in 1..10000 {
-            assert!(matches!(parse(&format!("{}true", " ".repeat(i))), Ok(Expr::BoolLiteral { value: true, .. })));
-            assert!(matches!(parse(&format!("true{}", " ".repeat(i))), Ok(Expr::BoolLiteral { value: true, .. })));
-            assert!(matches!(parse(&format!("{}true{}", " ".repeat(i), " ".repeat(i))), Ok(Expr::BoolLiteral { value: true, .. })));
-
-            assert!(matches!(parse(&format!("{}false", " ".repeat(i))), Ok(Expr::BoolLiteral { value: false, .. })));
-            assert!(matches!(parse(&format!("false{}", " ".repeat(i))), Ok(Expr::BoolLiteral { value: false, .. })));
-            assert!(matches!(parse(&format!("{}false{}", " ".repeat(i), " ".repeat(i))), Ok(Expr::BoolLiteral { value: false, .. })));
+            assert!(matches!(parse(&format!("{}false", spaces)), Ok(Expr::BoolLiteral { value: false, .. })));
+            assert!(matches!(parse(&format!("false{}", spaces)), Ok(Expr::BoolLiteral { value: false, .. })));
+            assert!(matches!(parse(&format!("{}false{}", spaces, spaces)), Ok(Expr::BoolLiteral { value: false, .. })));
+            spaces.push(' ');
         }
     }
 

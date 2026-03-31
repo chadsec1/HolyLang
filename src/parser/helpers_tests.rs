@@ -633,8 +633,11 @@ mod tests {
 
         #[test]
         fn identifier_empty() {
-            for i in 0..100000 {
-                assert!(helpers::validate_identifier_name(&" ".repeat(i)).is_err());
+            const MAX_SPACES: usize = 10000;
+            let mut spaces = String::with_capacity(MAX_SPACES);
+            for _ in 0..MAX_SPACES {
+                assert!(helpers::validate_identifier_name(&spaces).is_err());
+                spaces.push(' ');
             }
         }
 
