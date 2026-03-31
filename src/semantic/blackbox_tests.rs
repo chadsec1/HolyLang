@@ -1758,12 +1758,7 @@ mod blackbox_tests {
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             for i in 0..100 {
-
-                let mut elements = vec![];
-
-                for _ in 0..i+1 {
-                    elements.push(l.clone());
-                }
+                let elements = vec![l.clone(); i + 1];
                 
                 let arr_lit = Expr::ArrayLiteral {
                     elements: elements,
@@ -1799,11 +1794,7 @@ mod blackbox_tests {
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             for i in 2..100 {
-                let mut elements = vec![];
-
-                for _ in 0..i+1 {
-                    elements.push(l.clone());
-                }
+                let elements = vec![l.clone(); i + 1];
                 
                 let arr_lit = Expr::ArrayLiteral {
                     elements: elements,

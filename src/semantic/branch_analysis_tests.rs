@@ -180,8 +180,9 @@ mod test_block_always_terminates {
         let literals_with_var = get_all_literals_with_var_no_arr();
 
         for lv in literals_with_var {
+            let stmt = Stmt::Expr(lv.clone());
             for i in 0..=10000 {
-                let dummy_branch = vec![Stmt::Expr(lv.clone()); i + 1];
+                let dummy_branch = vec![stmt.clone(); i + 1];
 
                 let stmts: Vec<Stmt> = vec![
                     Stmt::While(WhileStmt{
@@ -231,8 +232,10 @@ mod test_block_always_terminates {
         let literals_with_var = get_all_literals_with_var_no_arr();
 
         for lv in literals_with_var {
+
+            let stmt = Stmt::Expr(lv.clone());
             for i in 0..=10000 {
-                let dummy_branch = vec![Stmt::Expr(lv.clone()); i + 1];
+                let dummy_branch = vec![stmt.clone(); i + 1];
 
                 let stmts: Vec<Stmt> = vec![
                     Stmt::If(IfStmt{
@@ -314,8 +317,9 @@ mod test_block_always_terminates {
         let literals_with_var = get_all_literals_with_var_no_arr();
 
         for lv in literals_with_var {
+            let stmt = Stmt::Expr(lv.clone());
             for i in 0..=10000 {
-                let dummy_branch = vec![Stmt::Expr(lv.clone()); i + 1];
+                let dummy_branch = vec![stmt.clone(); i + 1];
 
                 let stmts: Vec<Stmt> = vec![
                     Stmt::If(IfStmt{
