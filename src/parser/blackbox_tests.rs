@@ -343,8 +343,11 @@ mod tests {
 
     #[test]
     fn infinite_statements_valid_construction() {
-        for i in 0..10000 {
-            let stmts = parse_body(&format!("infinite {} {{\n\n}}", " ".repeat(i)));
+        const MAX_SPACES: usize = 10000;
+        
+        let mut spaces = String::with_capacity(MAX_SPACES);
+        for _ in 0..MAX_SPACES {
+            let stmts = parse_body(&format!("infinite {} {{\n\n}}", spaces));
             assert_eq!(stmts.len(), 1);
             if let Stmt::Infinite(inf) = &stmts[0] {
                 assert_eq!(inf.branch.len(), 0);
@@ -352,6 +355,7 @@ mod tests {
             } else {
                 panic!("Expected infinite statement");
             }
+            spaces.push(' ');
 
         }
     }
@@ -730,8 +734,12 @@ mod tests {
 
     #[test]
     fn while_statements_no_condition_errors() {
-        for i in 0..10000 {
-            assert_parse_err(&wrap(&format!("while {}{{\n\n}}", " ".repeat(i))));    
+        const MAX_SPACES: usize = 10000;
+        
+        let mut spaces = String::with_capacity(MAX_SPACES);
+        for _ in 0..MAX_SPACES {
+            assert_parse_err(&wrap(&format!("while {}{{\n\n}}", spaces)));
+            spaces.push(' ');
         }
     }
 
@@ -1134,15 +1142,23 @@ mod tests {
 
     #[test]
     fn if_statements_no_condition_errors() {
-        for i in 0..10000 {
-            assert_parse_err(&wrap(&format!("if {}{{\n\n}}", " ".repeat(i))));    
+        const MAX_SPACES: usize = 10000;
+        
+        let mut spaces = String::with_capacity(MAX_SPACES);
+        for _ in 0..MAX_SPACES {
+            assert_parse_err(&wrap(&format!("if {}{{\n\n}}", spaces)));    
+            spaces.push(' ');
         }
     }
 
     #[test]
     fn if_statements_elif_no_condition_errors() {
-        for i in 0..10000 {
-            assert_parse_err(&wrap(&format!("if 1 == 2 {{\n\n}} elif {}{{\n\n}}", " ".repeat(i))));    
+        const MAX_SPACES: usize = 10000;
+        
+        let mut spaces = String::with_capacity(MAX_SPACES);
+        for _ in 0..MAX_SPACES {
+            assert_parse_err(&wrap(&format!("if 1 == 2 {{\n\n}} elif {}{{\n\n}}", spaces)));    
+            spaces.push(' ');
         }
 
     }
