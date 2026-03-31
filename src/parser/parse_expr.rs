@@ -371,28 +371,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
     }
 
 
-    // Unary negate support.
-    if s.starts_with('-') {
-        let rest = s[1..].trim();
-
-        if rest.is_empty() {
-            return Err(HolyError::Parse(format!(
-                "Expected expression before '-' at line {} column {}",
-                span.line, span.column
-            )));
-        }
-
-        // Parse inner expression
-        let inner = parse_expr(rest, span)?;
-
-        // Return the expression wrapped in Unary of operation negate.
-        return Ok(Expr::UnaryOp {
-            op: UnaryOpKind::Negate, 
-            expr: Box::new(inner), 
-            span: span
-        });
-    }
-
+    
 
     // Binary operations handling: split on the first operator
     if let Some((pos, op)) = helpers::find_top_level_op_any(s, &['+', '-', '*', '/', '!', '=', '>', '<']) {
@@ -479,6 +458,29 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
             span: span,
         });
     }
+
+    // Unary negate support.
+    if s.starts_with('-') {
+        let rest = s[1..].trim();
+
+        if rest.is_empty() {
+            return Err(HolyError::Parse(format!(
+                "Expected expression before '-' at line {} column {}",
+                span.line, span.column
+            )));
+        }
+
+        // Parse inner expression
+        let inner = parse_expr(rest, span)?;
+
+        // Return the expression wrapped in Unary of operation negate.
+        return Ok(Expr::UnaryOp {
+            op: UnaryOpKind::Negate, 
+            expr: Box::new(inner), 
+            span: span
+        });
+    }
+
 
 
     // Function call: name(arg1, arg2)
