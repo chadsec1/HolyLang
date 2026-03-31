@@ -181,11 +181,7 @@ mod test_block_always_terminates {
 
         for lv in literals_with_var {
             for i in 0..=10000 {
-                let mut dummy_branch = vec![];
-
-                for _ in 0..=i {
-                    dummy_branch.push(Stmt::Expr(lv.clone()));
-                }
+                let dummy_branch = vec![Stmt::Expr(lv.clone()); i + 1];
 
                 let stmts: Vec<Stmt> = vec![
                     Stmt::While(WhileStmt{
@@ -236,11 +232,7 @@ mod test_block_always_terminates {
 
         for lv in literals_with_var {
             for i in 0..=10000 {
-                let mut dummy_branch = vec![];
-
-                for _ in 0..=i {
-                    dummy_branch.push(Stmt::Expr(lv.clone()));
-                }
+                let dummy_branch = vec![Stmt::Expr(lv.clone()); i + 1];
 
                 let stmts: Vec<Stmt> = vec![
                     Stmt::If(IfStmt{
@@ -323,11 +315,7 @@ mod test_block_always_terminates {
 
         for lv in literals_with_var {
             for i in 0..=10000 {
-                let mut dummy_branch = vec![];
-
-                for _ in 0..=i {
-                    dummy_branch.push(Stmt::Expr(lv.clone()));
-                }
+                let dummy_branch = vec![Stmt::Expr(lv.clone()); i + 1];
 
                 let stmts: Vec<Stmt> = vec![
                     Stmt::If(IfStmt{
