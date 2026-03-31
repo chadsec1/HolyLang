@@ -389,9 +389,12 @@ mod tests {
     // Same test as above, but before the expression, there is an `i` of spaces.
     #[test]
     fn while_statements_literals_spaces_before_expr() {
-        for i in 0..5000 {
+        const MAX_SPACES: usize = 5000;
+
+        let mut spaces = String::with_capacity(MAX_SPACES);
+        for _ in 0..MAX_SPACES {
             for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
-                let stmts = parse_body(&format!("while{} 1 {} 2 {{\n\n}}", " ".repeat(i), s));
+                let stmts = parse_body(&format!("while{} 1 {} 2 {{\n\n}}", spaces, s));
                 assert_eq!(stmts.len(), 1);
                 if let Stmt::While(w) = &stmts[0] {
 
@@ -413,7 +416,7 @@ mod tests {
                     panic!("expected while statement");
                 }
             }
-
+            spaces.push(' ');
         }
     }
 
@@ -422,9 +425,12 @@ mod tests {
     // Same test as above, but after the expression, there is an `i` of spaces.
     #[test]
     fn while_statements_literals_spaces_after_expr() {
-        for i in 0..5000 {
+        const MAX_SPACES: usize = 5000;
+
+        let mut spaces = String::with_capacity(MAX_SPACES);
+        for _ in 0..MAX_SPACES {
             for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
-                let stmts = parse_body(&format!("while 1 {} 2 {}{{\n\n}}", s, " ".repeat(i)));
+                let stmts = parse_body(&format!("while 1 {} 2 {}{{\n\n}}", s, spaces));
                 assert_eq!(stmts.len(), 1);
                 if let Stmt::While(w) = &stmts[0] {
 
@@ -446,7 +452,7 @@ mod tests {
                     panic!("expected while statement");
                 }
             }
-
+            spaces.push(' ');
         }
     }
 
@@ -483,9 +489,12 @@ mod tests {
     // Same test as above, but before the expression, there is an `i` of spaces.
     #[test]
     fn while_statements_vars_spaces_before_expr() {
-        for i in 0..5000 {
+        const MAX_SPACES: usize = 5000;
+
+        let mut spaces = String::with_capacity(MAX_SPACES);
+        for _ in 0..MAX_SPACES {
             for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
-                let stmts = parse_body(&format!("while{} x {} y {{\n\n}}", " ".repeat(i), s));
+                let stmts = parse_body(&format!("while{} x {} y {{\n\n}}", spaces, s));
                 assert_eq!(stmts.len(), 1);
                 if let Stmt::While(w) = &stmts[0] {
 
@@ -507,15 +516,20 @@ mod tests {
                     panic!("expected while statement");
                 }
             }
+
+            spaces.push(' ');
         }
     }
 
     // Same test as above, but after the expression, there is an `i` of spaces.
     #[test]
     fn while_statements_vars_spaces_after_expr() {
-        for i in 0..5000 {
+        const MAX_SPACES: usize = 5000;
+
+        let mut spaces = String::with_capacity(MAX_SPACES);
+        for _ in 0..MAX_SPACES {
             for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
-                let stmts = parse_body(&format!("while x {} y {}{{\n\n}}", s, " ".repeat(i)));
+                let stmts = parse_body(&format!("while x {} y {}{{\n\n}}", s, spaces));
                 assert_eq!(stmts.len(), 1);
                 if let Stmt::While(w) = &stmts[0] {
 
@@ -537,6 +551,7 @@ mod tests {
                     panic!("expected while statement");
                 }
             }
+            spaces.push(' ');
         }
     }
 
@@ -594,9 +609,12 @@ mod tests {
     // Same test as above, but before the expression, there is an `i` of spaces.
     #[test]
     fn while_statements_vars_and_literals_spaces_before_expr() {
-        for i in 0..5000 {
+        const MAX_SPACES: usize = 5000;
+
+        let mut spaces = String::with_capacity(MAX_SPACES);
+        for _ in 0..MAX_SPACES {
             for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
-                let stmts = parse_body(&format!("while{} 69 {} y {{\n\n}}", " ".repeat(i), s));
+                let stmts = parse_body(&format!("while{} 69 {} y {{\n\n}}", spaces, s));
                 assert_eq!(stmts.len(), 1);
                 if let Stmt::While(w) = &stmts[0] {
 
@@ -621,7 +639,7 @@ mod tests {
 
 
             for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
-                let stmts = parse_body(&format!("while{} x {} 67 {{\n\n}}", " ".repeat(i), s));
+                let stmts = parse_body(&format!("while{} x {} 67 {{\n\n}}", spaces, s));
                 assert_eq!(stmts.len(), 1);
                 if let Stmt::While(w) = &stmts[0] {
                     if let Expr::BinOp { left, right, op, .. } = &w.condition {
@@ -641,6 +659,8 @@ mod tests {
                     panic!("expected while statement");
                 }
             }
+
+            spaces.push(' ');
         }
     }
 
@@ -649,9 +669,12 @@ mod tests {
     // Same test as above, but after the expression, there is an `i` of spaces.
     #[test]
     fn while_statements_vars_and_literals_spaces_after_expr() {
-        for i in 0..5000 {
+        const MAX_SPACES: usize = 5000;
+
+        let mut spaces = String::with_capacity(MAX_SPACES);
+        for _ in 0..MAX_SPACES {
             for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
-                let stmts = parse_body(&format!("while 69 {} y {}{{\n\n}}", s, " ".repeat(i)));
+                let stmts = parse_body(&format!("while 69 {} y {}{{\n\n}}", s, spaces));
                 assert_eq!(stmts.len(), 1);
                 if let Stmt::While(w) = &stmts[0] {
 
@@ -676,7 +699,7 @@ mod tests {
 
 
             for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
-                let stmts = parse_body(&format!("while x {} 67 {}{{\n\n}}", s, " ".repeat(i)));
+                let stmts = parse_body(&format!("while x {} 67 {}{{\n\n}}", s, spaces));
                 assert_eq!(stmts.len(), 1);
                 if let Stmt::While(w) = &stmts[0] {
                     if let Expr::BinOp { left, right, op, .. } = &w.condition {
@@ -696,6 +719,7 @@ mod tests {
                     panic!("expected while statement");
                 }
             }
+            spaces.push(' ');
         }
     }
 
