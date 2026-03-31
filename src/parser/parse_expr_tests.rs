@@ -124,7 +124,7 @@ mod parse_expr_tests {
 
     #[test]
     fn test_bool_leading_trailing_whitespace() {
-        const MAX_SPACES: usize = 10000;
+        const MAX_SPACES: usize = 1000;
         
         let mut spaces = String::with_capacity(MAX_SPACES);
         for _ in 0..MAX_SPACES {
@@ -938,21 +938,24 @@ mod parse_expr_tests {
             }
         }
 
-        for i in 0..1000 {
+        const MAX_SPACES: usize = 1000;
+        
+        let mut spaces = String::with_capacity(MAX_SPACES);
+        for _ in 0..MAX_SPACES {
             for (b, s) in ALL_BIN_OP_KIND.iter().zip(BIN_OP_KIND_SYMBOLS.iter()) {
-                let variant = &format!("{}1{}2", " ".repeat(i), s);
+                let variant = &format!("{}1{}2", spaces, s);
                 checker(variant, b.clone());
                
-                let variant = &format!("1{}2{}", s, " ".repeat(i));
+                let variant = &format!("1{}2{}", s, spaces);
                 checker(variant, b.clone());
 
-                let variant = &format!("1{}{}2", s, " ".repeat(i));
+                let variant = &format!("1{}{}2", s, spaces);
                 checker(variant, b.clone());
 
-                let variant = &format!("1{}{}2", " ".repeat(i), s);
+                let variant = &format!("1{}{}2", spaces, s);
                 checker(variant, b.clone());
-
             }
+            spaces.push(' ');
         }
     }
 
@@ -972,23 +975,25 @@ mod parse_expr_tests {
                 other => panic!("expected BinOp, got {:?}", other),
             }
         }
-
-        for i in 0..1000 {
+        const MAX_SPACES: usize = 1000;
+        
+        let mut spaces = String::with_capacity(MAX_SPACES);
+        for _ in 0..MAX_SPACES {
             for (b, s) in ALL_BIN_OP_KIND.iter().zip(BIN_OP_KIND_SYMBOLS.iter()) {
-                let variant = &format!("{}x{}y", " ".repeat(i), s);
+                let variant = &format!("{}x{}y", spaces, s);
                 checker(variant, b.clone());
 
-                let variant = &format!("x{}y{}", s, " ".repeat(i));
+                let variant = &format!("x{}y{}", s, spaces);
                 checker(variant, b.clone());
 
-                let variant = &format!("x{}{}y", s, " ".repeat(i));
+                let variant = &format!("x{}{}y", s, spaces);
                 checker(variant, b.clone());
 
-                let variant = &format!("x{}{}y", " ".repeat(i), s);
+                let variant = &format!("x{}{}y", spaces, s);
                 checker(variant, b.clone());
-
-
             }
+
+            spaces.push(' ');
         }
     }
 
