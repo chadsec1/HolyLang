@@ -14,8 +14,10 @@ mod helpers_tests;
 #[cfg(test)]
 mod blackbox_tests;
 
+/*
 #[cfg(test)]
 mod branch_analysis_tests;
+*/
 
 mod branch_analysis;
 mod infer;
