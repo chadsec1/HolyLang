@@ -181,8 +181,11 @@ mod tests {
     #[test]
     fn parse_function_nested_array_return_type() {
         for t in ALL_TYPES_NO_ARR_NO_INFER {
+            let mut s1 = String::with_capacity(200);
+
             for i in 1..100 {
-                let ast = parse(&format!("func foo() {}[]{} {{\n}}\n", t, "[]".repeat(i))).unwrap();
+                s1.push_str("[]");
+                let ast = parse(&format!("func foo() {}[]{} {{\n}}\n", t, s1)).unwrap();
                 let f = &ast.functions[0];
 
                 assert_eq!(f.return_type.clone().unwrap().len(), 1);
@@ -1311,8 +1314,11 @@ mod tests {
     #[test]
     fn var_decl_deeply_nested_array() {
         for t in ALL_TYPES_NO_ARR_NO_INFER {
-            for i in 1..100 {
-                let stmts = parse_body(&format!("own x = {}[][]{}", t, "[]".repeat(i) ));
+            let mut s1 = String::with_capacity(200);
+
+            for _ in 1..100 {
+                s1.push_str("[]");
+                let stmts = parse_body(&format!("own x = {}[][]{}", t, s1 ));
                 if let Stmt::VarDecl(v) = &stmts[0] {
                     if let Some(Expr::ArrayLiteral { elements, .. }) = &v.value {
                         assert_eq!(elements.len(), 0);
@@ -1750,9 +1756,29 @@ mod tests {
 
     #[test]
     fn binop_arth_vars_and_literals_mixed() {
-        for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
-            for i in 0..100000 {
-                let stmts = parse_body(&format!("own x = a {} {}", s, i));
+        let edge_cases_numbers = [
+            i8::MIN as i128, i8::MAX as i128, 
+            i16::MIN as i128, i16::MAX as i128, 
+            i32::MIN as i128, i32::MAX as i128, 
+            i64::MIN as i128, i64::MAX as i128, 
+            i128::MIN, i128::MAX, 
+        ];
+
+
+        let edge_cases_types = [
+            Type::Int8, Type::Int8,
+            Type::Int16, Type::Int16,
+            Type::Int32, Type::Int32,
+            Type::Int64, Type::Int64,
+            Type::Int128, Type::Int128,
+        ];
+
+
+        for (en, _) in edge_cases_numbers.iter().zip(edge_cases_types.iter()) {    
+
+
+            for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
+                let stmts = parse_body(&format!("own x = a {} {}", s, en));
                 if let Stmt::VarDecl(v) = &stmts[0] {
                     if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
                         assert_eq!(op, b);
@@ -1765,12 +1791,10 @@ mod tests {
                     }
                 } else { panic!("Expected VarDecl, instead we got {:?}", &stmts[0]) }
             }
-        }
 
 
-        for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
-            for i in 0..100000 {
-                let stmts = parse_body(&format!("own x = {} {} a", i, s));
+            for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
+                let stmts = parse_body(&format!("own x = {} {} a", en, s));
                 if let Stmt::VarDecl(v) = &stmts[0] {
                     if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
                         assert_eq!(op, b);

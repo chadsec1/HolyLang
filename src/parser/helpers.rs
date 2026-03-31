@@ -48,6 +48,29 @@ pub fn find_top_level_op_any(s: &str, ops: &[char]) -> Option<(usize, char)> {
             '(' => depth += 1,
             ')' => { if depth > 0 { depth -= 1; } }
             _ if depth == 0 && ops.contains(&c) => {
+                if c == '-' {
+
+                    // Skip whitespaces
+                    let prev_non_ws = (0..i).rev()
+                        .map(|j| chars[j].1)
+                        .find(|ch| !ch.is_whitespace());
+
+                    match prev_non_ws {
+                        // start of string, unary
+                        None => { 
+                            i += 1; 
+                            continue; 
+                        } 
+                        // unary
+                        Some(prev) if ops.contains(&prev) || prev == '(' => { 
+                            i += 1; 
+                            continue; 
+                        }
+                        // binary, fall through
+                        _ => {} 
+                    }
+                }
+
                 let next = chars.get(i + 1).map(|(_, nc)| *nc);
                 let prec = precedence(c, next);
                 // <= gives us rightmost of lowest precedence (left-associativity)
