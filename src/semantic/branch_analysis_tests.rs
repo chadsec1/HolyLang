@@ -1,7 +1,7 @@
 use super::*;
 
 use crate::parser::{
-    IfStmt, BreakStmt
+    IfStmt, WhileStmt, BreakStmt
 };
 
 use crate::semantic::branch_analysis::{
@@ -88,10 +88,9 @@ fn make_break_stmt() -> Stmt {
     Stmt::Break(BreakStmt { span: span() })
 }
 
-/*
 fn var_expr(name: &str) -> Expr {
     Expr::Var { name: name.to_string(), span: span() }
-}*/
+}
 
 fn get_all_literals_no_arr() -> [Expr; 15] {
     let literals = [
@@ -120,10 +119,91 @@ fn get_all_literals_no_arr() -> [Expr; 15] {
 }
 
 
+fn get_all_literals_with_var_no_arr() -> [Expr; 16] {
+    let literals = [
+        int8_lit(1),
+        int16_lit(1),
+        int32_lit(1),
+        int64_lit(1),
+        int128_lit(1),
+
+        byte_lit(1),
+        uint16_lit(1),
+        uint32_lit(1),
+        uint64_lit(1),
+        uint128_lit(1),
+
+        usize_lit(1),
+
+        float32_lit(1.0),
+        float64_lit(1.0),
+
+        bool_lit(false),
+        str_lit("Hi"),
+        var_expr("a")
+    ];
+
+    return literals;
+}
+
+
 #[cfg(test)]
 mod test_block_always_terminates {
     use super::*;
     
+
+
+    #[test]
+    fn empty_while_statement_branch() {
+        let literals = get_all_literals_no_arr();
+
+        for l in literals {
+            let stmts: Vec<Stmt> = vec![
+                Stmt::While(WhileStmt{
+                    condition: l,
+                    branch: vec![],
+                    span: span(),
+                })
+            ];
+
+            let result: bool = block_always_terminates(&stmts);
+            // Branch does not terminate
+            assert_eq!(result, false);
+        }
+    }
+
+
+    // Even if the while loop branch is not empty
+    // it should never terminate, because the while statement may or may not execute at all.
+    #[test]
+    fn while_statement_branch_never_terminates() {
+        let literals_with_var = get_all_literals_with_var_no_arr();
+
+        for lv in literals_with_var {
+            for i in 0..=10000 {
+                let mut dummy_branch = vec![];
+
+                for _ in 0..=i {
+                    dummy_branch.push(Stmt::Expr(lv.clone()));
+                }
+
+                let stmts: Vec<Stmt> = vec![
+                    Stmt::While(WhileStmt{
+                        condition: lv.clone(),
+                        branch: dummy_branch,
+                        span: span(),
+                    })
+                ];
+
+                let result: bool = block_always_terminates(&stmts);
+                // Branch does not terminate
+                assert_eq!(result, false);
+            }
+        }
+    }
+
+
+
 
     #[test]
     fn empty_if_statement_branch() {
@@ -145,6 +225,42 @@ mod test_block_always_terminates {
             assert_eq!(result, false);
         }
     }
+
+
+    // Even if the if statement main branch is not empty
+    // it should never terminate, because there is no else branch, 
+    // meaning it may or may not execute at all.
+    #[test]
+    fn if_statement_branch_never_terminates() {
+        let literals_with_var = get_all_literals_with_var_no_arr();
+
+        for lv in literals_with_var {
+            for i in 0..=10000 {
+                let mut dummy_branch = vec![];
+
+                for _ in 0..=i {
+                    dummy_branch.push(Stmt::Expr(lv.clone()));
+                }
+
+                let stmts: Vec<Stmt> = vec![
+                    Stmt::If(IfStmt{
+                        condition: lv.clone(),
+                        if_branch: dummy_branch,
+                        elif_branches: vec![],
+                        else_branch: None,
+                        span: span(),
+                    })
+                ];
+
+                let result: bool = block_always_terminates(&stmts);
+                // Branch does not terminate
+                assert_eq!(result, false);
+            }
+        }
+    }
+
+
+
 
 
 
@@ -203,24 +319,32 @@ mod test_block_always_terminates {
     // terminate, therefore the block does not always terminate.
     #[test]
     fn if_statement_else_branch_return_not_terminates() {
-        let literals = get_all_literals_no_arr();
+        let literals_with_var = get_all_literals_with_var_no_arr();
 
-        for l in literals {
-            let stmts: Vec<Stmt> = vec![
-                Stmt::If(IfStmt{
-                    condition: l.clone(),
-                    if_branch: vec![], 
-                    elif_branches: vec![],
-                    else_branch: Some(vec![
-                        make_return_stmt(vec![l])
-                    ]),
-                    span: span(),
-                })
-            ];
+        for lv in literals_with_var {
+            for i in 0..=10000 {
+                let mut dummy_branch = vec![];
 
-            let result: bool = block_always_terminates(&stmts);
-            // Branch does not terminate
-            assert_eq!(result, false);
+                for _ in 0..=i {
+                    dummy_branch.push(Stmt::Expr(lv.clone()));
+                }
+
+                let stmts: Vec<Stmt> = vec![
+                    Stmt::If(IfStmt{
+                        condition: lv.clone(),
+                        if_branch: dummy_branch, 
+                        elif_branches: vec![],
+                        else_branch: Some(vec![
+                            make_return_stmt(vec![lv.clone()])
+                        ]),
+                        span: span(),
+                    })
+                ];
+
+                let result: bool = block_always_terminates(&stmts);
+                // Branch does not terminate
+                assert_eq!(result, false);
+            }
         }
     }
 
@@ -251,10 +375,40 @@ mod test_block_always_terminates {
         }
     }
 
-    // main and elif branch terminates via `return` statement, but else branch does not 
-    // terminate, therefore the block does not always terminate.
+    // main and elif branch terminates via `return` statement, but else branch does not
+    // exist, therefore the block does not always terminate.
     #[test]
     fn if_statement_main_and_elif_branch_return_not_terminates() {
+        let literals = get_all_literals_no_arr();
+
+        for l1 in &literals {
+            for l2 in &literals {
+                let stmts: Vec<Stmt> = vec![
+                    Stmt::If(IfStmt{
+                        condition: l1.clone(),
+                        if_branch: vec![
+                            make_return_stmt(vec![l1.clone()])
+                        ], 
+                        elif_branches: vec![(l1.clone(), vec![
+                            make_return_stmt(vec![l2.clone()])
+                        ])],
+                        else_branch: None,
+                        span: span(),
+                    })
+                ];
+
+                let result: bool = block_always_terminates(&stmts);
+                // Branch does not terminate
+                assert_eq!(result, false);
+            }
+        }
+    }
+
+
+    // main and elif branch terminates via `return` statement, but else branch is empty
+    // therefore the block does not always terminate.
+    #[test]
+    fn if_statement_main_and_elif_branch_return_else_empty_not_terminates() {
         let literals = get_all_literals_no_arr();
 
         for l1 in &literals {
@@ -291,25 +445,28 @@ mod test_block_always_terminates {
     fn if_statement_main_branch_and_else_branch_return_not_terminates() {
         let literals = get_all_literals_no_arr();
 
-        for l in literals {
-            let stmts: Vec<Stmt> = vec![
-                Stmt::If(IfStmt{
-                    condition: l.clone(),
-                    if_branch: vec![
-                        make_return_stmt(vec![l.clone()])
-                    ], 
 
-                    elif_branches: vec![(l.clone(), vec![])],
-                    else_branch: Some(vec![
-                        make_return_stmt(vec![l])
-                    ]),
-                    span: span(),
-                })
-            ];
+        for l1 in &literals {
+            for l2 in &literals {
+                let stmts: Vec<Stmt> = vec![
+                    Stmt::If(IfStmt{
+                        condition: l1.clone(),
+                        if_branch: vec![
+                            make_return_stmt(vec![l2.clone()])
+                        ], 
 
-            let result: bool = block_always_terminates(&stmts);
-            // Branch does not terminate
-            assert_eq!(result, false);
+                        elif_branches: vec![(l1.clone(), vec![])],
+                        else_branch: Some(vec![
+                            make_return_stmt(vec![l2.clone()])
+                        ]),
+                        span: span(),
+                    })
+                ];
+
+                let result: bool = block_always_terminates(&stmts);
+                // Branch does not terminate
+                assert_eq!(result, false);
+            }
         }
     }
 
