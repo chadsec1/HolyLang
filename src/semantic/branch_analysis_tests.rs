@@ -1,7 +1,7 @@
 use super::*;
 
 use crate::parser::{
-    IfStmt, WhileStmt, BreakStmt
+    IfStmt, WhileStmt, InfiniteStmt, BreakStmt
 };
 
 use crate::semantic::branch_analysis::{
@@ -151,6 +151,92 @@ fn get_all_literals_with_var_no_arr() -> [Expr; 16] {
 mod test_block_always_terminates {
     use super::*;
     
+
+    #[test]
+    fn empty_infinite_statement_branch() {
+        let stmts: Vec<Stmt> = vec![
+            Stmt::Infinite(InfiniteStmt{
+                branch: vec![],
+                span: span(),
+            })
+        ];
+
+        let result: bool = block_always_terminates(&stmts);
+        // Branch does not terminate
+        assert_eq!(result, false);
+    }
+
+
+    #[test]
+    fn infinite_statement_branch_not_terminates() {
+        let literals_with_var = get_all_literals_with_var_no_arr();
+
+        for lv in literals_with_var {
+            let stmt = Stmt::Expr(lv.clone());
+            for i in 0..=1000 {
+                let dummy_branch = vec![stmt.clone(); i + 1];
+
+                let stmts: Vec<Stmt> = vec![
+                    Stmt::Infinite(InfiniteStmt{
+                        branch: dummy_branch,
+                        span: span(),
+                    })
+                ];
+
+                let result: bool = block_always_terminates(&stmts);
+                // Branch does not terminate
+                assert_eq!(result, false);
+            }
+        }
+    }
+
+
+
+    #[test]
+    fn infinite_statement_branch_return_terminates() {
+        let literals_with_var = get_all_literals_with_var_no_arr();
+
+        for lv in literals_with_var {
+            let stmt = make_return_stmt(vec![lv.clone()]);
+            for i in 0..=1000 {
+                let dummy_branch = vec![stmt.clone(); i + 1];
+
+                let stmts: Vec<Stmt> = vec![
+                    Stmt::Infinite(InfiniteStmt{
+                        branch: dummy_branch,
+                        span: span(),
+                    })
+                ];
+
+                let result: bool = block_always_terminates(&stmts);
+                // Branch terminates
+                assert_eq!(result, true);
+            }
+        }
+    }
+
+    #[test]
+    fn infinite_statement_branch_break_terminates() {
+        for i in 0..=1000 {
+            let dummy_branch = vec![make_break_stmt(); i + 1];
+
+            let stmts: Vec<Stmt> = vec![
+                Stmt::Infinite(InfiniteStmt{
+                    branch: dummy_branch,
+                    span: span(),
+                })
+            ];
+
+            let result: bool = block_always_terminates(&stmts);
+            // Branch terminates
+            assert_eq!(result, true);
+        }
+    }
+
+
+
+
+
 
 
     #[test]
