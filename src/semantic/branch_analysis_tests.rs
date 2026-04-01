@@ -176,7 +176,7 @@ mod test_block_always_terminates {
     // Even if the while loop branch is not empty
     // it should never terminate, because the while statement may or may not execute at all.
     #[test]
-    fn while_statement_branch_never_terminates() {
+    fn while_statement_branch_not_empty_never_terminates() {
         let literals_with_var = get_all_literals_with_var_no_arr();
 
         for lv in literals_with_var {
@@ -198,6 +198,36 @@ mod test_block_always_terminates {
             }
         }
     }
+
+
+    // Even if the while loop branch returns
+    // it should never terminate, because the while statement may or may not execute at all.
+    #[test]
+    fn while_statement_branch_returns_never_terminates() {
+        let literals_with_var = get_all_literals_with_var_no_arr();
+
+        for lv in literals_with_var {
+            let stmt = make_return_stmt(vec![lv.clone()]);
+
+            for i in 0..=1000 {
+                let dummy_branch = vec![stmt.clone(); i + 1];
+
+                let stmts: Vec<Stmt> = vec![
+                    Stmt::While(WhileStmt{
+                        condition: lv.clone(),
+                        branch: dummy_branch,
+                        span: span(),
+                    })
+                ];
+
+                let result: bool = block_always_terminates(&stmts);
+                // Branch does not terminate
+                assert_eq!(result, false);
+            }
+        }
+    }
+
+
 
 
     #[test]
