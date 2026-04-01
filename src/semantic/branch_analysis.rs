@@ -40,8 +40,9 @@ pub fn dead_code_analysis(block: &Vec<Stmt>) -> Result<(), HolyError> {
 
 
                 dead_code_analysis(body)?;
+
                 
-                if block_always_terminates(&infinite_stmt.branch) {
+                if block_always_terminates(&infinite_stmt.branch, true) {
                     end_detected = true;
                 }
             }
@@ -87,14 +88,14 @@ pub fn dead_code_analysis(block: &Vec<Stmt>) -> Result<(), HolyError> {
 
                 // Check if statements branches all terminates
                 if if_stmt.else_branch.is_some() {
-                    let if_term = block_always_terminates(&if_stmt.if_branch);
-                    let else_term = block_always_terminates(if_stmt.else_branch.as_ref().unwrap());
+                    let if_term = block_always_terminates(&if_stmt.if_branch, false);
+                    let else_term = block_always_terminates(if_stmt.else_branch.as_ref().unwrap(), false);
 
                     // Apparently this is fine because `.all` returns true if elif_branches are
                     // empty.
                     let elifs_term = if_stmt.elif_branches
                         .iter()
-                        .all(|s_vec| block_always_terminates(&s_vec.1));
+                        .all(|s_vec| block_always_terminates(&s_vec.1, false));
 
                     if if_term && else_term && elifs_term {
                         end_detected = true;
@@ -118,23 +119,31 @@ pub fn dead_code_analysis(block: &Vec<Stmt>) -> Result<(), HolyError> {
 
 /// Recursive helper that tells us if a block of code terminates or not
 /// Like if it returns or breaks, then it terminates. 
-pub fn block_always_terminates(block: &Vec<Stmt>) -> bool {
+/// is_loop MUST be `true` if you call this while you are in a loop, to not count `break`
+/// statements inside nested loops as upstream block terminations.
+pub fn block_always_terminates(block: &Vec<Stmt>, is_loop: bool) -> bool {
     for stmt in block {
         match stmt {
-            Stmt::Return(_) | Stmt::Break(_) => return true,
+            Stmt::Return(_) => return true,
+            Stmt::Break(_) => {
+                if !is_loop {
+                    return true
+                }
+            }
             Stmt::If(if_stmt) => {
                 // Without an else, we can't guarantee termination
                 // because the if might not execute at all
                 if if_stmt.else_branch.is_none() {
                     continue;
                 }
-                let if_terminates = block_always_terminates(&if_stmt.if_branch);
+                let if_terminates = block_always_terminates(&if_stmt.if_branch, is_loop);
                 let else_terminates = block_always_terminates(
-                    if_stmt.else_branch.as_ref().unwrap()
+                    if_stmt.else_branch.as_ref().unwrap(),
+                    is_loop
                 );
                 let elifs_terminate = if_stmt.elif_branches
                     .iter()
-                    .all(|s_vec| block_always_terminates(&s_vec.1));
+                    .all(|s_vec| block_always_terminates(&s_vec.1, is_loop));
 
                 if if_terminates && else_terminates && elifs_terminate {
                     return true;
@@ -142,7 +151,7 @@ pub fn block_always_terminates(block: &Vec<Stmt>) -> bool {
             }
 
             Stmt::Infinite(infinite_stmt) => {
-                return block_always_terminates(&infinite_stmt.branch);
+                return block_always_terminates(&infinite_stmt.branch, true);
             } 
 
 

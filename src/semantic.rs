@@ -944,28 +944,3 @@ fn check_call(
     }
 }
 
-/*
-#[cfg(test)]
-mod tests {
-    use super::*; 
-    
-    #[test]
-    fn test_default_for_nested_arrays() {
-        let span = Span { line: 1, column: 0 };
-        let mut expr: Option<Expr> = None;
-
-        let ty = Type::Array(Box::new(Type::Array(Box::new(Type::Array(Box::new(Type::Int32))))));
-
-        assign_default_value_for_type(&mut expr, &ty, span).unwrap();
-
-        match expr {
-            Some(Expr::ArrayLiteral { elements, array_ty, .. }) => {
-                assert!(elements.is_empty());
-                assert_eq!(array_ty, Type::Array(Box::new(Type::Array(Box::new(Type::Int32)))));
-            }
-            other => panic!("expected ArrayLiteral, got {:?}", other),
-        }
-    }
-
-}
-*/

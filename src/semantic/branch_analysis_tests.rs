@@ -161,7 +161,7 @@ mod test_block_always_terminates {
             })
         ];
 
-        let result: bool = block_always_terminates(&stmts);
+        let result: bool = block_always_terminates(&stmts, false);
         // Branch does not terminate
         assert_eq!(result, false);
     }
@@ -183,7 +183,7 @@ mod test_block_always_terminates {
                     })
                 ];
 
-                let result: bool = block_always_terminates(&stmts);
+                let result: bool = block_always_terminates(&stmts, false);
                 // Branch does not terminate
                 assert_eq!(result, false);
             }
@@ -208,28 +208,10 @@ mod test_block_always_terminates {
                     })
                 ];
 
-                let result: bool = block_always_terminates(&stmts);
+                let result: bool = block_always_terminates(&stmts, false);
                 // Branch terminates
                 assert_eq!(result, true);
             }
-        }
-    }
-
-    #[test]
-    fn infinite_statement_branch_break_terminates() {
-        for i in 0..=1000 {
-            let dummy_branch = vec![make_break_stmt(); i + 1];
-
-            let stmts: Vec<Stmt> = vec![
-                Stmt::Infinite(InfiniteStmt{
-                    branch: dummy_branch,
-                    span: span(),
-                })
-            ];
-
-            let result: bool = block_always_terminates(&stmts);
-            // Branch terminates
-            assert_eq!(result, true);
         }
     }
 
@@ -250,7 +232,7 @@ mod test_block_always_terminates {
             })
         ];
 
-        let result: bool = block_always_terminates(&stmts);
+        let result: bool = block_always_terminates(&stmts, false);
         // Branch does not terminate
         assert_eq!(result, false);
     }
@@ -276,7 +258,7 @@ mod test_block_always_terminates {
                     })
                 ];
 
-                let result: bool = block_always_terminates(&stmts);
+                let result: bool = block_always_terminates(&stmts, false);
                 // Branch does not terminate
                 assert_eq!(result, false);
             }
@@ -304,7 +286,7 @@ mod test_block_always_terminates {
                     })
                 ];
 
-                let result: bool = block_always_terminates(&stmts);
+                let result: bool = block_always_terminates(&stmts, false);
                 // Branch does terminate
                 assert_eq!(result, true);
             }
@@ -312,7 +294,6 @@ mod test_block_always_terminates {
     }   
 
 
-    /*
     #[test]
     fn infinite_statement_nested_branch_break_not_terminates() {
         for i in 0..=1000 {
@@ -330,14 +311,11 @@ mod test_block_always_terminates {
                 })
             ];
 
-            let result: bool = block_always_terminates(&stmts);
+            let result: bool = block_always_terminates(&stmts, false);
             // Branch does not terminate
             assert_eq!(result, false);
         }
     }    
-    */
-
-
 
 
 
@@ -356,7 +334,7 @@ mod test_block_always_terminates {
                 })
             ];
 
-            let result: bool = block_always_terminates(&stmts);
+            let result: bool = block_always_terminates(&stmts, false);
             // Branch does not terminate
             assert_eq!(result, false);
         }
@@ -382,7 +360,7 @@ mod test_block_always_terminates {
                     })
                 ];
 
-                let result: bool = block_always_terminates(&stmts);
+                let result: bool = block_always_terminates(&stmts, false);
                 // Branch does not terminate
                 assert_eq!(result, false);
             }
@@ -410,7 +388,7 @@ mod test_block_always_terminates {
                     })
                 ];
 
-                let result: bool = block_always_terminates(&stmts);
+                let result: bool = block_always_terminates(&stmts, false);
                 // Branch does not terminate
                 assert_eq!(result, false);
             }
@@ -436,7 +414,7 @@ mod test_block_always_terminates {
                     })
                 ];
 
-                let result: bool = block_always_terminates(&stmts);
+                let result: bool = block_always_terminates(&stmts, false);
                 // Branch does not terminate
                 assert_eq!(result, false);
             }
@@ -461,7 +439,7 @@ mod test_block_always_terminates {
                 })
             ];
 
-            let result: bool = block_always_terminates(&stmts);
+            let result: bool = block_always_terminates(&stmts, false);
             // Branch does not terminate
             assert_eq!(result, false);
         }
@@ -491,7 +469,7 @@ mod test_block_always_terminates {
                     })
                 ];
 
-                let result: bool = block_always_terminates(&stmts);
+                let result: bool = block_always_terminates(&stmts, false);
                 // Branch does not terminate
                 assert_eq!(result, false);
             }
@@ -519,7 +497,7 @@ mod test_block_always_terminates {
                 })
             ];
 
-            let result: bool = block_always_terminates(&stmts);
+            let result: bool = block_always_terminates(&stmts, false);
             // Branches do not terminate
             assert_eq!(result, false);
         }
@@ -545,7 +523,7 @@ mod test_block_always_terminates {
                 })
             ];
 
-            let result: bool = block_always_terminates(&stmts);
+            let result: bool = block_always_terminates(&stmts, false);
             // Branch does not terminate
             assert_eq!(result, false);
         }
@@ -577,7 +555,7 @@ mod test_block_always_terminates {
                     })
                 ];
 
-                let result: bool = block_always_terminates(&stmts);
+                let result: bool = block_always_terminates(&stmts, false);
                 // Branch does not terminate
                 assert_eq!(result, false);
             }
@@ -605,7 +583,7 @@ mod test_block_always_terminates {
                 })
             ];
 
-            let result: bool = block_always_terminates(&stmts);
+            let result: bool = block_always_terminates(&stmts, false);
             // Branch does not terminate
             assert_eq!(result, false);
         }
@@ -633,7 +611,7 @@ mod test_block_always_terminates {
                     })
                 ];
 
-                let result: bool = block_always_terminates(&stmts);
+                let result: bool = block_always_terminates(&stmts, false);
                 // Branch does not terminate
                 assert_eq!(result, false);
             }
@@ -663,7 +641,7 @@ mod test_block_always_terminates {
                     })
                 ];
 
-                let result: bool = block_always_terminates(&stmts);
+                let result: bool = block_always_terminates(&stmts, false);
                 // Branch does not terminate
                 assert_eq!(result, false);
             }
@@ -699,7 +677,7 @@ mod test_block_always_terminates {
                     })
                 ];
 
-                let result: bool = block_always_terminates(&stmts);
+                let result: bool = block_always_terminates(&stmts, false);
                 // Branch does not terminate
                 assert_eq!(result, false);
             }
@@ -730,7 +708,7 @@ mod test_block_always_terminates {
                     })
                 ];
 
-                let result: bool = block_always_terminates(&stmts);
+                let result: bool = block_always_terminates(&stmts, false);
                 // Branch does terminate
                 assert_eq!(result, true);
             }
@@ -767,7 +745,7 @@ mod test_block_always_terminates {
                         })
                     ];
 
-                    let result: bool = block_always_terminates(&stmts);
+                    let result: bool = block_always_terminates(&stmts, false);
                     // Branch does terminate
                     assert_eq!(result, true);
                 }
@@ -797,7 +775,7 @@ mod test_block_always_terminates {
                 })
             ];
 
-            let result: bool = block_always_terminates(&stmts);
+            let result: bool = block_always_terminates(&stmts, false);
             // Branch does not terminate
             assert_eq!(result, false);
         }
@@ -826,7 +804,7 @@ mod test_block_always_terminates {
                     })
                 ];
 
-                let result: bool = block_always_terminates(&stmts);
+                let result: bool = block_always_terminates(&stmts, false);
                 // Branch does not terminate
                 assert_eq!(result, false);
             }
@@ -855,7 +833,7 @@ mod test_block_always_terminates {
                 })
             ];
 
-            let result: bool = block_always_terminates(&stmts);
+            let result: bool = block_always_terminates(&stmts, false);
             // Branch does terminate
             assert_eq!(result, true);
         }
@@ -883,7 +861,7 @@ mod test_block_always_terminates {
                 })
             ];
 
-            let result: bool = block_always_terminates(&stmts);
+            let result: bool = block_always_terminates(&stmts, false);
             // Branch does not terminate
             assert_eq!(result, false);
         }
@@ -910,7 +888,7 @@ mod test_block_always_terminates {
                 })
             ];
 
-            let result: bool = block_always_terminates(&stmts);
+            let result: bool = block_always_terminates(&stmts, false);
             // Branch does not terminate
             assert_eq!(result, false);
         }
@@ -948,7 +926,7 @@ mod test_block_always_terminates {
                     })
                 ];
 
-                let result: bool = block_always_terminates(&stmts);
+                let result: bool = block_always_terminates(&stmts, false);
                 // Branch does terminate
                 assert_eq!(result, true);
             }
