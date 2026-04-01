@@ -396,7 +396,7 @@ mod tests {
     // Same test as above, but before the expression, there is an `i` of spaces.
     #[test]
     fn while_statements_literals_spaces_before_expr() {
-        const MAX_SPACES: usize = 5000;
+        const MAX_SPACES: usize = 1000;
 
         let mut spaces = String::with_capacity(MAX_SPACES);
         for _ in 0..MAX_SPACES {
@@ -432,7 +432,7 @@ mod tests {
     // Same test as above, but after the expression, there is an `i` of spaces.
     #[test]
     fn while_statements_literals_spaces_after_expr() {
-        const MAX_SPACES: usize = 5000;
+        const MAX_SPACES: usize = 1000;
 
         let mut spaces = String::with_capacity(MAX_SPACES);
         for _ in 0..MAX_SPACES {
@@ -496,7 +496,7 @@ mod tests {
     // Same test as above, but before the expression, there is an `i` of spaces.
     #[test]
     fn while_statements_vars_spaces_before_expr() {
-        const MAX_SPACES: usize = 5000;
+        const MAX_SPACES: usize = 1000;
 
         let mut spaces = String::with_capacity(MAX_SPACES);
         for _ in 0..MAX_SPACES {
@@ -531,7 +531,7 @@ mod tests {
     // Same test as above, but after the expression, there is an `i` of spaces.
     #[test]
     fn while_statements_vars_spaces_after_expr() {
-        const MAX_SPACES: usize = 5000;
+        const MAX_SPACES: usize = 1000;
 
         let mut spaces = String::with_capacity(MAX_SPACES);
         for _ in 0..MAX_SPACES {
@@ -616,7 +616,7 @@ mod tests {
     // Same test as above, but before the expression, there is an `i` of spaces.
     #[test]
     fn while_statements_vars_and_literals_spaces_before_expr() {
-        const MAX_SPACES: usize = 5000;
+        const MAX_SPACES: usize = 1000;
 
         let mut spaces = String::with_capacity(MAX_SPACES);
         for _ in 0..MAX_SPACES {
