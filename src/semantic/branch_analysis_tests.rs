@@ -1008,4 +1008,33 @@ mod test_dead_code_analysis {
         }
     }
 
+
+    #[test]
+    fn infinite_statement_branch_stmts_after_return_dead() {
+        let literals_with_var = get_all_literals_with_var_no_arr();
+
+        for lv in literals_with_var {
+            let stmt = Stmt::Expr(lv.clone());
+            for i in 0..=1000 {
+                let mut dummy_branch = vec![stmt.clone(); i + 1];
+            
+                // Insert return statement at `i`
+                let rstmt = make_return_stmt(vec![lv.clone()]);
+                dummy_branch.insert(i, rstmt);
+
+                let stmts: Vec<Stmt> = vec![
+                    Stmt::Infinite(InfiniteStmt{
+                        branch: dummy_branch,
+                        span: span(),
+                    })
+                ];
+
+                let result = dead_code_analysis(&stmts);
+                // Block has dead code because it contains statements after the certain return.
+                assert!(result.is_err());
+            }
+        }
+    }
+
+
 }
