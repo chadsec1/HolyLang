@@ -531,13 +531,6 @@ mod test_block_always_terminates {
 
 
 
-    
-
-
-
-
-
-
 
     // Same as the above tests, but these variants terminates via a `break` statement instead.
     //
@@ -593,6 +586,36 @@ mod test_block_always_terminates {
             }
         }
     }
+
+
+    // if statement main branch terminates via `break` statement, and so does the else branch,
+    // and there are no elif branches, therefore the block always terminates.
+    #[test]
+    fn if_statement_main_and_else_branch_break_terminates() {
+        let literals = get_all_literals_no_arr();
+
+        for l in &literals {
+            let stmts: Vec<Stmt> = vec![
+                Stmt::If(IfStmt{
+                    condition: l.clone(),
+                    if_branch: vec![
+                        make_break_stmt()
+                    ],
+                    elif_branches: vec![],
+                    else_branch: Some(vec![
+                        make_break_stmt()
+                    ]),
+                    span: span(),
+                })
+            ];
+
+            let result: bool = block_always_terminates(&stmts);
+            // Branch does terminate
+            assert_eq!(result, true);
+        }
+    }
+
+
 
 
     // elif branch terminates via `break` statement, but main branch and else does not 
@@ -651,6 +674,40 @@ mod test_block_always_terminates {
 
 
 
+    // if statement main branch terminates via `break` statement, and so does the else branch,
+    // and there are `i` of elif branches that also terminates, 
+    // therefore the block always terminates.
+    #[test]
+    fn if_statement_main_and_else_and_elif_branches_break_terminates() {
+        let literals = get_all_literals_no_arr();
+
+        for l in &literals {
+            let mut elif_branches = vec![];
+            for _ in 1..100 { 
+                elif_branches.push((l.clone(), vec![
+                    make_break_stmt()
+                ]));
+
+                let stmts: Vec<Stmt> = vec![
+                    Stmt::If(IfStmt{
+                        condition: l.clone(),
+                        if_branch: vec![
+                            make_break_stmt()
+                        ],
+                        elif_branches: elif_branches.clone(),
+                        else_branch: Some(vec![
+                            make_break_stmt()
+                        ]),
+                        span: span(),
+                    })
+                ];
+
+                let result: bool = block_always_terminates(&stmts);
+                // Branch does terminate
+                assert_eq!(result, true);
+            }
+        }
+    }
 
 
 
