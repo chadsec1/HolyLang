@@ -1774,6 +1774,83 @@ mod tests {
     }
 
 
+
+    #[test]
+    fn binop_arth_unsigned_literals_only() {
+        let edge_cases_numbers = [
+            u8::MIN as u128, u8::MAX as u128, 
+            u16::MIN as u128, u16::MAX as u128, 
+            u32::MIN as u128, u32::MAX as u128, 
+            u64::MIN as u128, u64::MAX as u128, 
+            u128::MIN, u128::MAX, 
+
+            usize::MIN as u128, usize::MAX as u128
+        ];
+
+
+        // Because we default to signed integers literals, unless we go out of range, then we switch to
+        // unsigned literals types.
+        // so those expected types are correct.
+        // Int8 because unsigned::MIN is always 0, which can fit into int8
+        //
+        // I hope this test is not too much voodo for the reader, but it is what it is. It's good,
+        // it's correct, it works, and it catches most parser edge cases.
+        let edge_cases_types = [
+            Type::Int8, Type::Int16,
+            Type::Int8, Type::Int32,
+            Type::Int8, Type::Int64,
+            Type::Int8, Type::Int128,
+            Type::Int8, Type::Uint128,
+            
+            Type::Int8, Type::Int128,
+        ];
+
+        for (en1, et1) in edge_cases_numbers.iter().zip(edge_cases_types.iter()) {    
+            for (en2, et2) in edge_cases_numbers.iter().zip(edge_cases_types.iter()) {    
+                for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
+                    let stmts = parse_body(&format!("own x = {} {} {}", en1, s, en2));
+                    if let Stmt::VarDecl(v) = &stmts[0] {
+                        if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
+                            assert_eq!(op, b);
+
+                            if let Expr::IntLiteral { value, .. } = **left {
+                                assert_eq!(value.get_type(), et1.clone());
+
+                                if value.is_signed() {
+                                    assert_eq!(value.as_i128(), *en1 as i128);
+                                } else {
+                                    assert_eq!(value.as_u128(), *en1);
+                                } 
+
+                            } else { panic!("Expected IntLiteral, instead got: {:?}", **left) }
+
+
+                            if let Expr::IntLiteral { value, .. } = **right {
+                                assert_eq!(value.get_type(), et2.clone());
+
+
+                                if value.is_signed() {
+                                    assert_eq!(value.as_i128(), *en2 as i128);
+                                } else {
+                                    assert_eq!(value.as_u128(), *en2);
+                                } 
+
+                            } else { panic!("Expected IntLiteral, instead got: {:?}", **right) }
+
+
+                        } else {
+                            panic!("Expected {:?}, instead we got {:?}", b, &v.value);
+                        }
+                    } else { panic!("Expected VarDecl, instead we got {:?}", &stmts[0]) }
+                }
+            }
+        }
+    }
+
+
+
+
+
     #[test]
     fn binop_arth_vars_only() {
         for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
