@@ -1713,23 +1713,61 @@ mod tests {
     // Binary operations
 
     #[test]
-    fn binop_arth_literals_only() {
-        for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
-            for i1 in 0..260 {
-                for i2 in 0..260 {
-                    let stmts = parse_body(&format!("own x = {} {} {}", i1, s, i2));
+    fn binop_arth_signed_literals_only() {
+        let edge_cases_numbers = [
+            i8::MIN as i128, i8::MAX as i128, 
+            i16::MIN as i128, i16::MAX as i128, 
+            i32::MIN as i128, i32::MAX as i128, 
+            i64::MIN as i128, i64::MAX as i128, 
+            i128::MIN, i128::MAX, 
+        ];
+
+
+        let edge_cases_types = [
+            Type::Int8, Type::Int8,
+            Type::Int16, Type::Int16,
+            Type::Int32, Type::Int32,
+            Type::Int64, Type::Int64,
+            Type::Int128, Type::Int128,
+        ];
+
+
+        for (en1, et1) in edge_cases_numbers.iter().zip(edge_cases_types.iter()) {    
+            for (en2, et2) in edge_cases_numbers.iter().zip(edge_cases_types.iter()) {    
+                for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
+                    let stmts = parse_body(&format!("own x = {} {} {}", en1, s, en2));
                     if let Stmt::VarDecl(v) = &stmts[0] {
                         if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
                             assert_eq!(op, b);
 
-                            assert!(matches!(**left, Expr::IntLiteral { .. }));
-                            assert!(matches!(**right, Expr::IntLiteral { .. }));
+                            if let Expr::IntLiteral { value, .. } = **left {
+                                assert_eq!(value.get_type(), et1.clone());
+
+                                if !value.is_signed() {
+                                    panic!("We are in a signed testing function, but value is unsigned: {:?}", **left);
+                                }
+
+                                assert_eq!(value.as_i128(), *en1);
+
+                            } else { panic!("Expected IntLiteral, instead got: {:?}", **left) }
+
+
+                            if let Expr::IntLiteral { value, .. } = **right {
+                                assert_eq!(value.get_type(), et2.clone());
+
+                                if !value.is_signed() {
+                                    panic!("We are in a signed testing function, but value is unsigned: {:?}", **right);
+                                }
+
+                                assert_eq!(value.as_i128(), *en2);
+
+                            } else { panic!("Expected IntLiteral, instead got: {:?}", **right) }
+
 
                         } else {
                             panic!("Expected {:?}, instead we got {:?}", b, &v.value);
                         }
                     } else { panic!("Expected VarDecl, instead we got {:?}", &stmts[0]) }
-                    
                 }
             }
         }
