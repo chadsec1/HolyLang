@@ -152,6 +152,16 @@ fn get_all_literals_with_var_no_arr() -> [Expr; 16] {
 mod test_block_always_terminates {
     use super::*;
     
+    #[test]
+    fn empty_func_branch() {
+        let stmts: Vec<Stmt> = vec![];
+
+        let result: bool = block_always_terminates(&stmts, false);
+        // Branch does not terminate
+        assert_eq!(result, false);
+    }
+
+
 
     #[test]
     fn empty_infinite_statement_branch() {
@@ -217,25 +227,27 @@ mod test_block_always_terminates {
     }
 
 
-    // TODO: Make it 100 nested infinite statements.
 
     #[test]
-    fn empty_infinite_statement_nested_branch_not_terminates() {
-        let stmts: Vec<Stmt> = vec![
-            Stmt::Infinite(InfiniteStmt{
-                branch: vec![
-                    Stmt::Infinite(InfiniteStmt{
-                        branch: vec![],
+    fn empty_infinite_statement_nested_branch_not_terminates_deep() {
+        for depth in 1..=1000 {
+            // Build from the inside out
+            let mut stmts: Vec<Stmt> = vec![];
+            for _ in 0..depth {
+                stmts = vec![
+                    Stmt::Infinite(InfiniteStmt {
+                        branch: stmts,
                         span: span(),
                     })
-                ],
-                span: span(),
-            })
-        ];
+                ];
+            }
 
-        let result: bool = block_always_terminates(&stmts, false);
-        // Branch does not terminate
-        assert_eq!(result, false);
+            let result: bool = block_always_terminates(&stmts, false);
+            assert_eq!(
+                result, false,
+                "Expected false at nesting depth {depth}"
+            );
+        }
     }
 
     #[test]
@@ -526,10 +538,6 @@ mod test_block_always_terminates {
             }
         }
     }
-
-
-
-
 
 
     #[test]
