@@ -63,6 +63,22 @@ pub fn dead_code_analysis(block: &Vec<Stmt>) -> Result<(), HolyError> {
             }
 
 
+            Stmt::For(for_stmt) => {
+                let body = &for_stmt.branch;
+                if body.len() == 0 {
+                    return Err(HolyError::Semantic(format!(
+                            "For loop branch has no statements. Empty branches are not allowed (line {} column {})",
+                            for_stmt.span.line, for_stmt.span.column,
+                        )));
+
+                }
+
+
+                dead_code_analysis(body)?;
+            }
+
+
+
 
 
             Stmt::If(if_stmt) => {
