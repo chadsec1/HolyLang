@@ -228,6 +228,32 @@ mod test_block_always_terminates {
     }
 
 
+    // Even if the while loop branch breaks
+    // it should never terminate, because the while statement may or may not execute at all.
+    #[test]
+    fn while_statement_branch_break_never_terminates() {
+        let literals_with_var = get_all_literals_with_var_no_arr();
+
+        for lv in literals_with_var {
+            for i in 0..=1000 {
+                let dummy_branch = vec![make_break_stmt(); i + 1];
+
+                let stmts: Vec<Stmt> = vec![
+                    Stmt::While(WhileStmt{
+                        condition: lv.clone(),
+                        branch: dummy_branch,
+                        span: span(),
+                    })
+                ];
+
+                let result: bool = block_always_terminates(&stmts);
+                // Branch does not terminate
+                assert_eq!(result, false);
+            }
+        }
+    }
+
+
 
 
     #[test]
