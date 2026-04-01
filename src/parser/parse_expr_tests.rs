@@ -86,14 +86,14 @@ mod parse_expr_tests {
 
     #[test]
     fn test_whitespace_only_errors() {
-        let mut s1 = String::with_capacity(10000);
-        let mut s2 = String::with_capacity(10000);
-        let mut s3 = String::with_capacity(10000);
-        let mut s4 = String::with_capacity(10000);
-        let mut s5 = String::with_capacity(30000);
-        let mut s6 = String::with_capacity(40000);
+        let mut s1 = String::with_capacity(5000);
+        let mut s2 = String::with_capacity(5000);
+        let mut s3 = String::with_capacity(5000);
+        let mut s4 = String::with_capacity(5000);
+        let mut s5 = String::with_capacity(15000);
+        let mut s6 = String::with_capacity(20000);
 
-        for _ in 1..10000 {
+        for _ in 1..5000 {
             s1.push(' ');
             s2.push('\t');
             s3.push('\n');

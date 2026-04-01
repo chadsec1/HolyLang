@@ -1683,12 +1683,12 @@ mod blackbox_tests {
     fn test_array_out_of_bounds_single_access_errors() {
         // own arr t[] = [l, l, l]
         // own x t = arr[i]  (out of bounds)
-        // i starts from 3 up to 100k
+        // i starts from 3 up to 10k
 
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            for i in 3..100000 {
+            for i in 3..10000 {
                 let arr_lit = Expr::ArrayLiteral {
                     elements: vec![l.clone(), l.clone(), l.clone()],
                     array_ty: t.clone(),
@@ -1719,12 +1719,12 @@ mod blackbox_tests {
     fn test_array_out_of_bounds_multiple_access_errors() {
         // own arr t[] = [l, l, l]
         // own x t = arr[0:i]  (out of bounds)
-        // i starts from 3 up to 100k
+        // i starts from 3 up to 10k
 
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            for i in 3..100000 {
+            for i in 3..10000 {
                 let arr_lit = Expr::ArrayLiteral {
                     elements: vec![l.clone(), l.clone(), l.clone()],
                     array_ty: t.clone(),

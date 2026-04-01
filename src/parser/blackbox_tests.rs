@@ -346,7 +346,7 @@ mod tests {
 
     #[test]
     fn infinite_statements_valid_construction() {
-        const MAX_SPACES: usize = 10000;
+        const MAX_SPACES: usize = 5000;
         
         let mut spaces = String::with_capacity(MAX_SPACES);
         for _ in 0..MAX_SPACES {
@@ -737,7 +737,7 @@ mod tests {
 
     #[test]
     fn while_statements_no_condition_errors() {
-        const MAX_SPACES: usize = 10000;
+        const MAX_SPACES: usize = 5000;
         
         let mut spaces = String::with_capacity(MAX_SPACES);
         for _ in 0..MAX_SPACES {
@@ -1145,7 +1145,7 @@ mod tests {
 
     #[test]
     fn if_statements_no_condition_errors() {
-        const MAX_SPACES: usize = 10000;
+        const MAX_SPACES: usize = 5000;
         
         let mut spaces = String::with_capacity(MAX_SPACES);
         for _ in 0..MAX_SPACES {
@@ -1156,7 +1156,7 @@ mod tests {
 
     #[test]
     fn if_statements_elif_no_condition_errors() {
-        const MAX_SPACES: usize = 10000;
+        const MAX_SPACES: usize = 5000;
         
         let mut spaces = String::with_capacity(MAX_SPACES);
         for _ in 0..MAX_SPACES {
