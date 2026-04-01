@@ -119,8 +119,9 @@ pub fn dead_code_analysis(block: &Vec<Stmt>) -> Result<(), HolyError> {
 
 /// Recursive helper that tells us if a block of code terminates or not
 /// Like if it returns or breaks, then it terminates. 
-/// is_loop MUST be `true` if you call this while you are in a loop, to not count `break`
-/// statements inside nested loops as upstream block terminations.
+/// is_loop MUST be `true` if you call this while you are in a loop, 
+/// to not count `break` statements inside nested loop(s) as upstream block terminations.
+///
 pub fn block_always_terminates(block: &Vec<Stmt>, is_loop: bool) -> bool {
     for stmt in block {
         match stmt {

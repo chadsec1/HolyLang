@@ -6,6 +6,7 @@ use crate::parser::{
 
 use crate::semantic::branch_analysis::{
     block_always_terminates,
+    dead_code_analysis
 };
 
 // Test Helpers
@@ -937,3 +938,74 @@ mod test_block_always_terminates {
 
 }
 
+#[cfg(test)]
+mod test_dead_code_analysis {
+    use super::*;
+    
+
+    #[test]
+    fn empty_infinite_statement_branch() {
+        let stmts: Vec<Stmt> = vec![
+            Stmt::Infinite(InfiniteStmt{
+                branch: vec![],
+                span: span(),
+            })
+        ];
+
+        let result = dead_code_analysis(&stmts);
+        // Block has dead code (because of empty branch).
+        assert!(result.is_err());
+                
+        assert!(result.unwrap_err().to_string().starts_with("Semantic error: Infinite loop branch has no statements. Empty branches are not allowed"));
+    }
+
+
+    #[test]
+    fn infinite_statement_branch_not_dead() {
+        let literals_with_var = get_all_literals_with_var_no_arr();
+
+        for lv in literals_with_var {
+            let stmt = Stmt::Expr(lv.clone());
+            for i in 0..=1000 {
+                let dummy_branch = vec![stmt.clone(); i + 1];
+
+                let stmts: Vec<Stmt> = vec![
+                    Stmt::Infinite(InfiniteStmt{
+                        branch: dummy_branch,
+                        span: span(),
+                    })
+                ];
+
+                let result = dead_code_analysis(&stmts);
+                // Block has no dead code.
+                assert!(result.is_ok());
+            }
+        }
+    }
+
+
+
+    #[test]
+    fn infinite_statement_branch_return_multiple_times_dead() {
+        let literals_with_var = get_all_literals_with_var_no_arr();
+
+        for lv in literals_with_var {
+            let stmt = make_return_stmt(vec![lv.clone()]);
+            for i in 1..=1000 {
+                let dummy_branch = vec![stmt.clone(); i + 1];
+
+                let stmts: Vec<Stmt> = vec![
+                    Stmt::Infinite(InfiniteStmt{
+                        branch: dummy_branch,
+                        span: span(),
+                    })
+                ];
+
+                let result = dead_code_analysis(&stmts);
+                // Block has dead code because it returns more than once.
+                assert!(result.is_err());
+            }
+        }
+    }
+
+}
