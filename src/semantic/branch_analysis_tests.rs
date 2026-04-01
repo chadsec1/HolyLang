@@ -1087,15 +1087,24 @@ mod test_block_always_terminates {
             }
         }
     }
-
-
-
 }
+
+
+
+
 
 #[cfg(test)]
 mod test_dead_code_analysis {
     use super::*;
     
+
+    #[test]
+    #[should_panic(expected = "Compiler bug")]
+    fn empty_func_branch_panics() {
+        let stmts: Vec<Stmt> = vec![];
+        let _ = dead_code_analysis(&stmts);
+    }
+
 
     #[test]
     fn empty_infinite_statement_branch() {
@@ -1109,7 +1118,6 @@ mod test_dead_code_analysis {
         let result = dead_code_analysis(&stmts);
         // Block has dead code (because of empty branch).
         assert!(result.is_err());
-                
         assert!(result.unwrap_err().to_string().starts_with("Semantic error: Infinite loop branch has no statements. Empty branches are not allowed"));
     }
 
@@ -1158,6 +1166,7 @@ mod test_dead_code_analysis {
                 let result = dead_code_analysis(&stmts);
                 // Block has dead code because it returns more than once.
                 assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().starts_with("Semantic error: Dead code detected starting from line"));
             }
         }
     }
@@ -1186,6 +1195,7 @@ mod test_dead_code_analysis {
                 let result = dead_code_analysis(&stmts);
                 // Block has dead code because it contains statements after the certain return.
                 assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().starts_with("Semantic error: Dead code detected starting from line"));
             }
         }
     }
