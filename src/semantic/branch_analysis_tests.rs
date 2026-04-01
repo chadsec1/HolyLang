@@ -1201,4 +1201,57 @@ mod test_dead_code_analysis {
     }
 
 
+
+
+    #[test]
+    fn infinite_statement_branch_break_multiple_times_dead() {
+        for i in 1..=1000 {
+            let dummy_branch = vec![make_break_stmt(); i + 1];
+
+            let stmts: Vec<Stmt> = vec![
+                Stmt::Infinite(InfiniteStmt{
+                    branch: dummy_branch,
+                    span: span(),
+                })
+            ];
+
+            let result = dead_code_analysis(&stmts);
+            // Block has dead code because it returns more than once.
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().starts_with("Semantic error: Dead code detected starting from line"));
+        }
+    }
+
+
+    #[test]
+    fn infinite_statement_branch_stmts_after_break_dead() {
+        let literals_with_var = get_all_literals_with_var_no_arr();
+
+        for lv in literals_with_var {
+            let stmt = Stmt::Expr(lv.clone());
+            for i in 0..=1000 {
+                let mut dummy_branch = vec![stmt.clone(); i + 1];
+            
+                // Insert break statement at `i`
+                let bstmt = make_break_stmt();
+                dummy_branch.insert(i, bstmt);
+
+                let stmts: Vec<Stmt> = vec![
+                    Stmt::Infinite(InfiniteStmt{
+                        branch: dummy_branch,
+                        span: span(),
+                    })
+                ];
+
+                let result = dead_code_analysis(&stmts);
+                // Block has dead code because it contains statements after the certain return.
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().starts_with("Semantic error: Dead code detected starting from line"));
+            }
+        }
+    }
+
+
+
+
 }
