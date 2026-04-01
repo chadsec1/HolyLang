@@ -1,7 +1,7 @@
 use super::*;
 
 use crate::parser::{
-    IfStmt, WhileStmt, InfiniteStmt, BreakStmt
+    ForStmt, IfStmt, WhileStmt, InfiniteStmt, BreakStmt
 };
 
 use crate::semantic::branch_analysis::{
@@ -421,6 +421,113 @@ mod test_block_always_terminates {
             }
         }
     }
+
+
+    #[test]
+    fn empty_for_statement_branch_never_terminates() {
+        let literals = get_all_literals_no_arr();
+
+        for l in literals {
+            let stmts: Vec<Stmt> = vec![
+                Stmt::For(ForStmt{
+                    holder_name: "x".to_string(),
+                    value: l,
+                    branch: vec![],
+                    span: span(),
+                })
+            ];
+
+            let result: bool = block_always_terminates(&stmts, false);
+            // Branch does not terminate
+            assert_eq!(result, false);
+        }
+    }
+
+
+    // Even if the for loop branch is not empty
+    // it should never terminate, because the for statement may or may not execute at all.
+    #[test]
+    fn for_statement_branch_not_empty_never_terminates() {
+        let literals_with_var = get_all_literals_with_var_no_arr();
+
+        for lv in literals_with_var {
+            let stmt = Stmt::Expr(lv.clone());
+            for i in 0..=1000 {
+                let dummy_branch = vec![stmt.clone(); i + 1];
+
+                let stmts: Vec<Stmt> = vec![
+                    Stmt::For(ForStmt{
+                        holder_name: "x".to_string(),
+                        value: lv.clone(),
+                        branch: dummy_branch,
+                        span: span(),
+                    })
+                ];
+
+                let result: bool = block_always_terminates(&stmts, false);
+                // Branch does not terminate
+                assert_eq!(result, false);
+            }
+        }
+    }
+
+
+    // Even if the for loop branch returns
+    // it should never terminate, because the for statement may or may not execute at all.
+    #[test]
+    fn for_statement_branch_returns_never_terminates() {
+        let literals_with_var = get_all_literals_with_var_no_arr();
+
+        for lv in literals_with_var {
+            let stmt = make_return_stmt(vec![lv.clone()]);
+
+            for i in 0..=1000 {
+                let dummy_branch = vec![stmt.clone(); i + 1];
+
+                let stmts: Vec<Stmt> = vec![
+                    Stmt::For(ForStmt{
+                        holder_name: "x".to_string(),
+                        value: lv.clone(),
+                        branch: dummy_branch,
+                        span: span(),
+                    })
+                ];
+
+                let result: bool = block_always_terminates(&stmts, false);
+                // Branch does not terminate
+                assert_eq!(result, false);
+            }
+        }
+    }
+
+
+    // Even if the for loop branch breaks
+    // it should never terminate, because the for statement may or may not execute at all.
+    #[test]
+    fn for_statement_branch_break_never_terminates() {
+        let literals_with_var = get_all_literals_with_var_no_arr();
+
+        for lv in literals_with_var {
+            for i in 0..=1000 {
+                let dummy_branch = vec![make_break_stmt(); i + 1];
+
+                let stmts: Vec<Stmt> = vec![
+                    Stmt::For(ForStmt{
+                        holder_name: "x".to_string(),
+                        value: lv.clone(),
+                        branch: dummy_branch,
+                        span: span(),
+                    })
+                ];
+
+                let result: bool = block_always_terminates(&stmts, false);
+                // Branch does not terminate
+                assert_eq!(result, false);
+            }
+        }
+    }
+
+
 
 
 
