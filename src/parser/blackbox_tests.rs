@@ -1817,7 +1817,8 @@ mod tests {
                                 assert_eq!(value.get_type(), et1.clone());
 
                                 if value.is_signed() {
-                                    assert_eq!(value.as_i128(), *en1 as i128);
+                                    assert!(value.as_i128() >= 0);
+                                    assert_eq!(value.as_i128() as u128, *en1);
                                 } else {
                                     assert_eq!(value.as_u128(), *en1);
                                 } 
@@ -1830,7 +1831,8 @@ mod tests {
 
 
                                 if value.is_signed() {
-                                    assert_eq!(value.as_i128(), *en2 as i128);
+                                    assert!(value.as_i128() >= 0);
+                                    assert_eq!(value.as_i128() as u128, *en2);
                                 } else {
                                     assert_eq!(value.as_u128(), *en2);
                                 } 
@@ -1988,7 +1990,8 @@ mod tests {
                             assert_eq!(value.get_type(), et.clone());
 
                             if value.is_signed() {
-                                assert_eq!(value.as_i128(), *en as i128);
+                                assert!(value.as_i128() >= 0);
+                                assert_eq!(value.as_i128() as u128, *en);
                             } else {
                                 assert_eq!(value.as_u128(), *en);
                             }   
@@ -2012,7 +2015,8 @@ mod tests {
                             assert_eq!(value.get_type(), et.clone());
 
                             if value.is_signed() {
-                                assert_eq!(value.as_i128(), *en as i128);
+                                assert!(value.as_i128() >= 0);
+                                assert_eq!(value.as_i128() as u128, *en);
                             } else {
                                 assert_eq!(value.as_u128(), *en);
                             }   
