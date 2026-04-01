@@ -161,6 +161,48 @@ mod test_block_always_terminates {
         assert_eq!(result, false);
     }
 
+    #[test]
+    fn func_branch_not_terminates() {
+        let literals_with_var = get_all_literals_with_var_no_arr();
+
+        for lv in literals_with_var {
+            let stmt = Stmt::Expr(lv.clone());
+            for i in 0..=1000 {
+                let stmts: Vec<Stmt> = vec![stmt.clone(); i + 1];
+                let result: bool = block_always_terminates(&stmts, false);
+                // Branch does not terminate
+                assert_eq!(result, false);
+            }
+        }
+
+    }
+
+    #[test]
+    fn func_branch_return_terminates() {
+        let literals_with_var = get_all_literals_with_var_no_arr();
+
+        for lv in literals_with_var {
+            let stmts: Vec<Stmt> = vec![
+                make_return_stmt(vec![lv.clone()])
+            ];
+
+            let result: bool = block_always_terminates(&stmts, false);
+            // Branch does terminate
+            assert_eq!(result, true);
+        }
+    }
+
+    #[test]
+    fn func_branch_break_terminates() {
+        let stmts: Vec<Stmt> = vec![
+            make_break_stmt()
+        ];
+
+        let result: bool = block_always_terminates(&stmts, false);
+        // Branch does terminate
+        assert_eq!(result, true);
+    }
+
 
 
     #[test]
@@ -229,11 +271,11 @@ mod test_block_always_terminates {
 
 
     #[test]
-    fn empty_infinite_statement_nested_branch_not_terminates_deep() {
-        for depth in 1..=1000 {
+    fn empty_infinite_statement_nested_branch_not_terminates() {
+        for i in 1..=1000 {
             // Build from the inside out
             let mut stmts: Vec<Stmt> = vec![];
-            for _ in 0..depth {
+            for _ in 0..=i {
                 stmts = vec![
                     Stmt::Infinite(InfiniteStmt {
                         branch: stmts,
@@ -243,10 +285,7 @@ mod test_block_always_terminates {
             }
 
             let result: bool = block_always_terminates(&stmts, false);
-            assert_eq!(
-                result, false,
-                "Expected false at nesting depth {depth}"
-            );
+            assert_eq!(result, false);
         }
     }
 
