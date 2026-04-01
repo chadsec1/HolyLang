@@ -375,12 +375,12 @@ mod test_block_always_terminates {
 
     #[test]
     fn empty_while_statement_branch() {
-        let literals = get_all_literals_no_arr();
+        let literals_with_var = get_all_literals_with_var_no_arr();
 
-        for l in literals {
+        for lv in literals_with_var {
             let stmts: Vec<Stmt> = vec![
                 Stmt::While(WhileStmt{
-                    condition: l,
+                    condition: lv,
                     branch: vec![],
                     span: span(),
                 })
@@ -1103,6 +1103,52 @@ mod test_dead_code_analysis {
     fn empty_func_branch_panics() {
         let stmts: Vec<Stmt> = vec![];
         let _ = dead_code_analysis(&stmts);
+    }
+
+
+
+    #[test]
+    fn while_statement_branch_not_dead() {
+        let literals_with_var = get_all_literals_with_var_no_arr();
+
+        for lv in literals_with_var {
+            let stmts: Vec<Stmt> = vec![
+                Stmt::While(WhileStmt{
+                    condition: lv,
+                    branch: vec![],
+                    span: span(),
+                })
+            ];
+
+            let result = dead_code_analysis(&stmts);
+            // Block has no dead code (because while statement may or may not execute).
+            assert!(result.is_ok());
+     
+        }
+    }
+
+
+    #[test]
+    fn while_statement_branch_return_not_dead() {
+        let literals_with_var = get_all_literals_with_var_no_arr();
+
+        for lv in literals_with_var {
+            let stmt = make_return_stmt(vec![lv.clone()]);
+            for i in 1..=1000 {
+                let dummy_branch = vec![stmt.clone(); i + 1];
+                let stmts: Vec<Stmt> = vec![
+                    Stmt::While(WhileStmt{
+                        condition: lv.clone(),
+                        branch: dummy_branch,
+                        span: span(),
+                    })
+                ];
+
+                let result = dead_code_analysis(&stmts);
+                // Block has no dead code (because while statement may or may not execute).
+                assert!(result.is_ok());
+            }       
+        }
     }
 
 

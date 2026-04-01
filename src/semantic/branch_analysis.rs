@@ -48,6 +48,23 @@ pub fn dead_code_analysis(block: &Vec<Stmt>) -> Result<(), HolyError> {
             }
 
 
+            Stmt::While(while_stmt) => {
+                let body = &while_stmt.branch;
+                if body.len() == 0 {
+                    return Err(HolyError::Semantic(format!(
+                            "While loop branch has no statements. Empty branches are not allowed (line {} column {})",
+                            while_stmt.span.line, while_stmt.span.column,
+                        )));
+
+                }
+
+
+                dead_code_analysis(body)?;
+            }
+
+
+
+
             Stmt::If(if_stmt) => {
                 if if_stmt.if_branch.len() == 0 {
                     return Err(HolyError::Semantic(format!(
