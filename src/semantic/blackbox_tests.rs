@@ -2014,6 +2014,34 @@ mod blackbox_tests {
     }
 
 
+    // Array access on undeclared variable
+    #[test]
+    fn test_array_multiple_access_on_undeclared_var_errors() {
+        
+        for t in ALL_TYPES_NO_ARR {
+            for i in 1..100 {
+                let access = Expr::ArrayMultipleAccess {
+                    array: Box::new(var_expr("e")),
+                    start: Some(Box::new(usize_lit(1))),
+                    end: Some(Box::new(usize_lit(i))),
+                    span: span(),
+                };
+                let body = vec![
+                    var_decl("x", Type::Array(Box::new(t.clone())), Some(access)),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().starts_with("Semantic error: Array access on undeclared variable `e`"));
+            }
+        }
+
+    }
+     
+
+
 
 
 
