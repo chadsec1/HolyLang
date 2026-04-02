@@ -2042,6 +2042,43 @@ mod blackbox_tests {
 
 
 
+    #[test]
+    fn test_array_valid_multiple_access_both_ends_on_moved_var_errors() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for i in 2..100 {
+                let elements = vec![l.clone(); i + 1];
+                
+                let arr_lit = Expr::ArrayLiteral {
+                    elements: elements,
+                    array_ty: t.clone(),
+                    span: span(),
+                };
+
+                for i2 in 0..i-1 {
+                    let access = Expr::ArrayMultipleAccess {
+                        array: Box::new(var_expr("arr")),
+                        start: Some(Box::new(usize_lit(1))),
+                        end: Some(Box::new(usize_lit(i2+1))),
+                        span: span(),
+                    };
+                    let body = vec![
+                        var_decl("arr", Type::Array(Box::new(t.clone())), Some(arr_lit.clone())),
+                        var_decl("x", Type::Array(Box::new(t.clone())), Some(access)),
+                    ];
+                    let func = void_func("foo", vec![], body);
+                    let mut ast = ast_one(func);
+                    check_semantics(&mut ast).unwrap();
+                }       
+            }
+        }
+    }
+
+
+
+
+
 
     // Array access on undeclared variable
     #[test]
