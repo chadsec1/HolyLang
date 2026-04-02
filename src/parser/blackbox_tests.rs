@@ -84,7 +84,6 @@ mod tests {
             let result = parse(&format!("func main) {} {{\n}}\n", t));
 
             assert!(result.is_err());
-            println!("huh? {result:?}");
             assert!(result.unwrap_err().to_string().contains("Invalid function header (no '(')"));
         }
     }
