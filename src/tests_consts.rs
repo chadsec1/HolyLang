@@ -142,9 +142,8 @@ pub const ALL_TYPES_NO_ARR_SCATTERED: &[Type] = &[
     Type::Int128,
     Type::Int8,
     Type::Uint64,
-    Type::Int64,
     Type::Float32,
-    Type::Byte,
+    Type::Int64,
     Type::Uint16,
     Type::String,
     Type::Uint128,
@@ -152,6 +151,7 @@ pub const ALL_TYPES_NO_ARR_SCATTERED: &[Type] = &[
     Type::Uint32,
     Type::Int16,
     Type::Bool,
+    Type::Byte,
     Type::Int32,
     Type::Usize,
 

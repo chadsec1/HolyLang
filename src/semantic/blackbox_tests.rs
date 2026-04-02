@@ -125,9 +125,8 @@ fn get_all_literals_no_arr_scattered_order() -> [Expr; 15] {
         int128_lit(1),
         int8_lit(1),
         uint64_lit(1),
-        int64_lit(1),
         float32_lit(1.0),
-        byte_lit(1),
+        int64_lit(1),
         uint16_lit(1),
         str_lit("Hi"),
         uint128_lit(1),
@@ -135,6 +134,7 @@ fn get_all_literals_no_arr_scattered_order() -> [Expr; 15] {
         uint32_lit(1),
         int16_lit(1),
         bool_lit(false),
+        byte_lit(1),
         int32_lit(1),
         usize_lit(1)
     ];
@@ -1600,22 +1600,40 @@ mod blackbox_tests {
 
     #[test]
     fn test_call_wrong_arg_type_errors() {
-        let callee = void_func("bar", vec![param("a", Type::Int32)], vec![]);
-        let body = vec![Stmt::Expr(call_expr("bar", vec![bool_lit(true)]))];
-        let caller = void_func("main", vec![], body);
-        let mut ast = AST { functions: vec![callee, caller] };
-        let result = check_semantics(&mut ast);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("type mismatch"));
+        let literals_scattered = get_all_literals_no_arr_scattered_order();
+
+
+        for ((l, t1), t2) in literals_scattered.iter()
+            .zip(ALL_TYPES_NO_ARR_SCATTERED.iter())
+            .zip(ALL_TYPES_NO_ARR)
+        {
+            let callee = void_func("bar", vec![param("a", t2.clone())], vec![]);
+
+            let body = vec![
+                var_decl("x", t1.clone(), Some(l.clone())),
+
+                Stmt::Expr(call_expr("bar", vec![var_expr("x")]))
+            ];
+            let caller = void_func("main", vec![], body);
+            let mut ast = AST { functions: vec![callee, caller] };
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("type mismatch"));
+        }
     }
 
     #[test]
     fn test_correct_call_passes() {
-        let callee = void_func("bar", vec![param("a", Type::Int32)], vec![]);
-        let body = vec![Stmt::Expr(call_expr("bar", vec![int32_lit(42)]))];
-        let caller = void_func("main", vec![], body);
-        let mut ast = AST { functions: vec![callee, caller] };
-        check_semantics(&mut ast).unwrap();
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let callee = void_func("bar", vec![param("a", t.clone())], vec![]);
+            let body = vec![Stmt::Expr(call_expr("bar", vec![l.clone()]))];
+            let caller = void_func("main", vec![], body);
+            let mut ast = AST { functions: vec![callee, caller] };
+            check_semantics(&mut ast).unwrap();
+        }
     }
 
     // return statement with multiple values (aka multi-return)
