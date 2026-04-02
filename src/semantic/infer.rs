@@ -171,8 +171,8 @@ pub fn infer_expr_type(
                 }
             } else {
                 return Err(HolyError::Semantic(format!(
-                        "You can only access declared array variables  (line {} column {})", 
-                        span.line, span.column
+                        "Expected variable of any `array` type, instead got an `{}` (line {} column {})", 
+                        array, span.line, span.column
                     )));
             }
 
@@ -249,13 +249,6 @@ pub fn infer_expr_type(
                                                 start_num, end_num, span.line, span.column
                                             )));
                                 }
-                                // just to be defensive:
-                                if end_num < start_num {
-                                    return Err(HolyError::Semantic(format!(
-                                                "End index `{}` cannot be larger than start index `{}` (line {} column {})", 
-                                                end_num, start_num, span.line, span.column
-                                            )));
-                                }
                             }
                         }
                     }
@@ -273,8 +266,8 @@ pub fn infer_expr_type(
                 }
             } else {
                 return Err(HolyError::Semantic(format!(
-                        "You can only access arrays via variables  (line {} column {})", 
-                        span.line, span.column
+                        "Expected variable of any `array` type, instead got an `{}` (line {} column {})", 
+                        array, span.line, span.column
                     )));
             }
         }
