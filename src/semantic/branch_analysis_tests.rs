@@ -1859,8 +1859,8 @@ mod test_return_branch_analysis {
     }
 
 
-    // If statement with elif branch, and an else branch will always have one branch execute, and if all branches return, it can always return,
-    // 
+    // If statement with elif branch, and an else branch will always have one branch execute, and if even one branch not returns, 
+    // it cant gurantee that it will always return.
     #[test]
     fn func_if_statement_with_else_branch_return_elif_branch_not_return_error() {
         let literals_with_var = get_all_literals_with_var_no_arr();
@@ -1889,6 +1889,40 @@ mod test_return_branch_analysis {
             assert!(result.unwrap_err().to_string().contains("but statement branch body does not end with a return statement"));
         }
     }
+
+
+    // If statement with elif branch, and an else branch will always have one branch execute, and if even one branch not returns, 
+    // it cant gurantee that it will always return.
+    // 
+    #[test]
+    fn func_if_statement_with_elif_branch_return_else_branch_not_return_error() {
+        let literals_with_var = get_all_literals_with_var_no_arr();
+        for lv in literals_with_var {
+            let dummy_func = make_dummy_func("x".to_string(), Some(vec![
+                    Stmt::If(IfStmt{
+                        condition: lv.clone(),
+                        if_branch: vec![
+                            make_return_stmt(vec![lv.clone()])
+                        ],
+                        elif_branches: vec![(lv.clone(), vec![
+                            make_return_stmt(vec![lv.clone()])
+                        ])],
+                        else_branch: Some(vec![
+                            Stmt::Expr(lv.clone())
+                        ]),
+                        span: span(),
+                    })
+                ]));
+
+            let last_stmt = dummy_func.body.last();
+
+            let result = return_branch_analysis(&dummy_func, last_stmt.cloned(), false, false);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("but statement branch body does not end with a return statement"));
+        }
+    }
+
 
 
 
