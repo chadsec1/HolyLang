@@ -1834,6 +1834,71 @@ mod blackbox_tests {
         }
     }
 
+
+    // i.e. "hi"[0] is an error. You can only access variables, of type array, not literals.
+    #[test]
+    fn test_array_access_on_literals_errors() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for i in 0..1000 {
+                let access = Expr::ArraySingleAccess {
+                    array: Box::new(l.clone()),
+                    index: Box::new(usize_lit(i)),
+                    span: span(),
+                };
+                let body = vec![
+                    var_decl("x", t.clone(), Some(access)),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().starts_with("Semantic error: Expected variable of any `array` type"));
+
+            }       
+        }
+    }
+
+
+    #[test]
+    fn test_array_access_on_moved_variable_errors() {
+
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for i in 0..100 {
+                let elements = vec![l.clone(); i + 1];
+                
+                let arr_lit = Expr::ArrayLiteral {
+                    elements: elements,
+                    array_ty: t.clone(),
+                    span: span(),
+                };
+
+                for i2 in 0..i+1 {
+                    let access = Expr::ArraySingleAccess {
+                        array: Box::new(var_expr("a")),
+                        index: Box::new(usize_lit(i2)),
+                        span: span(),
+                    };
+                    let body = vec![
+                        var_decl("a", Type::Array(Box::new(t.clone())), Some(arr_lit.clone())),
+                        var_decl("x", Type::Array(Box::new(t.clone())), Some(var_expr("a"))),
+                        var_decl("y", t.clone(), Some(access)),
+                    ];
+                    let func = void_func("foo", vec![], body);
+                    let mut ast = ast_one(func);
+                    let result = check_semantics(&mut ast);
+                    assert!(result.is_err());
+                    assert!(result.unwrap_err().to_string().starts_with("Semantic error: Array access on moved variable `a`"));
+                }
+            }       
+        }
+    }
+
+
+
     #[test]
     fn test_array_valid_multiple_access_both_ends_passes() {
 
