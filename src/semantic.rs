@@ -128,6 +128,7 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
     // because dead code analysis should not let dead code pass.
     // last statement should be always be the one actualy always returning.
     //
+    // We only do return branch analysis if function has declared return type.
     if func.return_type.is_some() {
         let last_func_stmt = func.body.last();
         branch_analysis::return_branch_analysis(&func.clone(), last_func_stmt.cloned(), false, false)?;
