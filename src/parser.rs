@@ -449,12 +449,28 @@ fn parse_function(lines: &Vec<&str>, start_i: usize) -> Result<(Function, usize)
     // header like: func add(a int32, b int32) int32 {
     let after_func = &header_raw["func ".len()..];
 
+
+    /*
+    let open_parenthesis_count = header_raw.chars().filter(|&c| c == '(').count();
+    let close_parenthesis_count = header_raw.chars().filter(|&c| c == ')').count();
+
+    if open_parenthesis_count != close_parenthesis_count {
+        return Err(HolyError::Parse(format!("Invalid function header: there is extra parenthesis in the function declaration header `{}` at line {}", header_raw, start_i + 1)));
+    }
+    */
+
+
     // find '(' matching for params
     let open_paren = after_func.find('(').ok_or_else(|| {
         HolyError::Parse(format!("Invalid function header (no '(') at line {}: `{}`", start_i + 1, header_raw))
     })?;
     
     let name = after_func[..open_paren].trim().to_string();
+    if name.ends_with(")")  {
+        return Err(HolyError::Parse(format!("Invalid function header: there is an extra closing parenthesis `)` in the function declaration header `{}` at line {}", header_raw, start_i + 1)));
+    }
+
+
 
     helpers::validate_identifier_name(&name)
         .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
@@ -478,7 +494,7 @@ fn parse_function(lines: &Vec<&str>, start_i: usize) -> Result<(Function, usize)
         return Err(HolyError::Parse(format!("Function body statements must start on the next line (line {})", start_i + 1)));
     }
 
-
+    
     let return_type = if return_type_str.is_empty() {
         None
     } else {

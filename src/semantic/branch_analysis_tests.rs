@@ -1371,4 +1371,15 @@ mod test_return_branch_analysis {
     }
 
 
+    #[test]
+    fn func_never_returns() {
+        let dummy_func = make_dummy_func("x".to_string(), None);
+        let last_stmt = dummy_func.body.last();
+
+        let result = return_branch_analysis(&dummy_func, last_stmt.cloned(), false, false);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("statement branch body does not end with a return statement"));
+
+    }
+
 }
