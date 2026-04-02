@@ -1460,11 +1460,6 @@ mod test_return_branch_analysis {
 
 
 
-
-
-
-
-
     // If you try to break in an infinite loop that is last statement, it must error.
     //
     #[test]

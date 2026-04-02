@@ -231,7 +231,7 @@ pub fn return_branch_analysis(
 
             // This is weak check, but I will keep it. It can catch (some) bugs.
             if infinite_stmt.branch.len() == 0 {
-                panic!("(Compiler bug) all branches must contain at least one statement, this shouldve been caught by dead_code_analyse before calling us:\nFunc: {:?}", func);
+                panic!("(Compiler bug) all branches must contain at least one statement, this shouldve been caught by dead_code_analyse before calling us:\nFunc: {:?}\ninfinite_stmt: {:?}", func, infinite_stmt);
             }
 
             // If we are in a nested loop(s), we dont care about breaks or whatever.
@@ -280,7 +280,7 @@ pub fn return_branch_analysis(
             //
 
             if while_stmt.branch.len() == 0 {
-                panic!("(Compiler bug) all branches must contain at least one statement, this shouldve been caught by dead_code_analyse before calling us:\nFunc: {:?}", func);
+                panic!("(Compiler bug) all branches must contain at least one statement, this shouldve been caught by dead_code_analyse before calling us:\nFunc: {:?}\nwhile_stmt: {:?}", func, while_stmt);
             }
 
             if !is_loop {
@@ -293,6 +293,11 @@ pub fn return_branch_analysis(
         }
         
         Some(Stmt::For(for_stmt)) => {
+            if for_stmt.branch.len() == 0 {
+                panic!("(Compiler bug) all branches must contain at least one statement, this shouldve been caught by dead_code_analyse before calling us:\nFunc: {:?}\nfor_stmt: {:?}", func, for_stmt);
+            }
+
+
             if !is_loop {
                 return Err(HolyError::Semantic(format!(
                         "For loops may or may not execute at all, therefore you need a return statement outside the loop scope. (line {} column {})",
