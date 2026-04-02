@@ -1413,9 +1413,9 @@ mod test_return_branch_analysis {
     }
 
 
-    // Same as above, but this time else branch is Some, but empty. (this should panic because
-    // return_branch_analysis assumes all function branches contain at least 1 statement, which
-    // is what is guaranteed by dead_code_analysis.)
+    // Empty branches should panic because return_branch_analysis assumes 
+    // all function branches contain at least 1 statement, which
+    // is what is guaranteed by dead_code_analysis.
     #[should_panic(expected = "Compiler bug")]
     #[test]
     fn func_infinite_statement_empty_branch_panics() {
@@ -1430,6 +1430,35 @@ mod test_return_branch_analysis {
 
         let _ = return_branch_analysis(&dummy_func, last_stmt.cloned(), false, false);
     }
+
+    // Same as above test, but this time nested.
+    #[should_panic(expected = "Compiler bug")]
+    #[test]
+    fn func_infinite_statement_nested_branch_empty_panics() {
+        // NOTE: This test unlike other tests doesn't build from inside out, because return analysis
+        // doesn't care too much about deeply nested infinite loops, it only cares about 2 nested
+        // loops max
+        // Which I think is something worth changing, but for now, this test will be fine.
+        let stmts = vec![
+            Stmt::Infinite(InfiniteStmt {
+                branch: vec![
+                    Stmt::Infinite(InfiniteStmt {
+                        branch: vec![],
+                        span: span()
+                    })
+                ],
+                span: span(),
+            })
+        ];
+    
+        let dummy_func = make_dummy_func("x".to_string(), Some(stmts));
+
+        let last_stmt = dummy_func.body.last();
+
+        let _ = return_branch_analysis(&dummy_func, last_stmt.cloned(), false, false);
+    }
+
+
 
 
 

@@ -206,6 +206,7 @@ pub fn return_branch_analysis(
         panic!("(Compiler bug) do not call return_branch_analysis on functions with empty bodies! Always check body size");
     }
 
+
     match last_stmt {
 
         Some(Stmt::Break(break_stmt)) => {
@@ -228,6 +229,7 @@ pub fn return_branch_analysis(
 
         Some(Stmt::Infinite(infinite_stmt)) => {
 
+            // This is weak check, but I will keep it. It can catch (some) bugs.
             if infinite_stmt.branch.len() == 0 {
                 panic!("(Compiler bug) all branches must contain at least one statement, this shouldve been caught by dead_code_analyse before calling us:\nFunc: {:?}", func);
             }
@@ -235,6 +237,8 @@ pub fn return_branch_analysis(
             // If we are in a nested loop(s), we dont care about breaks or whatever.
             // We only care about upper most level infinite loop.
             //
+            // Otherwise, we execute this block which ensures you can't break out of the infinite
+            // loop because it's last statement in a function that returns
             //
             if !is_loop {
                 // So, why do we error on break? can't programmer like break then return outside for
@@ -246,16 +250,10 @@ pub fn return_branch_analysis(
                 for s in &infinite_stmt.branch {
                     match s {
                         Stmt::Break(break_stmt) => {
-
-                            // If this is a nested loop, like a infinite inside another infinite, you can
-                            // break out of it fine.
-                            if !is_loop {
-                                return Err(HolyError::Semantic(format!(
-                                    "You cannot `break` out of a infinite loop if its the last statement in a function that returns. Use a return statement instead. (line {} column {})",
-                                    break_stmt.span.line, break_stmt.span.column,
-                                )));
-                                
-                            }
+                            return Err(HolyError::Semantic(format!(
+                                "You cannot `break` out of a infinite loop if its the last statement in a function that returns. Use a return statement instead. (line {} column {})",
+                                break_stmt.span.line, break_stmt.span.column,
+                            )));
                         }
 
                         Stmt::If(_) => {
@@ -263,11 +261,7 @@ pub fn return_branch_analysis(
                         }
 
 
-                        Stmt::While(_) => {
-                            return_branch_analysis(func, Some(s.clone()), true, false)?;
-                        }
-
-                        Stmt::Infinite(_) => {
+                        Stmt::While(_) | Stmt::For(_) | Stmt::Infinite(_) => {
                             return_branch_analysis(func, Some(s.clone()), true, false)?;
                         }
 
@@ -298,10 +292,14 @@ pub fn return_branch_analysis(
             }
         }
         
-        Some(Stmt::For(for_stmt)) => return Err(HolyError::Semantic(format!(
-                    "For loops may or may not execute at all, therefore you need a return statement outside the loop scope. (line {} column {})",
-                    for_stmt.span.line, for_stmt.span.column,
-                ))),
+        Some(Stmt::For(for_stmt)) => {
+            if !is_loop {
+                return Err(HolyError::Semantic(format!(
+                        "For loops may or may not execute at all, therefore you need a return statement outside the loop scope. (line {} column {})",
+                        for_stmt.span.line, for_stmt.span.column,
+                    )))
+            }
+        },
         
 
         Some(Stmt::If(if_stmt)) => {
