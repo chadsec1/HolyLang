@@ -6,7 +6,8 @@ use crate::parser::{
 
 use crate::semantic::branch_analysis::{
     block_always_terminates,
-    dead_code_analysis
+    dead_code_analysis,
+    return_branch_analysis
 };
 
 // Test Helpers
@@ -80,6 +81,19 @@ fn bool_lit(b: bool) -> Expr {
 fn str_lit(s: &str) -> Expr {
     Expr::StringLiteral { value: s.to_string(), span: span() }
 }
+
+fn make_dummy_func(name: String, body: Option<Vec<Stmt>>) -> Function {
+    if body.is_none() {
+        return Function { 
+            name: name, params: vec![], return_type: Some(vec![Type::Int32]), body: vec![Stmt::Expr(int64_lit(69))], span: span()
+        }; 
+    } else {
+        return Function { 
+            name: name, params: vec![], return_type: Some(vec![Type::Int32]), body: body.unwrap(), span: span()
+        };
+    }
+}
+
 
 fn make_return_stmt(exprs: Vec<Expr>) -> Stmt {
     Stmt::Return(exprs)
@@ -476,13 +490,13 @@ mod test_block_always_terminates {
 
     #[test]
     fn empty_for_statement_branch_never_terminates() {
-        let literals = get_all_literals_no_arr();
+        let literals_with_var = get_all_literals_with_var_no_arr();
 
-        for l in literals {
+        for lv in literals_with_var {
             let stmts: Vec<Stmt> = vec![
                 Stmt::For(ForStmt{
                     holder_name: "x".to_string(),
-                    value: l,
+                    value: lv,
                     branch: vec![],
                     span: span(),
                 })
@@ -1096,7 +1110,6 @@ mod test_block_always_terminates {
 #[cfg(test)]
 mod test_dead_code_analysis {
     use super::*;
-    
 
     #[test]
     #[should_panic(expected = "Compiler bug")]
@@ -1106,9 +1119,30 @@ mod test_dead_code_analysis {
     }
 
 
+    #[test]
+    fn empty_for_statement_branch_dead() {
+        let literals_with_var = get_all_literals_with_var_no_arr();
+
+        for lv in literals_with_var {
+            let stmts: Vec<Stmt> = vec![
+                Stmt::For(ForStmt{
+                    holder_name: "x".to_string(),
+                    value: lv,
+                    branch: vec![],
+                    span: span(),
+                })
+            ];
+
+            let result = dead_code_analysis(&stmts);
+            // Block has no dead code (because while statement may or may not execute).
+            // But inside the while statement its self, its empty, so it its self is dead.
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().starts_with("Semantic error: For loop branch has no statements. Empty branches are not allowed"));
+        }
+    }
 
     #[test]
-    fn while_statement_branch_not_dead() {
+    fn empty_while_statement_branch_dead() {
         let literals_with_var = get_all_literals_with_var_no_arr();
 
         for lv in literals_with_var {
@@ -1122,20 +1156,27 @@ mod test_dead_code_analysis {
 
             let result = dead_code_analysis(&stmts);
             // Block has no dead code (because while statement may or may not execute).
-            assert!(result.is_ok());
+            // But inside the while statement its self, its empty, so it its self is dead.
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().starts_with("Semantic error: While loop branch has no statements. Empty branches are not allowed"));
      
         }
     }
 
 
     #[test]
-    fn while_statement_branch_return_not_dead() {
+    fn while_statement_branch_multiple_return_dead() {
         let literals_with_var = get_all_literals_with_var_no_arr();
 
         for lv in literals_with_var {
-            let stmt = make_return_stmt(vec![lv.clone()]);
-            for i in 1..=1000 {
-                let dummy_branch = vec![stmt.clone(); i + 1];
+            let stmt = Stmt::Expr(lv.clone());
+            for i in 0..=1000 {
+                let mut dummy_branch = vec![stmt.clone(); i + 1];
+            
+                // Insert return statement at `i`
+                let rstmt = make_return_stmt(vec![lv.clone()]);
+                dummy_branch.insert(i, rstmt);
+
                 let stmts: Vec<Stmt> = vec![
                     Stmt::While(WhileStmt{
                         condition: lv.clone(),
@@ -1145,8 +1186,13 @@ mod test_dead_code_analysis {
                 ];
 
                 let result = dead_code_analysis(&stmts);
+
                 // Block has no dead code (because while statement may or may not execute).
-                assert!(result.is_ok());
+                // But inside the while statement its self, there are statements after the return
+                // statement, so those are dead.
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().starts_with("Semantic error: Dead code detected starting from line"));
+
             }       
         }
     }
@@ -1296,8 +1342,33 @@ mod test_dead_code_analysis {
             }
         }
     }
+}
 
 
+
+
+#[cfg(test)]
+mod test_return_branch_analysis {
+    use super::*;
+    
+    #[should_panic(expected = "Compiler bug")]
+    #[test]
+    fn empty_func_body() {
+        let dummy_func = make_dummy_func("x".to_string(), Some(vec![]));
+        let last_stmt: Option<Stmt> = None;
+
+        let _ = return_branch_analysis(&dummy_func, last_stmt, false, false);
+    }
+
+
+    #[should_panic(expected = "Compiler bug")]
+    #[test]
+    fn empty_func_last_stmt() {
+        let dummy_func = make_dummy_func("x".to_string(), None);
+        let last_stmt: Option<Stmt> = None;
+
+        let _ = return_branch_analysis(&dummy_func, last_stmt, false, false);
+    }
 
 
 }

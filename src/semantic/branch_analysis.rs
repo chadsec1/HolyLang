@@ -78,9 +78,6 @@ pub fn dead_code_analysis(block: &Vec<Stmt>) -> Result<(), HolyError> {
             }
 
 
-
-
-
             Stmt::If(if_stmt) => {
                 if if_stmt.if_branch.len() == 0 {
                     return Err(HolyError::Semantic(format!(
@@ -203,7 +200,11 @@ pub fn return_branch_analysis(
     is_loop: bool,
     forbid_break: bool
 ) -> Result<(), HolyError> {
-    let ret_ty = func.return_type.clone().unwrap();
+    let ret_ty = func.return_type.as_ref().expect("(Compiler bug) Dont call return_branch_analysis on functions that dont have declared return type(s)!");
+
+    if func.body.len() == 0 {
+        panic!("(Compiler bug) do not call return_branch_analysis on functions with empty bodies! Always check body size");
+    }
 
     match last_stmt {
 
