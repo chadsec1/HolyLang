@@ -1413,6 +1413,29 @@ mod test_return_branch_analysis {
     }
 
 
+    // Same as above, but this time else branch is Some, but empty. (this should panic because
+    // return_branch_analysis assumes all function branches contain at least 1 statement, which
+    // is what is guaranteed by dead_code_analysis.)
+    #[should_panic(expected = "Compiler bug")]
+    #[test]
+    fn func_infinite_statement_empty_branch_panics() {
+        let dummy_func = make_dummy_func("x".to_string(), Some(vec![
+            Stmt::Infinite(InfiniteStmt{
+                branch: vec![],
+                span: span(),
+            })
+        ]));
+
+        let last_stmt = dummy_func.body.last();
+
+        let _ = return_branch_analysis(&dummy_func, last_stmt.cloned(), false, false);
+    }
+
+
+
+
+
+
     // If you try to break in an infinite loop that is last statement, it must error.
     //
     #[test]
@@ -1600,6 +1623,62 @@ mod test_return_branch_analysis {
                     "Semantic error: For loops may or may not execute at all, therefore you need a return statement outside the loop scope."));
         }
     }
+
+
+
+    // If statement without an else branch, may or may not execute, therefore even if they return inside the main branch, the
+    // function its self may not always return, therefore return analysis should error here
+    // 
+    #[test]
+    fn func_if_statement_returns_error() {
+        let literals_with_var = get_all_literals_with_var_no_arr();
+        for lv in literals_with_var {
+            let dummy_func = make_dummy_func("x".to_string(), Some(vec![
+                    Stmt::If(IfStmt{
+                        condition: lv.clone(),
+                        if_branch: vec![
+                            make_return_stmt(vec![lv.clone()])
+                        ],
+                        elif_branches: vec![],
+                        else_branch: None,
+                        span: span(),
+                    })
+                ]));
+
+            let last_stmt = dummy_func.body.last();
+
+            let result = return_branch_analysis(&dummy_func, last_stmt.cloned(), false, false);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().starts_with(
+                    "Semantic error: Function `x` only returns in if statement branches, which might not always execute. Add an `else` branch"));
+        }
+    }
+
+
+    // Same as above, but this time else branch is Some, but empty. (this should panic because
+    // return_branch_analysis assumes all function branches contain at least 1 statement, which
+    // is what is guaranteed by dead_code_analysis.)
+    #[should_panic(expected = "Compiler bug")]
+    #[test]
+    fn func_if_statement_with_empty_else_branch_returns_error() {
+        let dummy_func = make_dummy_func("x".to_string(), Some(vec![
+            Stmt::If(IfStmt{
+                condition: int32_lit(1),
+                if_branch: vec![
+                    make_return_stmt(vec![int32_lit(2)])
+                ],
+                elif_branches: vec![],
+                else_branch: Some(vec![]),
+                span: span(),
+            })
+        ]));
+
+        let last_stmt = dummy_func.body.last();
+
+        let _ = return_branch_analysis(&dummy_func, last_stmt.cloned(), false, false);
+    }
+
 
 
 

@@ -228,6 +228,10 @@ pub fn return_branch_analysis(
 
         Some(Stmt::Infinite(infinite_stmt)) => {
 
+            if infinite_stmt.branch.len() == 0 {
+                panic!("(Compiler bug) all branches must contain at least one statement, this shouldve been caught by dead_code_analyse before calling us:\nFunc: {:?}", func);
+            }
+
             // If we are in a nested loop(s), we dont care about breaks or whatever.
             // We only care about upper most level infinite loop.
             //
@@ -280,6 +284,11 @@ pub fn return_branch_analysis(
             // If this is a nested loop, like a while loop inside a `infinite` loop, we let you do
             // that. if in_loop is true, it might not be last statement after all.
             //
+
+            if while_stmt.branch.len() == 0 {
+                panic!("(Compiler bug) all branches must contain at least one statement, this shouldve been caught by dead_code_analyse before calling us:\nFunc: {:?}", func);
+            }
+
             if !is_loop {
                 return Err(HolyError::Semantic(format!(
                         "While loops may or may not execute at all, therefore you need a return statement outside the loop scope, or consider using `infinite` loops instead. (line {} column {})",
