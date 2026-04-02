@@ -59,7 +59,72 @@ mod tests {
         assert_parse_err("own x = 1");
     }
 
-    // Function declarations
+    // Functions
+
+    #[test]
+    fn parse_function_with_missing_opening_parenthesis_errors() {
+        let result = parse("func main) {\n}\n");
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Invalid function header (no '(')"));
+    }
+
+    #[test]
+    fn parse_function_with_missing_closing_parenthesis_errors() {
+        let result = parse("func main( {\n}\n");
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Invalid function header (no ')')"));
+    }
+
+
+    #[test]
+    fn parse_function_with_returns_missing_opening_parenthesis_errors() {
+        for t in ALL_TYPES_NO_ARR_NO_INFER {
+            let result = parse(&format!("func main) {} {{\n}}\n", t));
+
+            assert!(result.is_err());
+            println!("huh? {result:?}");
+            assert!(result.unwrap_err().to_string().contains("Invalid function header (no '(')"));
+        }
+    }
+
+    #[test]
+    fn parse_function_with_returns_missing_closing_parenthesis_errors() {
+        for t in ALL_TYPES_NO_ARR_NO_INFER {
+            let result = parse(&format!("func main( {} {{\n}}\n", t));
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Invalid function header (no ')')"));
+        }
+    }
+
+    #[test]
+    fn parse_function_missing_opening_parenthesis_with_multiple_returns_errors() {
+        for t1 in ALL_TYPES_NO_ARR_NO_INFER {
+            for t2 in ALL_TYPES_NO_ARR_NO_INFER {
+                let result = parse(&format!("func main) ({}, {}) {{\n}}\n", t1, t2));
+
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("Invalid function header: there is an extra closing parenthesis `)` in the function declaration header"));
+            }
+        }
+    }
+
+
+    #[test]
+    fn parse_function_missing_closing_parenthesis_with_multiple_returns_errors() {
+        for t1 in ALL_TYPES_NO_ARR_NO_INFER {
+            for t2 in ALL_TYPES_NO_ARR_NO_INFER {
+                let result = parse(&format!("func main( ({}, {}) {{\n}}\n", t1, t2));
+
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("Invalid parameter"));
+            }
+        }
+    }
+
+
 
     #[test]
     fn parse_empty_function() {
