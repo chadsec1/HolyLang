@@ -1863,7 +1863,6 @@ mod blackbox_tests {
 
     #[test]
     fn test_array_access_on_moved_variable_errors() {
-
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -1884,7 +1883,8 @@ mod blackbox_tests {
                     };
                     let body = vec![
                         var_decl("a", Type::Array(Box::new(t.clone())), Some(arr_lit.clone())),
-                        var_decl("x", Type::Array(Box::new(t.clone())), Some(var_expr("a"))),
+                        // move a to x
+                        var_decl("x", Type::Array(Box::new(t.clone())), Some(var_expr("a"))), 
                         var_decl("y", t.clone(), Some(access)),
                     ];
                     let func = void_func("foo", vec![], body);
@@ -1935,6 +1935,37 @@ mod blackbox_tests {
             }
         }
     }
+
+
+    // Similar to above test, except here we attempt to access a literal instead of array variable, which
+    // should always error
+    #[test]
+    fn test_array_multiple_access_on_literals_both_ends_errors() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for i in 0..100 {
+                let access = Expr::ArrayMultipleAccess {
+                    array: Box::new(l.clone()),
+                    start: Some(Box::new(usize_lit(1))),
+                    end: Some(Box::new(usize_lit(i+1))),
+                    span: span(),
+                };
+                let body = vec![
+                    var_decl("x", Type::Array(Box::new(t.clone())), Some(access)),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().starts_with("Semantic error: Expected variable of any `array` type"));
+            }
+        }
+    }
+
+
+
+
 
 
     #[test]
