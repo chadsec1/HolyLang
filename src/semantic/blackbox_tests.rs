@@ -2014,6 +2014,35 @@ mod blackbox_tests {
     }
 
 
+    // Array access on non-array variable
+    #[test]
+    fn test_array_multiple_access_on_non_array_var_errors() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for i in 0..1000 {
+                let access = Expr::ArrayMultipleAccess {
+                    array: Box::new(var_expr("e")),
+                    start: Some(Box::new(usize_lit(1))),
+                    end: Some(Box::new(usize_lit(i+1))),
+                    span: span(),
+                };
+                let body = vec![
+                    var_decl("e", t.clone(), Some(l.clone())),
+                    var_decl("x", t.clone(), Some(access)),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().starts_with("Semantic error: Array access on non-array variable `e`"));
+            }       
+        }
+    }
+
+
+
+
     // Array access on undeclared variable
     #[test]
     fn test_array_multiple_access_on_undeclared_var_errors() {
