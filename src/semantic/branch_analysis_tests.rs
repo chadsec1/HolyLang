@@ -408,7 +408,7 @@ mod test_block_always_terminates {
 
 
     // Even if the while loop branch is not empty
-    // it should never terminate, because the while statement may or may not execute at all.
+    // it must never terminate, because the while statement may or may not execute at all.
     #[test]
     fn while_statement_branch_not_empty_never_terminates() {
         let literals_with_var = get_all_literals_with_var_no_arr();
@@ -435,7 +435,7 @@ mod test_block_always_terminates {
 
 
     // Even if the while loop branch returns
-    // it should never terminate, because the while statement may or may not execute at all.
+    // it must never terminate, because the while statement may or may not execute at all.
     #[test]
     fn while_statement_branch_returns_never_terminates() {
         let literals_with_var = get_all_literals_with_var_no_arr();
@@ -463,7 +463,7 @@ mod test_block_always_terminates {
 
 
     // Even if the while loop branch breaks
-    // it should never terminate, because the while statement may or may not execute at all.
+    // it must never terminate, because the while statement may or may not execute at all.
     #[test]
     fn while_statement_branch_break_never_terminates() {
         let literals_with_var = get_all_literals_with_var_no_arr();
@@ -510,7 +510,7 @@ mod test_block_always_terminates {
 
 
     // Even if the for loop branch is not empty
-    // it should never terminate, because the for statement may or may not execute at all.
+    // it must never terminate, because the for statement may or may not execute at all.
     #[test]
     fn for_statement_branch_not_empty_never_terminates() {
         let literals_with_var = get_all_literals_with_var_no_arr();
@@ -538,7 +538,7 @@ mod test_block_always_terminates {
 
 
     // Even if the for loop branch returns
-    // it should never terminate, because the for statement may or may not execute at all.
+    // it must never terminate, because the for statement may or may not execute at all.
     #[test]
     fn for_statement_branch_returns_never_terminates() {
         let literals_with_var = get_all_literals_with_var_no_arr();
@@ -567,7 +567,7 @@ mod test_block_always_terminates {
 
 
     // Even if the for loop branch breaks
-    // it should never terminate, because the for statement may or may not execute at all.
+    // it must never terminate, because the for statement may or may not execute at all.
     #[test]
     fn for_statement_branch_break_never_terminates() {
         let literals_with_var = get_all_literals_with_var_no_arr();
@@ -616,7 +616,7 @@ mod test_block_always_terminates {
 
 
     // Even if the if statement main branch is not empty
-    // it should never terminate, because there is no else branch, 
+    // it must never terminate, because there is no else branch, 
     // meaning it may or may not execute at all.
     #[test]
     fn if_statement_branch_never_terminates() {
@@ -1398,18 +1398,209 @@ mod test_return_branch_analysis {
     }
 
 
-    // Shouldnt error, because return_analysis does not care break is outside of a loop
-    // that is responsiblity of semantic checks, not return analysis.
+
+    // Must trigger a guard panic that is meant to catch misuse of return_branch_analysis
+    #[should_panic(expected = "Compiler bug")]
     #[test]
-    fn func_breaks() {
+    fn func_break_without_loop_panics() {
         let dummy_func = make_dummy_func("x".to_string(), Some(vec![
             make_break_stmt()
         ]));
 
         let last_stmt = dummy_func.body.last();
 
-        let result = return_branch_analysis(&dummy_func, last_stmt.cloned(), false, false);
-        assert!(result.is_ok());
+        let _ = return_branch_analysis(&dummy_func, last_stmt.cloned(), false, false);
     }
+
+
+    // If you try to break in an infinite loop that is last statement, it must error.
+    //
+    #[test]
+    fn func_infinite_statement_break_errors() {
+        let dummy_func = make_dummy_func("x".to_string(), Some(vec![
+            Stmt::Infinite(InfiniteStmt{
+                branch: vec![
+                    make_break_stmt()
+                ],
+                span: span(),
+            })
+        ]));
+
+        let last_stmt = dummy_func.body.last();
+
+        let result = return_branch_analysis(&dummy_func, last_stmt.cloned(), false, false);
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().starts_with(
+                "Semantic error: You cannot `break` out of a infinite loop if its the last statement in a function that returns. Use a return statement instead."));
+    }
+
+
+
+    // Nested infinite loops inside infinite loops breaks shouldn't be counted as breaks upstream
+    #[test]
+    fn func_infinite_statement_nested_branch_break() {
+        for i in 1..=500 {
+            // Build from the inside out
+            let mut stmts: Vec<Stmt> = vec![make_break_stmt()];
+            for _ in 0..=i {
+                stmts = vec![
+                    Stmt::Infinite(InfiniteStmt {
+                        branch: stmts,
+                        span: span(),
+                    })
+                ];
+            }
+        
+            let dummy_func = make_dummy_func("x".to_string(), Some(stmts));
+
+            let last_stmt = dummy_func.body.last();
+
+            let result = return_branch_analysis(&dummy_func, last_stmt.cloned(), false, false);
+
+            assert!(result.is_ok());
+        }
+    }
+
+
+    
+    // Nested while loops inside infinite loops breaks shouldn't be counted as breaks upstream
+    #[test]
+    fn func_infinite_statement_while_statement_nested_branch_break() {
+        let literals_with_var = get_all_literals_with_var_no_arr();
+
+        for lv in literals_with_var {
+            for i in 1..=500 {
+                // Build from the inside out
+                let mut stmts: Vec<Stmt> = vec![make_break_stmt()];
+                for _ in 0..=i {
+                    stmts = vec![
+                        Stmt::While(WhileStmt {
+                            condition: lv.clone(),
+                            branch: stmts,
+                            span: span(),
+                        })
+                    ];
+                }
+
+                stmts = vec![
+                        Stmt::Infinite(InfiniteStmt {
+                            branch: stmts,
+                            span: span(),
+                        })
+                    ];
+
+            
+                let dummy_func = make_dummy_func("x".to_string(), Some(stmts));
+
+                let last_stmt = dummy_func.body.last();
+
+                let result = return_branch_analysis(&dummy_func, last_stmt.cloned(), false, false);
+
+                assert!(result.is_ok());
+            }
+        }
+    }
+
+
+    // Nested for loops inside infinite loops breaks shouldn't be counted as breaks upstream
+    #[test]
+    fn func_infinite_statement_for_statement_nested_branch_break() {
+        let literals_with_var = get_all_literals_with_var_no_arr();
+
+        for lv in literals_with_var {
+            for i in 1..=500 {
+                // Build from the inside out
+                let mut stmts: Vec<Stmt> = vec![make_break_stmt()];
+                for _ in 0..=i {
+                    stmts = vec![
+                        Stmt::For(ForStmt{
+                            holder_name: "y".to_string(),
+                            value: lv.clone(),
+                            branch: stmts,
+                            span: span(),
+                        })
+                    ];
+                }
+
+                stmts = vec![
+                    Stmt::Infinite(InfiniteStmt {
+                        branch: stmts,
+                        span: span(),
+                    })
+                ];
+
+            
+                let dummy_func = make_dummy_func("x".to_string(), Some(stmts));
+                let last_stmt = dummy_func.body.last();
+                let result = return_branch_analysis(&dummy_func, last_stmt.cloned(), false, false);
+
+                assert!(result.is_ok());
+            }
+        }
+    }
+
+
+
+
+
+    // While loops may or may not execute, therefore even if they return inside their body, the
+    // function its self may not return, therefore return analysis should error here
+    // 
+    #[test]
+    fn func_while_statement_returns_error() {
+        let literals_with_var = get_all_literals_with_var_no_arr();
+        for lv in literals_with_var {
+            let dummy_func = make_dummy_func("x".to_string(), Some(vec![
+                    Stmt::While(WhileStmt {
+                        condition: lv.clone(),
+                        branch: vec![
+                            make_return_stmt(vec![lv.clone()])
+                        ],
+                        span: span(),
+                    })
+                ]));
+
+            let last_stmt = dummy_func.body.last();
+
+            let result = return_branch_analysis(&dummy_func, last_stmt.cloned(), false, false);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().starts_with(
+                    "Semantic error: While loops may or may not execute at all, therefore you need a return statement outside the loop scope, or consider using `infinite` loops instead."));
+        }
+    }
+
+
+
+    // For loops may or may not execute, therefore even if they return inside their body, the
+    // function its self may not return, therefore return analysis should error here
+    // 
+    #[test]
+    fn func_for_statement_returns_error() {
+        let literals_with_var = get_all_literals_with_var_no_arr();
+        for lv in literals_with_var {
+            let dummy_func = make_dummy_func("x".to_string(), Some(vec![
+                    Stmt::For(ForStmt {
+                        holder_name: "y".to_string(),
+                        value: lv.clone(),
+                        branch: vec![
+                            make_return_stmt(vec![lv.clone()])
+                        ],
+                        span: span(),
+                    })
+                ]));
+
+            let last_stmt = dummy_func.body.last();
+
+            let result = return_branch_analysis(&dummy_func, last_stmt.cloned(), false, false);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().starts_with(
+                    "Semantic error: For loops may or may not execute at all, therefore you need a return statement outside the loop scope."));
+        }
+    }
+
+
 
 }

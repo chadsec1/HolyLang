@@ -209,6 +209,12 @@ pub fn return_branch_analysis(
     match last_stmt {
 
         Some(Stmt::Break(break_stmt)) => {
+
+            // Just a compiler bug guard.
+            if !is_loop {
+                panic!("(Compiler bug) check_stmts shouldve errored before we even got called. We got a break statement when we arent even in a loop!");
+            }
+
             if forbid_break {
                 return Err(HolyError::Semantic(format!(
                         "You cannot `break` out of an infinite loop if its the last statement in a function that returns. Use a return statement instead. (line {} column {})",
