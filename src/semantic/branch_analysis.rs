@@ -211,7 +211,7 @@ pub fn return_branch_analysis(
         Some(Stmt::Break(break_stmt)) => {
             if forbid_break {
                 return Err(HolyError::Semantic(format!(
-                        "You cannot `break` out of a forever loop if its the last statement in a function that returns. Use a return statement instead. (line {} column {})",
+                        "You cannot `break` out of an infinite loop if its the last statement in a function that returns. Use a return statement instead. (line {} column {})",
                         break_stmt.span.line, break_stmt.span.column,
                     )));
             }
@@ -230,18 +230,18 @@ pub fn return_branch_analysis(
                 // So, why do we error on break? can't programmer like break then return outside for
                 // loop?
                 // Answer is that return_branch_analysis is only called on last statemet, and if
-                // forever loop is last statement, you can't break out of it. You can only return, or
+                // infinite loop is last statement, you can't break out of it. You can only return, or
                 // you dont return but you don't break.
                 //
                 for s in &infinite_stmt.branch {
                     match s {
                         Stmt::Break(break_stmt) => {
 
-                            // If this is a nested loop, like a forever inside another forever, you can
+                            // If this is a nested loop, like a infinite inside another infinite, you can
                             // break out of it fine.
                             if !is_loop {
                                 return Err(HolyError::Semantic(format!(
-                                    "You cannot `break` out of a forever loop if its the last statement in a function that returns. Use a return statement instead. (line {} column {})",
+                                    "You cannot `break` out of a infinite loop if its the last statement in a function that returns. Use a return statement instead. (line {} column {})",
                                     break_stmt.span.line, break_stmt.span.column,
                                 )));
                                 
@@ -271,12 +271,12 @@ pub fn return_branch_analysis(
         }
 
         Some(Stmt::While(while_stmt)) => {
-            // If this is a nested loop, like a while loop inside a `forever` loop, we let you do
+            // If this is a nested loop, like a while loop inside a `infinite` loop, we let you do
             // that. if in_loop is true, it might not be last statement after all.
             //
             if !is_loop {
                 return Err(HolyError::Semantic(format!(
-                        "While loops may or may not execute at all, therefore you need a return statement outside the loop scope, or consider using `forever` infinite loops instead. (line {} column {})",
+                        "While loops may or may not execute at all, therefore you need a return statement outside the loop scope, or consider using `infinite` loops instead. (line {} column {})",
                         while_stmt.span.line, while_stmt.span.column,
                     )));
             
