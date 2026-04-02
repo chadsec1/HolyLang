@@ -38,9 +38,7 @@ pub fn dead_code_analysis(block: &Vec<Stmt>) -> Result<(), HolyError> {
 
                 }
 
-
                 dead_code_analysis(body)?;
-
                 
                 if block_always_terminates(&infinite_stmt.branch, true) {
                     end_detected = true;

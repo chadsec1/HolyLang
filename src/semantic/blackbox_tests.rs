@@ -28,6 +28,23 @@ fn get_all_signed_literals_no_arr() -> [Expr; 7] {
     return literals;
 }
 
+
+fn get_all_signed_literals_no_arr_no_float() -> [Expr; 5] {
+    let literals = [
+        int8_lit(1),
+        int16_lit(1),
+        int32_lit(1),
+        int64_lit(1),
+        int128_lit(1),
+    ];
+
+    return literals;
+}
+
+
+
+
+
 fn get_all_unsigned_literals_no_arr() -> [Expr; 6] {
     let literals = [
         byte_lit(1),
@@ -1636,6 +1653,21 @@ mod blackbox_tests {
         }
     }
 
+
+    // All signed literals whose value equal to or more than `0` can be safely converted to uint,
+    // so passing integer literals directly to functions should always work
+    #[test]
+    fn test_correct_call_literal_inference_passes() {
+        let signed_literals = get_all_signed_literals_no_arr_no_float();
+        
+        for (sl, t) in signed_literals.iter().zip(ALL_UNSIGNED_TYPES_NO_ARR.iter()) {
+            let callee = void_func("bar", vec![param("a", t.clone())], vec![]);
+            let body = vec![Stmt::Expr(call_expr("bar", vec![sl.clone()]))];
+            let caller = void_func("main", vec![], body);
+            let mut ast = AST { functions: vec![callee, caller] };
+            check_semantics(&mut ast).unwrap();
+        }
+    }
     // return statement with multiple values (aka multi-return)
 
     #[test]
@@ -2315,6 +2347,25 @@ mod blackbox_tests {
             assert!(result.unwrap_err().to_string().starts_with("Semantic error: Plain literals are not allowed in formating! Remove the format placeholders and use the literal directly!"));
         }
     } 
+
+
+    #[should_panic(expected = "Compiler bug")]
+    #[test]
+    fn test_format_call_without_any_template_placeholders_panics() {
+        let literals = get_all_literals_no_arr();
+
+        for l in &literals {
+            let fmt = Expr::FormatCall {
+                template: "value".to_string(),
+                expressions: vec![l.clone()], 
+                span: span(),
+            };
+            let body = vec![var_decl("s", Type::String, Some(fmt))];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let _ = check_semantics(&mut ast);
+        }
+    }
 
     #[test]
     fn test_format_call_with_variable_passes() {

@@ -423,7 +423,7 @@ pub fn infer_expr_type(
         Expr::FormatCall { template, expressions: exprs_vec, span: _} => {
 
             if !template.contains("{}") {
-                panic!("(Compielr bug) We got a FormatCall Without any template placeholders, the parser should've not allowed this. template: `{:?}`, expressions: `{:?}`", template, exprs_vec);
+                panic!("(Compiler bug) We got a FormatCall Without any template placeholders, the parser should've not allowed this. template: `{:?}`, expressions: `{:?}`", template, exprs_vec);
             }
 
             for e in exprs_vec {
