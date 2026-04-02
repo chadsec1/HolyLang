@@ -1379,7 +1379,21 @@ mod test_return_branch_analysis {
         let result = return_branch_analysis(&dummy_func, last_stmt.cloned(), false, false);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("statement branch body does not end with a return statement"));
-
     }
 
+
+    #[test]
+    fn func_returns() {
+        let literals_with_var = get_all_literals_with_var_no_arr();
+        for lv in literals_with_var {
+            let dummy_func = make_dummy_func("x".to_string(), Some(vec![
+                make_return_stmt(vec![lv.clone()])
+            ]));
+
+            let last_stmt = dummy_func.body.last();
+
+            let result = return_branch_analysis(&dummy_func, last_stmt.cloned(), false, false);
+            assert!(result.is_ok());
+        }
+    }
 }
