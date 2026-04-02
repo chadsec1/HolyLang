@@ -2296,7 +2296,7 @@ mod blackbox_tests {
             assert!(result.is_err());
             assert!(result.unwrap_err().to_string().starts_with("Semantic error: Plain literals are not allowed in formating! Remove the format placeholders and use the literal directly!"));
         }
-    }
+    } 
 
     #[test]
     fn test_format_call_with_variable_passes() {
@@ -2317,6 +2317,40 @@ mod blackbox_tests {
             check_semantics(&mut ast).unwrap();
         }
     }
+
+
+    #[test]
+    fn test_nested_format_call_errors() {
+        let literals = get_all_literals_no_arr();
+
+        for l in &literals {
+            let fmt = Expr::FormatCall {
+                template: "value: {}".to_string(),
+                expressions: vec![var_expr("n")], 
+                span: span(),
+            };
+
+            let fmt = Expr::FormatCall {
+                template: "value: {}".to_string(),
+                expressions: vec![fmt], 
+                span: span(),
+            };
+
+
+            let body = vec![
+                var_decl("n", Type::Infer, Some(l.clone())),
+                var_decl("s", Type::String, Some(fmt)),
+            ];
+            
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().starts_with("Semantic error: Nested FormatCalls are not allowed."));
+            
+        }
+    }
+
 
     // happy-path integration 
 
