@@ -1680,7 +1680,7 @@ mod test_return_branch_analysis {
     }
 
 
-    // Same as above test, but since main if branch is empty, this sohuld always panic.
+    // Same as above test, but since main if branch is empty, this should always panic.
     #[should_panic(expected = "Compiler bug")]
     #[test]
     fn func_if_statement_empty_panics() {
@@ -1960,5 +1960,67 @@ mod test_return_branch_analysis {
 
 
 
+
+    // If statements within infinite loops without an else branch, returning only in one branch (main branch), 
+    // even though the statement it may or may not execute, that is fine. because the if statement
+    // is not the last statement of function, the infinite loop is.
+    // 
+    #[test]
+    fn func_infinite_if_statement_returns() {
+        let literals_with_var = get_all_literals_with_var_no_arr();
+        for lv in literals_with_var {
+            let dummy_func = make_dummy_func("x".to_string(), Some(vec![
+                    Stmt::Infinite(InfiniteStmt{
+                        branch: vec![
+                            Stmt::If(IfStmt{
+                                condition: lv.clone(),
+                                if_branch: vec![
+                                    make_return_stmt(vec![lv.clone()])
+                                ],
+                                elif_branches: vec![],
+                                else_branch: None,
+                                span: span(),
+                            })
+                        ],
+                        span: span()
+                    })]));
+
+            let last_stmt = dummy_func.body.last();
+
+            let result = return_branch_analysis(&dummy_func, last_stmt.cloned(), false, false);
+
+            assert!(result.is_ok());
+        }
+    }
+
+    #[test]
+    fn func_infinite_if_statement_returns_with_else_branch_returns() {
+        let literals_with_var = get_all_literals_with_var_no_arr();
+        for lv in literals_with_var {
+            let dummy_func = make_dummy_func("x".to_string(), Some(vec![
+                    Stmt::Infinite(InfiniteStmt{
+                        branch: vec![
+                            Stmt::If(IfStmt{
+                                condition: lv.clone(),
+                                if_branch: vec![
+                                    make_return_stmt(vec![lv.clone()])
+                                ],
+                                elif_branches: vec![],
+                                else_branch: Some(vec![
+                                    make_return_stmt(vec![lv.clone()])
+                                ]),
+                                span: span(),
+                            })
+                        ],
+                        span: span()
+                    })]));
+
+            let last_stmt = dummy_func.body.last();
+
+            let result = return_branch_analysis(&dummy_func, last_stmt.cloned(), false, false);
+
+            assert!(result.is_ok());
+        }
+    }
 
 }
