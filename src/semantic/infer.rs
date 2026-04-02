@@ -471,7 +471,7 @@ pub fn infer_expr_type(
                         Ok(ret_vec[0].clone())
                     } else {
                         Err(HolyError::Semantic(format!(
-                            "Call to `{}` returns {} values but is used in a single-value expression (line {} column {})",
+                            "Call to function `{}` returns {} values but is used in a single-value expression (line {} column {})",
                             name, ret_vec.len(), span.line, span.column
                         )))
                     }
@@ -480,7 +480,7 @@ pub fn infer_expr_type(
                     // check_call should already error when require_ret == true,
                     // but to be defensive:
                     Err(HolyError::Semantic(format!(
-                        "Call to `{}` has no return type but is used in an expression (line {} column {})",
+                        "Call to function `{}` has no declared return type but is used in an expression (line {} column {})",
                         name, span.line, span.column
                     )))
                 }

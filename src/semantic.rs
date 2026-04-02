@@ -274,7 +274,7 @@ fn check_stmts(
                     // check_call with require_ret = true -> Option<Vec<Type>>
                     let ret_opt = check_call(name, args, locals, fun_sigs, true, *span)?;
                     let ret_vec = ret_opt.ok_or_else(|| HolyError::Semantic(format!(
-                        "Call to `{}` used in multi-declaration but has no return types (line {} column {})",
+                        "Call to function `{}` used in multi-declaration but function has no declared return types (line {} column {})",
                         name, span.line, span.column
                     )))?;
 
@@ -433,7 +433,7 @@ fn check_stmts(
                     // check_call with require_ret = true -> Option<Vec<Type>>
                     let ret_opt = check_call(name, args, locals, fun_sigs, true, *span)?;
                     let ret_vec = ret_opt.ok_or_else(|| HolyError::Semantic(format!(
-                        "Call to `{}` used in multi-assignment but has no return types (line {} column {})",
+                        "Call to function `{}` used in multi-assignment but function has no declared return types (line {} column {})",
                         name, span.line, span.column
                     )))?;
 
