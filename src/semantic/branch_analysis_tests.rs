@@ -1396,4 +1396,20 @@ mod test_return_branch_analysis {
             assert!(result.is_ok());
         }
     }
+
+
+    // Shouldnt error, because return_analysis does not care break is outside of a loop
+    // that is responsiblity of semantic checks, not return analysis.
+    #[test]
+    fn func_breaks() {
+        let dummy_func = make_dummy_func("x".to_string(), Some(vec![
+            make_break_stmt()
+        ]));
+
+        let last_stmt = dummy_func.body.last();
+
+        let result = return_branch_analysis(&dummy_func, last_stmt.cloned(), false, false);
+        assert!(result.is_ok());
+    }
+
 }
