@@ -710,12 +710,10 @@ mod blackbox_tests {
     }
 
 
-    // TODO: Improve this test to have variable length of nested arrays.
-    //
     #[test]
     fn test_default_nested_array_is_empty() {
         for t in ALL_TYPES_NO_ARR_NO_INFER {
-            for i in 1..=100 {
+            for i in 1..=200 {
                 let mut nested_ty = Type::Array(Box::new(t.clone()));
 
                 for _ in 0..=i {
