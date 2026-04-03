@@ -7,7 +7,7 @@
 
 HolyLang programming language: A mix between Go's readability, and Rust's compile-time safety.
 
-In some areas, like logic-bug reducing features, HolyLang beats Rust.
+In some specific aspects such as "logic-bug reducing features", HolyLang is superior to Rust.
 
 
 # Work-in-progress
