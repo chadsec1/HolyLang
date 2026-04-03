@@ -6,7 +6,7 @@ use crate::parser::{
 
 
 use crate::tests_consts::{
-    ALL_TYPES_NO_ARR, ALL_TYPES_NO_ARR_SCATTERED, ALL_TYPES_NO_ARR_NO_USIZE,
+    ALL_TYPES_NO_ARR, ALL_TYPES_NO_ARR_SCATTERED, ALL_TYPES_NO_ARR_NO_USIZE, ALL_TYPES_NO_ARR_NO_INFER,
     ALL_UNSIGNED_TYPES_NO_ARR, ALL_SIGNED_TYPES_NO_ARR,
     ALL_BIN_OP_KIND_ARTH, ALL_BIN_OP_KIND_COMP, ALL_BIN_OP_KIND_COMP_EQ,
 };
@@ -651,6 +651,21 @@ mod blackbox_tests {
         }
     }
 
+
+    #[test]
+    fn test_default_string_empty() {
+        // `own x bool` value should default to a Bool literal with value of false
+        let body = vec![var_decl("str", Type::String, None)];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        check_semantics(&mut ast).unwrap();
+        if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+            assert!(matches!(&v.value, Some(Expr::StringLiteral { value, .. }) if value == ""));
+        }
+    }
+
+
+
     #[test]
     fn test_default_float32_zero() {
         // `own x float64` value should default to a Float literal with value of 0.0
@@ -677,32 +692,56 @@ mod blackbox_tests {
 
     #[test]
     fn test_default_array_is_empty() {
-        let body = vec![var_decl("arr", Type::Array(Box::new(Type::Int32)), None)];
-        let func = void_func("foo", vec![], body);
-        let mut ast = ast_one(func);
-        check_semantics(&mut ast).unwrap();
-        if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
-            if let Some(Expr::ArrayLiteral { elements, .. }) = &v.value {
-                assert!(elements.is_empty());
-            } else {
-                panic!("expected empty ArrayLiteral");
+        for t in ALL_TYPES_NO_ARR_NO_INFER {
+            let body = vec![var_decl("arr", Type::Array(Box::new(t.clone())), None)];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            check_semantics(&mut ast).unwrap();
+            if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+                assert_eq!(v.type_name, Type::Array(Box::new(t.clone())));
+                if let Some(Expr::ArrayLiteral { elements, array_ty, .. }) = &v.value {
+                    assert!(elements.is_empty());
+                    assert_eq!(array_ty, t);
+                } else {
+                    panic!("expected empty ArrayLiteral");
+                }
             }
         }
     }
 
 
+    // TODO: Improve this test to have variable length of nested arrays.
+    //
     #[test]
     fn test_default_nested_array_is_empty() {
-        let body = vec![var_decl("nested_array", Type::Array(Box::new(Type::Array(Box::new(Type::Int32)))), None)];
-        let func = void_func("foo", vec![], body);
-        let mut ast = ast_one(func);
-        check_semantics(&mut ast).unwrap();
-        if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
-            if let Some(Expr::ArrayLiteral { elements, .. }) = &v.value {
-                assert!(elements.is_empty());
-            } else {
-                panic!("expected empty ArrayLiteral");
+        for t in ALL_TYPES_NO_ARR_NO_INFER {
+            for i in 1..=100 {
+                let mut nested_ty = Type::Array(Box::new(t.clone()));
+
+                for _ in 0..=i {
+                    nested_ty = Type::Array(Box::new(nested_ty));
+                }
+
+                let body = vec![var_decl("nested_array", nested_ty.clone(), None)];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                check_semantics(&mut ast).unwrap();
+                if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+                    assert_eq!(v.type_name, nested_ty);
+                    if let Some(Expr::ArrayLiteral { elements, array_ty, .. }) = &v.value {
+                        assert!(elements.is_empty());
+                        // This is to add the outer most array type wrapping, so variable 
+                        // type == array_ty
+                        //
+                        let array_ty_wraped = Type::Array(Box::new(array_ty.clone()));
+                        assert_eq!(array_ty_wraped, nested_ty);
+
+                    } else {
+                        panic!("expected empty ArrayLiteral");
+                    }
+                }
             }
+                
         }
     }
 
@@ -710,19 +749,24 @@ mod blackbox_tests {
 
     #[test]
     fn test_use_after_move_errors_explicit_type() {
-        // own a int32 = 5
-        // own b int32 = a   (moves `a`)
-        // own c int32 = a   (this must error because `a` already moved)
-        let body = vec![
-            var_decl("a", Type::Int32, Some(int32_lit(5))),
-            var_decl("b", Type::Int32, Some(var_expr("a"))),
-            var_decl("c", Type::Int32, Some(var_expr("a"))),
-        ];
-        let func = void_func("foo", vec![], body);
-        let mut ast = ast_one(func);
-        let result = check_semantics(&mut ast);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("moved"));
+        // own a t = 5
+        // own b t = a   (moves `a`)
+        // own c t = a   (this must error because `a` already moved)
+
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR_NO_INFER.iter()) {
+            let body = vec![
+                var_decl("a", t.clone(), Some(l.clone())),
+                var_decl("b", t.clone(), Some(var_expr("a"))),
+                var_decl("c", t.clone(), Some(var_expr("a"))),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("moved"));
+        }
     }
 
     #[test]
@@ -730,33 +774,44 @@ mod blackbox_tests {
         // own a = 5
         // own b = a   (moves `a`)
         // own c = a   (this must error because `a` already moved)
-        let body = vec![
-            var_decl("a", Type::Infer, Some(int32_lit(5))),
-            var_decl("b", Type::Infer, Some(var_expr("a"))),
-            var_decl("c", Type::Infer, Some(var_expr("a"))),
-        ];
-        let func = void_func("foo", vec![], body);
-        let mut ast = ast_one(func);
-        let result = check_semantics(&mut ast);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("moved"));
+
+        let literals = get_all_literals_no_arr();
+        
+        for l in literals {
+            let body = vec![
+                var_decl("a", Type::Infer, Some(l.clone())),
+                var_decl("b", Type::Infer, Some(var_expr("a"))),
+                var_decl("c", Type::Infer, Some(var_expr("a"))),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("moved"));
+        }
     }
 
     #[test]
     fn test_use_after_move_errors_explicit_and_infer_type() {
-        // own a int32 = 5
+        // own a T = 5
         // own b = a   (moves `a`)
-        // own c int32 = a   (this must error because `a` already moved)
-        let body = vec![
-            var_decl("a", Type::Int32, Some(int32_lit(5))),
-            var_decl("b", Type::Infer, Some(var_expr("a"))),
-            var_decl("c", Type::Int32, Some(var_expr("a"))),
-        ];
-        let func = void_func("foo", vec![], body);
-        let mut ast = ast_one(func);
-        let result = check_semantics(&mut ast);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("moved"));
+        // own c T = a   (this must error because `a` already moved)
+        //
+
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR_NO_INFER.iter()) {
+            let body = vec![
+                var_decl("a", t.clone(), Some(l.clone())),
+                var_decl("b", Type::Infer, Some(var_expr("a"))),
+                var_decl("c", t.clone(), Some(var_expr("a"))),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("moved"));
+        }
     }
 
     #[test]
@@ -781,10 +836,10 @@ mod blackbox_tests {
 
     #[test]
     fn test_pass_variable_to_call_marks_it_moved() {
-        // bar takes one int32.
-        // own a T = Some Literal
+        // bar takes one t.
+        // own a t = Some Literal
         // bar(a)       (moves a)
-        // own b T = a  (error)
+        // own b t = a  (error)
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -2091,6 +2146,7 @@ mod blackbox_tests {
             }
         }
 
+        // Same as above, but a little weaker because we can't do i2+1 for l.. its just always 1.
 
         for (l, t) in literals_no_usize.iter().zip(ALL_TYPES_NO_ARR_NO_USIZE.iter()) {
             for i in 2..100 {
@@ -2122,13 +2178,7 @@ mod blackbox_tests {
                 assert!(result.unwrap_err().to_string().starts_with("Semantic error: Expected end index to be of type `usize` for array"));
             }
         }
-
-
-
     }
-
-
-
 
 
 
@@ -2507,7 +2557,7 @@ mod blackbox_tests {
         let mut ast = ast_one(func);
         let result = check_semantics(&mut ast);
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("float64"));
+        assert!(result.unwrap_err().to_string().starts_with("Semantic error: Float literal has a float64 value but we expected a float32 value"));
     }
 
 

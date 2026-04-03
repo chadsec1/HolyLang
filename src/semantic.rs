@@ -163,7 +163,7 @@ fn check_stmts(
                 if var.type_name == Type::Infer {
                     if let Some(expr) = &mut var.value {
                         let ty = infer::infer_expr_type(expr, locals, fun_sigs, None)?;
-                        // assign inferred type to variable and propagate to literal nodes if needed
+                        // assign inferred type to variable
                         var.type_name = ty.clone();
                     } else {
                         return Err(HolyError::Semantic(format!(

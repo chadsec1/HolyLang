@@ -90,8 +90,6 @@ impl Type {
 
         current
     }
-
-
 }
 
 
