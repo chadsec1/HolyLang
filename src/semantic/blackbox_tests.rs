@@ -6,7 +6,8 @@ use crate::parser::{
 
 
 use crate::tests_consts::{
-    ALL_TYPES_NO_ARR, ALL_TYPES_NO_ARR_SCATTERED, ALL_UNSIGNED_TYPES_NO_ARR, ALL_SIGNED_TYPES_NO_ARR,
+    ALL_TYPES_NO_ARR, ALL_TYPES_NO_ARR_SCATTERED, ALL_TYPES_NO_ARR_NO_USIZE,
+    ALL_UNSIGNED_TYPES_NO_ARR, ALL_SIGNED_TYPES_NO_ARR,
     ALL_BIN_OP_KIND_ARTH, ALL_BIN_OP_KIND_COMP, ALL_BIN_OP_KIND_COMP_EQ,
 };
 
@@ -158,6 +159,34 @@ fn get_all_literals_no_arr_scattered_order() -> [Expr; 15] {
 
     return literals;
 }
+
+
+
+fn get_all_literals_no_arr_no_usize() -> [Expr; 14] {
+    let literals = [
+        int8_lit(1),
+        int16_lit(1),
+        int32_lit(1),
+        int64_lit(1),
+        int128_lit(1),
+
+        byte_lit(1),
+        uint16_lit(1),
+        uint32_lit(1),
+        uint64_lit(1),
+        uint128_lit(1),
+
+        float32_lit(1.0),
+        float64_lit(1.0),
+
+        bool_lit(false),
+        str_lit("Hi")
+    ];
+
+    return literals;
+}
+
+
 
 fn span() -> Span {
     Span { line: 1, column: 0 }
@@ -1987,7 +2016,125 @@ mod blackbox_tests {
     }
 
 
-    // Similar to above test, except here we attempt to access a literal instead of array variable, which
+    // Same as above test, but this makes start and end variables instead of literals
+    #[test]
+    fn test_array_valid_multiple_access_both_ends_vars_passes() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for i in 2..100 {
+                let elements = vec![l.clone(); i + 1];
+                
+                let arr_lit = Expr::ArrayLiteral {
+                    elements: elements,
+                    array_ty: t.clone(),
+                    span: span(),
+                };
+
+                for i2 in 0..i-1 {
+                    let access = Expr::ArrayMultipleAccess {
+                        array: Box::new(var_expr("arr")),
+                        start: Some(Box::new(var_expr("e"))),
+                        end: Some(Box::new(var_expr("h"))),
+                        span: span(),
+                    };
+                    let body = vec![
+                        var_decl("e", Type::Usize, Some(usize_lit(1))),
+                        var_decl("h", Type::Usize, Some(usize_lit(i2+1))),
+                        var_decl("arr", Type::Array(Box::new(t.clone())), Some(arr_lit.clone())),
+                        var_decl("x", Type::Array(Box::new(t.clone())), Some(access)),
+                    ];
+                    let func = void_func("foo", vec![], body);
+                    let mut ast = ast_one(func);
+                    check_semantics(&mut ast).unwrap();
+                }       
+            }
+        }
+    }
+
+    // Same as above test, but this makes start usize var, but end is not usize
+    // and vice versa.
+    #[test]
+    fn test_array_valid_multiple_access_both_ends_vars_start_not_usize_errors() {
+        let literals_no_usize = get_all_literals_no_arr_no_usize();
+        
+        for (l, t) in literals_no_usize.iter().zip(ALL_TYPES_NO_ARR_NO_USIZE.iter()) {
+            for i in 2..100 {
+                let elements = vec![l.clone(); i + 1];
+                
+                let arr_lit = Expr::ArrayLiteral {
+                    elements: elements,
+                    array_ty: t.clone(),
+                    span: span(),
+                };
+
+                for i2 in 0..i-1 {
+                    let access = Expr::ArrayMultipleAccess {
+                        array: Box::new(var_expr("arr")),
+                        start: Some(Box::new(var_expr("e"))),
+                        end: Some(Box::new(var_expr("h"))),
+                        span: span(),
+                    };
+                    let body = vec![
+                        var_decl("e", t.clone(), Some(l.clone())),
+                        var_decl("h", Type::Usize, Some(usize_lit(i2+1))),
+                        var_decl("arr", Type::Array(Box::new(t.clone())), Some(arr_lit.clone())),
+                        var_decl("x", Type::Array(Box::new(t.clone())), Some(access)),
+                    ];
+                    let func = void_func("foo", vec![], body);
+                    let mut ast = ast_one(func);
+                    let result = check_semantics(&mut ast);
+                    assert!(result.is_err());
+                    assert!(result.unwrap_err().to_string().starts_with("Semantic error: Expected start index to be of type `usize` for array"));
+
+                }       
+            }
+        }
+
+
+        for (l, t) in literals_no_usize.iter().zip(ALL_TYPES_NO_ARR_NO_USIZE.iter()) {
+            for i in 2..100 {
+                let elements = vec![l.clone(); i + 1];
+                
+                let arr_lit = Expr::ArrayLiteral {
+                    elements: elements,
+                    array_ty: t.clone(),
+                    span: span(),
+                };
+
+                let access = Expr::ArrayMultipleAccess {
+                    array: Box::new(var_expr("arr")),
+                    start: Some(Box::new(var_expr("e"))),
+                    end: Some(Box::new(var_expr("h"))),
+                    span: span(),
+                };
+                let body = vec![
+                    var_decl("e", Type::Usize, Some(usize_lit(1))),
+                    var_decl("h", t.clone(), Some(l.clone())),
+                    var_decl("arr", Type::Array(Box::new(t.clone())), Some(arr_lit.clone())),
+                    var_decl("x", Type::Array(Box::new(t.clone())), Some(access)),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+                println!("niggers master {:?}", result);
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().starts_with("Semantic error: Expected end index to be of type `usize` for array"));
+            }
+        }
+
+
+
+    }
+
+
+
+
+
+
+
+
+    // Similar to above test(s), except here we attempt to access a literal instead of array variable, which
     // should always error
     #[test]
     fn test_array_multiple_access_on_literals_both_ends_errors() {
