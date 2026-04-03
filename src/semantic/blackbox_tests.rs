@@ -2897,6 +2897,70 @@ mod blackbox_tests {
         }
     }
 
+
+    #[test]
+    fn test_copy_of_func_call_errors() {
+        let call_expr = Expr::Call{
+            name: "x".to_string(),
+            args: vec![],
+            span: span()
+        };
+
+        let copy_expr = Expr::CopyCall { expr: Box::new(call_expr), span: span() };
+        let body = vec![var_decl("x", Type::Infer, Some(copy_expr))];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Copy call expects a variable"));
+    }
+
+
+    #[test]
+    fn test_copy_of_array_access_errors() {
+        for i in 0..1000 {
+            let array_expr = Expr::ArraySingleAccess {
+                array: Box::new(var_expr("e")),
+                index: Box::new(usize_lit(i)),
+                span: span(),
+            };
+
+
+            let copy_expr = Expr::CopyCall { expr: Box::new(array_expr), span: span() };
+            let body = vec![var_decl("x", Type::Infer, Some(copy_expr))];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Copying is not needed for array access, when you access or slice an array or a string, a new copy is made. Remove the copy call and use operation directly."));
+        }
+    }
+
+
+    #[test]
+    fn test_copy_of_array_multiple_access_errors() {
+        for i in 0..=1000 {
+            let array_expr = Expr::ArrayMultipleAccess {
+                    array: Box::new(var_expr("arr")),
+                    start: Some(Box::new(usize_lit(0))),
+                    end: Some(Box::new(usize_lit(i))),
+                    span: span(),
+                };
+
+
+            let copy_expr = Expr::CopyCall { expr: Box::new(array_expr), span: span() };
+            let body = vec![var_decl("x", Type::Infer, Some(copy_expr))];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Copying is not needed for array access, when you access or slice an array or a string, a new copy is made. Remove the copy call and use operation directly."));
+        }
+    }
+
+
+
+
     #[test]
     fn test_double_copy_errors() {
         let literals = get_all_literals_no_arr();
