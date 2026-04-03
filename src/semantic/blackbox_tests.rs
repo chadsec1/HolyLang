@@ -14,6 +14,25 @@ use crate::tests_consts::{
 
 // helper functions
 
+
+
+
+
+fn get_all_literals_no_arr_no_ints() -> [Expr; 4] {
+    let literals = [
+
+        float32_lit(1.0),
+        float64_lit(1.0),
+
+        bool_lit(false),
+        str_lit("Hi")
+    ];
+
+    return literals;
+}
+
+
+
 fn get_all_signed_literals_no_arr() -> [Expr; 7] {
     let literals = [
         int8_lit(1),
@@ -1832,6 +1851,52 @@ mod blackbox_tests {
             assert!(result.unwrap_err().to_string().contains("Return length mismatch"));
         }
     }
+
+
+    // Invalid array construction (element types mismatch)
+    #[test]
+    fn test_array_element_type_mismatch_errors() {
+        let literals_no_ints = get_all_literals_no_arr_no_ints();
+        let literals_scattered = get_all_literals_no_arr_scattered_order();
+
+        
+        for ((l1, t1), l2) in literals_scattered.iter()
+            .zip(ALL_TYPES_NO_ARR_SCATTERED.iter())
+            .zip(literals_no_ints.iter())
+        {
+            for i in 0..100 {
+                let mut elements = vec![l1.clone(); i + 1];
+
+                elements.push(l2.clone());
+                
+                let arr_lit = Expr::ArrayLiteral {
+                    elements: elements.clone(),
+                    array_ty: t1.clone(),
+                    span: span(),
+                };
+
+                for i2 in 0..i+1 {
+                    let access = Expr::ArraySingleAccess {
+                        array: Box::new(var_expr("x")),
+                        index: Box::new(usize_lit(i2)),
+                        span: span(),
+                    };
+                    let body = vec![
+                        var_decl("x", Type::Array(Box::new(t1.clone())), Some(arr_lit.clone())),
+                        var_decl("y", t1.clone(), Some(access)),
+                    ];
+                    let func = void_func("foo", vec![], body);
+                    let mut ast = ast_one(func);
+                    let result = check_semantics(&mut ast);
+                    assert!(result.is_err());
+                    assert!(result.unwrap_err().to_string().starts_with("Semantic error: Array element type mismatch: expected"));
+                }
+            }       
+        }
+    }
+
+
+
 
     // array invalid access patterns errors checks
     #[test]
