@@ -2421,11 +2421,15 @@ mod blackbox_tests {
                     };
                     let body = vec![
                         var_decl("arr", Type::Array(Box::new(t.clone())), Some(arr_lit.clone())),
-                        var_decl("x", Type::Array(Box::new(t.clone())), Some(access)),
+                        // move arr to x
+                        var_decl("x", Type::Array(Box::new(t.clone())), Some(var_expr("arr"))), 
+                        var_decl("y", t.clone(), Some(access)),
                     ];
                     let func = void_func("foo", vec![], body);
                     let mut ast = ast_one(func);
-                    check_semantics(&mut ast).unwrap();
+                    let result = check_semantics(&mut ast);
+                    assert!(result.is_err());
+                    assert!(result.unwrap_err().to_string().starts_with("Semantic error: Array access on moved variable `arr`"));
                 }       
             }
         }
