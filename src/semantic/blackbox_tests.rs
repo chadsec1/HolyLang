@@ -2578,7 +2578,7 @@ mod blackbox_tests {
         let mut ast = ast_one(func);
         let result = check_semantics(&mut ast);
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().starts_with("Semantic error: Float literal has a float64 value but we expected a float32 value"));
+        assert!(result.unwrap_err().to_string().contains("is of type `float64`, but we expected type `float32`"));
     }
 
 

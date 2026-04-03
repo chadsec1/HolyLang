@@ -86,8 +86,8 @@ pub fn infer_expr_type(
             if infer_hint.is_some() {
                 match infer_hint.unwrap() {
                     Type::Float32 => {
-                        if let FloatLiteralValue::Float64(_) = value {
-                            return Err(HolyError::Semantic(format!("Float literal has a float64 value but we expected a float32 value (line {} column {})", span.line, span.column)));
+                        if let FloatLiteralValue::Float64(f) = value {
+                            return Err(HolyError::Semantic(format!("Float literal `{}` is of type `float64`, but we expected type `float32` (line {} column {})", f, span.line, span.column)));
                         }
                     }
                     Type::Float64 => {
@@ -771,8 +771,8 @@ pub fn assign_infer_type_to_expr_value(expr: &mut Expr, ty: Type) -> Result<(), 
         Expr::FloatLiteral { value, span } => {
             match ty {
                 Type::Float32 => {
-                    if let FloatLiteralValue::Float64(_) = value {
-                        return Err(HolyError::Semantic(format!("Float literal has a float64 value but we expected a float32 value (line {} column {})", span.line, span.column)));
+                    if let FloatLiteralValue::Float64(f) = value {
+                        return Err(HolyError::Semantic(format!("Float literal `{}` is of type `float64`, but we expected type `float32` (line {} column {})", f, span.line, span.column)));
                     }
                 }
                 Type::Float64 => {
