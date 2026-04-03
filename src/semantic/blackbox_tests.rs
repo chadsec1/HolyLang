@@ -2193,6 +2193,44 @@ mod blackbox_tests {
 
 
 
+    // We dont use should_panic here because we test multiplecases like literals, arrays of
+    // different types, etc.
+    #[test]
+    fn test_array_multiple_access_without_start_and_end_panics() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for i in 1..=100 {
+                let elements = vec![l.clone(); i + 1];
+                
+                let arr_lit = Expr::ArrayLiteral {
+                    elements: elements,
+                    array_ty: t.clone(),
+                    span: span(),
+                };
+
+                let access = Expr::ArrayMultipleAccess {
+                    array: Box::new(var_expr("arr")),
+                    start: None,
+                    end: None,
+                    span: span(),
+                };
+                let body = vec![
+                    var_decl("arr", Type::Array(Box::new(t.clone())), Some(arr_lit.clone())),
+                    var_decl("x", Type::Array(Box::new(t.clone())), Some(access)),
+                ];
+                let func = void_func("foo", vec![], body);
+                let result = std::panic::catch_unwind(|| { 
+                    let mut ast = ast_one(func);
+                    let _ = check_semantics(&mut ast);
+                });
+
+                assert!(result.is_err(), "Expected panic for: {:?} {:?}", t, l);
+            }
+        }
+    }
+
+
     #[test]
     fn test_array_valid_multiple_access_both_ends_passes() {
 
@@ -2338,10 +2376,7 @@ mod blackbox_tests {
             }
         }
     }
-
-
-
-
+ 
 
     // Similar to above test(s), except here we attempt to access a literal instead of array variable, which
     // should always error
