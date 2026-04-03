@@ -1860,6 +1860,9 @@ mod blackbox_tests {
         let literals_scattered = get_all_literals_no_arr_scattered_order();
 
         
+        // We use no_ints here because if we included int literals, they would get inferred to
+        // correct type if they fit, and since functions return 1 for all ints, they would always
+        // fit.
         for ((l1, t1), l2) in literals_scattered.iter()
             .zip(ALL_TYPES_NO_ARR_SCATTERED.iter())
             .zip(literals_no_ints.iter())
@@ -1893,6 +1896,47 @@ mod blackbox_tests {
                 }
             }       
         }
+
+
+        // Same as above, but this time we test with a variable. All literals.
+        let literals = get_all_literals_no_arr();
+        for (((l1, t1), l2), t2) in literals_scattered.iter()
+            .zip(ALL_TYPES_NO_ARR_SCATTERED.iter())
+            .zip(literals.iter())
+            .zip(ALL_TYPES_NO_ARR)
+        {
+            for i in 0..100 {
+                let mut elements = vec![l1.clone(); i + 1];
+
+                elements.push(var_expr("e"));
+                
+                let arr_lit = Expr::ArrayLiteral {
+                    elements: elements.clone(),
+                    array_ty: t1.clone(),
+                    span: span(),
+                };
+
+                for i2 in 0..i+1 {
+                    let access = Expr::ArraySingleAccess {
+                        array: Box::new(var_expr("x")),
+                        index: Box::new(usize_lit(i2)),
+                        span: span(),
+                    };
+                    let body = vec![
+                        var_decl("e", t2.clone(), Some(l2.clone())),
+                        var_decl("x", Type::Array(Box::new(t1.clone())), Some(arr_lit.clone())),
+                        var_decl("y", t1.clone(), Some(access)),
+                    ];
+                    let func = void_func("foo", vec![], body);
+                    let mut ast = ast_one(func);
+                    let result = check_semantics(&mut ast);
+                    assert!(result.is_err());
+                    assert!(result.unwrap_err().to_string().starts_with("Semantic error: Array element type mismatch: expected"));
+                }
+            }       
+        }
+
+
     }
 
 
