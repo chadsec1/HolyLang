@@ -166,10 +166,7 @@ fn check_stmts(
                         // assign inferred type to variable
                         var.type_name = ty.clone();
                     } else {
-                        return Err(HolyError::Semantic(format!(
-                            "Variable `{}` requires explicit type when no initializer is provided (line {} column {})",
-                            var.name, var.span.line, var.span.column
-                        )));
+                        panic!("(Compiler bug) parser phase shouldnt have let this invalid code reach this far, Since var is of type infer, it must've had a value for declaration. Var: {:?}", var);
                     }
                 } else {
                     // explicit type: if initializer present, ensure initializer is compatible

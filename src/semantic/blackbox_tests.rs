@@ -321,6 +321,28 @@ mod blackbox_tests {
     use super::*;
 
 
+    // Empty functions are not allowed
+    #[test]
+    fn test_empty_functions_errors() {
+        let mut ast = AST {
+            functions: vec![
+                Function {
+                    name: "foo".to_string(),
+                    params: vec![],
+                    return_type: None,
+                    body: vec![
+
+                    ],
+                    span: span(),
+                }
+            ]
+        };
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("has no statements, empty functions are not allowed!"));
+    }
+
+
     // duplicate functions are not allowed
     #[test]
     fn test_duplicate_function_name_errors() {
@@ -329,8 +351,7 @@ mod blackbox_tests {
         let mut ast = AST { functions: vec![f1, f2] };
         let result = check_semantics(&mut ast);
         assert!(result.is_err());
-        let msg = result.unwrap_err().to_string();
-        assert!(msg.contains("Duplicate function"));
+        assert!(result.unwrap_err().to_string().contains("Duplicate function"));
     }
 
     // Code after return is not allowed
@@ -404,21 +425,23 @@ mod blackbox_tests {
             // After check, the VarDecl type should be T
             if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
                 assert_eq!(v.type_name, t.clone());
+                assert_eq!(v.value, Some(l.clone()));
             } else {
                 panic!("expected VarDecl");
             }
         }
     }
 
+
+    #[should_panic(expected = "Compiler bug")]
     #[test]
     fn test_infer_requires_initializer_or_explicit_type() {
-        // Variables declared with Infer type and no value must error
+        // Variables declared with Infer type and no value should've been caught by parser phase
+        // but if it i didn't, semantic should always panic.
         let body = vec![var_decl("x", Type::Infer, None)];
         let func = void_func("foo", vec![], body);
         let mut ast = ast_one(func);
-        let result = check_semantics(&mut ast);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("requires explicit type"));
+        let _ = check_semantics(&mut ast);
     }
 
     // type mismatch tests

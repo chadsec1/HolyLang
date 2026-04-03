@@ -189,10 +189,28 @@ impl FloatLiteralValue {
     }
 }
 
+/* 
+ * Basically, this is needed because without it, NaN == NaN, -0.0 == 0.0, inf, and more would
+ * produce the wrong boolean comparison result since FloatLiteralValue has
+ * PartialEq derived
+ *
+*/
+impl PartialEq for FloatLiteralValue {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (FloatLiteralValue::Float32(a), FloatLiteralValue::Float32(b)) => a.to_bits() == b.to_bits(),
+            (FloatLiteralValue::Float64(a), FloatLiteralValue::Float64(b)) => a.to_bits() == b.to_bits(),
+            _ => false,
+        }
+    }
+}
+
+impl Eq for FloatLiteralValue {}
 
 
-/// AST nodes
-#[derive(Debug, Clone)]
+
+/// AST expressions nodes
+#[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
     /// Integer literal value, the type is the IntLiteralValue Enum wrapper
     IntLiteral {
@@ -390,7 +408,7 @@ pub enum Stmt {
     Func(Function), 
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Span {
     pub line: usize,
     pub column: usize,
