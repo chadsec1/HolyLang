@@ -2967,7 +2967,7 @@ mod blackbox_tests {
         let literals = get_all_literals_no_arr();
 
         for l in &literals {
-            let body = vec![var_assign("x", l.clone())]; // y not declared
+            let body = vec![var_assign("x", l.clone())];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             let result = check_semantics(&mut ast);
@@ -2975,6 +2975,22 @@ mod blackbox_tests {
             assert!(result.unwrap_err().to_string().contains("undeclared variable"));
         }
     }
+
+    #[test]
+    fn test_assignment_of_undeclared_variable_other_errors() {
+        for t in ALL_TYPES_NO_ARR {
+            let body = vec![
+                var_decl("x", t.clone(), Some(var_expr("y"))),
+            ]; 
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("undeclared variable"));
+        }
+    }
+
+
 
     // function parameters
     //
