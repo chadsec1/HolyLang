@@ -5,7 +5,7 @@
 [![Codacy Badge](https://app.codacy.com/project/badge/Coverage/73ffcbec8b7849a7a90f2003efe101af)](https://app.codacy.com/gh/chadsec1/HolyLang/coverage)
 
 
-HolyLang programming language: A mix between Go's readability, and Rust's compile-time safety.
+HolyLang programming language: Rust's compile-time safety, with Golang's readability.
 
 In some specific aspects such as "logic-bug reducing features", HolyLang is superior to Rust.
 
