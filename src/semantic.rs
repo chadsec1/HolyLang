@@ -2,9 +2,7 @@ use std::collections::HashMap;
 
 use crate::error::HolyError;
 use crate::parser::{
-    AST, Expr, Function, Stmt, Type, Span, IntLiteralValue, FloatLiteralValue, UnaryOpKind, BinOpKind,
-
-    validate_identifier_name
+    AST, Expr, Function, Stmt, Type, Span, IntLiteralValue, FloatLiteralValue, UnaryOpKind, BinOpKind
 };
 
 

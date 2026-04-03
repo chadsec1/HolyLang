@@ -18,8 +18,6 @@ mod helpers;
 mod parse_expr;
 
 
-pub(crate) use helpers::validate_identifier_name;
-
 
 /// Types for HolyLang
 #[derive(Debug, Clone, PartialEq)]

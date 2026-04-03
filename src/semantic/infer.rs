@@ -285,11 +285,6 @@ pub fn infer_expr_type(
                 
                 Ok(info.ty.clone())
             } else {
-                
-                validate_identifier_name(name)
-                    .map_err(|_| 
-                        HolyError::Semantic(format!("Invalid syntax `{}` (line {} column {})", name, span.line, span.column)))?;
-                
                 Err(HolyError::Semantic(format!("Use of undeclared variable `{}` (line {} column {})", name, span.line, span.column)))
             }
         }
