@@ -256,6 +256,15 @@ fn var_decl(name: &str, ty: Type, value: Option<Expr>) -> Stmt {
     })
 }
 
+
+fn var_assign(name: &str, value: Expr) -> Stmt {
+    Stmt::VarAssign(VariableAssignment {
+        name: name.to_string(),
+        value,
+        span: span(),
+    })
+}
+
 fn int8_lit(n: i8) -> Expr {
     Expr::IntLiteral { value: IntLiteralValue::Int8(n), span: span() }
 }
@@ -908,11 +917,7 @@ mod blackbox_tests {
             let body = vec![
                 var_decl("x", t.clone(), Some(l.clone())),
                 Stmt::Lock(vec![var_expr("x")]),
-                Stmt::VarAssign(VariableAssignment {
-                    name: "x".to_string(),
-                    value: l.clone(),
-                    span: span(),
-                }),
+                var_assign("x", l.clone())
             ];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
@@ -1016,11 +1021,7 @@ mod blackbox_tests {
                 var_decl("x", t.clone(), Some(l.clone())),
                 Stmt::Lock(vec![var_expr("x")]),
                 Stmt::Unlock(vec![var_expr("x")]),
-                Stmt::VarAssign(VariableAssignment {
-                    name: "x".to_string(),
-                    value: l.clone(),
-                    span: span(),
-                }),
+                var_assign("x", l.clone())
             ];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
@@ -2960,6 +2961,20 @@ mod blackbox_tests {
         }
     }
 
+
+    #[test]
+    fn test_assignment_of_undeclared_variable_errors() {
+        let literals = get_all_literals_no_arr();
+
+        for l in &literals {
+            let body = vec![var_assign("x", l.clone())]; // y not declared
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("undeclared variable"));
+        }
+    }
 
     // function parameters
     //
