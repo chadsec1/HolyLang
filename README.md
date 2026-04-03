@@ -20,16 +20,21 @@ It still lacks: unsafe blocks, and actual binary generation phase.
 # This is a comment
 
 func main() {
-    # 1 is evaluated as an expression, and given appropriate type depending on its literal value
-    # since x has no explicit value, the type of the right hand literal become the type of x
+    # `own` is the variable declaration keyword 
+    #
+    # since x has no explicit value, the type of the right hand expression type become the type of x
+    # This is just a simple inference systme, nothing complex or fancy like other languages
+    #
+
     own x = 1
 
 
     # Shadowing a declared variable is allowed
     own x = 2
 
-    # 2 is evaluated as an expression, with type hint of int32
-    # if 2 evaulated type does not match type hint, the compiler will error.
+
+    # You can explicitly specify the variable type.
+    # if the right hand expression type does not match `x` explicit type, the compiler would error.
     own x int32 = 2
 
 
@@ -51,8 +56,10 @@ func main() {
     own x int32[][] = int32[][int32[1,2], int32[3,4], int32[5,6]]
 
 
-    # Example of move-or-copy safety model, only one owner of a variable exists,
-    # no aliasing, no references, no borrowing.
+    # Example of the move-or-copy safety model, where there is only one owner of a variable,
+    # Holylang does not support references, borrowing, aliases, etc.
+    # You either move, or copy.
+       
 
     own x = 1
     own y = x
