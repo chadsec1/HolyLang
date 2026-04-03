@@ -1868,6 +1868,36 @@ mod blackbox_tests {
         }
     }
 
+    #[test]
+    fn test_array_access_not_usize_var_errors() {
+        let literals = get_all_literals_no_arr_no_usize();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR_NO_USIZE.iter()) {
+            let arr_lit = Expr::ArrayLiteral {
+                elements: vec![l.clone(), l.clone(), l.clone()],
+                array_ty: t.clone(),
+                span: span(),
+            };
+            let access = Expr::ArraySingleAccess {
+                array: Box::new(var_expr("arr")),
+                index: Box::new(var_expr("e")),
+                span: span(),
+            };
+            let body = vec![
+                var_decl("e", t.clone(), Some(l.clone())),
+                var_decl("arr", Type::Array(Box::new(t.clone())), Some(arr_lit)),
+                var_decl("x", t.clone(), Some(access)),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Expected array index to be of type"));
+        }
+    }
+
+
+
 
 
     #[test]
@@ -2194,7 +2224,6 @@ mod blackbox_tests {
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
                 let result = check_semantics(&mut ast);
-                println!("niggers master {:?}", result);
                 assert!(result.is_err());
                 assert!(result.unwrap_err().to_string().starts_with("Semantic error: Expected end index to be of type `usize` for array"));
             }
