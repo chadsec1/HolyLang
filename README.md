@@ -30,7 +30,7 @@ func main() {
     own x = 1
 
 
-    # Shadowing a declared variable is allowed
+    # Shadowing a declared variable within the same scope it is declared in, is allowed
     own x = 2
 
 
@@ -147,9 +147,9 @@ func main() {
 
     # For loops
 
-    own x = string["john", "jane", "jeffrey", "epstein"]
+    own x = string["john", "jane", "jack", "jeffrey", "epstein"]
     for s in x {
-        if s == "epstein" {
+        if s == "jack" {
             break
         }
     }
@@ -166,6 +166,8 @@ func main() {
     # Infinite loops
     own x int32
     infinite {
+
+        # When you use variables in expressions, they are copied automatically, you dont need copy().
         x = add(x + 1, x + 2)
 
 
