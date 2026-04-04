@@ -157,6 +157,13 @@ fn check_stmts(
 
         match stmt {
             Stmt::VarDecl(var) => {
+                if fun_sigs.contains_key(&var.name) {
+                    return Err(HolyError::Semantic(format!(
+                                "Name `{}` is already taken by a function, pick a different name for your variable. (line {} column {})", 
+                                &var.name, var.span.line, var.span.column
+                            )));
+
+                }
                 // If var has explicit type: keep it. If Infer: try infer from initializer.
                 if var.type_name == Type::Infer {
                     if let Some(expr) = &mut var.value {
