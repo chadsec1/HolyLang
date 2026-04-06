@@ -1,7 +1,7 @@
 use super::*;
 use crate::parser::{
     Param, Variable, VariableAssignment, 
-    IfStmt, WhileStmt
+    IfStmt, WhileStmt, ForStmt
 };
 
 
@@ -1100,6 +1100,111 @@ mod blackbox_tests {
         }
     }
 
+    // Test for statements with arrays.
+    #[test]
+    fn test_for_statements_with_arrays() {
+        let literals = get_all_literals_no_arr();
+
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for i in 0..=100 {
+                let elements = vec![l.clone(); i];
+
+                let arr_lit = Expr::ArrayLiteral {
+                    elements: elements.clone(),
+                    array_ty: t.clone(),
+                    span: span(),
+                };
+
+                let body = vec![ 
+                    var_decl("a", Type::Array(Box::new(t.clone())), Some(arr_lit)),
+                    Stmt::For(ForStmt{
+                        holder_name: "x".to_string(),
+                        value: var_expr("a"),
+                        branch: vec![
+                            // Just dummy declaration, so we don't get flagged by dead code because
+                            // of empty branch.
+                            var_decl("z", t.clone(), None),
+                        ],
+                        span: span(),
+                    }),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+
+                assert!(result.is_ok())
+            }
+        }
+    }
+
+
+    // Test for statements with rangecall, with only usize literals, no variables.
+    #[test]
+    fn test_for_statements_with_range_usize_literal() {
+        for t in ALL_TYPES_NO_ARR_NO_INFER {
+            for i in 0..=100 {
+                let body = vec![ 
+                    Stmt::For(ForStmt{
+                        holder_name: "x".to_string(),
+                        value: Expr::RangeCall{
+                            start: Box::new(usize_lit(0)),
+                            end: Box::new(usize_lit(i)),
+                            span: span()
+                        },
+                        
+                        branch: vec![
+                            // Just dummy declaration, so we don't get flagged by dead code because
+                            // of empty branch.
+                            var_decl("z", t.clone(), None),
+                        ],
+                        span: span(),
+                    }),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+
+                assert!(result.is_ok())
+            }
+        }
+
+        // Same as above, but start is also i
+
+        for t in ALL_TYPES_NO_ARR_NO_INFER {
+            for i in 0..=100 {
+                let body = vec![ 
+                    Stmt::For(ForStmt{
+                        holder_name: "x".to_string(),
+                        value: Expr::RangeCall{
+                            start: Box::new(usize_lit(i)),
+                            end: Box::new(usize_lit(i)),
+                            span: span()
+                        },
+                        
+                        branch: vec![
+                            // Just dummy declaration, so we don't get flagged by dead code because
+                            // of empty branch.
+                            var_decl("z", t.clone(), None),
+                        ],
+                        span: span(),
+                    }),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+
+                assert!(result.is_ok())
+            }
+        }
+
+
+    }
+
+
+
+
+
+
     // Test while statements with only literals, no strings/bools
     #[test]
     fn test_while_statements_ints_floats_literals_same_type() {
@@ -1868,8 +1973,8 @@ mod blackbox_tests {
             .zip(ALL_TYPES_NO_ARR_SCATTERED.iter())
             .zip(literals_no_ints.iter())
         {
-            for i in 0..100 {
-                let mut elements = vec![l1.clone(); i + 1];
+            for i in 0..=100 {
+                let mut elements = vec![l1.clone(); i];
 
                 elements.push(l2.clone());
                 
@@ -1906,8 +2011,8 @@ mod blackbox_tests {
             .zip(literals.iter())
             .zip(ALL_TYPES_NO_ARR)
         {
-            for i in 0..100 {
-                let mut elements = vec![l1.clone(); i + 1];
+            for i in 0..=100 {
+                let mut elements = vec![l1.clone(); i];
 
                 elements.push(var_expr("e"));
                 
@@ -1953,7 +2058,7 @@ mod blackbox_tests {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            for i in 3..10000 {
+            for i in 3..=10000 {
                 let arr_lit = Expr::ArrayLiteral {
                     elements: vec![l.clone(), l.clone(), l.clone()],
                     array_ty: t.clone(),
@@ -2019,7 +2124,7 @@ mod blackbox_tests {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            for i in 3..10000 {
+            for i in 3..=10000 {
                 let arr_lit = Expr::ArrayLiteral {
                     elements: vec![l.clone(), l.clone(), l.clone()],
                     array_ty: t.clone(),
@@ -2052,7 +2157,7 @@ mod blackbox_tests {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            for i in 0..100 {
+            for i in 0..=100 {
                 let elements = vec![l.clone(); i + 1];
                 
                 let arr_lit = Expr::ArrayLiteral {
@@ -2161,7 +2266,7 @@ mod blackbox_tests {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            for i in 0..100 {
+            for i in 0..=100 {
                 let elements = vec![l.clone(); i + 1];
                 
                 let arr_lit = Expr::ArrayLiteral {
