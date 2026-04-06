@@ -7,6 +7,8 @@ use crate::parser::{
 
 use crate::tests_consts::{
     ALL_TYPES_NO_ARR, ALL_TYPES_NO_ARR_SCATTERED, ALL_TYPES_NO_ARR_NO_USIZE, ALL_TYPES_NO_ARR_NO_INFER, ALL_TYPES_NO_INTS_NO_ARR,
+    ALL_INT_TYPES_NO_ARR_NO_INFER,
+
     ALL_UNSIGNED_TYPES_NO_ARR, ALL_SIGNED_TYPES_NO_ARR,
     ALL_BIN_OP_KIND_ARTH, ALL_BIN_OP_KIND_COMP, ALL_BIN_OP_KIND_COMP_EQ,
 };
@@ -462,7 +464,7 @@ mod blackbox_tests {
         }
     }
 
-    // type inference tests
+    // variables and type inference tests
 
     #[test]
     fn test_infer_type_literal() {
@@ -483,6 +485,45 @@ mod blackbox_tests {
             }
         }
     }
+
+
+
+    #[test]
+    fn test_variable_name_taken_by_func_errors() {
+        for t in ALL_TYPES_NO_ARR {
+            let main = void_func("main", vec![], vec![
+                var_decl("foo", t.clone(), Some(call_expr("foo", vec![]))),
+            ]);
+
+            let foo = void_func("foo", vec![], vec![]);
+
+            let mut ast = AST { functions: vec![main, foo] };
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());        
+            assert!(result.unwrap_err().to_string().contains("Name `foo` is already taken by a function, pick a different name for your variable."));
+        }
+    }
+
+
+    // This test is duplicated but not really.. other tests dont test it all way through.
+    #[test]
+    fn test_var_decl_type_mismatch_errors() {
+        let literals_no_ints = get_all_literals_no_arr_no_ints();
+
+        for t in ALL_INT_TYPES_NO_ARR_NO_INFER {
+            for l in &literals_no_ints {
+                let body = vec![var_decl("x", t.clone(), Some(l.clone()))];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+
+                assert!(result.is_err());        
+                assert!(result.unwrap_err().to_string().contains("Type mismatch assigning to"));
+            }
+        }
+    }
+
 
 
     #[should_panic(expected = "Compiler bug")]
@@ -511,13 +552,8 @@ mod blackbox_tests {
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             let result = check_semantics(&mut ast);
-            assert!(result.is_err());
-
-            let err = result.unwrap_err().to_string();
-            let err = err.starts_with("Semantic error: Cannot assign integer literal to non-integer type `bool`")
-                     || err.starts_with("Semantic error: Cannot assign float literal to non-float type `bool`");
-
-            assert!(err); 
+            assert!(result.is_err());    
+            assert!(result.unwrap_err().to_string().contains("Type mismatch assigning to"));
         }
 
 
@@ -527,13 +563,9 @@ mod blackbox_tests {
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             let result = check_semantics(&mut ast);
+
             assert!(result.is_err());
-
-            let err = result.unwrap_err().to_string();
-            let err = err.starts_with("Semantic error: Cannot assign integer literal to non-integer type `string`")
-                     || err.starts_with("Semantic error: Cannot assign float literal to non-float type `string`");
-
-            assert!(err);                
+            assert!(result.unwrap_err().to_string().contains("Type mismatch assigning to"));
         }
 
     }
@@ -1933,6 +1965,52 @@ mod blackbox_tests {
             assert!(result.unwrap_err().to_string().contains("type mismatch"));
         }
     }
+
+    #[test]
+    fn test_call_wrong_return_arity_errors() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let callee = returning_func("bar", vec![], vec![t.clone(), t.clone()], vec![
+                return_stmt(vec![l.clone(), l.clone()])
+            ]);
+            let body = vec![
+                var_decl("x", t.clone(), Some(
+                            call_expr("bar", vec![])
+                        )
+                )
+            ];
+            let caller = void_func("main", vec![], body);
+            let mut ast = AST { functions: vec![callee, caller] };
+
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Call to function `bar` returns 2 values but is used in a single-value expression"));
+        }
+    }
+
+
+    #[test]
+    fn test_call_assign_from_non_returning_func_errors() {
+        for t in ALL_TYPES_NO_ARR {
+            let callee = void_func("bar", vec![], vec![]);
+            let body = vec![
+                var_decl("x", t.clone(), Some(
+                            call_expr("bar", vec![])
+                        )
+                )
+            ];
+            let caller = void_func("main", vec![], body);
+            let mut ast = AST { functions: vec![callee, caller] };
+
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("has no return type declared but is used in an expression"));
+        }
+    }
+
 
     #[test]
     fn test_correct_call_passes() {

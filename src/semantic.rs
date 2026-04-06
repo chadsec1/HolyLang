@@ -174,12 +174,13 @@ fn check_stmts(
                         panic!("(Compiler bug) parser phase shouldnt have let this invalid code reach this far, Since var is of type infer, it must've had a value for declaration. Var: {:?}", var);
                     }
                 } else {
-                    // explicit type: if initializer present, ensure initializer is compatible
+                    // explicit type, if initializer present, ensure initializer is compatible
                     
                     if let Some(expr) = &mut var.value {
-                        infer::assign_infer_type_to_expr_value(expr, var.type_name.clone())?;
+                        // On second thought, I don't think this is needed.
+                        // infer::assign_infer_type_to_expr_value(expr, var.type_name.clone())?;
 
-                        // Now infer/check the expression type as usual.
+                        // Infer and check the expression type.
                         let expr_ty = infer::infer_expr_type(expr, locals, fun_sigs, Some(var.type_name.clone()))?;
                         if !helpers::type_compatible(&expr_ty, &var.type_name) {
                             return Err(HolyError::Semantic(format!(
@@ -937,7 +938,7 @@ fn check_call(
         None => {
             if require_ret {
                 Err(HolyError::Semantic(format!(
-                    "Function `{}` has no return type declared but is used in an expression (must declare return type) (line {} column {})",
+                    "Function `{}` has no return type declared but is used in an expression (line {} column {})",
                     name, span.line, span.column
                 )))
             } else {
