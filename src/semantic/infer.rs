@@ -362,7 +362,6 @@ pub fn infer_expr_type(
                 return Err(HolyError::Semantic(format!(
                         "Expected range arguments to be any Integer type, instead we got: `{}` and `{}` (line {} column {})", 
                         start_ty, end_ty, span.line, span.column)))
-
             }
 
 

@@ -6,7 +6,7 @@ use crate::parser::{
 
 
 use crate::tests_consts::{
-    ALL_TYPES_NO_ARR, ALL_TYPES_NO_ARR_SCATTERED, ALL_TYPES_NO_ARR_NO_USIZE, ALL_TYPES_NO_ARR_NO_INFER,
+    ALL_TYPES_NO_ARR, ALL_TYPES_NO_ARR_SCATTERED, ALL_TYPES_NO_ARR_NO_USIZE, ALL_TYPES_NO_ARR_NO_INFER, ALL_TYPES_NO_INTS_NO_ARR,
     ALL_UNSIGNED_TYPES_NO_ARR, ALL_SIGNED_TYPES_NO_ARR,
     ALL_BIN_OP_KIND_ARTH, ALL_BIN_OP_KIND_COMP, ALL_BIN_OP_KIND_COMP_EQ,
 };
@@ -125,6 +125,30 @@ fn get_all_literals_no_arr_str_bool_scattered() -> [Expr; 13] {
 
     return literals;
 }
+
+
+
+
+fn get_all_literals_no_arr_str_bool_float() -> [Expr; 11] {
+    let literals = [
+        int8_lit(1),
+        int16_lit(1),
+        int32_lit(1),
+        int64_lit(1),
+        int128_lit(1),
+
+        byte_lit(1),
+        uint16_lit(1),
+        uint32_lit(1),
+        uint64_lit(1),
+        uint128_lit(1),
+
+        usize_lit(1),
+    ];
+
+    return literals;
+}
+
 
 
 
@@ -1100,7 +1124,7 @@ mod blackbox_tests {
         }
     }
 
-    // Test for statements with arrays.
+    // Test for statements with array variables, no literals.
     #[test]
     fn test_for_statements_with_arrays() {
         let literals = get_all_literals_no_arr();
@@ -1138,66 +1162,106 @@ mod blackbox_tests {
     }
 
 
-    // Test for statements with rangecall, with only usize literals, no variables.
+    // Test for statements with rangecall, with only integer literals, no variables.
     #[test]
-    fn test_for_statements_with_range_usize_literal() {
-        for t in ALL_TYPES_NO_ARR_NO_INFER {
-            for i in 0..=100 {
-                let body = vec![ 
-                    Stmt::For(ForStmt{
-                        holder_name: "x".to_string(),
-                        value: Expr::RangeCall{
-                            start: Box::new(usize_lit(0)),
-                            end: Box::new(usize_lit(i)),
-                            span: span()
-                        },
-                        
-                        branch: vec![
-                            // Just dummy declaration, so we don't get flagged by dead code because
-                            // of empty branch.
-                            var_decl("z", t.clone(), None),
-                        ],
-                        span: span(),
-                    }),
-                ];
-                let func = void_func("foo", vec![], body);
-                let mut ast = ast_one(func);
-                let result = check_semantics(&mut ast);
+    fn test_for_statements_with_range_int_literals() {
+        let literals = get_all_literals_no_arr_str_bool_float();
 
-                assert!(result.is_ok())
-            }
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![ 
+                Stmt::For(ForStmt{
+                    holder_name: "x".to_string(),
+                    value: Expr::RangeCall{
+                        start: Box::new(l.clone()),
+                        end: Box::new(l.clone()),
+                        span: span()
+                    },
+                    
+                    branch: vec![
+                        // Just dummy declaration, so we don't get flagged by dead code because
+                        // of empty branch.
+                        var_decl("z", t.clone(), None),
+                    ],
+                    span: span(),
+                }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_ok())
         }
+    }
 
-        // Same as above, but start is also i
 
-        for t in ALL_TYPES_NO_ARR_NO_INFER {
-            for i in 0..=100 {
-                let body = vec![ 
-                    Stmt::For(ForStmt{
-                        holder_name: "x".to_string(),
-                        value: Expr::RangeCall{
-                            start: Box::new(usize_lit(i)),
-                            end: Box::new(usize_lit(i)),
-                            span: span()
-                        },
-                        
-                        branch: vec![
-                            // Just dummy declaration, so we don't get flagged by dead code because
-                            // of empty branch.
-                            var_decl("z", t.clone(), None),
-                        ],
-                        span: span(),
-                    }),
-                ];
-                let func = void_func("foo", vec![], body);
-                let mut ast = ast_one(func);
-                let result = check_semantics(&mut ast);
+    #[test]
+    fn test_for_statements_with_range_non_int_literals_errors() {
+        let literals_no_ints = get_all_literals_no_arr_no_ints();
 
-                assert!(result.is_ok())
-            }
+
+        for (l, t) in literals_no_ints.iter().zip(ALL_TYPES_NO_INTS_NO_ARR.iter()) {
+            let body = vec![ 
+                Stmt::For(ForStmt{
+                    holder_name: "x".to_string(),
+                    value: Expr::RangeCall{
+                        start: Box::new(l.clone()),
+                        end: Box::new(l.clone()),
+                        span: span()
+                    },
+                    
+                    branch: vec![
+                        // Just dummy declaration, so we don't get flagged by dead code because
+                        // of empty branch.
+                        var_decl("z", t.clone(), None),
+                    ],
+                    span: span(),
+                }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Expected range arguments to be any Integer type"));
         }
+    }
 
 
+    #[test]
+    fn test_for_statements_with_range_mixed_literals_errors() {
+        let literals_no_ints = get_all_literals_no_arr_no_ints();
+        let literals = get_all_literals_no_arr();
+
+
+
+        for ((l, t), l2) in literals_no_ints.iter()
+            .zip(ALL_TYPES_NO_INTS_NO_ARR.iter())
+            .zip(literals)
+        {
+            let body = vec![ 
+                Stmt::For(ForStmt{
+                    holder_name: "x".to_string(),
+                    value: Expr::RangeCall{
+                        start: Box::new(l.clone()),
+                        end: Box::new(l2.clone()),
+                        span: span()
+                    },
+                    
+                    branch: vec![
+                        // Just dummy declaration, so we don't get flagged by dead code because
+                        // of empty branch.
+                        var_decl("z", t.clone(), None),
+                    ],
+                    span: span(),
+                }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Expected range arguments to be of the same type"));
+        }
     }
 
 
