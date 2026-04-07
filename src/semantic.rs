@@ -908,11 +908,15 @@ fn check_call(
     for (i, (arg_expr, param_ty)) in args.iter_mut().zip(param_tys.iter()).enumerate() {
         let arg_ty = infer::infer_expr_type(arg_expr, locals, fun_sigs, Some(param_ty.clone()))?;
         if arg_ty == Type::Infer {
-            // assign literal inference to param type when possible
-            infer::assign_infer_type_to_expr_value(arg_expr, param_ty.clone())?;
+            panic!(
+                "(Compiler bug) argument inferred type is Infer, that's an impossible condition. name: {:?}\nargs: {:?}\nlocals: {:?}\nfun_sigs: {:?}\nrequire_ret: {:?}\nspan: {:?}", 
+                name, args, locals, fun_sigs, require_ret, span
+                )
+
+            // infer::assign_infer_type_to_expr_value(arg_expr, param_ty.clone())?;
         } else if !helpers::type_compatible(&arg_ty, param_ty) {
             return Err(HolyError::Semantic(format!(
-                "Argument number {} type mismatch in call to `{}`: expected `{}`, got `{}` (line {} column {})",
+                "Argument number `{}` type mismatch in call to `{}`: expected `{}`, got `{}` (line {} column {})",
                 i + 1, name, param_ty, arg_ty, span.line, span.column,
             )));
         }

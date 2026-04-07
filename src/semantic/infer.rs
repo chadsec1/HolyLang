@@ -744,6 +744,9 @@ pub fn infer_integer_literal_helper(infer_ty: Type, value: IntLiteralValue, span
     }
 }
 
+
+/*
+ IMPORTANT NOTE: I don't believe this function is needed anymore. But I could be wrong..
 // Function to attempt to change an expression's literal to match `ty`. If fails, it errors.
 // ty is the expression holder type (i.e. variable type)
 // expr is the value literal its self
@@ -788,4 +791,4 @@ pub fn assign_infer_type_to_expr_value(expr: &mut Expr, ty: Type) -> Result<(), 
     Ok(())
 }
 
-
+*/
