@@ -522,10 +522,10 @@ pub fn check_usize_literal_to_src(expr: &Expr, len: usize, span: Span, locals: H
             }
         },
 
-        Expr::CopyCall{expr: e, ..} => {
-            check_usize_literal_to_src(e, len, span, locals)?;
-            Ok(())
-        }
+        Expr::CopyCall{..} => Err(HolyError::Semantic(format!(
+                        "You do not need to Copy an index when you are accessing an array, it is always copied. Remove the copy call. (line {} column {})"
+                        ,span.line, span.column
+                    ))),
 
 
         // If it's not a literal, like, a function call, etc. We just assume it's within range
@@ -745,50 +745,3 @@ pub fn infer_integer_literal_helper(infer_ty: Type, value: IntLiteralValue, span
 }
 
 
-/*
- IMPORTANT NOTE: I don't believe this function is needed anymore. But I could be wrong..
-// Function to attempt to change an expression's literal to match `ty`. If fails, it errors.
-// ty is the expression holder type (i.e. variable type)
-// expr is the value literal its self
-pub fn assign_infer_type_to_expr_value(expr: &mut Expr, ty: Type) -> Result<(), HolyError> {
-    match expr {
-        Expr::IntLiteral { value, span } => {
-            match ty {
-                Type::Int8 | Type::Int16 | Type::Int32 | Type::Int64 | Type::Int128 | Type::Byte | Type::Uint16 | Type::Uint32 | Type::Uint64 | Type::Uint128 | Type::Usize => {
-                    *value = infer_integer_literal_helper(ty, *value, *span)?;
-                }
-
-                _ => {
-                    return Err(HolyError::Semantic(format!("Cannot assign integer literal to non-integer type `{}` (line {} column {})", ty, span.line, span.column)));
-                }
-            }
-
-            return Ok(());
-        }
-        Expr::FloatLiteral { value, span } => {
-            match ty {
-                Type::Float32 => {
-                    if let FloatLiteralValue::Float64(f) = value {
-                        return Err(HolyError::Semantic(format!("Float literal `{}` is of type `float64`, but we expected type `float32` (line {} column {})", f, span.line, span.column)));
-                    }
-                }
-                Type::Float64 => {
-                    if let FloatLiteralValue::Float32(f) = value {
-                        *value = FloatLiteralValue::Float64(f.clone() as f64);
-                    }
-                }
-                _ => {
-                        return Err(HolyError::Semantic(format!("Cannot assign float literal to non-float type `{}` (line {} column {})", ty, span.line, span.column)));
-                    }
-
-            }
-
-        }
-        // For non-literals, nothing to assign, and that's OK.
-        _ => {}
-    }
-
-    Ok(())
-}
-
-*/

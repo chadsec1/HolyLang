@@ -2327,6 +2327,50 @@ mod blackbox_tests {
     }
 
 
+    // Because array access index variables are always copied.
+    #[test]
+    fn test_array_valid_access_variable_copy_errors() {
+
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for i in 0..=100 {
+                let elements = vec![l.clone(); i + 1];
+                
+            
+                
+                let arr_lit = Expr::ArrayLiteral {
+                    elements: elements,
+                    array_ty: t.clone(),
+                    span: span(),
+                };
+
+                for i2 in 0..i+1 {
+                
+                    let copy_var = Expr::CopyCall { expr: Box::new(var_expr("e")), span: span() };
+                    let access = Expr::ArraySingleAccess {
+                        array: Box::new(var_expr("arr")),
+                        index: Box::new(copy_var),
+                        span: span(),
+                    };
+
+                    let body = vec![
+                        var_decl("e", Type::Usize, Some(usize_lit(i2))),
+                        var_decl("arr", Type::Array(Box::new(t.clone())), Some(arr_lit.clone())),
+                        var_decl("x", t.clone(), Some(access)),
+                    ];
+                    let func = void_func("foo", vec![], body);
+                    let mut ast = ast_one(func);
+                    let result = check_semantics(&mut ast);
+                    assert!(result.is_err());
+                    assert!(result.unwrap_err().to_string().contains("You do not need to Copy an index when you are accessing an array, it is always copied. Remove the copy call"));
+                }
+            }       
+        }
+    }
+
+
+
     // i.e. "hi"[0] is an error. You can only access variables, of type array, not literals.
     #[test]
     fn test_array_access_on_literals_errors() {
