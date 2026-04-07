@@ -105,111 +105,104 @@ mod tests {
         use super::*;
         #[test]
         fn empty_string_returns_none() {
-            assert_eq!(helpers::find_top_level_op_any("", &['+', '-']), None);
+            assert_eq!(helpers::find_top_level_op_any(""), None);
         }
 
         #[test]
         fn no_ops_in_string_returns_none() {
-            assert_eq!(helpers::find_top_level_op_any("hello world", &['+', '-']), None);
+            assert_eq!(helpers::find_top_level_op_any("hello world"), None);
         }
 
         #[test]
         fn single_addition() {
-            let result = helpers::find_top_level_op_any("a+b", &['+', '-', '*', '/']);
-            assert_eq!(result, Some((1, '+')));
+            let result = helpers::find_top_level_op_any("a+b");
+            assert_eq!(result, Some((1, "+")));
         }
 
         #[test]
         fn single_subtraction() {
-            let result = helpers::find_top_level_op_any("a-b", &['+', '-', '*', '/']);
-            assert_eq!(result, Some((1, '-')));
+            let result = helpers::find_top_level_op_any("a-b");
+            assert_eq!(result, Some((1, "-")));
         }
 
         #[test]
         fn single_multiplication() {
-            let result = helpers::find_top_level_op_any("a*b", &['+', '-', '*', '/']);
-            assert_eq!(result, Some((1, '*')));
+            let result = helpers::find_top_level_op_any("a*b");
+            assert_eq!(result, Some((1, "*")));
         }
 
         #[test]
         fn op_inside_parens_is_skipped() {
             // "(a+b)" — '+' is depth-1, should be ignored
-            let result = helpers::find_top_level_op_any("(a+b)", &['+', '-']);
+            let result = helpers::find_top_level_op_any("(a+b)");
             assert_eq!(result, None);
         }
 
         #[test]
         fn op_at_top_level_with_inner_parens() {
             // "(a+b)+(c+d)" — only the middle '+' is top-level
-            let result = helpers::find_top_level_op_any("(a+b)+(c+d)", &['+']);
-            assert_eq!(result, Some((5, '+')));
+            let result = helpers::find_top_level_op_any("(a+b)+(c+d)");
+            assert_eq!(result, Some((5, "+")));
         }
 
         #[test]
         fn left_associativity_picks_rightmost_lowest_precedence() {
             // "a+b+c" — both '+' have the same precedence; should get the RIGHTMOST one
-            let result = helpers::find_top_level_op_any("a+b+c", &['+', '-', '*', '/']);
-            assert_eq!(result, Some((3, '+')));
+            let result = helpers::find_top_level_op_any("a+b+c");
+            assert_eq!(result, Some((3, "+")));
         }
 
         #[test]
         fn lower_precedence_wins_over_higher() {
-            // "a*b+c" — '+' (prec 2) wins over '*' (prec 3)
-            let result = helpers::find_top_level_op_any("a*b+c", &['+', '-', '*', '/']);
-            assert_eq!(result, Some((3, '+')));
+            // "a*b+c" - '+' (prec 2) wins over '*' (prec 3)
+            let result = helpers::find_top_level_op_any("a*b+c");
+            assert_eq!(result, Some((3, "+")));
         }
 
         #[test]
         fn multiply_wins_when_no_addition() {
-            let result = helpers::find_top_level_op_any("a*b*c", &['+', '-', '*', '/']);
+            let result = helpers::find_top_level_op_any("a*b*c");
             // rightmost '*' at index 3
-            assert_eq!(result, Some((3, '*')));
+            assert_eq!(result, Some((3, "*")));
         }
 
         #[test]
         fn nested_parens_all_ops_hidden() {
             // "((a+b)*(c-d))" — all ops are nested
-            let result = helpers::find_top_level_op_any("((a+b)*(c-d))", &['+', '-', '*', '/']);
+            let result = helpers::find_top_level_op_any("((a+b)*(c-d))");
             assert_eq!(result, None);
         }
 
         #[test]
         fn comparison_operators_have_lowest_precedence() {
             // "a+b>c*d" — '>' has prec 1, '+' has prec 2, so '>' wins
-            let result = helpers::find_top_level_op_any("a+b>c*d", &['+', '-', '*', '/', '>']);
-            assert_eq!(result, Some((3, '>')));
-        }
-
-        #[test]
-        fn only_ops_in_search_list_are_found() {
-            // '+' exists but we only search for '*'
-            let result = helpers::find_top_level_op_any("a+b", &['*']);
-            assert_eq!(result, None);
+            let result = helpers::find_top_level_op_any("a+b>c*d");
+            assert_eq!(result, Some((3, ">")));
         }
 
         #[test]
         fn deeply_nested_op_is_hidden() {
-            let result = helpers::find_top_level_op_any("(((a+b)))", &['+']);
+            let result = helpers::find_top_level_op_any("(((a+b)))");
             assert_eq!(result, None);
         }
 
         #[test]
         fn unbalanced_close_paren_depth_saturates_at_zero() {
-            // "a)+b" — after ')' depth would go negative but is clamped; '+' at 2 is top-level
-            let result = helpers::find_top_level_op_any("a)+b", &['+']);
-            assert_eq!(result, Some((2, '+')));
+            // "a)+b" — after ')' depth would go negative but is clamped, '+' at 2 is top-level
+            let result = helpers::find_top_level_op_any("a)+b");
+            assert_eq!(result, Some((2, "+")));
         }
 
         #[test]
         fn op_immediately_at_start() {
-            let result = helpers::find_top_level_op_any("+b", &['+']);
-            assert_eq!(result, Some((0, '+')));
+            let result = helpers::find_top_level_op_any("+b");
+            assert_eq!(result, Some((0, "+")));
         }
 
         #[test]
         fn op_immediately_at_end() {
-            let result = helpers::find_top_level_op_any("a+", &['+']);
-            assert_eq!(result, Some((1, '+')));
+            let result = helpers::find_top_level_op_any("a+");
+            assert_eq!(result, Some((1, "+")));
         }
     }
 

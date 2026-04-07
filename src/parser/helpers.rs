@@ -24,6 +24,81 @@ pub fn find_constructor_bracket(s: &str) -> Option<usize> {
 }
 
 
+pub fn find_top_level_op_any(s: &str) -> Option<(usize, &str)> {
+    fn precedence(op: &str) -> u8 {
+        match op {
+            "==" | "!=" => 1,
+            ">" | "<" | ">=" | "<=" => 1,
+            "<<" | ">>" => 1,
+            "+" | "-" => 2,
+            "*" | "/" => 3,
+            _ => u8::MAX,
+        }
+    }
+
+    let chars: Vec<(usize, char)> = s.char_indices().collect();
+    let mut depth = 0usize;
+    let mut best: Option<(usize, &str)> = None;
+    let mut best_prec = u8::MAX;
+    let mut i = 0;
+
+    while i < chars.len() {
+        let (idx, c) = chars[i];
+        match c {
+            '(' | '[' | '{' => depth += 1,
+            ')' | ']' | '}' => { if depth > 0 { depth -= 1; } }
+            _ if depth == 0 => {
+                // Peek next char
+                let next = chars.get(i + 1).map(|(_, nc)| *nc);
+
+                // Determine operator string at this position
+                let op_str: Option<&str> = match c {
+                    '=' if next == Some('=') => Some(&s[idx..idx+2]),
+                    '!' if next == Some('=') => Some(&s[idx..idx+2]),
+                    '>' if next == Some('=') => Some(&s[idx..idx+2]),
+                    '<' if next == Some('=') => Some(&s[idx..idx+2]),
+                    '>' if next == Some('>') => Some(&s[idx..idx+2]),
+                    '<' if next == Some('<') => Some(&s[idx..idx+2]),
+                    '+' | '-' | '*' | '/' | '>' | '<' => Some(&s[idx..idx+1]),
+                    _ => None,
+                };
+
+                if let Some(op) = op_str {
+                    // Skip unary minus
+                    if op == "-" {
+                        let prev_non_ws = (0..i).rev()
+                            .map(|j| chars[j].1)
+                            .find(|ch| !ch.is_whitespace());
+                        match prev_non_ws {
+                            None => { i += 1; continue; }
+                            Some(prev) if "+-*/!=<>(".contains(prev) => { i += 1; continue; }
+                            _ => {}
+                        }
+                    }
+
+                    let prec = precedence(op);
+                    if prec <= best_prec {
+                        best_prec = prec;
+                        best = Some((idx, op));
+                    }
+
+                    // Skip both chars for two-char operators so we don't
+                    // match the second char again
+                    if op.len() == 2 {
+                        i += 2;
+                        continue;
+                    }
+                }
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+    best
+}
+
+/*
+
 pub fn find_top_level_op_any(s: &str, ops: &[char]) -> Option<(usize, char)> {
     fn precedence(c: char, next: Option<char>) -> u8 {
         match c {
@@ -86,6 +161,7 @@ pub fn find_top_level_op_any(s: &str, ops: &[char]) -> Option<(usize, char)> {
 
     best
 }
+*/
 
 
 

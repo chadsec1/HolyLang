@@ -2377,7 +2377,7 @@ mod blackbox_tests {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            for i in 0..1000 {
+            for i in 0..=1000 {
                 let access = Expr::ArraySingleAccess {
                     array: Box::new(l.clone()),
                     index: Box::new(usize_lit(i)),
@@ -2403,7 +2403,7 @@ mod blackbox_tests {
     #[test]
     fn test_array_access_on_undeclared_var_errors() {
         for t in ALL_TYPES_NO_ARR {
-            for i in 0..1000 {
+            for i in 0..=1000 {
                 let access = Expr::ArraySingleAccess {
                     array: Box::new(var_expr("e")),
                     index: Box::new(usize_lit(i)),
@@ -2427,7 +2427,7 @@ mod blackbox_tests {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            for i in 0..1000 {
+            for i in 0..=1000 {
                 let access = Expr::ArraySingleAccess {
                     array: Box::new(var_expr("e")),
                     index: Box::new(usize_lit(i)),

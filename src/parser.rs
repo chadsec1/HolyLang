@@ -296,6 +296,12 @@ pub enum BinOpKind {
     Multiply,
     Divide,
 
+    BitwiseShiftLeft,
+    BitwiseShiftRight,
+    BitwiseAnd,
+    BitwiseOr,
+
+
     Equal,
     NotEqual,
     Greater,

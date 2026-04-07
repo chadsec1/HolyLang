@@ -374,9 +374,9 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
     
 
     // Binary operations handling: split on the first operator
-    if let Some((pos, op)) = helpers::find_top_level_op_any(s, &['+', '-', '*', '/', '!', '=', '>', '<']) {
+    if let Some((pos, op)) = helpers::find_top_level_op_any(s) {
         let left = s[..pos].trim();
-        let mut right = s[pos + 1..].trim();
+        let right = s[pos + op.len()..].trim();
         if left.is_empty() {
             return Err(HolyError::Parse(format!(
                 "Expected expression before '{}' at line {} column {}",
@@ -390,61 +390,23 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
             )));
         }
 
-        let op_enum = match &op {
-            '+' => BinOpKind::Add,
-            '-' => BinOpKind::Subtract,
-            '*' => BinOpKind::Multiply,
-            '/' => BinOpKind::Divide,
-            '=' => {
-                if right.starts_with('=') {
-                    right = right[1..].trim();
-                    BinOpKind::Equal
-
-                } else {
-                    return Err(HolyError::Parse(format!(
-                        "Invalid binary operation '{}' at line {} column {}",
-                        &s[pos..pos + 2], span.line, span.column
-                    )));
-
-                }
-            },
-            '!' => {
-                if right.starts_with('=') {
-                    right = right[1..].trim();
-                    BinOpKind::NotEqual
-
-                } else {
-                    return Err(HolyError::Parse(format!(
-                        "Invalid binary operation '{}' at line {} column {}",
-                        &s[pos..pos + 2], span.line, span.column
-                    )));
-
-                }
-            },
-
-            '>' => {
-                if right.starts_with('=') {
-                    right = right[1..].trim();
-                    BinOpKind::GreaterEqual
-                } else {
-                    BinOpKind::Greater
-                }
-            }
-
-            '<' => {
-                if right.starts_with('=') {
-                    right = right[1..].trim();
-                    BinOpKind::LessEqual
-                } else {
-                    BinOpKind::Less
-                }
-            }
-
+        let op_enum = match op {
+            "+"  => BinOpKind::Add,
+            "-"  => BinOpKind::Subtract,
+            "*"  => BinOpKind::Multiply,
+            "/"  => BinOpKind::Divide,
+            "==" => BinOpKind::Equal,
+            "!=" => BinOpKind::NotEqual,
+            ">"  => BinOpKind::Greater,
+            ">=" => BinOpKind::GreaterEqual,
+            "<"  => BinOpKind::Less,
+            "<=" => BinOpKind::LessEqual,
+            ">>" => BinOpKind::BitwiseShiftRight,
+            "<<" => BinOpKind::BitwiseShiftLeft,
             o => {
                 return Err(HolyError::Parse(format!(
-                    "Unknown binary operand {} (line {} column {})",
-                    o,
-                    span.line, span.column
+                    "Unknown binary operand `{}` (line {} column {})",
+                    o, span.line, span.column
                 )));
             },
         };
