@@ -15,6 +15,7 @@ use crate::tests_consts::{
     ALL_BIN_OP_KIND_REAL_ARTH, ALL_BIN_OP_KIND_BIT_ARTH,
 
     ALL_BIN_OP_KIND_LOGIC,
+ALL_BIN_OP_KIND_COMP_ARTH
 
 };
 
@@ -3091,6 +3092,55 @@ mod blackbox_tests {
             }
         }
     }
+
+
+    #[test]
+    fn test_all_literals_binop_comp_arth_errors() {
+        let literals_str_bool = [str_lit("hi"), bool_lit(false)];
+
+        for l in literals_str_bool {
+            for b in ALL_BIN_OP_KIND_COMP_ARTH {
+                let bin = Expr::BinOp {
+                    left: Box::new(l.clone()),
+                    op: b,
+                    right: Box::new(l.clone()),
+                    span: span(),
+                };
+                let body = vec![var_decl("s", Type::Infer, Some(bin))];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("You cannot perform arithmetic comparison on non-numeric types"));
+            }
+        }
+    }
+
+
+    #[test]
+    fn test_all_literals_binop_comp_arth_mixed_errors() {
+        let literals = get_all_literals_no_arr_few_ints();
+        let literals_scattered = get_all_literals_no_arr_few_ints_scattered();
+
+        for (l, ls) in literals.iter().zip(literals_scattered.iter()) {
+            for b in ALL_BIN_OP_KIND_COMP_ARTH {
+                let bin = Expr::BinOp {
+                    left: Box::new(l.clone()),
+                    op: b,
+                    right: Box::new(ls.clone()),
+                    span: span(),
+                };
+                let body = vec![var_decl("s", Type::Infer, Some(bin))];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("Type mismatch in binary comparison operation"));
+            }
+        }
+    }
+
+
 
 
     #[test]

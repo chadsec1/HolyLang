@@ -69,6 +69,16 @@ pub const ALL_BIN_OP_KIND_COMP: [BinOpKind; 6] = [
     BinOpKind::LessEqual, 
 ];
 
+
+
+pub const ALL_BIN_OP_KIND_COMP_ARTH: [BinOpKind; 4] = [
+    BinOpKind::Greater,
+    BinOpKind::GreaterEqual,
+    BinOpKind::Less,
+    BinOpKind::LessEqual, 
+];
+
+
 pub const ALL_BIN_OP_KIND_COMP_EQ: [BinOpKind; 2] = [
     BinOpKind::Equal,
     BinOpKind::NotEqual,
