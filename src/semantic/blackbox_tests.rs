@@ -74,6 +74,38 @@ fn get_all_literals_no_arr_no_ints() -> [Expr; 4] {
 
 
 
+fn get_all_literals_no_arr_few_ints() -> [Expr; 6] {
+    let literals = [
+        uint128_lit(1),
+        int128_lit(1),
+
+        float32_lit(1.0),
+        float64_lit(1.0),
+
+        bool_lit(false),
+        str_lit("Hi")
+    ];
+
+    return literals;
+}
+
+
+fn get_all_literals_no_arr_few_ints_scattered() -> [Expr; 6] {
+    let literals = [
+        str_lit("Hi"),
+        float32_lit(1.0),
+
+        int128_lit(1),
+        bool_lit(false),
+        float64_lit(1.0),
+        uint128_lit(1),
+    ];
+
+    return literals;
+}
+
+
+
 fn get_all_signed_literals_no_arr() -> [Expr; 7] {
     let literals = [
         int8_lit(1),
@@ -3034,6 +3066,91 @@ mod blackbox_tests {
             }
         }
     }
+
+
+
+    // Same as above test, but its mixed types
+    #[test]
+    fn test_all_literals_binop_comp_eq_errors() {
+        let literals = get_all_literals_no_arr_few_ints();
+        let literals_scattered = get_all_literals_no_arr_few_ints_scattered();
+
+        for (l, ls) in literals.iter().zip(literals_scattered.iter()) {
+            for b in ALL_BIN_OP_KIND_COMP_EQ {
+                let bin = Expr::BinOp {
+                    left: Box::new(l.clone()),
+                    op: b,
+                    right: Box::new(ls.clone()),
+                    span: span(),
+                };
+                let body = vec![var_decl("s", Type::Infer, Some(bin))];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+                assert!(result.is_err());
+            }
+        }
+    }
+
+
+    #[test]
+    fn test_all_literals_binop_comp_eq_for_binop_logical_passes() {
+        let literals = get_all_literals_no_arr();
+
+        for l in literals {
+            for b in ALL_BIN_OP_KIND_COMP_EQ {
+                let bin_bool = Expr::BinOp {
+                        left: Box::new(l.clone()),
+                        op: b,
+                        right: Box::new(l.clone()),
+                        span: span(),
+                    };
+
+                for bl in ALL_BIN_OP_KIND_LOGIC {
+                    let bin = Expr::BinOp {
+                        left: Box::new(bin_bool.clone()),
+                        op: bl,
+                        right: Box::new(bin_bool.clone()),
+                        span: span(),
+                    };
+
+
+                    let body = vec![var_decl("s", Type::Infer, Some(bin))];
+                    let func = void_func("foo", vec![], body);
+                    let mut ast = ast_one(func);
+                    let result = check_semantics(&mut ast);
+                    assert!(result.is_ok());
+                }
+            }
+        }
+    }
+
+
+
+
+    #[test]
+    fn test_non_boolean_binop_logical_passes() {
+        let bools = [bool_lit(false), bool_lit(true)];
+
+        for bv in &bools {
+            for b in ALL_BIN_OP_KIND_LOGIC {
+                let bin = Expr::BinOp {
+                    left: Box::new(bv.clone()),
+                    op: b,
+                    right: Box::new(bv.clone()),
+                    span: span(),
+                };
+                let body = vec![var_decl("s", Type::Infer, Some(bin))];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+                assert!(result.is_ok());
+            }
+        }
+    }
+
+
+
 
 
     // Non boolean left or right with logical "AND" or "OR" should error
