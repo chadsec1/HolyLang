@@ -537,6 +537,23 @@ mod blackbox_tests {
         }
     }
 
+
+    #[test]
+    fn test_non_returning_func_in_expr_errors() {
+        let callee = void_func("bar", vec![], vec![]);
+        let body = vec![
+            var_decl("x", Type::Infer, Some(call_expr("bar", vec![])))
+        ];
+        let caller = void_func("main", vec![], body);
+        let mut ast = AST { functions: vec![callee, caller] };
+
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("has no return type declared but is used in an expression"));
+    }
+
+
+
     // variables and type inference tests
 
     #[test]
