@@ -14,8 +14,9 @@ use crate::tests_consts::{
     ALL_BIN_OP_KIND_ARTH, ALL_BIN_OP_KIND_COMP, ALL_BIN_OP_KIND_COMP_EQ,
     ALL_BIN_OP_KIND_REAL_ARTH, ALL_BIN_OP_KIND_BIT_ARTH,
 
+    ALL_BIN_OP_KIND,
     ALL_BIN_OP_KIND_LOGIC,
-ALL_BIN_OP_KIND_COMP_ARTH
+    ALL_BIN_OP_KIND_COMP_ARTH
 
 };
 
@@ -3198,6 +3199,36 @@ mod blackbox_tests {
             }
         }
     }
+
+
+
+    #[test]
+    fn test_binop_copy_var_errors() {
+        let literals = get_all_literals_no_arr();
+
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for b in ALL_BIN_OP_KIND {
+                let copy_var = Expr::CopyCall { expr: Box::new(var_expr("a")), span: span() };
+
+                let bin = Expr::BinOp {
+                    left: Box::new(copy_var),
+                    op: b,
+                    right: Box::new(l.clone()),
+                    span: span(),
+                };
+                let body = vec![
+                    var_decl("a", t.clone(), Some(l.clone())),
+                    var_decl("s", Type::Infer, Some(bin))
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("Copying is not needed for variables in binary operations"));
+            }
+        }
+    }
+
 
 
 
