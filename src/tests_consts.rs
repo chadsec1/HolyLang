@@ -75,11 +75,10 @@ pub const ALL_BIN_OP_KIND_COMP_EQ: [BinOpKind; 2] = [
 ];
 
 
-/*
 pub const ALL_BIN_OP_KIND_LOGIC: [BinOpKind; 2] = [
     BinOpKind::And,
     BinOpKind::Or,
-];*/
+];
 
 
 

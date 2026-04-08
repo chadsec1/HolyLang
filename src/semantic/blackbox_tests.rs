@@ -14,7 +14,7 @@ use crate::tests_consts::{
     ALL_BIN_OP_KIND_ARTH, ALL_BIN_OP_KIND_COMP, ALL_BIN_OP_KIND_COMP_EQ,
     ALL_BIN_OP_KIND_REAL_ARTH, ALL_BIN_OP_KIND_BIT_ARTH,
 
-    // ALL_BIN_OP_KIND_LOGIC,
+    ALL_BIN_OP_KIND_LOGIC,
 
 };
 
@@ -23,6 +23,31 @@ use crate::tests_consts::{
 
 
 
+
+fn get_all_literals_no_arr_bool() -> [Expr; 14] {
+    let literals = [
+        int8_lit(1),
+        int16_lit(1),
+        int32_lit(1),
+        int64_lit(1),
+        int128_lit(1),
+
+        byte_lit(1),
+        uint16_lit(1),
+        uint32_lit(1),
+        uint64_lit(1),
+        uint128_lit(1),
+
+        usize_lit(1),
+
+        float32_lit(1.0),
+        float64_lit(1.0),
+
+        str_lit("Hi")
+    ];
+
+    return literals;
+}
 
 fn get_all_float_literals_no_arr() -> [Expr; 2] {
     let literals = [
@@ -3001,7 +3026,7 @@ mod blackbox_tests {
                     right: Box::new(l.clone()),
                     span: span(),
                 };
-                let body = vec![var_decl("s", Type::Bool, Some(bin))];
+                let body = vec![var_decl("s", Type::Infer, Some(bin))];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
                 let result = check_semantics(&mut ast);
@@ -3009,6 +3034,77 @@ mod blackbox_tests {
             }
         }
     }
+
+
+    // Non boolean left or right with logical "AND" or "OR" should error
+    #[test]
+    fn test_non_boolean_binop_logical_errors() {
+        let literals = get_all_literals_no_arr_bool();
+
+        for l in &literals {
+            for b in ALL_BIN_OP_KIND_LOGIC {
+                let bin = Expr::BinOp {
+                    left: Box::new(l.clone()),
+                    op: b,
+                    right: Box::new(l.clone()),
+                    span: span(),
+                };
+                let body = vec![var_decl("s", Type::Infer, Some(bin))];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("Logical binary operation require both expressions to be evalutable to type `bool`"));
+            }
+        }
+
+
+        let bool_values = [false, true];
+        // Same test, but left is a bool (false and true)
+        for l in &literals {
+            for b in ALL_BIN_OP_KIND_LOGIC {
+                for bv in bool_values {
+                    let bin = Expr::BinOp {
+                        left: Box::new(bool_lit(bv)),
+                        op: b.clone(),
+                        right: Box::new(l.clone()),
+                        span: span(),
+                    };
+                    let body = vec![var_decl("s", Type::Infer, Some(bin))];
+                    let func = void_func("foo", vec![], body);
+                    let mut ast = ast_one(func);
+                    let result = check_semantics(&mut ast);
+                    assert!(result.is_err());
+                    assert!(result.unwrap_err().to_string().contains("Logical binary operation require both expressions to be evalutable to type `bool`"));
+                }
+            }
+        }
+
+
+        // Same test, but right is a bool (false and true)
+        for l in &literals {
+            for b in ALL_BIN_OP_KIND_LOGIC {
+                for bv in bool_values {
+                    let bin = Expr::BinOp {
+                        left: Box::new(l.clone()),
+                        op: b.clone(),
+                        right: Box::new(bool_lit(bv)),
+                        span: span(),
+                    };
+                    let body = vec![var_decl("s", Type::Infer, Some(bin))];
+                    let func = void_func("foo", vec![], body);
+                    let mut ast = ast_one(func);
+                    let result = check_semantics(&mut ast);
+                    assert!(result.is_err());
+                    assert!(result.unwrap_err().to_string().contains("Logical binary operation require both expressions to be evalutable to type `bool`"));
+                }
+            }
+        }
+    }
+
+
+
+
 
     #[test]
     fn test_integers_binop_arth_passes() {
