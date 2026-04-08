@@ -120,38 +120,6 @@ pub fn type_compatible(a: &Type, b: &Type) -> bool {
 }
 
 
-/// Resolve binary operation for numeric types and operations. Rules:
-/// - both must be numeric and same kind (int/int or float/float)
-/// - mixing signed and unsigned is an error
-/// - return the resulting type
-pub fn resolve_binary_op_types_numeric(a: &Type, b: &Type, span: &Span) -> Result<Type, HolyError> {
-    use Type::*;
-    match (a, b) {
-        (Int8, Int8) => Ok(Int8),
-        (Int16, Int16) => Ok(Int16),
-        (Int32, Int32) => Ok(Int32),
-        (Int64, Int64) => Ok(Int64),
-        (Int128, Int128) => Ok(Int128),
-
-        (Usize, Usize) => Ok(Usize),
-
-        (Byte, Byte) => Ok(Byte),
-        (Uint16, Uint16) => Ok(Uint16),
-        (Uint32, Uint32) => Ok(Uint32),
-        (Uint64, Uint64) => Ok(Uint64),
-        (Uint128, Uint128) => Ok(Uint128),
-
-        (Float32, Float32) => Ok(Float32),
-        (Float64, Float64) => Ok(Float64),
-
-
-        (t1 @ _, t2 @ _) if (*t1 == Infer || *t2 == Infer) => panic!("(Compiler bug) We received a numeric binary operation with at least one side being of type infer. A: {:?}, B: {:?}", a, b),
-
-        // mixed signed/unsigned or int/float combos is not allowed
-        _ => Err(HolyError::Semantic(format!("Type mismatch in binary operation: `{}` vs `{}` (line {} column {})", a, b, span.line, span.column))),
-    }
-}
-
 
 /// Takes 2 floating point types, determines which type can hold more than the other
 ///

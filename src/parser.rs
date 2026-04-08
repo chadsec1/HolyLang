@@ -76,6 +76,11 @@ impl Type {
     }
 
 
+    pub fn is_numeric_type(&self) -> bool {
+        return self.is_integer_type() || self.is_floating_type()
+    }
+
+
     pub fn get_array_inner_most_type(&self) -> &Type {
         if !matches!(self, Type::Array(_)) {
             panic!("(Compiler bug) Do not call get_inner_most_type unless you are sure Type is an array. Self: {:?}", self);
@@ -287,6 +292,8 @@ pub enum Expr {
 #[derive(Debug, Clone, PartialEq)]
 pub enum UnaryOpKind {
     Negate,
+    BitwiseNot,
+    Not,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -301,7 +308,8 @@ pub enum BinOpKind {
     BitwiseAnd,
     BitwiseOr,
 
-
+    And,
+    Or,
     Equal,
     NotEqual,
     Greater,

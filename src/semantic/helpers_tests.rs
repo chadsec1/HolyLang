@@ -10,7 +10,6 @@ use crate::semantic::helpers::{
     assign_default_value_for_type,
     get_bigger_type_of_two_integers,
     get_bigger_type_of_two_floatings,
-    resolve_binary_op_types_numeric,
     type_compatible
 };
 
@@ -497,110 +496,6 @@ mod helpers_tests {
         assert!(!type_compatible(&Type::Int32,  &Type::Uint32));
         assert!(!type_compatible(&Type::Int64,  &Type::Uint64));
         assert!(!type_compatible(&Type::Int128, &Type::Uint128));
-    }
-
-    // resolve_binary_op_types_numeric
-    #[test]
-    fn binop_same_signed_types_resolve_correctly() {
-        assert_eq!(resolve_binary_op_types_numeric(&Type::Int8,   &Type::Int8,   &dummy_span()).unwrap(), Type::Int8);
-        assert_eq!(resolve_binary_op_types_numeric(&Type::Int16,  &Type::Int16,  &dummy_span()).unwrap(), Type::Int16);
-        assert_eq!(resolve_binary_op_types_numeric(&Type::Int32,  &Type::Int32,  &dummy_span()).unwrap(), Type::Int32);
-        assert_eq!(resolve_binary_op_types_numeric(&Type::Int64,  &Type::Int64,  &dummy_span()).unwrap(), Type::Int64);
-        assert_eq!(resolve_binary_op_types_numeric(&Type::Int128, &Type::Int128, &dummy_span()).unwrap(), Type::Int128);
-    }
-
-    #[test]
-    fn binop_same_unsigned_types_resolve_correctly() {
-        assert_eq!(resolve_binary_op_types_numeric(&Type::Byte,    &Type::Byte,    &dummy_span()).unwrap(), Type::Byte);
-        assert_eq!(resolve_binary_op_types_numeric(&Type::Uint16,  &Type::Uint16,  &dummy_span()).unwrap(), Type::Uint16);
-        assert_eq!(resolve_binary_op_types_numeric(&Type::Uint32,  &Type::Uint32,  &dummy_span()).unwrap(), Type::Uint32);
-        assert_eq!(resolve_binary_op_types_numeric(&Type::Uint64,  &Type::Uint64,  &dummy_span()).unwrap(), Type::Uint64);
-        assert_eq!(resolve_binary_op_types_numeric(&Type::Uint128, &Type::Uint128, &dummy_span()).unwrap(), Type::Uint128);
-        assert_eq!(resolve_binary_op_types_numeric(&Type::Usize,   &Type::Usize,   &dummy_span()).unwrap(), Type::Usize);
-    }
-
-    #[test]
-    fn binop_same_float_types_resolve_correctly() {
-        assert_eq!(resolve_binary_op_types_numeric(&Type::Float32, &Type::Float32, &dummy_span()).unwrap(), Type::Float32);
-        assert_eq!(resolve_binary_op_types_numeric(&Type::Float64, &Type::Float64, &dummy_span()).unwrap(), Type::Float64);
-    }
-
-    // Mixing signed and unsigned must always be an error
-    #[test]
-    fn binop_signed_unsigned_mix_is_always_error() {
-        let signed   = [Type::Int8, Type::Int16, Type::Int32, Type::Int64, Type::Int128];
-        let unsigned = [Type::Byte, Type::Uint16, Type::Uint32, Type::Uint64, Type::Uint128, Type::Usize];
-
-        for s in &signed {
-            for u in &unsigned {
-                assert!(
-                    resolve_binary_op_types_numeric(s, u, &dummy_span()).is_err(),
-                    "Mixing {:?} + {:?} should be an error", s, u
-                );
-                assert!(
-                    resolve_binary_op_types_numeric(u, s, &dummy_span()).is_err(),
-                    "Mixing {:?} + {:?} should be an error", u, s
-                );
-            }
-        }
-    }
-
-    // Mixing int and float must always be an error
-    #[test]
-    fn binop_int_float_mix_is_always_error() {
-        let integers = [Type::Int32, Type::Uint32];
-        let floats   = [Type::Float32, Type::Float64];
-
-        for i in &integers {
-            for f in &floats {
-                assert!(resolve_binary_op_types_numeric(i, f, &dummy_span()).is_err(),
-                    "{:?} + {:?} should be an error", i, f);
-                assert!(resolve_binary_op_types_numeric(f, i, &dummy_span()).is_err(),
-                    "{:?} + {:?} should be an error", f, i);
-            }
-        }
-    }
-
-    // Different-width signed ints must be an error — no implicit widening allowed
-    #[test]
-    fn binop_different_width_signed_int_is_error() {
-        assert!(resolve_binary_op_types_numeric(&Type::Int8,  &Type::Int32, &dummy_span()).is_err());
-        assert!(resolve_binary_op_types_numeric(&Type::Int32, &Type::Int64, &dummy_span()).is_err());
-        assert!(resolve_binary_op_types_numeric(&Type::Int64, &Type::Int128, &dummy_span()).is_err());
-    }
-
-    // Different-width float mix must be an error — no implicit widening allowed
-    #[test]
-    fn binop_float32_float64_mix_is_error() {
-        assert!(resolve_binary_op_types_numeric(&Type::Float32, &Type::Float64, &dummy_span()).is_err());
-        assert!(resolve_binary_op_types_numeric(&Type::Float64, &Type::Float32, &dummy_span()).is_err());
-    }
-
-    // Bool / String must not be accepted by numeric binop resolver
-    #[test]
-    fn binop_non_numeric_types_are_error() {
-        assert!(resolve_binary_op_types_numeric(&Type::Bool,   &Type::Bool,   &dummy_span()).is_err());
-        assert!(resolve_binary_op_types_numeric(&Type::String, &Type::String, &dummy_span()).is_err());
-        assert!(resolve_binary_op_types_numeric(&Type::Bool,   &Type::Int32,  &dummy_span()).is_err());
-    }
-
-    // Infer on either side must panic — it's a compiler bug to call this before inference is done
-    #[test]
-    #[should_panic(expected = "Compiler bug")]
-    fn binop_infer_left_panics() {
-        let _ = resolve_binary_op_types_numeric(&Type::Infer, &Type::Int32, &dummy_span());
-    }
-
-    #[test]
-    #[should_panic(expected = "Compiler bug")]
-    fn binop_infer_right_panics() {
-        let _ = resolve_binary_op_types_numeric(&Type::Int32, &Type::Infer, &dummy_span());
-    }
-
-    #[test]
-    #[should_panic(expected = "Compiler bug")]
-    fn binop_infer_both_panics() {
-        let _ = resolve_binary_op_types_numeric(&Type::Infer, &Type::Infer, &dummy_span());
     }
 
     // get_bigger_type_of_two_floatings

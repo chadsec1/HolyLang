@@ -57,9 +57,32 @@ pub fn advanced_infer_2_types(
 }
 
 
+
+pub fn infer_expr_type(
+    expr: &mut Expr,
+    locals: &mut HashMap<String, VarInfo>,
+    fun_sigs: &HashMap<String, (Vec<Type>, Option<Vec<Type>>)>,
+    infer_hint: Option<Type>
+) -> Result<Type, HolyError> {
+ 
+    let t = infer_expr_type_handler(expr, locals, fun_sigs, infer_hint.clone())?;
+
+    // This is a global guard for all calls to infer_expr_type_handler, to catch most critical bugs
+    // within the handler.
+    if t == Type::Infer {
+        panic!(
+            "(Compiler bug) Inferred type of the expression is `Infer`, which shouldn't be possible and indicates a bug in infer_expr_type_handler.\nexpr: {:?}\nlocals: {:?}\nfun_sigs: {:?}\ninfer_hint: {:?}",
+            expr, locals, fun_sigs, infer_hint
+            );
+    }
+
+    Ok(t)
+}
+
 /// Infer the type of an expression, and update literal nodes (and nested nodes) where possible.
 /// Returns the deduced Type for the expression.
-pub fn infer_expr_type(
+/// NOTE: This function is not to be called directly, always call the guard function instead.
+fn infer_expr_type_handler(
     expr: &mut Expr,
     locals: &mut HashMap<String, VarInfo>,
     fun_sigs: &HashMap<String, (Vec<Type>, Option<Vec<Type>>)>,
@@ -316,30 +339,66 @@ pub fn infer_expr_type(
                         span.line, span.column)))
             }
 
-            if lty == Type::Infer || rty == Type::Infer {
-                panic!("(Compiler bug) lty and or rty are of type Infer even after we tried to infer: Left: {:?} Right: {:?}", **left, **right);
-            }
-
             
-            // Check if lty or rty are of types that cannot have arithmetic performed on.
-            if matches!(lty, Type::String | Type::Bool | Type::Array(_) ) || matches!(rty, Type::String | Type::Bool | Type::Array(_) ) {
-                if matches!(op, BinOpKind::Add | BinOpKind::Subtract | BinOpKind::Multiply | BinOpKind::Divide | BinOpKind::Greater | BinOpKind::GreaterEqual | BinOpKind::Less | BinOpKind::LessEqual) {
-                    return Err(HolyError::Semantic(format!("You cannot perform arithmetic on types: `{}` vs `{}`. (line {} column {})", lty, rty, span.line, span.column)));
+            
+            // Arthmetic binary operations
+            //
+            if matches!(op, BinOpKind::Add | BinOpKind::Subtract | BinOpKind::Multiply | BinOpKind::Divide) { 
+                if lty != rty { 
+                    return Err(HolyError::Semantic(format!("Type mismatch in binary arithmetic operation: `{}` vs `{}` (line {} column {})", lty, rty, span.line, span.column)));
                 }
-            }
 
-            // arthmetic
-            if matches!(op, BinOpKind::Add | BinOpKind::Subtract | BinOpKind::Multiply | BinOpKind::Divide ) {
-                // This checks type equality, etc.
-                let t = helpers::resolve_binary_op_types_numeric(&lty, &rty, span)?;
-                Ok(t)
+                if !lty.is_numeric_type() {
+                    return Err(HolyError::Semantic(format!("Expected numeric types in binary arithmetic operation, instead we got: `{}` vs `{}` (line {} column {})", lty, rty, span.line, span.column)));
+                }
 
-            // boolean comparison
-            } else if matches!(op, BinOpKind::Equal | BinOpKind::NotEqual | BinOpKind::Greater | BinOpKind::GreaterEqual | BinOpKind::Less | BinOpKind::LessEqual ) {
+
+                Ok(lty)
+
+            // Logical 'OR' and 'AND'
+            } else if matches!(op, BinOpKind::Or | BinOpKind::And) {
+                if !( (lty == Type::Bool) && (rty == Type::Bool) ) {
+                    return Err(HolyError::Semantic(format!(
+                                "Logical binary operation require both expressions to be evalutable to type `bool`, but we got: `{}` vs `{}` (line {} column {})", 
+                                lty, rty, span.line, span.column
+                            )));
+                }
+
+                Ok(Type::Bool)
+
+            // comparison
+            } else if matches!(op, BinOpKind::Equal | BinOpKind::NotEqual ) {
                 if lty != rty {
                     return Err(HolyError::Semantic(format!("Type mismatch in binary comparison operation: `{}` vs `{}` (line {} column {})", lty, rty, span.line, span.column)));
                 }
                 Ok(Type::Bool)
+            
+            // arthemtic comparison (greater than, less than, etc)
+            } else if matches!(op, BinOpKind::Greater | BinOpKind::GreaterEqual | BinOpKind::Less | BinOpKind::LessEqual) {
+                if lty != rty {
+                    return Err(HolyError::Semantic(format!("Type mismatch in binary comparison operation: `{}` vs `{}` (line {} column {})", lty, rty, span.line, span.column)));
+                }
+                if lty.is_numeric_type() {
+                    return Err(HolyError::Semantic(format!("You cannot perform arithmetic comparison on non-numeric types: `{}` vs `{}`. (line {} column {})", lty, rty, span.line, span.column)));
+                }
+
+                Ok(Type::Bool)
+
+
+
+            } else if matches!(op, BinOpKind::BitwiseShiftLeft | BinOpKind::BitwiseShiftRight | BinOpKind::BitwiseAnd | BinOpKind::BitwiseOr) {
+                if lty != rty {
+                    return Err(HolyError::Semantic(format!("Type mismatch in binary bitwise operation: `{}` vs `{}` (line {} column {})", lty, rty, span.line, span.column)));
+                }
+
+                // You can only perform bitwise operations on integer types
+                if lty.is_integer_type() {
+                    return Err(HolyError::Semantic(format!("You cannot perform bitwise operations on non-integer types: `{}` vs `{}`. (line {} column {})", lty, rty, span.line, span.column)));
+                }
+
+                Ok(lty)
+
+
             } else {
                 panic!("(Compiler bug) We got an unexpected BinOpKind: {:?}", op)
             }

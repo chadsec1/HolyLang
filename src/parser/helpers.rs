@@ -27,13 +27,19 @@ pub fn find_constructor_bracket(s: &str) -> Option<usize> {
 pub fn find_top_level_op_any(s: &str) -> Option<(usize, &str)> {
     fn precedence(op: &str) -> u8 {
         match op {
-            "==" | "!=" => 1,
-            ">" | "<" | ">=" | "<=" => 1,
-            "<<" | ">>" => 1,
-            "+" | "-" => 2,
-            "*" | "/" => 3,
+            "or" => 1,
+            "and" => 2,
+            "==" | "!=" => 3,
+            ">" | "<" | ">=" | "<=" => 3,
+            "<<" | ">>" => 3,
+            "+" | "-" => 4,
+            "*" | "/" => 5,
             _ => u8::MAX,
         }
+    }
+    
+    fn is_ident_char(c: char) -> bool {
+        c.is_ascii_alphanumeric() || c == '_'
     }
 
     let chars: Vec<(usize, char)> = s.char_indices().collect();
@@ -53,19 +59,45 @@ pub fn find_top_level_op_any(s: &str) -> Option<(usize, &str)> {
 
                 // Determine operator string at this position
                 let op_str: Option<&str> = match c {
-                    '=' if next == Some('=') => Some(&s[idx..idx+2]),
-                    '!' if next == Some('=') => Some(&s[idx..idx+2]),
-                    '>' if next == Some('=') => Some(&s[idx..idx+2]),
-                    '<' if next == Some('=') => Some(&s[idx..idx+2]),
-                    '>' if next == Some('>') => Some(&s[idx..idx+2]),
-                    '<' if next == Some('<') => Some(&s[idx..idx+2]),
-                    '+' | '-' | '*' | '/' | '>' | '<' => Some(&s[idx..idx+1]),
+                    '=' if next == Some('=') => Some(&s[idx..idx + 2]),
+                    '!' if next == Some('=') => Some(&s[idx..idx + 2]),
+                    '>' if next == Some('=') => Some(&s[idx..idx + 2]),
+                    '<' if next == Some('=') => Some(&s[idx..idx + 2]),
+                    '>' if next == Some('>') => Some(&s[idx..idx + 2]),
+                    '<' if next == Some('<') => Some(&s[idx..idx + 2]),
+                    'a' if s[idx..].starts_with("and") => {
+                        let before = if i == 0 { None } else { Some(chars[i - 1].1) };
+                        let after = chars.get(i + 3).map(|(_, ch)| *ch);
+
+                        if before.map_or(true, |ch| !is_ident_char(ch))
+                            && after.map_or(true, |ch| !is_ident_char(ch))
+                        {
+                            Some(&s[idx..idx + 3])
+                        } else {
+                            None
+                        }
+                    }
+
+                    'o' if s[idx..].starts_with("or") => {
+                        let before = if i == 0 { None } else { Some(chars[i - 1].1) };
+                        let after = chars.get(i + 2).map(|(_, ch)| *ch);
+
+                        if before.map_or(true, |ch| !is_ident_char(ch))
+                            && after.map_or(true, |ch| !is_ident_char(ch))
+                        {
+                            Some(&s[idx..idx + 2])
+                        } else {
+                            None
+                        }
+                    }
+
+                    '+' | '-' | '*' | '/' | '>' | '<' | '|' | '&' => Some(&s[idx..idx+1]),
                     _ => None,
                 };
 
                 if let Some(op) = op_str {
-                    // Skip unary minus
-                    if op == "-" {
+                    // Skip unary  (negate, bitwise not)
+                    if op == "-" || op == "~" {
                         let prev_non_ws = (0..i).rev()
                             .map(|j| chars[j].1)
                             .find(|ch| !ch.is_whitespace());

@@ -403,6 +403,10 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
             "<=" => BinOpKind::LessEqual,
             ">>" => BinOpKind::BitwiseShiftRight,
             "<<" => BinOpKind::BitwiseShiftLeft,
+            "&" => BinOpKind::BitwiseAnd,
+            "|" => BinOpKind::BitwiseOr,
+            "and" => BinOpKind::And,
+            "or" => BinOpKind::Or,
             o => {
                 return Err(HolyError::Parse(format!(
                     "Unknown binary operand `{}` (line {} column {})",
@@ -442,6 +446,31 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
             span: span
         });
     }
+
+
+    // Unary bitwise not support.
+    if s.starts_with('~') {
+        let rest = s[1..].trim();
+
+        if rest.is_empty() {
+            return Err(HolyError::Parse(format!(
+                "Expected expression before '~' at line {} column {}",
+                span.line, span.column
+            )));
+        }
+
+        // Parse inner expression
+        let inner = parse_expr(rest, span)?;
+
+        // Return the expression wrapped in Unary of operation bitwise not.
+        return Ok(Expr::UnaryOp {
+            op: UnaryOpKind::BitwiseNot, 
+            expr: Box::new(inner), 
+            span: span
+        });
+    }
+
+
 
 
 
