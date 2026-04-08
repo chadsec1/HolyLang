@@ -924,6 +924,7 @@ mod parse_expr_tests {
 
     // Many spacing variants should parse identically
     // i.e. 1+2,  1 + 2, 1+ 2, 1 +2, 2   * 1, etc.
+    // with special handling for "or" and "and" words.
     #[test]
     fn test_whitespace_around_and_within_operators_literals() {
         // just a helper so i don't have spam code with it over and over again.
@@ -943,17 +944,44 @@ mod parse_expr_tests {
         let mut spaces = String::with_capacity(MAX_SPACES);
         for _ in 0..MAX_SPACES {
             for (b, s) in ALL_BIN_OP_KIND.iter().zip(BIN_OP_KIND_SYMBOLS.iter()) {
-                let variant = &format!("{}1{}2", spaces, s);
-                checker(variant, b.clone());
-               
-                let variant = &format!("1{}2{}", s, spaces);
-                checker(variant, b.clone());
+                if *s == "or" || *s == "and" {
+                    let variant = &format!("{}1{}2", spaces, s);
+                    assert_parse_err(variant);
 
-                let variant = &format!("1{}{}2", s, spaces);
-                checker(variant, b.clone());
+                    let variant = &format!("1{}2{}", s, spaces);
+                    assert_parse_err(variant);
 
-                let variant = &format!("1{}{}2", spaces, s);
-                checker(variant, b.clone());
+                    let variant = &format!("1{}{}2", s, spaces);
+                    assert_parse_err(variant);
+
+                    let variant = &format!("1{}{}2", spaces, s);
+                    assert_parse_err(variant);
+
+
+                    let variant = &format!("{}1 {} 2", spaces, s);
+                    checker(variant, b.clone());
+                   
+                    let variant = &format!("1 {} 2{}", s, spaces);
+                    checker(variant, b.clone());
+
+                    let variant = &format!("1 {} {}2", s, spaces);
+                    checker(variant, b.clone());
+
+                    let variant = &format!("1{} {} 2", spaces, s);
+                    checker(variant, b.clone());
+                } else {
+                    let variant = &format!("{}1{}2", spaces, s);
+                    checker(variant, b.clone());
+                   
+                    let variant = &format!("1{}2{}", s, spaces);
+                    checker(variant, b.clone());
+
+                    let variant = &format!("1{}{}2", s, spaces);
+                    checker(variant, b.clone());
+
+                    let variant = &format!("1{}{}2", spaces, s);
+                    checker(variant, b.clone());
+                }
             }
             spaces.push(' ');
         }
@@ -980,17 +1008,32 @@ mod parse_expr_tests {
         let mut spaces = String::with_capacity(MAX_SPACES);
         for _ in 0..MAX_SPACES {
             for (b, s) in ALL_BIN_OP_KIND.iter().zip(BIN_OP_KIND_SYMBOLS.iter()) {
-                let variant = &format!("{}x{}y", spaces, s);
-                checker(variant, b.clone());
+                if *s == "or" || *s == "and" {
+                    let variant = &format!("{}x {} y", spaces, s);
+                    checker(variant, b.clone());
 
-                let variant = &format!("x{}y{}", s, spaces);
-                checker(variant, b.clone());
+                    let variant = &format!("x {} y{}", s, spaces);
+                    checker(variant, b.clone());
 
-                let variant = &format!("x{}{}y", s, spaces);
-                checker(variant, b.clone());
+                    let variant = &format!("x {} {}y", s, spaces);
+                    checker(variant, b.clone());
 
-                let variant = &format!("x{}{}y", spaces, s);
-                checker(variant, b.clone());
+                    let variant = &format!("x{} {} y", spaces, s);
+                    checker(variant, b.clone());
+
+                } else {
+                    let variant = &format!("{}x{}y", spaces, s);
+                    checker(variant, b.clone());
+
+                    let variant = &format!("x{}y{}", s, spaces);
+                    checker(variant, b.clone());
+
+                    let variant = &format!("x{}{}y", s, spaces);
+                    checker(variant, b.clone());
+
+                    let variant = &format!("x{}{}y", spaces, s);
+                    checker(variant, b.clone());
+                }
             }
 
             spaces.push(' ');

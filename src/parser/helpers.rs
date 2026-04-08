@@ -103,7 +103,7 @@ pub fn find_top_level_op_any(s: &str) -> Option<(usize, &str)> {
                             .find(|ch| !ch.is_whitespace());
                         match prev_non_ws {
                             None => { i += 1; continue; }
-                            Some(prev) if "+-*/!=<>(".contains(prev) => { i += 1; continue; }
+                            Some(prev) if "+-*/&|!=<>(".contains(prev) => { i += 1; continue; }
                             _ => {}
                         }
                     }

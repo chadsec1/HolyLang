@@ -8,9 +8,14 @@ use crate::parser::{
 use crate::tests_consts::{
     ALL_TYPES_NO_ARR, ALL_TYPES_NO_ARR_SCATTERED, ALL_TYPES_NO_ARR_NO_USIZE, ALL_TYPES_NO_ARR_NO_INFER, ALL_TYPES_NO_INTS_NO_ARR,
     ALL_INT_TYPES_NO_ARR_NO_INFER,
+    ALL_FLOATS_TYPES,
 
     ALL_UNSIGNED_TYPES_NO_ARR, ALL_SIGNED_TYPES_NO_ARR,
     ALL_BIN_OP_KIND_ARTH, ALL_BIN_OP_KIND_COMP, ALL_BIN_OP_KIND_COMP_EQ,
+    ALL_BIN_OP_KIND_REAL_ARTH, ALL_BIN_OP_KIND_BIT_ARTH,
+
+    // ALL_BIN_OP_KIND_LOGIC,
+
 };
 
 
@@ -18,6 +23,15 @@ use crate::tests_consts::{
 
 
 
+
+fn get_all_float_literals_no_arr() -> [Expr; 2] {
+    let literals = [
+        float32_lit(1.0),
+        float64_lit(1.0),
+    ];
+
+    return literals;
+}
 
 
 fn get_all_literals_no_arr_no_ints() -> [Expr; 4] {
@@ -1455,6 +1469,7 @@ mod blackbox_tests {
                         span: span(),
                     };
 
+
                 let body = vec![ 
                     Stmt::If(IfStmt{
                         condition: condition,
@@ -1470,7 +1485,9 @@ mod blackbox_tests {
                 ];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
-                assert!(check_semantics(&mut ast).is_ok());
+                let result = check_semantics(&mut ast);
+
+                assert!(result.is_ok());
             }
         }
     }
@@ -2960,34 +2977,44 @@ mod blackbox_tests {
             let mut ast = ast_one(func);
             let result = check_semantics(&mut ast);
             assert!(result.is_err());
-            assert!(result.unwrap_err().to_string().starts_with("Semantic error: You cannot perform arithmetic on types: `string` vs `string`"));
+
+            let assert_cond = result.unwrap_err().to_string();
+            let assert_cond = assert_cond.contains("Expected numeric types in binary arithmetic operation") |
+                                assert_cond.contains("You cannot perform bitwise operations on non-integer types");
+
+            assert!(assert_cond);
         }
     }
 
 
 
+    // (includes strings)
     #[test]
-    fn test_string_binop_comp_eq_passes() {
-        for b in ALL_BIN_OP_KIND_COMP_EQ {
-            let bin = Expr::BinOp {
-                left: Box::new(str_lit("hello")),
-                op: b,
-                right: Box::new(str_lit("world")),
-                span: span(),
-            };
-            let body = vec![var_decl("s", Type::Bool, Some(bin))];
-            let func = void_func("foo", vec![], body);
-            let mut ast = ast_one(func);
-            let result = check_semantics(&mut ast);
-            assert!(result.is_ok());
+    fn test_all_literals_binop_comp_eq_passes() {
+        let literals = get_all_literals_no_arr();
+
+        for l in literals {
+            for b in ALL_BIN_OP_KIND_COMP_EQ {
+                let bin = Expr::BinOp {
+                    left: Box::new(l.clone()),
+                    op: b,
+                    right: Box::new(l.clone()),
+                    span: span(),
+                };
+                let body = vec![var_decl("s", Type::Bool, Some(bin))];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+                assert!(result.is_ok());
+            }
         }
     }
 
     #[test]
-    fn test_integers_and_floats_binop_arth_passes() {
-        let literals_ints_floats = get_all_literals_no_arr_str_bool();
+    fn test_integers_binop_arth_passes() {
+        let literals_ints = get_all_literals_no_arr_str_bool_float() ;
         
-        for (l, t) in literals_ints_floats.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+        for (l, t) in literals_ints.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             for b in ALL_BIN_OP_KIND_ARTH {
                 let bin = Expr::BinOp {
                     left: Box::new(l.clone()),
@@ -3003,6 +3030,56 @@ mod blackbox_tests {
             }
         }
     }
+
+
+    #[test]
+    fn test_floating_binop_real_arth_passes() {
+        let literals_floats = get_all_float_literals_no_arr();
+
+        for (l, t) in literals_floats.iter().zip(ALL_FLOATS_TYPES.iter()) {
+            for b in ALL_BIN_OP_KIND_REAL_ARTH {
+                let bin = Expr::BinOp {
+                    left: Box::new(l.clone()),
+                    op: b.clone(),
+                    right: Box::new(l.clone()),
+                    span: span(),
+                };
+                let body = vec![var_decl("s", t.clone(), Some(bin))];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+
+                assert!(result.is_ok());
+            }
+        }
+    }
+
+
+    #[test]
+    fn test_non_int_binop_bit_arth_errors() {
+        let literals_no_ints = get_all_literals_no_arr_no_ints(); 
+
+        for (l, t) in literals_no_ints.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for b in ALL_BIN_OP_KIND_BIT_ARTH {
+                let bin = Expr::BinOp {
+                    left: Box::new(l.clone()),
+                    op: b,
+                    right: Box::new(l.clone()),
+                    span: span(),
+                };
+                let body = vec![var_decl("s", t.clone(), Some(bin))];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+                assert!(result.is_err());
+            }
+        }
+    }
+
+
+
+
+
 
     // integer literal inference 
 
@@ -3097,16 +3174,15 @@ mod blackbox_tests {
                     let result = check_semantics(&mut ast);
                     assert!(result.is_err());
                     let assert_condition = result.unwrap_err().to_string();
-                    let assert_condition = assert_condition.starts_with("Semantic error: Type mismatch in binary operation: ") 
-                                           || assert_condition.starts_with("Semantic error: You cannot perform arithmetic on types: ");
+                    let assert_condition = assert_condition.contains("Type mismatch in binary") 
+                                           || assert_condition.contains("You cannot perform arithmetic");
 
                     assert!(assert_condition);
                 }
             }
         }
         
-
-
+        // Same as above, but this switches non_int to left, and int to right
         for int in &int_literals {
             for non_int in &non_int_literals {
                 for b in ALL_BIN_OP_KIND_ARTH {
@@ -3122,8 +3198,8 @@ mod blackbox_tests {
                     let result = check_semantics(&mut ast);
                     assert!(result.is_err());
                     let assert_condition = result.unwrap_err().to_string();
-                    let assert_condition = assert_condition.starts_with("Semantic error: Type mismatch in binary operation: ") 
-                                           || assert_condition.starts_with("Semantic error: You cannot perform arithmetic on types: ");
+                    let assert_condition = assert_condition.contains("Type mismatch in binary") 
+                                           || assert_condition.contains("You cannot perform arithmetic");
 
                     assert!(assert_condition);
                 }
@@ -3151,6 +3227,7 @@ mod blackbox_tests {
                     op: b,
                     span: span(),
                 };
+
                 let body = vec![
                     var_decl("x", Type::Infer, Some(l1.clone())),
                     var_decl("y", Type::Infer, Some(l2.clone())),
@@ -3159,9 +3236,12 @@ mod blackbox_tests {
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
                 let result = check_semantics(&mut ast);
+
                 assert!(result.is_err());
+
                 let assert_condition = result.unwrap_err().to_string();
-                let assert_condition = assert_condition.starts_with("Semantic error: Type mismatch in binary operation: ");
+                let assert_condition = assert_condition.contains("Type mismatch in binary arithmetic operation") |
+                                        assert_condition.contains("Type mismatch in binary bitwise operation");
 
                 assert!(assert_condition);
             }
@@ -3352,11 +3432,13 @@ mod blackbox_tests {
     #[test]
     fn test_params_are_in_scope_basic() {
         // Checks if function parameters are in scope, without testing for inner scopes.
-        for t in ALL_TYPES_NO_ARR {
+        for t in ALL_TYPES_NO_ARR_NO_INFER {
             let body = vec![return_stmt(vec![var_expr("n")])];
             let func = returning_func("foo", vec![param("n", t.clone())], vec![t.clone()], body);
             let mut ast = ast_one(func);
-            check_semantics(&mut ast).unwrap();
+
+            let result = check_semantics(&mut ast);
+            assert!(result.is_ok());
         }
     }
 
@@ -3485,10 +3567,10 @@ mod blackbox_tests {
     // happy-path integration 
 
     #[test]
-    fn test_full_valid_program() {
+    fn test_full_valid_program_integers() {
         // This program tests all integers / floating points and all arthemtic binary operations
         // it also tests variable declaration, function declaration, and function calling 
-        let literals = get_all_literals_no_arr();
+        let literals_ints = get_all_literals_no_arr_str_bool_float() ;
 
         for b in ALL_BIN_OP_KIND_ARTH {
             let add_body = vec![return_stmt(vec![
@@ -3501,11 +3583,7 @@ mod blackbox_tests {
             ])];
             
 
-            for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-                if matches!(t.clone(), Type::Bool | Type::String) {
-                    continue;
-                }
-
+            for (l, t) in literals_ints.iter().zip(ALL_TYPES_NO_ARR.iter()) {
                 let add = returning_func(
                     "add",
                     vec![param("a", t.clone()), param("b", t.clone())],

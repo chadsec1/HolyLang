@@ -1,7 +1,7 @@
 use std::fmt;
 
 /// The main HolyLang compiler error type
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum HolyError {
     /// Parsing errors (invalid syntax, unknown token, etc.)
     Parse(String),

@@ -58,6 +58,7 @@ pub fn advanced_infer_2_types(
 
 
 
+/// Guard wrapper function around infer_expr_type_hazmat
 pub fn infer_expr_type(
     expr: &mut Expr,
     locals: &mut HashMap<String, VarInfo>,
@@ -65,13 +66,13 @@ pub fn infer_expr_type(
     infer_hint: Option<Type>
 ) -> Result<Type, HolyError> {
  
-    let t = infer_expr_type_handler(expr, locals, fun_sigs, infer_hint.clone())?;
+    let t = infer_expr_type_hazmat(expr, locals, fun_sigs, infer_hint.clone())?;
 
     // This is a global guard for all calls to infer_expr_type_handler, to catch most critical bugs
     // within the handler.
     if t == Type::Infer {
         panic!(
-            "(Compiler bug) Inferred type of the expression is `Infer`, which shouldn't be possible and indicates a bug in infer_expr_type_handler.\nexpr: {:?}\nlocals: {:?}\nfun_sigs: {:?}\ninfer_hint: {:?}",
+            "(Compiler bug) Inferred type of the expression is `Infer`, which shouldn't be possible and indicates a bug in either infer_expr_type_handler or in caller's logic.\nexpr: {:?}\nlocals: {:?}\nfun_sigs: {:?}\ninfer_hint: {:?}",
             expr, locals, fun_sigs, infer_hint
             );
     }
@@ -81,8 +82,10 @@ pub fn infer_expr_type(
 
 /// Infer the type of an expression, and update literal nodes (and nested nodes) where possible.
 /// Returns the deduced Type for the expression.
-/// NOTE: This function is not to be called directly, always call the guard function instead.
-fn infer_expr_type_handler(
+///
+/// NOTE: This function is not to be called directly, always call the guard function instead unless
+/// you absolutely sure of what you're doing.
+fn infer_expr_type_hazmat(
     expr: &mut Expr,
     locals: &mut HashMap<String, VarInfo>,
     fun_sigs: &HashMap<String, (Vec<Type>, Option<Vec<Type>>)>,
@@ -378,7 +381,7 @@ fn infer_expr_type_handler(
                 if lty != rty {
                     return Err(HolyError::Semantic(format!("Type mismatch in binary comparison operation: `{}` vs `{}` (line {} column {})", lty, rty, span.line, span.column)));
                 }
-                if lty.is_numeric_type() {
+                if !lty.is_numeric_type() {
                     return Err(HolyError::Semantic(format!("You cannot perform arithmetic comparison on non-numeric types: `{}` vs `{}`. (line {} column {})", lty, rty, span.line, span.column)));
                 }
 
@@ -392,7 +395,7 @@ fn infer_expr_type_handler(
                 }
 
                 // You can only perform bitwise operations on integer types
-                if lty.is_integer_type() {
+                if !lty.is_integer_type() {
                     return Err(HolyError::Semantic(format!("You cannot perform bitwise operations on non-integer types: `{}` vs `{}`. (line {} column {})", lty, rty, span.line, span.column)));
                 }
 

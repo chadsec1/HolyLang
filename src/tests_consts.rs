@@ -6,29 +6,59 @@ use crate::parser::{
 
 
 // This array order must match BinOpKindSymbols order
-pub const ALL_BIN_OP_KIND: [BinOpKind; 10] = [
+pub const ALL_BIN_OP_KIND: [BinOpKind; 16] = [
     BinOpKind::Equal,
     BinOpKind::NotEqual,
     BinOpKind::Greater,
     BinOpKind::GreaterEqual,
     BinOpKind::Less,
     BinOpKind::LessEqual, 
+
+    BinOpKind::And,
+    BinOpKind::Or,
+
+
     BinOpKind::Add,
     BinOpKind::Subtract,
     BinOpKind::Multiply,
     BinOpKind::Divide,
 
+    BinOpKind::BitwiseShiftLeft,
+    BinOpKind::BitwiseShiftRight,
+    BinOpKind::BitwiseAnd,
+    BinOpKind::BitwiseOr,
 ];
 
 
 
 
-pub const ALL_BIN_OP_KIND_ARTH: [BinOpKind; 4] = [
+pub const ALL_BIN_OP_KIND_ARTH: [BinOpKind; 8] = [
+    BinOpKind::Add,
+    BinOpKind::Subtract,
+    BinOpKind::Multiply,
+    BinOpKind::Divide,
+
+    BinOpKind::BitwiseShiftLeft,
+    BinOpKind::BitwiseShiftRight,
+    BinOpKind::BitwiseAnd,
+    BinOpKind::BitwiseOr,
+];
+
+pub const ALL_BIN_OP_KIND_REAL_ARTH: [BinOpKind; 4] = [
     BinOpKind::Add,
     BinOpKind::Subtract,
     BinOpKind::Multiply,
     BinOpKind::Divide,
 ];
+
+pub const ALL_BIN_OP_KIND_BIT_ARTH: [BinOpKind; 4] = [
+    BinOpKind::BitwiseShiftLeft,
+    BinOpKind::BitwiseShiftRight,
+    BinOpKind::BitwiseAnd,
+    BinOpKind::BitwiseOr,
+];
+
+
 
 pub const ALL_BIN_OP_KIND_COMP: [BinOpKind; 6] = [
     BinOpKind::Equal,
@@ -45,17 +75,34 @@ pub const ALL_BIN_OP_KIND_COMP_EQ: [BinOpKind; 2] = [
 ];
 
 
-pub const BIN_OP_KIND_SYMBOLS: [&str; 10] = [
+/*
+pub const ALL_BIN_OP_KIND_LOGIC: [BinOpKind; 2] = [
+    BinOpKind::And,
+    BinOpKind::Or,
+];*/
+
+
+
+pub const BIN_OP_KIND_SYMBOLS: [&str; 16] = [
     "==",
     "!=",
     ">",
     ">=",
     "<",
     "<=",
+    
+    "and",
+    "or",
+
     "+",
     "-",
     "*",
-    "/"
+    "/",
+
+    "<<",
+    ">>",
+    "&",
+    "|"
 
 ];
 
@@ -69,11 +116,17 @@ pub const BIN_OP_KIND_COMP_SYMBOLS: [&str; 6] = [
     "<="
 ];
 
-pub const BIN_OP_KIND_ARTH_SYMBOLS: [&str; 4] = [
+pub const BIN_OP_KIND_ARTH_SYMBOLS: [&str; 8] = [
     "+",
     "-",
     "*",
-    "/"
+    "/",
+
+    "<<",
+    ">>",
+    "&",
+    "|"
+
 ];
 
 
@@ -140,6 +193,13 @@ pub const ALL_TYPES_NO_INTS_NO_ARR: &[Type] = &[
     Type::Bool,
     Type::String,
     Type::Infer,
+];
+
+
+
+pub const ALL_FLOATS_TYPES: &[Type] = &[
+    Type::Float32,
+    Type::Float64,
 ];
 
 

@@ -708,10 +708,17 @@ mod tests {
                 for c in &chars {
                     assert!(helpers::validate_identifier_name(&format!("{}{}", kw, c)).is_ok());
 
-                    if !kw.to_lowercase().starts_with('u') && c.to_ascii_lowercase() == 'u' {
-                        // So like an int32 doesnt become uint32, etc, which would error.
+                    // So like an int32 doesnt become uint32, etc, which would error.
+                    if kw.to_lowercase().starts_with("int") && c.to_ascii_lowercase() == 'u' {
                         continue
                     }
+
+                    // So like "or" doesn't become "for"
+                    if *kw == "or" && c.to_ascii_lowercase() == 'f' {
+                        continue
+                    }
+
+
                     assert!(helpers::validate_identifier_name(&format!("{}{}", c, kw)).is_ok());
                 }
             }
