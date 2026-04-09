@@ -225,12 +225,12 @@ fn check_stmts(
 
                 // Check if source value is a variable and if its locked or moved, and moves it
                 if let Some(Expr::Var { name: src_name, span }) = &var.value {
-                    let src = locals.get_mut(src_name).ok_or_else(|| {
-                        HolyError::Semantic(format!("Use of undeclared variable `{}` (line {} column {})", src_name, span.line, span.column))
-                    })?;
+                    let src = locals.get_mut(src_name).expect(
+                        &format!("(Compiler bug) infer_expr_type should've already errored if source variable didnt exist, but it didnt. var: {:?}", var)
+                        );
 
                     if src.moved {
-                        return Err(HolyError::Semantic(format!("Use of moved variable `{}` (line {} column {})", src_name, span.line, span.column)));
+                        panic!("(Compiler bug) infer_expr_type should've already errored if source variable is moved, but it didnt. var: {:?}", var)
                     }
 
 
@@ -238,7 +238,7 @@ fn check_stmts(
                     if in_loop && upstream_var_names.contains(&src_name) {
                         return Err(HolyError::Semantic(format!(
                                     "Upstream variable `{}` is potentially moved multiple times, because you are in a loop. Consider using `copy()` (line {} column {})", 
-                                    &src_name, var.span.line, var.span.column
+                                    &src_name, span.line, span.column
                                 )));
                     }
 
@@ -321,8 +321,6 @@ fn check_stmts(
                         }
 
 
-
-
                         // insert into locals
                         //
                         locals.insert(
@@ -385,14 +383,13 @@ fn check_stmts(
                 let mut value_len: Option<usize> = None;
               
                 if let Expr::Var { name: src_name, span } = &assign.value {
-                    let src = locals.get_mut(src_name).ok_or_else(|| {
-                        HolyError::Semantic(format!("Use of undeclared variable `{}` (line {} column {})", src_name, span.line, span.column))
-                    })?;
+                    let src = locals.get_mut(src_name).expect(
+                        &format!("(Compiler bug) infer_expr_type should've already errored if source variable didnt exist, but it didnt. assign: {:?}", assign)
+                        );
 
                     if src.moved {
-                        return Err(HolyError::Semantic(format!("Use of moved variable `{}` (line {} column {})", src_name, span.line, span.column)));
+                        panic!("(Compiler bug) infer_expr_type should've already errored if source variable is moved, but it didnt. assign: {:?}", assign)
                     }
-
 
 
                     // Error if we are in loop, and we tried to take ownership of an upstream variable
