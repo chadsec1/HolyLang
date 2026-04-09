@@ -595,6 +595,43 @@ mod blackbox_tests {
         }
     }
 
+    #[test]
+    fn test_vardecl_uses_non_declared_var_errors() {
+        for t in ALL_TYPES_NO_ARR {
+            let body = vec![var_decl("x", t.clone(), Some(var_expr("y")))];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Use of undeclared variable `y`"));
+        }
+    }
+
+
+    #[test]
+    fn test_vardecl_uses_moved_var_errors() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                var_decl("x", t.clone(), Some(l.clone())),
+                var_decl("y", t.clone(), Some(var_expr("x"))),
+                var_decl("z", t.clone(), Some(var_expr("x")))
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Use of moved variable `x`"));
+        }
+    }
+
+
+
+
+
 
     // This test is duplicated but not really.. other tests dont test it all way through.
     #[test]
@@ -2355,6 +2392,37 @@ mod blackbox_tests {
             assert!(result.is_err());
             assert!(result.unwrap_err().to_string().contains("Variable `a` is already defined upstream"));
             // assert!(result.unwrap_err().to_string().contains("Variable `b` is already defined upstream"));
+        }
+    }
+
+
+    #[test]
+    fn test_multi_return_decl_not_func_call_errors() {
+        let literals = get_all_literals_no_arr();
+        let literals_scattered = get_all_literals_no_arr_scattered_order();
+
+        for (((l1, t1), l2), t2) in literals.iter()
+            .zip(ALL_TYPES_NO_ARR.iter())
+            .zip(literals_scattered.iter())
+            .zip(ALL_TYPES_NO_ARR_SCATTERED)
+        {
+            let pair_body = vec![return_stmt(vec![l1.clone(), l2.clone()])];
+            let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
+
+            let vars = vec![
+                Variable { name: "a".to_string(), type_name: t1.clone(), value: None, span: span() },
+                Variable { name: "b".to_string(), type_name: t2.clone(), value: None, span: span() },
+            ];
+            let body = vec![
+                Stmt::VarDeclMulti(vars, l1.clone())
+            ];
+            let main = void_func("main", vec![], body);
+
+            let mut ast = AST { functions: vec![pair, main] };
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Multi-declarement requires only a single function call on the right-hand side"));
         }
     }
 
