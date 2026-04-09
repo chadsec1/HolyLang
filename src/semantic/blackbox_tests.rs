@@ -3409,41 +3409,6 @@ mod blackbox_tests {
         }
     }
 
-
-    // integer literal inference 
-    #[test]
-    fn test_integer_literal_inferred_to_int8() {
-        // if variable is declared with an int8 and the value is an int32, but it can fit in int8,
-        // it shouldn't error
-        let lit = int32_lit(100); 
-        let body = vec![var_decl("x", Type::Int8, Some(lit))];
-        let func = void_func("foo", vec![], body);
-        let mut ast = ast_one(func);
-        check_semantics(&mut ast).unwrap();
-        if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
-            assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Int8(100), .. })));
-        }
-    }
-
-    #[test]
-    fn test_integer_literal_out_of_range_for_int8_errors() {
-        for i in 0..32767 {
-            let lit = int16_lit(i);
-            let body = vec![var_decl("x", Type::Int8, Some(lit))];
-            let func = void_func("foo", vec![], body);
-            let mut ast = ast_one(func);
-            let result = check_semantics(&mut ast);
-
-            if i <= i8::MAX as i16 {
-                assert!(result.is_ok());
-
-            } else {
-                assert!(result.is_err());
-                assert!(result.unwrap_err().to_string().contains("out of range"));
-            }
-        }
-    }
-
     #[test]
     fn test_float32_cannot_accept_float64_errors() {
         let lit = Expr::FloatLiteral { value: FloatLiteralValue::Float64(3.14), span: span() };
@@ -3456,6 +3421,184 @@ mod blackbox_tests {
     }
 
 
+
+
+    // (signed) integer literal inference
+    #[test]
+    fn test_integer_literal_inferred_to_int8() {
+        // if variable is declared with an int8 and the value is a different signed int literal, but it can fit in int8,
+        // it shouldn't error
+        let literals_signed_ints = get_all_signed_literals_no_arr_no_float();
+
+        for l in literals_signed_ints {
+            let body = vec![var_decl("x", Type::Int8, Some(l))];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            check_semantics(&mut ast).unwrap();
+            if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+                // because all literals in that func return int literals with value of 1
+                assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Int8(1), .. })));
+            }
+        }
+    }
+
+    #[test]
+    fn test_integer_literal_out_of_range_for_int8_errors() {
+        let edge_cases_numbers = [
+            i8::MIN as i16, i8::MAX as i16,
+            i16::MIN, i16::MAX
+        ];
+
+        for i in edge_cases_numbers {
+            let lit = int16_lit(i);
+            let body = vec![var_decl("x", Type::Int8, Some(lit))];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+
+            if (i <= i8::MAX as i16) && (i >= i8::MIN as i16) {
+                assert!(result.is_ok());
+
+            } else {
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("out of range"));
+            }
+        }
+    }
+
+
+
+    // Same as above test(s) but for int16
+    #[test]
+    fn test_integer_literal_inferred_to_int16() {
+        let literals_signed_ints = get_all_signed_literals_no_arr_no_float();
+
+        for l in literals_signed_ints {
+            let body = vec![var_decl("x", Type::Int16, Some(l))];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            check_semantics(&mut ast).unwrap();
+            if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+                assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Int16(1), .. })));
+            }
+        }
+    }
+
+    #[test]
+    fn test_integer_literal_out_of_range_for_int16_errors() {
+        let edge_cases_numbers = [
+            i16::MIN as i32, i16::MAX as i32,
+            i32::MIN, i32::MAX
+        ];
+
+        for i in edge_cases_numbers {
+            let lit = int32_lit(i);
+            let body = vec![var_decl("x", Type::Int16, Some(lit))];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+
+            if (i <= i16::MAX as i32) && (i >= i16::MIN as i32) {
+                assert!(result.is_ok());
+
+            } else {
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("out of range"));
+            }
+        }
+    }
+    
+
+    // Same as above test(s) but for int32
+    #[test]
+    fn test_integer_literal_inferred_to_int32() {
+        let literals_signed_ints = get_all_signed_literals_no_arr_no_float();
+
+        for l in literals_signed_ints {
+            let body = vec![var_decl("x", Type::Int32, Some(l))];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            check_semantics(&mut ast).unwrap();
+            if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+                assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Int32(1), .. })));
+            }
+        }
+    }
+
+    #[test]
+    fn test_integer_literal_out_of_range_for_int32_errors() {
+        let edge_cases_numbers = [
+            i32::MIN as i64, i32::MAX as i64,
+            i64::MIN, i64::MAX
+        ];
+
+        for i in edge_cases_numbers {
+            let lit = int64_lit(i);
+            let body = vec![var_decl("x", Type::Int32, Some(lit))];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+
+            if (i <= i32::MAX as i64) && (i >= i32::MIN as i64) {
+                assert!(result.is_ok());
+
+            } else {
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("out of range"));
+            }
+        }
+    }
+
+
+
+    // Same as above test(s) but for int64
+    #[test]
+    fn test_integer_literal_inferred_to_int64() {
+        let literals_signed_ints = get_all_signed_literals_no_arr_no_float();
+
+        for l in literals_signed_ints {
+            let body = vec![var_decl("x", Type::Int64, Some(l))];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            check_semantics(&mut ast).unwrap();
+            if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+                assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Int64(1), .. })));
+            }
+        }
+    }
+
+    #[test]
+    fn test_integer_literal_out_of_range_for_int64_errors() {
+        let edge_cases_numbers = [
+            i64::MIN as i128, i64::MAX as i128,
+            i128::MIN, i128::MAX
+        ];
+
+        for i in edge_cases_numbers {
+            let lit = int128_lit(i);
+            let body = vec![var_decl("x", Type::Int64, Some(lit))];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+
+            if (i <= i64::MAX as i128) && (i >= i64::MIN as i128) {
+                assert!(result.is_ok());
+
+            } else {
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("out of range"));
+            }
+        }
+    }
+
+
+
+
+
+
+
+
+    
     // binary operation type mismatch 
 
     #[test]

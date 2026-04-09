@@ -657,7 +657,6 @@ pub fn infer_integer_literal_helper(infer_ty: Type, value: IntLiteralValue, span
     }
 
 
-
     let val_raw: u128;
 
     if value.is_signed() {
