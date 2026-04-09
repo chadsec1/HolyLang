@@ -2215,6 +2215,117 @@ mod blackbox_tests {
         }
     }
 
+    #[test]
+    fn test_multi_return_decl_one_variable_locked_errors() {
+        // func pair() (t1, t2,) { return l1, l2 }
+        // func main() { 
+        // own a t1
+        // lock a
+        // own a, b = pair() }
+
+        let literals = get_all_literals_no_arr();
+        let literals_scattered = get_all_literals_no_arr_scattered_order();
+
+        
+        for (((l1, t1), l2), t2) in literals.iter()
+            .zip(ALL_TYPES_NO_ARR.iter())
+            .zip(literals_scattered.iter())
+            .zip(ALL_TYPES_NO_ARR_SCATTERED)
+        {
+            let pair_body = vec![return_stmt(vec![l1.clone(), l2.clone()])];
+            let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
+
+            let vars = vec![
+                Variable { name: "a".to_string(), type_name: t1.clone(), value: None, span: span() },
+                Variable { name: "b".to_string(), type_name: t2.clone(), value: None, span: span() },
+            ];
+            let body = vec![
+                var_decl("a", t1.clone(), None),
+                Stmt::Lock(vec![var_expr("a")]),
+
+                Stmt::VarDeclMulti(vars, call_expr("pair", vec![]))
+            ];
+            let main = void_func("main", vec![], body);
+
+            let mut ast = AST { functions: vec![pair, main] };
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Variable `a` is locked"));
+        }
+
+
+
+        // Same test, but this time `b` is locked instead
+        for (((l1, t1), l2), t2) in literals.iter()
+            .zip(ALL_TYPES_NO_ARR.iter())
+            .zip(literals_scattered.iter())
+            .zip(ALL_TYPES_NO_ARR_SCATTERED)
+        {
+            let pair_body = vec![return_stmt(vec![l1.clone(), l2.clone()])];
+            let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
+
+            let vars = vec![
+                Variable { name: "a".to_string(), type_name: t1.clone(), value: None, span: span() },
+                Variable { name: "b".to_string(), type_name: t2.clone(), value: None, span: span() },
+            ];
+            let body = vec![
+                var_decl("b", t1.clone(), None),
+                Stmt::Lock(vec![var_expr("b")]),
+
+                Stmt::VarDeclMulti(vars, call_expr("pair", vec![]))
+            ];
+            let main = void_func("main", vec![], body);
+
+            let mut ast = AST { functions: vec![pair, main] };
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Variable `b` is locked"));
+        }
+    }
+
+
+    // Same test, but both `a` and `b` are locked
+    #[test]
+    fn test_multi_return_decl_two_variables_locked_errors() {
+        let literals = get_all_literals_no_arr();
+        let literals_scattered = get_all_literals_no_arr_scattered_order();
+        
+        for (((l1, t1), l2), t2) in literals.iter()
+            .zip(ALL_TYPES_NO_ARR.iter())
+            .zip(literals_scattered.iter())
+            .zip(ALL_TYPES_NO_ARR_SCATTERED)
+        {
+            let pair_body = vec![return_stmt(vec![l1.clone(), l2.clone()])];
+            let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
+
+            let vars = vec![
+                Variable { name: "a".to_string(), type_name: t1.clone(), value: None, span: span() },
+                Variable { name: "b".to_string(), type_name: t2.clone(), value: None, span: span() },
+            ];
+            let body = vec![
+                var_decl("a", t1.clone(), None),
+                var_decl("b", t1.clone(), None),
+                Stmt::Lock(vec![var_expr("a"), var_expr("b")]),
+
+                Stmt::VarDeclMulti(vars, call_expr("pair", vec![]))
+            ];
+            let main = void_func("main", vec![], body);
+
+            let mut ast = AST { functions: vec![pair, main] };
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Variable `a` is locked"));
+            // assert!(result.unwrap_err().to_string().contains("Variable `b` is locked"));
+        }
+    }
+
+
+
+
+
 
     #[test]
     fn test_multi_return_decl_typemismatch_errors() {
