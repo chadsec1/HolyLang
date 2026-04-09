@@ -640,6 +640,7 @@ pub fn infer_integer_literal_helper(infer_ty: Type, value: IntLiteralValue, span
             }
 
             Type::Int128 => {
+                // Not very needed.. but just to be defensive..
                 if val_raw < i128::MIN || val_raw > i128::MAX {
                     return Err(HolyError::Semantic(format!("Integer literal {} out of range for type {} (line {} column {})", value, infer_ty, span.line, span.column)));
                 }

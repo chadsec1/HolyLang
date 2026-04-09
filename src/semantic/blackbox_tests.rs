@@ -3677,14 +3677,133 @@ mod blackbox_tests {
         }
     }
 
+    
+    // Same as above test(s) but for uint16
+    #[test]
+    fn test_integer_literal_inferred_to_uint16() {
+        let literals_unsigned_ints = get_all_unsigned_literals_no_arr();
+
+        for l in literals_unsigned_ints {
+            let body = vec![var_decl("x", Type::Uint16, Some(l))];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            check_semantics(&mut ast).unwrap();
+            if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+                // because all literals in that func return int literals with value of 1
+                assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Uint16(1), .. })));
+            }
+        }
+    }
+
+    #[test]
+    fn test_integer_literal_out_of_range_for_uint16_errors() {
+        let edge_cases_numbers = [
+            u16::MIN as u32, u16::MAX as u32,
+            u32::MIN, u32::MAX
+        ];
+
+        for i in edge_cases_numbers {
+            let lit = uint32_lit(i);
+            let body = vec![var_decl("x", Type::Uint16, Some(lit))];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+
+            if (i <= u16::MAX as u32) && (i >= u16::MIN as u32) {
+                assert!(result.is_ok());
+
+            } else {
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("out of range"));
+            }
+        }
+    }
 
 
 
+    // Same as above test(s) but for uint32
+    #[test]
+    fn test_integer_literal_inferred_to_uint32() {
+        let literals_unsigned_ints = get_all_unsigned_literals_no_arr();
+
+        for l in literals_unsigned_ints {
+            let body = vec![var_decl("x", Type::Uint32, Some(l))];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            check_semantics(&mut ast).unwrap();
+            if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+                // because all literals in that func return int literals with value of 1
+                assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Uint32(1), .. })));
+            }
+        }
+    }
+
+    #[test]
+    fn test_integer_literal_out_of_range_for_uint32_errors() {
+        let edge_cases_numbers = [
+            u32::MIN as u64, u32::MAX as u64,
+            u64::MIN, u64::MAX
+        ];
+
+        for i in edge_cases_numbers {
+            let lit = uint64_lit(i);
+            let body = vec![var_decl("x", Type::Uint32, Some(lit))];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+
+            if (i <= u32::MAX as u64) && (i >= u32::MIN as u64) {
+                assert!(result.is_ok());
+
+            } else {
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("out of range"));
+            }
+        }
+    }
 
 
 
+    // Same as above test(s) but for uint64
+    #[test]
+    fn test_integer_literal_inferred_to_uint64() {
+        let literals_unsigned_ints = get_all_unsigned_literals_no_arr();
 
+        for l in literals_unsigned_ints {
+            let body = vec![var_decl("x", Type::Uint64, Some(l))];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            check_semantics(&mut ast).unwrap();
+            if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+                // because all literals in that func return int literals with value of 1
+                assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Uint64(1), .. })));
+            }
+        }
+    }
 
+    #[test]
+    fn test_integer_literal_out_of_range_for_uint64_errors() {
+        let edge_cases_numbers = [
+            u64::MIN as u128, u64::MAX as u128,
+            u128::MIN, u128::MAX
+        ];
+
+        for i in edge_cases_numbers {
+            let lit = uint128_lit(i);
+            let body = vec![var_decl("x", Type::Uint64, Some(lit))];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+
+            if (i <= u64::MAX as u128) && (i >= u64::MIN as u128) {
+                assert!(result.is_ok());
+
+            } else {
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("out of range"));
+            }
+        }
+    }
 
 
 
