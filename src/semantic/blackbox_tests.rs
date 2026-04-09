@@ -2324,6 +2324,44 @@ mod blackbox_tests {
 
 
 
+    // Cuz u can't overshadow variables declared in upstream scopes
+    #[test]
+    fn test_multi_return_decl_one_variable_upstream_errors() {
+        // This tests against function arguments considering they are upstream
+        let literals = get_all_literals_no_arr();
+        let literals_scattered = get_all_literals_no_arr_scattered_order();
+        
+        // Lets leave them locked.
+        for (((l1, t1), l2), t2) in literals.iter()
+            .zip(ALL_TYPES_NO_ARR.iter())
+            .zip(literals_scattered.iter())
+            .zip(ALL_TYPES_NO_ARR_SCATTERED)
+        {
+            let pair_body = vec![return_stmt(vec![l1.clone(), l2.clone()])];
+            let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
+
+            let vars = vec![
+                Variable { name: "a".to_string(), type_name: t1.clone(), value: None, span: span() },
+                Variable { name: "b".to_string(), type_name: t2.clone(), value: None, span: span() },
+            ];
+            let body = vec![
+                Stmt::VarDeclMulti(vars, call_expr("pair", vec![]))
+            ];
+            let main = void_func("main", vec![param("a", t1.clone()), param("b", t2.clone())], body);
+
+            let mut ast = AST { functions: vec![pair, main] };
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Variable `a` is already defined upstream"));
+            // assert!(result.unwrap_err().to_string().contains("Variable `b` is already defined upstream"));
+        }
+    }
+
+
+
+
+
 
 
 

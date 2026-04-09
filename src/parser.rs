@@ -318,14 +318,14 @@ pub enum BinOpKind {
     LessEqual
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Param {
     pub name: String,
     pub type_name: Type,
     pub span: Span,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Variable {
     pub name: String,
     /// Always present; Type::Infer means "infer in semantic phase"
@@ -335,7 +335,7 @@ pub struct Variable {
 
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Function {
     pub name: String,
     pub params: Vec<Param>,
@@ -345,21 +345,21 @@ pub struct Function {
 }
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct VariableAssignment {
     pub name: String,
     pub value: Expr,
     pub span: Span,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct MultiAssignment {
     pub names: Vec<String>,
     pub value: Expr,
     pub span: Span,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ForStmt {
     pub holder_name: String,
     pub value: Expr,
@@ -367,7 +367,7 @@ pub struct ForStmt {
     pub span: Span
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct WhileStmt {
     pub condition: Expr,
     pub branch: Vec<Stmt>,
@@ -375,7 +375,7 @@ pub struct WhileStmt {
 }
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct IfStmt {
     pub condition: Expr,
     pub if_branch: Vec<Stmt>,
@@ -384,24 +384,24 @@ pub struct IfStmt {
     pub span: Span
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct InfiniteStmt {
     pub branch: Vec<Stmt>,
     pub span: Span
 }
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BreakStmt {
     pub span: Span
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ContinueStmt {
     pub span: Span
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Stmt {
     VarDecl(Variable),
     VarDeclMulti(Vec<Variable>, Expr),

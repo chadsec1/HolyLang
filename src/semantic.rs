@@ -84,20 +84,6 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
         upstream_var_names.push(p.name.clone());
     }
     
-    // Ensure that no code exists after return
-    // NOTE:: This is very weak and fragile check, might need replacing.
-    /*
-    if let Some(last_ret_pos) = func.body.iter().rposition(|s| matches!(s, Stmt::Return(_))) {
-        if last_ret_pos + 1 < func.body.len() {
-            
-            let offending_span = helpers::stmt_span(&func.body[last_ret_pos + 1]);
-            return Err(HolyError::Semantic(format!(
-                "Code after `return` is not allowed (line {} column {})",
-                offending_span.line, offending_span.column
-            )));
-        }
-    }
-    */
 
     check_stmts(func.clone(), &mut func.body, &mut locals, upstream_var_names, fun_sigs, false)?;
 
@@ -151,6 +137,22 @@ fn check_stmts(
 
 ) -> Result<(), HolyError> {
 
+
+    // Special rule: Despite fact you cannot lock/unlock variables declared upstream,
+    // and function arguments are considered declared upstream, the
+    // special rule, if we are not in a nested scope (i.e. the block of
+    // stmts is equal to the function block its self.)
+    // then you CAN unlock/lock function arguments. Only function
+    // arguments though.
+    //
+
+    let is_nested_scope = if block.clone() == func.body {
+        false
+    } else {
+        true
+    };
+
+
     // Walk statements in order. 
     for stmt in block {
         let stmt_span = helpers::stmt_span(&stmt);
@@ -195,6 +197,14 @@ fn check_stmts(
                 }
 
             
+                // You cannot overshadow variables declared in upstream scopes.
+                if upstream_var_names.contains(&var.name) {
+                    return Err(HolyError::Semantic(format!(
+                                "Variable `{}` is already defined upstream, you cannot overshadow upstream variables (line {} column {})", 
+                                &var.name, var.span.line, var.span.column
+                            )));
+                }
+
                 // Check if variable exists in locals and if its locked.
                 if let Some(info) = locals.get(&var.name) {
                     if info.locked {
@@ -206,12 +216,6 @@ fn check_stmts(
                 }
 
 
-                if upstream_var_names.contains(&var.name) {
-                    return Err(HolyError::Semantic(format!(
-                                "Variable `{}` is already defined upstream, you cannot overshadow upstream variables (line {} column {})", 
-                                &var.name, var.span.line, var.span.column
-                            )));
-                }
 
 
                 let mut value_len: Option<usize> = None;
@@ -299,6 +303,13 @@ fn check_stmts(
                             )));
                         }
 
+                        if upstream_var_names.contains(&var.name) {
+                            return Err(HolyError::Semantic(format!(
+                                        "Variable `{}` is already defined upstream, you cannot overshadow upstream variables (line {} column {})", 
+                                        &var.name, var.span.line, var.span.column
+                                    )));
+                        }
+
                         // Check if variable exists in locals and if its locked.
                         if let Some(info) = locals.get(&var.name) {
                             if info.locked {
@@ -309,12 +320,6 @@ fn check_stmts(
                             }
                         }
 
-                        if upstream_var_names.contains(&var.name) {
-                            return Err(HolyError::Semantic(format!(
-                                        "Variable `{}` is already defined upstream, you cannot overshadow upstream variables (line {} column {})", 
-                                        &var.name, var.span.line, var.span.column
-                                    )));
-                        }
 
 
 
@@ -516,10 +521,21 @@ fn check_stmts(
                             }
 
                             if upstream_var_names.contains(&name) {
-                                return Err(HolyError::Semantic(format!(
-                                            "You cannot lock variable `{}` because it is declared upstream (line {} column {})", 
+                                // Special rule: Despite fact you cannot lock/unlock variables declared upstream,
+                                // and function arguments are considered declared upstream, the
+                                // special rule, if we are not in a nested scope (i.e. the block of
+                                // stmts is equal to the function block its self.)
+                                // then you CAN unlock/lock function arguments. Only function
+                                // arguments though.
+                                //
+
+
+                                if is_nested_scope || (!func.params.iter().any(|p| p.name == *name)) {
+                                    return Err(HolyError::Semantic(format!(
+                                            "You cannot unlock variable `{}` because it is declared upstream (line {} column {})", 
                                             name, span.line, span.column
                                         )));
+                                }  
                             }
 
                             var_names_to_lock.push(name.to_string());
@@ -576,10 +592,19 @@ fn check_stmts(
                             }
 
                             if upstream_var_names.contains(&name) {
-                                return Err(HolyError::Semantic(format!(
+                                // Special rule: Despite fact you cannot lock/unlock variables declared upstream,
+                                // and function arguments are considered declared upstream, the
+                                // special rule, if we are not in a nested scope (i.e. the block of
+                                // stmts is equal to the function block its self.)
+                                // then you CAN unlock/lock function arguments. Only function
+                                // arguments though.
+                                //
+                                if is_nested_scope || (!func.params.iter().any(|p| p.name == *name)) {
+                                    return Err(HolyError::Semantic(format!(
                                             "You cannot unlock variable `{}` because it is declared upstream (line {} column {})", 
                                             name, span.line, span.column
                                         )));
+                                }    
                             }
 
 
