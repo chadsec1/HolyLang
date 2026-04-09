@@ -2161,6 +2161,17 @@ mod blackbox_tests {
 
             let mut ast = AST { functions: vec![pair, main] };
             check_semantics(&mut ast).unwrap();
+
+            if let Stmt::VarDeclMulti(vs, ce) = &ast.functions[1].body[0] {
+                assert_eq!(vs.len(), 2, "Expected 2 variable declarations");
+                assert_eq!(vs[0].type_name, t1.clone());
+                assert_eq!(vs[1].type_name, t2.clone());
+            
+                if let Expr::Call { name, .. } = ce {
+                    assert_eq!(name, "pair");
+                } else { panic!("Expected Call expression, instead got {:?}", ce) }
+
+            } else { panic!("Expected VarDecl") }
         }
     }
 
@@ -2168,9 +2179,6 @@ mod blackbox_tests {
     // Same as above test, but this lets variables infer their types from return types
     #[test]
     fn test_multi_return_decl_infer_correct() {
-        // func pair() (t1, t2,) { return l1, l2 }
-        // func main() { own a, b = pair() }
-
         let literals = get_all_literals_no_arr();
         let literals_scattered = get_all_literals_no_arr_scattered_order();
 
@@ -2192,8 +2200,103 @@ mod blackbox_tests {
 
             let mut ast = AST { functions: vec![pair, main] };
             check_semantics(&mut ast).unwrap();
+
+        
+            if let Stmt::VarDeclMulti(vs, ce) = &ast.functions[1].body[0] {
+                assert_eq!(vs.len(), 2, "Expected 2 variable declarations");
+                assert_eq!(vs[0].type_name, t1.clone());
+                assert_eq!(vs[1].type_name, t2.clone());
+            
+                if let Expr::Call { name, .. } = ce {
+                    assert_eq!(name, "pair");
+                } else { panic!("Expected Call expression, instead got {:?}", ce) }
+
+            } else { panic!("Expected VarDecl") }
         }
     }
+
+
+    #[test]
+    fn test_multi_return_decl_typemismatch_errors() {
+        let literals = get_all_literals_no_arr();
+        let literals_scattered = get_all_literals_no_arr_scattered_order();
+
+
+
+        for ((l1, t1), t2) in literals.iter()
+            .zip(ALL_TYPES_NO_ARR.iter())
+            .zip(ALL_TYPES_NO_ARR_SCATTERED)
+        {
+            let pair_body = vec![return_stmt(vec![l1.clone(), l1.clone()])];
+            let pair = returning_func("pair", vec![], vec![t1.clone(), t1.clone()], pair_body);
+
+            let vars = vec![
+                Variable { name: "a".to_string(), type_name: t1.clone(), value: None, span: span() },
+                Variable { name: "b".to_string(), type_name: t2.clone(), value: None, span: span() },
+            ];
+            let body = vec![Stmt::VarDeclMulti(vars, call_expr("pair", vec![]))];
+            let main = void_func("main", vec![], body);
+
+            let mut ast = AST { functions: vec![pair, main] };
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Type mismatch for variable `b`"));
+        }
+
+
+        // Same test but the mismatch is in "a" instead of "b"
+        for ((l1, t1), t2) in literals_scattered.iter()
+            .zip(ALL_TYPES_NO_ARR.iter())
+            .zip(ALL_TYPES_NO_ARR_SCATTERED)
+        {
+            let pair_body = vec![return_stmt(vec![l1.clone(), l1.clone()])];
+            let pair = returning_func("pair", vec![], vec![t2.clone(), t2.clone()], pair_body);
+
+            let vars = vec![
+                Variable { name: "a".to_string(), type_name: t1.clone(), value: None, span: span() },
+                Variable { name: "b".to_string(), type_name: t2.clone(), value: None, span: span() },
+            ];
+            let body = vec![Stmt::VarDeclMulti(vars, call_expr("pair", vec![]))];
+            let main = void_func("main", vec![], body);
+
+            let mut ast = AST { functions: vec![pair, main] };
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Type mismatch for variable `a`"));
+        }
+
+
+        // Same test but the mismatch is in both "a" and "b"
+        for ((l1, t1), t2) in literals.iter()
+            .zip(ALL_TYPES_NO_ARR.iter())
+            .zip(ALL_TYPES_NO_ARR_SCATTERED)
+        {
+            let pair_body = vec![return_stmt(vec![l1.clone(), l1.clone()])];
+            let pair = returning_func("pair", vec![], vec![t1.clone(), t1.clone()], pair_body);
+
+            let vars = vec![
+                Variable { name: "a".to_string(), type_name: t2.clone(), value: None, span: span() },
+                Variable { name: "b".to_string(), type_name: t2.clone(), value: None, span: span() },
+            ];
+            let body = vec![Stmt::VarDeclMulti(vars, call_expr("pair", vec![]))];
+            let main = void_func("main", vec![], body);
+
+            let mut ast = AST { functions: vec![pair, main] };
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Type mismatch for variable `a`"));
+        }
+
+
+
+
+    }
+
+
+
 
 
 
@@ -3643,12 +3746,8 @@ mod blackbox_tests {
 
     #[test]
     fn test_integer_literal_out_of_range_for_int128_errors() {
-        // Why is MIN out of range you ask? because in real type system, you never actually type a
-        // uint128 literal as is, the parser should make it smallest signed int, n ot uint, so the
-        // infer system is designed around that...
-        //
         let edge_cases_numbers = [
-            u128::MIN, u128::MAX
+            i128::MAX as u128 + 1, u128::MAX
         ];
 
         for i in edge_cases_numbers {
