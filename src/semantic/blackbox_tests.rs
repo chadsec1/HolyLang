@@ -3805,6 +3805,47 @@ mod blackbox_tests {
         }
     }
 
+    // Same as above test(s) but for usize (which is most commonly uint64)
+    #[test]
+    fn test_integer_literal_inferred_to_usize() {
+        let literals_unsigned_ints = get_all_unsigned_literals_no_arr();
+
+        for l in literals_unsigned_ints {
+            let body = vec![var_decl("x", Type::Usize, Some(l))];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            check_semantics(&mut ast).unwrap();
+            if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+                // because all literals in that func return int literals with value of 1
+                assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Usize(1), .. })));
+            }
+        }
+    }
+
+    #[test]
+    fn test_integer_literal_out_of_range_for_usize_errors() {
+        let edge_cases_numbers = [
+            usize::MIN as u128, usize::MAX as u128,
+            u128::MIN, u128::MAX
+        ];
+
+        for i in edge_cases_numbers {
+            let lit = uint128_lit(i);
+            let body = vec![var_decl("x", Type::Usize, Some(lit))];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+
+            if (i <= usize::MAX as u128) && (i >= usize::MIN as u128) {
+                assert!(result.is_ok());
+
+            } else {
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("out of range"));
+            }
+        }
+    }
+
 
 
 
