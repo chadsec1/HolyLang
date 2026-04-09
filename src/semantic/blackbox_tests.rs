@@ -3391,9 +3391,26 @@ mod blackbox_tests {
 
 
 
+    // float literal inference
+
+
+    // All floating 32 literals can be safely converted to floating 64 .
+    #[test]
+    fn test_floating_literal_is_32_but_type_is_64() {
+        // if variable is declared with an int8 and the value is an int32, but it can fit in int8,
+        // it shouldn't error
+        let lit = float32_lit(1.0); 
+        let body = vec![var_decl("x", Type::Float64, Some(lit))];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        check_semantics(&mut ast).unwrap();
+        if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+            assert!(matches!(v.value, Some(Expr::FloatLiteral { value: FloatLiteralValue::Float64(1.0), .. })));
+        }
+    }
+
 
     // integer literal inference 
-
     #[test]
     fn test_integer_literal_inferred_to_int8() {
         // if variable is declared with an int8 and the value is an int32, but it can fit in int8,
