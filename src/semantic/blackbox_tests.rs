@@ -3817,29 +3817,9 @@ mod blackbox_tests {
         // int literals are not allowed to mix with literals of non-int type
         //
         
-        let int_literals = [
-            int8_lit(1),
-            int16_lit(1),
-            int32_lit(1),
-            int64_lit(1),
-            int128_lit(1),
+        let int_literals = get_all_literals_no_arr_str_bool_float();
 
-            byte_lit(1),
-            uint16_lit(1),
-            uint32_lit(1),
-            uint64_lit(1),
-            uint128_lit(1),
-
-            usize_lit(1),
-        ];
-
-
-        let non_int_literals = [
-            float32_lit(1.0),
-            float64_lit(1.0),
-            bool_lit(false),
-            str_lit("Hi")
-        ];
+        let non_int_literals = get_all_literals_no_arr_no_ints();
 
         for int in &int_literals {
             for non_int in &non_int_literals {
