@@ -719,7 +719,9 @@ pub fn infer_integer_literal_helper(infer_ty: Type, value: IntLiteralValue, span
         }
 
         other => {
-            panic!("(Compiler bug) Type not signed nor unsigned.. shouldnt be possible.. but here we are. {:?}", other);
+            return Err(HolyError::Semantic(format!("Integer literal `{}` out of range for type {} (line {} column {})", value, other, span.line, span.column)));
+            // TODO: This whole function needs rework I think...
+            // panic!("(Compiler bug) Type not signed nor unsigned.. shouldnt be possible.. but here we are. {:?}", other);
         }
     }
 }

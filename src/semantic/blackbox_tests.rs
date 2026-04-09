@@ -3592,6 +3592,98 @@ mod blackbox_tests {
     }
 
 
+    // 
+    #[test]
+    fn test_integer_literal_inferred_to_int128() {
+        let literals_signed_ints = get_all_signed_literals_no_arr_no_float();
+
+        for l in literals_signed_ints {
+            let body = vec![var_decl("x", Type::Int128, Some(l))];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            check_semantics(&mut ast).unwrap();
+            if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+                assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Int128(1), .. })));
+            }
+        }
+    }
+
+    #[test]
+    fn test_integer_literal_out_of_range_for_int128_errors() {
+        // Why is MIN out of range you ask? because in real type system, you never actually type a
+        // uint128 literal as is, the parser should make it smallest signed int, n ot uint, so the
+        // infer system is designed around that...
+        //
+        let edge_cases_numbers = [
+            u128::MIN, u128::MAX
+        ];
+
+        for i in edge_cases_numbers {
+            let lit = uint128_lit(i);
+            let body = vec![var_decl("x", Type::Int128, Some(lit))];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("out of range"));
+        }
+
+    }
+
+
+
+
+    // (unsigned) integer literal inference
+    #[test]
+    fn test_integer_literal_inferred_to_byte() {
+        // if variable is declared with an byte and the value is a different signed int literal, but it can fit in byte,
+        // it shouldn't error
+        let literals_unsigned_ints = get_all_unsigned_literals_no_arr();
+
+        for l in literals_unsigned_ints {
+            let body = vec![var_decl("x", Type::Byte, Some(l))];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            check_semantics(&mut ast).unwrap();
+            if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+                // because all literals in that func return int literals with value of 1
+                assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Byte(1), .. })));
+            }
+        }
+    }
+
+    #[test]
+    fn test_integer_literal_out_of_range_for_byte_errors() {
+        let edge_cases_numbers = [
+            u8::MIN as u16, u8::MAX as u16,
+            u16::MIN, u16::MAX
+        ];
+
+        for i in edge_cases_numbers {
+            let lit = uint16_lit(i);
+            let body = vec![var_decl("x", Type::Byte, Some(lit))];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+
+            if (i <= u8::MAX as u16) && (i >= u8::MIN as u16) {
+                assert!(result.is_ok());
+
+            } else {
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("out of range"));
+            }
+        }
+    }
+
+
+
+
+
+
+
+
 
 
 
