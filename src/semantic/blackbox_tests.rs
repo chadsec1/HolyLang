@@ -7,6 +7,8 @@ use crate::parser::{
 
 use crate::tests_consts::{
     ALL_TYPES_NO_ARR, ALL_TYPES_NO_ARR_SCATTERED, ALL_TYPES_NO_ARR_NO_USIZE, ALL_TYPES_NO_ARR_NO_INFER, ALL_TYPES_NO_INTS_NO_ARR,
+    ALL_TYPES_NO_INTS_NO_ARR_NO_INFER,
+
     ALL_INT_TYPES_NO_ARR_NO_INFER,
     ALL_FLOATS_TYPES,
 
@@ -554,7 +556,7 @@ mod blackbox_tests {
 
 
 
-    // variables and type inference tests
+    // variables declaration / assignment, and type inference tests
 
     #[test]
     fn test_infer_type_literal() {
@@ -627,6 +629,90 @@ mod blackbox_tests {
             assert!(result.unwrap_err().to_string().contains("Use of moved variable `x`"));
         }
     }
+
+
+    #[test]
+    fn test_varassign_type_mismatch_errors() {
+        let literals_ints = get_all_literals_no_arr_str_bool_float() ;
+        
+        for l in literals_ints {
+            for t in ALL_TYPES_NO_INTS_NO_ARR_NO_INFER {
+                let body = vec![
+                    var_decl("x", t.clone(), None),
+                    var_assign("x", l.clone())
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+
+                let result = check_semantics(&mut ast);
+
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("Cannot assign"));
+            }
+        }
+    }
+
+
+    #[test]
+    fn test_varassign_to_moved_var_errors() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                var_decl("x", t.clone(), Some(l.clone())),
+                var_decl("y", t.clone(), Some(var_expr("x"))),
+
+                var_assign("x", l.clone())
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Value assignment to moved variable `x`"));
+        }
+    }
+
+
+
+    #[test]
+    fn test_varassign_uses_non_declared_var_errors() {
+        for t in ALL_TYPES_NO_ARR_NO_INFER {
+            let body = vec![
+                var_decl("x", t.clone(), None), 
+                var_assign("x", var_expr("y"))
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Use of undeclared variable `y`"));
+        }
+    }
+
+
+    #[test]
+    fn test_varassign_uses_moved_var_errors() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR_NO_INFER.iter()) {
+            let body = vec![
+                var_decl("x", t.clone(), Some(l.clone())),
+                var_decl("y", t.clone(), Some(var_expr("x"))),
+                var_decl("z", t.clone(), None),
+                var_assign("z", var_expr("x"))
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Use of moved variable `x`"));
+        }
+    }
+
 
 
 

@@ -362,8 +362,7 @@ fn check_stmts(
                     )));
                 }
 
-                // Check if source value is a variable and if it is moved. 
-                // And moves it
+                // Check if our variable is moved
                 if varinfo.moved {
                     return Err(HolyError::Semantic(format!(
                         "Value assignment to moved variable `{}` (line {} column {})",
@@ -371,7 +370,7 @@ fn check_stmts(
                     ))); 
                 }
 
-                // Check if variable is locked.
+                // Check if our variable is locked.
                 if varinfo.locked {
                     return Err(HolyError::Semantic(format!(
                             "Variable `{}` is locked, therefore you cannot assign to it (line {} column {})", 
