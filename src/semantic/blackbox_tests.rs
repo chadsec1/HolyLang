@@ -2164,6 +2164,39 @@ mod blackbox_tests {
         }
     }
 
+
+    // Same as above test, but this lets variables infer their types from return types
+    #[test]
+    fn test_multi_return_decl_infer_correct() {
+        // func pair() (t1, t2,) { return l1, l2 }
+        // func main() { own a, b = pair() }
+
+        let literals = get_all_literals_no_arr();
+        let literals_scattered = get_all_literals_no_arr_scattered_order();
+
+        
+        for (((l1, t1), l2), t2) in literals.iter()
+            .zip(ALL_TYPES_NO_ARR.iter())
+            .zip(literals_scattered.iter())
+            .zip(ALL_TYPES_NO_ARR_SCATTERED)
+        {
+            let pair_body = vec![return_stmt(vec![l1.clone(), l2.clone()])];
+            let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
+
+            let vars = vec![
+                Variable { name: "a".to_string(), type_name: Type::Infer, value: None, span: span() },
+                Variable { name: "b".to_string(), type_name: Type::Infer, value: None, span: span() },
+            ];
+            let body = vec![Stmt::VarDeclMulti(vars, call_expr("pair", vec![]))];
+            let main = void_func("main", vec![], body);
+
+            let mut ast = AST { functions: vec![pair, main] };
+            check_semantics(&mut ast).unwrap();
+        }
+    }
+
+
+
     #[test]
     fn test_multi_return_count_mismatch_errors() {
         // pair returns 2 values, but programmer only binds 1 variable
@@ -3406,7 +3439,7 @@ mod blackbox_tests {
         check_semantics(&mut ast).unwrap();
         if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
             assert!(matches!(v.value, Some(Expr::FloatLiteral { value: FloatLiteralValue::Float64(1.0), .. })));
-        }
+        } else { panic!("Expected VarDecl") }
     }
 
     #[test]
@@ -3438,7 +3471,7 @@ mod blackbox_tests {
             if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
                 // because all literals in that func return int literals with value of 1
                 assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Int8(1), .. })));
-            }
+            } else { panic!("Expected VarDecl") }
         }
     }
 
@@ -3480,7 +3513,7 @@ mod blackbox_tests {
             check_semantics(&mut ast).unwrap();
             if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
                 assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Int16(1), .. })));
-            }
+            } else { panic!("Expected VarDecl") }
         }
     }
 
@@ -3521,7 +3554,7 @@ mod blackbox_tests {
             check_semantics(&mut ast).unwrap();
             if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
                 assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Int32(1), .. })));
-            }
+            } else { panic!("Expected VarDecl") }
         }
     }
 
@@ -3563,7 +3596,7 @@ mod blackbox_tests {
             check_semantics(&mut ast).unwrap();
             if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
                 assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Int64(1), .. })));
-            }
+            } else { panic!("Expected VarDecl") }
         }
     }
 
@@ -3604,7 +3637,7 @@ mod blackbox_tests {
             check_semantics(&mut ast).unwrap();
             if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
                 assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Int128(1), .. })));
-            }
+            } else { panic!("Expected VarDecl") }
         }
     }
 
@@ -3649,7 +3682,7 @@ mod blackbox_tests {
             if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
                 // because all literals in that func return int literals with value of 1
                 assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Byte(1), .. })));
-            }
+            } else { panic!("Expected VarDecl") }
         }
     }
 
@@ -3691,7 +3724,7 @@ mod blackbox_tests {
             if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
                 // because all literals in that func return int literals with value of 1
                 assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Uint16(1), .. })));
-            }
+            } else { panic!("Expected VarDecl") }
         }
     }
 
@@ -3734,7 +3767,7 @@ mod blackbox_tests {
             if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
                 // because all literals in that func return int literals with value of 1
                 assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Uint32(1), .. })));
-            }
+            } else { panic!("Expected VarDecl") }
         }
     }
 
@@ -3777,7 +3810,7 @@ mod blackbox_tests {
             if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
                 // because all literals in that func return int literals with value of 1
                 assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Uint64(1), .. })));
-            }
+            } else { panic!("Expected VarDecl") }
         }
     }
 
@@ -3818,7 +3851,7 @@ mod blackbox_tests {
             if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
                 // because all literals in that func return int literals with value of 1
                 assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Usize(1), .. })));
-            }
+            } else { panic!("Expected VarDecl") }
         }
     }
 
