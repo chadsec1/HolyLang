@@ -3847,6 +3847,21 @@ mod blackbox_tests {
     }
 
 
+    #[test]
+    fn test_integer_literal_inferred_to_uint128() {
+        let literals_signed_ints = get_all_signed_literals_no_arr_no_float();
+
+        for l in literals_signed_ints {
+            let body = vec![var_decl("x", Type::Uint128, Some(l))];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            check_semantics(&mut ast).unwrap();
+            if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+                assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Uint128(1), .. })));
+            } else { panic!("Expected VarDecl") }
+        }
+    }
+
 
 
 
