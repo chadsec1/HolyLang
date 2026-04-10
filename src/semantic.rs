@@ -528,7 +528,7 @@ fn check_stmts(
 
                                 if is_nested_scope || (!func.params.iter().any(|p| p.name == *name)) {
                                     return Err(HolyError::Semantic(format!(
-                                            "You cannot unlock variable `{}` because it is declared upstream (line {} column {})", 
+                                            "You cannot lock variable `{}` because it is declared upstream (line {} column {})", 
                                             name, span.line, span.column
                                         )));
                                 }  
