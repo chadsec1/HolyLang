@@ -1,7 +1,7 @@
 use super::*;
 use crate::parser::{
-    Param, Variable, VariableAssignment, 
-    IfStmt, WhileStmt, ForStmt
+    Param, Variable, VariableAssignment, MultiAssignment, 
+    IfStmt, WhileStmt, ForStmt, InfiniteStmt, BreakStmt, ContinueStmt
 };
 
 
@@ -630,6 +630,362 @@ mod blackbox_tests {
         }
     }
 
+    // This test is duplicated but not really.. other tests dont test it all way through.
+    #[test]
+    fn test_var_decl_type_mismatch_errors() {
+        let literals_no_ints = get_all_literals_no_arr_no_ints();
+
+        for t in ALL_INT_TYPES_NO_ARR_NO_INFER {
+            for l in &literals_no_ints {
+                let body = vec![var_decl("x", t.clone(), Some(l.clone()))];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+
+                assert!(result.is_err());        
+                assert!(result.unwrap_err().to_string().contains("Type mismatch assigning to"));
+            }
+        }
+    }
+
+
+
+    // Tests the rule:
+    // You cannot move an upstream variable multiple times inside a loop.
+    //
+
+    #[test]
+    fn test_vardecl_moving_upstream_var_in_while_loop_errors() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                var_decl("x", t.clone(), Some(l.clone())),
+                Stmt::While(WhileStmt{
+                        condition: bool_lit(false),
+                        branch: vec![
+                            var_decl("y", t.clone(), Some(var_expr("x")))
+                        ],
+                        span: span(),
+                    }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("variable `x` is potentially moved multiple times"));
+        }
+    }
+
+
+    #[test]
+    fn test_vardecl_moving_upstream_var_in_infinite_loop_errors() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                var_decl("x", t.clone(), Some(l.clone())),
+                Stmt::Infinite(InfiniteStmt{
+                        branch: vec![
+                            var_decl("y", t.clone(), Some(var_expr("x")))
+                        ],
+                        span: span(),
+                    }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("variable `x` is potentially moved multiple times"));
+        }
+    }
+
+    #[test]
+    fn test_vardecl_moving_upstream_var_in_for_loop_errors() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let arr_lit = Expr::ArrayLiteral {
+                elements: vec![],
+                array_ty: t.clone(),
+                span: span(),
+            };
+
+            let body = vec![
+                var_decl("x", t.clone(), Some(l.clone())),
+                var_decl("a", Type::Array(Box::new(t.clone())), Some(arr_lit)),
+                Stmt::For(ForStmt{
+                        holder_name: "e".to_string(),
+                        value: var_expr("a"),
+                        branch: vec![
+                            var_decl("y", t.clone(), Some(var_expr("x")))
+                        ],
+                        span: span(),
+                    }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("variable `x` is potentially moved multiple times"));
+        }
+    }
+
+
+
+
+
+
+
+
+    // Tests the rule: 
+    // You cannot overshadow variables declared in an upstream scope
+    //
+
+    #[test]
+    fn test_vardecl_overshadowing_upstream_var_in_for_loop_holder_errors() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let arr_lit = Expr::ArrayLiteral {
+                elements: vec![],
+                array_ty: t.clone(),
+                span: span(),
+            };
+
+            let body = vec![
+                var_decl("x", t.clone(), Some(l.clone())),
+                var_decl("a", Type::Array(Box::new(t.clone())), Some(arr_lit)),
+                Stmt::For(ForStmt{
+                        holder_name: "x".to_string(),
+                        value: var_expr("a"),
+                        branch: vec![
+                            // Just dummy declaration, so we don't get flagged by dead code because
+                            // of empty branch.
+                            var_decl("z", t.clone(), None),
+                        ],
+                        span: span(),
+                    }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Cannot use variable name `x` in for loop statement as it is already declared"));
+        }
+    }
+
+
+
+    #[test]
+    fn test_vardecl_overshadowing_upstream_var_in_for_loop_errors() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let arr_lit = Expr::ArrayLiteral {
+                elements: vec![],
+                array_ty: t.clone(),
+                span: span(),
+            };
+
+            let body = vec![
+                var_decl("x", t.clone(), Some(l.clone())),
+                var_decl("a", Type::Array(Box::new(t.clone())), Some(arr_lit)),
+                Stmt::For(ForStmt{
+                        holder_name: "e".to_string(),
+                        value: var_expr("a"),
+                        branch: vec![
+                            var_decl("x", t.clone(), Some(l.clone()))
+                        ],
+                        span: span(),
+                    }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("you cannot overshadow upstream variables"));
+        }
+    }
+
+
+
+    #[test]
+    fn test_vardecl_overshadowing_upstream_var_in_while_loop_errors() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                var_decl("x", t.clone(), Some(l.clone())),
+                Stmt::While(WhileStmt{
+                        condition: bool_lit(false),
+                        branch: vec![
+                            var_decl("x", t.clone(), Some(l.clone()))
+                        ],
+                        span: span(),
+                    }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("you cannot overshadow upstream variables"));
+        }
+    }
+
+    #[test]
+    fn test_vardecl_overshadowing_upstream_var_in_infinite_loop_errors() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                var_decl("x", t.clone(), Some(l.clone())),
+                Stmt::Infinite(InfiniteStmt{
+                        branch: vec![
+                            var_decl("x", t.clone(), Some(l.clone()))
+                        ],
+                        span: span(),
+                    }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("you cannot overshadow upstream variables"));
+        }
+    }
+
+
+
+    #[test]
+    fn test_vardecl_overshadowing_upstream_var_in_if_main_branch_errors() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                var_decl("x", t.clone(), Some(l.clone())),
+                Stmt::If(IfStmt{
+                    condition: bool_lit(false),
+                    if_branch: vec![
+                        var_decl("x", t.clone(), Some(l.clone()))
+                    ],
+                    elif_branches: vec![],
+                    else_branch: None,
+                    span: span(),
+                }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("you cannot overshadow upstream variables"));
+        }
+    }
+
+
+    #[test]
+    fn test_vardecl_overshadowing_upstream_var_in_if_else_branch_errors() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                var_decl("x", t.clone(), Some(l.clone())),
+                Stmt::If(IfStmt{
+                    condition: bool_lit(false),
+                    if_branch: vec![
+                        // Just dummy declaration, so we don't get flagged by dead code because
+                        // of empty branch.
+                        var_decl("z", t.clone(), None),
+
+                    ],
+                    elif_branches: vec![],
+                    else_branch: Some(vec![
+                        var_decl("x", t.clone(), Some(l.clone()))
+                    ]),
+                    span: span(),
+                }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("you cannot overshadow upstream variables"));
+        }
+    }
+
+
+    #[test]
+    fn test_vardecl_overshadowing_upstream_var_in_if_elif_branch_errors() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                var_decl("x", t.clone(), Some(l.clone())),
+                Stmt::If(IfStmt{
+                    condition: bool_lit(false),
+                    if_branch: vec![
+                        // Just dummy declaration, so we don't get flagged by dead code because
+                        // of empty branch.
+                        var_decl("z", t.clone(), None),
+                    ],
+                    elif_branches: vec![
+                        (bool_lit(false), vec![
+                            var_decl("x", t.clone(), Some(l.clone()))
+                        ])
+                    ],
+                    else_branch: None,
+                    span: span(),
+                }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("you cannot overshadow upstream variables"));
+        }
+    }
+
+
+
+
+
+
+
+    // Similar tests to above tests, but this for varaible assignment.
+    //
+
+    #[test]
+    fn test_varassign_assign_to_self_doesnt_move() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                var_decl("x", t.clone(), None),
+                var_assign("x", var_expr("x")),
+                var_assign("x", l.clone()),
+
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_ok());
+        }
+    }
+
+
+
 
     #[test]
     fn test_varassign_type_mismatch_errors() {
@@ -715,27 +1071,96 @@ mod blackbox_tests {
 
 
 
+    // Tests the rule:
+    // You cannot move an upstream variable multiple times inside a loop.
+    //
 
-
-
-
-    // This test is duplicated but not really.. other tests dont test it all way through.
     #[test]
-    fn test_var_decl_type_mismatch_errors() {
-        let literals_no_ints = get_all_literals_no_arr_no_ints();
+    fn test_varassign_moving_upstream_var_in_infinite_loop_errors() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                var_decl("x", t.clone(), Some(l.clone())),
+                Stmt::Infinite(InfiniteStmt{
+                        branch: vec![
+                            var_decl("y", t.clone(), Some(l.clone())),
+                            var_assign("y", var_expr("x"))
+                        ],
+                        span: span(),
+                    }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
 
-        for t in ALL_INT_TYPES_NO_ARR_NO_INFER {
-            for l in &literals_no_ints {
-                let body = vec![var_decl("x", t.clone(), Some(l.clone()))];
-                let func = void_func("foo", vec![], body);
-                let mut ast = ast_one(func);
-                let result = check_semantics(&mut ast);
-
-                assert!(result.is_err());        
-                assert!(result.unwrap_err().to_string().contains("Type mismatch assigning to"));
-            }
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("variable `x` is potentially moved multiple times"));
         }
     }
+
+    #[test]
+    fn test_varassign_moving_upstream_var_in_while_loop_errors() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                var_decl("x", t.clone(), Some(l.clone())),
+                Stmt::While(WhileStmt{
+                        condition: bool_lit(false),
+                        branch: vec![
+                            var_decl("y", t.clone(), Some(l.clone())),
+                            var_assign("y", var_expr("x"))
+                        ],
+                        span: span(),
+                    }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("variable `x` is potentially moved multiple times"));
+        }
+    }
+
+
+    #[test]
+    fn test_varassign_moving_upstream_var_in_for_loop_errors() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let arr_lit = Expr::ArrayLiteral {
+                elements: vec![],
+                array_ty: t.clone(),
+                span: span(),
+            };
+
+            let body = vec![
+                var_decl("x", t.clone(), Some(l.clone())),
+                var_decl("a", Type::Array(Box::new(t.clone())), Some(arr_lit)),
+                Stmt::For(ForStmt{
+                        holder_name: "e".to_string(),
+                        value: var_expr("a"),
+                        branch: vec![
+                            var_decl("y", t.clone(), Some(l.clone())),
+                            var_assign("y", var_expr("x"))
+                        ],
+                        span: span(),
+                    }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("variable `x` is potentially moved multiple times"));
+        }
+    }
+
+
+
+
 
 
 
@@ -1241,6 +1666,24 @@ mod blackbox_tests {
 
 
     #[test]
+    fn test_unlock_non_var_expr_errors() {
+        let literals = get_all_literals_no_arr();
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                var_decl("x", t.clone(), Some(l.clone())),
+                Stmt::Unlock(vec![l.clone()]),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Expected variable name, instead got"));
+        }
+    }
+
+
+
+    #[test]
     fn test_unlock_allows_redeclare_same_type() {
         let literals = get_all_literals_no_arr();
         
@@ -1298,6 +1741,88 @@ mod blackbox_tests {
         }
     }
 
+    #[test]
+    fn test_unlock_upstream_variable_in_while_loop_errors() {
+        let literals = get_all_literals_no_arr();
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                var_decl("x", t.clone(), Some(l.clone())),
+                Stmt::While(WhileStmt{
+                        condition: bool_lit(false),
+                        branch: vec![
+                            Stmt::Unlock(vec![var_expr("x")]),
+                        ],
+                        span: span(),
+                    }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("You cannot unlock variable `x` because it is declared upstream"));
+        }
+    }
+
+
+    #[test]
+    fn test_unlock_upstream_variable_in_infinite_loop_errors() {
+        let literals = get_all_literals_no_arr();
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                var_decl("x", t.clone(), Some(l.clone())),
+                Stmt::Infinite(InfiniteStmt{
+                        branch: vec![
+                            Stmt::Unlock(vec![var_expr("x")]),
+                        ],
+                        span: span(),
+                    }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("You cannot unlock variable `x` because it is declared upstream"));
+        }
+    }
+
+
+    #[test]
+    fn test_unlock_upstream_variable_in_for_loop_errors() {
+        let literals = get_all_literals_no_arr();
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let arr_lit = Expr::ArrayLiteral {
+                elements: vec![],
+                array_ty: t.clone(),
+                span: span(),
+            };
+
+
+            let body = vec![
+                var_decl("x", t.clone(), Some(l.clone())),
+                var_decl("a", Type::Array(Box::new(t.clone())), Some(arr_lit)),
+
+                Stmt::For(ForStmt{
+                    holder_name: "i".to_string(),
+                    value: var_expr("a"),
+                    branch: vec![
+                        Stmt::Unlock(vec![var_expr("x")]),
+                    ],
+                    span: span(),
+                }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("You cannot unlock variable `x` because it is declared upstream"));
+        }
+    }
+
+
+
+
+
+
 
     #[test]
     fn test_lock_unlock_lock_unlock_variable() {
@@ -1315,6 +1840,40 @@ mod blackbox_tests {
             let mut ast = ast_one(func);
             let result = check_semantics(&mut ast);
             assert!(result.is_ok());
+        }
+    }
+
+    #[test]
+    fn test_lock_non_var_expr_errors() {
+        let literals = get_all_literals_no_arr();
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                var_decl("x", t.clone(), Some(l.clone())),
+                Stmt::Lock(vec![l.clone()]),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Expected variable name, instead got"));
+        }
+    }
+
+
+
+    #[test]
+    fn test_lock_repeated_var_errors() {
+        let literals = get_all_literals_no_arr();
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                var_decl("x", t.clone(), Some(l.clone())),
+                Stmt::Lock(vec![var_expr("x"), var_expr("x")]),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Lock arguments have duplicated variable"));
         }
     }
 
@@ -1368,6 +1927,91 @@ mod blackbox_tests {
             assert!(result.unwrap_err().to_string().contains("is locked, therefore you cannot overshadow it"));
         }
     }
+
+
+
+    #[test]
+    fn test_lock_upstream_variable_in_while_loop_errors() {
+        let literals = get_all_literals_no_arr();
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                var_decl("x", t.clone(), Some(l.clone())),
+                Stmt::While(WhileStmt{
+                        condition: bool_lit(false),
+                        branch: vec![
+                            Stmt::Lock(vec![var_expr("x")]),
+                        ],
+                        span: span(),
+                    }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("You cannot lock variable `x` because it is declared upstream"));
+        }
+    }
+
+
+    #[test]
+    fn test_lock_upstream_variable_in_infinite_loop_errors() {
+        let literals = get_all_literals_no_arr();
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                var_decl("x", t.clone(), Some(l.clone())),
+                Stmt::Infinite(InfiniteStmt{
+                        branch: vec![
+                            Stmt::Lock(vec![var_expr("x")]),
+                        ],
+                        span: span(),
+                    }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("You cannot lock variable `x` because it is declared upstream"));
+        }
+    }
+
+
+    #[test]
+    fn test_lock_upstream_variable_in_for_loop_errors() {
+        let literals = get_all_literals_no_arr();
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let arr_lit = Expr::ArrayLiteral {
+                elements: vec![],
+                array_ty: t.clone(),
+                span: span(),
+            };
+
+
+            let body = vec![
+                var_decl("x", t.clone(), Some(l.clone())),
+                var_decl("a", Type::Array(Box::new(t.clone())), Some(arr_lit)),
+
+                Stmt::For(ForStmt{
+                    holder_name: "i".to_string(),
+                    value: var_expr("a"),
+                    branch: vec![
+                        Stmt::Lock(vec![var_expr("x")]),
+                    ],
+                    span: span(),
+                }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("You cannot lock variable `x` because it is declared upstream"));
+        }
+    }
+
+
+
+
+
+
 
     // Test for statements with array variables, no literals.
     #[test]
@@ -1511,6 +2155,251 @@ mod blackbox_tests {
 
 
 
+    #[test]
+    fn test_for_statements_with_range_holder_name_is_already_taken_errors() {
+        let literals = get_all_literals_no_arr_str_bool_float();
+
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![ 
+                var_decl("x", t.clone(), Some(l.clone())),
+                Stmt::For(ForStmt{
+                    holder_name: "x".to_string(),
+                    value: Expr::RangeCall{
+                        start: Box::new(l.clone()),
+                        end: Box::new(l.clone()),
+                        span: span()
+                    },
+                    
+                    branch: vec![
+                        // Just dummy declaration, so we don't get flagged by dead code because
+                        // of empty branch.
+                        var_decl("z", t.clone(), None),
+                    ],
+                    span: span(),
+                }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Cannot use variable name `x` in for loop statement as it is already declared"));
+        }
+    }
+
+
+    #[test]
+    fn test_for_statements_with_array_holder_name_is_already_taken_errors() {
+        let literals = get_all_literals_no_arr();
+
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for i in 0..=100 {
+                let elements = vec![l.clone(); i];
+
+                let arr_lit = Expr::ArrayLiteral {
+                    elements: elements.clone(),
+                    array_ty: t.clone(),
+                    span: span(),
+                };
+
+                let body = vec![ 
+                    var_decl("a", Type::Array(Box::new(t.clone())), Some(arr_lit)),
+                    var_decl("x", t.clone(), Some(l.clone())),
+                    Stmt::For(ForStmt{
+                        holder_name: "x".to_string(),
+                        value: var_expr("a"),
+
+                        branch: vec![
+                            // Just dummy declaration, so we don't get flagged by dead code because
+                            // of empty branch.
+                            var_decl("z", t.clone(), None),
+                        ],
+                        span: span(),
+                    }),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("Cannot use variable name `x` in for loop statement as it is already declared"));
+            }
+        }
+    }
+
+
+    #[test]
+    fn test_for_statements_with_no_array_no_range() {
+        let literals = get_all_literals_no_arr();
+
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter())
+        {
+            let body = vec![ 
+                Stmt::For(ForStmt{
+                    holder_name: "x".to_string(),
+                    value: l.clone(),
+                    branch: vec![
+                        // Just dummy declaration, so we don't get flagged by dead code because
+                        // of empty branch.
+                        var_decl("z", t.clone(), None),
+                    ],
+                    span: span(),
+                }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("For loop statement require an expression to be evaulatable to any `Array` type"));
+        }
+    }
+
+
+
+    #[test]
+    fn test_infinite_statements_pass() {
+        for t in ALL_TYPES_NO_ARR_NO_INFER {
+            let body = vec![ 
+                Stmt::Infinite(InfiniteStmt{
+                    branch: vec![
+                        // Just dummy declaration, so we don't get flagged by dead code because
+                        // of empty branch.
+                        var_decl("z", t.clone(), None),
+                    ],
+                    span: span(),
+                }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+
+            let result = check_semantics(&mut ast);
+            assert!(result.is_ok());
+        }
+    }
+
+    // Ensure infinite loops empty branches not allowed
+    #[test]
+    fn test_infinite_statements_empty_branch_errors() {
+        let body = vec![ 
+            Stmt::Infinite(InfiniteStmt{
+                branch: vec![],
+                span: span(),
+            }),
+        ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Infinite loop branch has no statements"));
+    }
+
+
+    // Ensure while loops empty branches are not allowed
+    #[test]
+    fn test_while_statements_empty_branch_errors() {
+        let literals_ints_floats = get_all_literals_no_arr_str_bool();
+
+        for l in literals_ints_floats {
+            for b in ALL_BIN_OP_KIND_COMP {
+                let condition = Expr::BinOp {
+                        left: Box::new(l.clone()),
+                        op: b,
+                        right: Box::new(l.clone()),
+                        span: span(),
+                    };
+
+                let body = vec![ 
+                    Stmt::While(WhileStmt{
+                        condition: condition,
+                        branch: vec![],
+                        span: span(),
+                    }),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("While loop branch has no statements"));
+            }
+        }
+    }
+
+
+    #[test]
+    fn test_for_statements_empty_branch_errors() {
+        let literals = get_all_literals_no_arr();
+
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for i in 0..=100 {
+                let elements = vec![l.clone(); i];
+
+                let arr_lit = Expr::ArrayLiteral {
+                    elements: elements.clone(),
+                    array_ty: t.clone(),
+                    span: span(),
+                };
+
+                let body = vec![ 
+                    var_decl("a", Type::Array(Box::new(t.clone())), Some(arr_lit)),
+                    Stmt::For(ForStmt{
+                        holder_name: "x".to_string(),
+                        value: var_expr("a"),
+
+                        branch: vec![],
+                        span: span(),
+                    }),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("For loop branch has no statements"));
+            }
+        }
+    }
+
+
+
+
+
+
+
+    // Tests while statements without booleans, or binop, or anything that could be evaluated to
+    // bool, is an error.
+    #[test]
+    fn test_while_statements_no_bool_eval_expr_errors() {
+        let literals = get_all_literals_no_arr();
+
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            // Skip bools
+            if *t == Type::Bool {
+                continue
+            }
+            let body = vec![ 
+                Stmt::While(WhileStmt{
+                    condition: l.clone(),
+                    branch: vec![
+                        // Just dummy declaration, so we don't get flagged by dead code because
+                        // of empty branch.
+                        var_decl("z", t.clone(), None),
+                    ],
+                    span: span(),
+                }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("While statement require an expression to be evaulatable to type `bool`"));
+        }
+    }
+
+
 
 
 
@@ -1645,12 +2534,238 @@ mod blackbox_tests {
                 assert!(check_semantics(&mut ast).is_ok());
             }
         }
-
-
-
     }
 
 
+    #[test]
+    fn test_break_statement_no_loop_errors() {
+        let body = vec![ 
+            Stmt::Break(BreakStmt{
+                span: span()
+            })
+        ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Break can only be used in loops"));
+    }
+
+    #[test]
+    fn test_break_statement_in_while_statements() {
+        let literals_ints_floats = get_all_literals_no_arr_str_bool();
+
+        for l in literals_ints_floats {
+            for b in ALL_BIN_OP_KIND_COMP {
+                let condition = Expr::BinOp {
+                        left: Box::new(l.clone()),
+                        op: b,
+                        right: Box::new(l.clone()),
+                        span: span(),
+                    };
+
+                let body = vec![ 
+                    Stmt::While(WhileStmt{
+                        condition: condition,
+                        branch: vec![
+                            Stmt::Break(BreakStmt{
+                                span: span()
+                            }),
+                        ],
+                        span: span(),
+                    }),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+
+                assert!(result.is_ok());
+            }
+        }
+    }
+
+
+    #[test]
+    fn test_break_statement_outside_while_statements_errors() {
+        let literals_ints_floats = get_all_literals_no_arr_str_bool();
+
+        for (l, t) in literals_ints_floats.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for b in ALL_BIN_OP_KIND_COMP {
+                let condition = Expr::BinOp {
+                        left: Box::new(l.clone()),
+                        op: b,
+                        right: Box::new(l.clone()),
+                        span: span(),
+                    };
+
+                let body = vec![ 
+                    Stmt::Break(BreakStmt{
+                        span: span()
+                    }),
+
+                    Stmt::While(WhileStmt{
+                        condition: condition,
+                        branch: vec![
+                            // Just dummy declaration, so we don't get flagged by dead code because
+                            // of empty branch.
+                            var_decl("z", t.clone(), None),
+
+                        ],
+                        span: span(),
+                    }),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+
+                let result = check_semantics(&mut ast);
+
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("Break can only be used in loops"));
+            }
+        }
+        // Same test, but the `break` is after the while loop
+
+        for (l, t) in literals_ints_floats.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for b in ALL_BIN_OP_KIND_COMP {
+                let condition = Expr::BinOp {
+                        left: Box::new(l.clone()),
+                        op: b,
+                        right: Box::new(l.clone()),
+                        span: span(),
+                    };
+
+                let body = vec![ 
+                    Stmt::While(WhileStmt{
+                        condition: condition,
+                        branch: vec![
+                            // Just dummy declaration, so we don't get flagged by dead code because
+                            // of empty branch.
+                            var_decl("z", t.clone(), None),
+
+                        ],
+                        span: span(),
+                    }),
+                    Stmt::Break(BreakStmt{
+                        span: span()
+                    }),
+
+
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+
+                let result = check_semantics(&mut ast);
+
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("Break can only be used in loops"));
+            }
+        }
+    }
+//
+
+    #[test]
+    fn test_break_statement_in_infinite_statements() {
+        let body = vec![ 
+            Stmt::Infinite(InfiniteStmt{
+                branch: vec![
+                    Stmt::Break(BreakStmt{
+                        span: span()
+                    }),
+                ],
+                span: span(),
+            }),
+        ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+
+        assert!(result.is_ok());
+    }
+
+
+    #[test]
+    fn test_break_statement_outside_infinite_statements_errors() {
+
+        for t in ALL_TYPES_NO_ARR_NO_INFER {
+            let body = vec![ 
+                Stmt::Break(BreakStmt{
+                    span: span()
+                }),
+
+                Stmt::Infinite(InfiniteStmt{
+                    branch: vec![
+                        // Just dummy declaration, so we don't get flagged by dead code because
+                        // of empty branch.
+                        var_decl("z", t.clone(), None),
+
+                    ],
+                    span: span(),
+                }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Break can only be used in loops"));
+        }
+
+        // Same test, but the `break` is after the infinite loop
+        for t in ALL_TYPES_NO_ARR_NO_INFER {
+            let body = vec![ 
+                Stmt::Infinite(InfiniteStmt{
+                    branch: vec![
+                        // Just dummy declaration, so we don't get flagged by dead code because
+                        // of empty branch.
+                        var_decl("z", t.clone(), None),
+
+                    ],
+                    span: span(),
+                }),
+                Stmt::Break(BreakStmt{
+                    span: span()
+                }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Break can only be used in loops"));
+        }
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    #[test]
+    fn test_continue_statement_no_loop_errors() {
+        let body = vec![ 
+            Stmt::Continue(ContinueStmt{
+                span: span()
+            })
+        ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Continue can only be used in loops"));
+    }
 
 
 
@@ -2256,8 +3371,602 @@ mod blackbox_tests {
             check_semantics(&mut ast).unwrap();
         }
     }
-    // return statement with multiple values (aka multi-return)
 
+
+    // return statement with multiple values (aka multi-return)
+    // with multi-assignments
+    #[test]
+    fn test_multi_return_assign_correct() {
+        // func pair() (t1, t2,) { return l1, l2 }
+        // func main() { 
+        //  own a t1
+        //  own b t2
+        //  a, b = pair() 
+        //  }
+
+        let literals = get_all_literals_no_arr();
+        let literals_scattered = get_all_literals_no_arr_scattered_order();
+
+        
+        for (((l1, t1), l2), t2) in literals.iter()
+            .zip(ALL_TYPES_NO_ARR.iter())
+            .zip(literals_scattered.iter())
+            .zip(ALL_TYPES_NO_ARR_SCATTERED)
+        {
+            let pair_body = vec![return_stmt(vec![l1.clone(), l2.clone()])];
+            let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
+
+            let body = vec![
+                var_decl("a", t1.clone(), None),
+                var_decl("b", t2.clone(), None),
+
+                Stmt::VarAssignMulti(MultiAssignment{
+                    names: vec!["a".to_string(), "b".to_string()],
+                    value: call_expr("pair", vec![]),
+                    span: span()
+                })
+            ];
+            let main = void_func("main", vec![], body);
+
+            let mut ast = AST { functions: vec![pair, main] };
+            check_semantics(&mut ast).unwrap();
+
+            if let Stmt::VarDecl(v) = &ast.functions[1].body[0] {
+                assert_eq!(v.name, "a");
+                assert_eq!(v.type_name, t1.clone());
+                assert_ne!(v.value, None);
+            } else { panic!("Expected VarDecl") }
+
+
+            if let Stmt::VarDecl(v) = &ast.functions[1].body[1] {
+                assert_eq!(v.name, "b");
+                assert_eq!(v.type_name, t2.clone());
+                assert_ne!(v.value, None);
+            } else { panic!("Expected VarDecl") }
+
+            if let Stmt::VarAssignMulti(ma) = &ast.functions[1].body[2] {
+                assert_eq!(ma.names.len(), 2, "Expected 2 variable names");
+                assert_eq!(ma.names[0], "a");
+                assert_eq!(ma.names[1], "b");
+
+                if let Expr::Call { name, .. } = &ma.value {
+                    assert_eq!(name, "pair");
+                } else { panic!("Expected Call expression, instead got {:?}", ma.value) }
+
+            } else { panic!("Expected VarAssignMulti") }
+        }
+    }
+
+
+    #[test]
+    fn test_multi_return_assign_type_mismatch_errors() {
+        let literals = get_all_literals_no_arr();
+
+
+        // a is mismatch, b is correct
+        for ((l1, t1), t2) in literals.iter()
+            .zip(ALL_TYPES_NO_ARR.iter())
+            .zip(ALL_TYPES_NO_ARR_SCATTERED)
+        {
+            let pair_body = vec![return_stmt(vec![l1.clone(), l1.clone()])];
+            let pair = returning_func("pair", vec![], vec![t1.clone(), t1.clone()], pair_body);
+
+            let body = vec![
+                var_decl("a", t2.clone(), None),
+                var_decl("b", t1.clone(), None),
+
+                Stmt::VarAssignMulti(MultiAssignment{
+                    names: vec!["a".to_string(), "b".to_string()],
+                    value: call_expr("pair", vec![]),
+                    span: span()
+                })
+            ];
+            let main = void_func("main", vec![], body);
+
+            let mut ast = AST { functions: vec![pair, main] };
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Type mismatch for variable `a`"));
+
+        }
+
+        // now b is mismatched while a is correct
+
+        for ((l1, t1), t2) in literals.iter()
+            .zip(ALL_TYPES_NO_ARR.iter())
+            .zip(ALL_TYPES_NO_ARR_SCATTERED)
+        {
+            let pair_body = vec![return_stmt(vec![l1.clone(), l1.clone()])];
+            let pair = returning_func("pair", vec![], vec![t1.clone(), t1.clone()], pair_body);
+
+            let body = vec![
+                var_decl("a", t1.clone(), None),
+                var_decl("b", t2.clone(), None),
+
+                Stmt::VarAssignMulti(MultiAssignment{
+                    names: vec!["a".to_string(), "b".to_string()],
+                    value: call_expr("pair", vec![]),
+                    span: span()
+                })
+            ];
+            let main = void_func("main", vec![], body);
+
+            let mut ast = AST { functions: vec![pair, main] };
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Type mismatch for variable `b`"));
+
+        }
+
+
+
+        // Both mismatched
+    
+        for ((l1, t1), t2) in literals.iter()
+            .zip(ALL_TYPES_NO_ARR.iter())
+            .zip(ALL_TYPES_NO_ARR_SCATTERED)
+        {
+            let pair_body = vec![return_stmt(vec![l1.clone(), l1.clone()])];
+            let pair = returning_func("pair", vec![], vec![t1.clone(), t1.clone()], pair_body);
+
+            let body = vec![
+                var_decl("a", t2.clone(), None),
+                var_decl("b", t2.clone(), None),
+
+                Stmt::VarAssignMulti(MultiAssignment{
+                    names: vec!["a".to_string(), "b".to_string()],
+                    value: call_expr("pair", vec![]),
+                    span: span()
+                })
+            ];
+            let main = void_func("main", vec![], body);
+
+            let mut ast = AST { functions: vec![pair, main] };
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Type mismatch for variable `a`"));
+            // assert!(result.unwrap_err().to_string().contains("Type mismatch for variable `b`"));
+
+        }
+    }
+
+
+
+    #[test]
+    fn test_multi_assign_func_not_return_errors() {
+        for (t1, t2) in ALL_TYPES_NO_ARR_NO_INFER.iter().zip(ALL_TYPES_NO_ARR_SCATTERED)
+        {
+            let pair = void_func("pair", vec![], vec![]);
+
+            let body = vec![
+                var_decl("a", t1.clone(), None),
+                var_decl("b", t2.clone(), None),
+
+                Stmt::VarAssignMulti(MultiAssignment{
+                    names: vec!["a".to_string()],
+                    value: call_expr("pair", vec![]),
+                    span: span()
+                })
+            ];
+            let main = void_func("main", vec![], body);
+
+            let mut ast = AST { functions: vec![pair, main] };
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Function `pair` has no return type declared but is used in an expression"));
+
+        }
+    }
+
+
+    #[test]
+    fn test_multi_assign_undeclared_vars_errors() {
+        let literals = get_all_literals_no_arr();
+        let literals_scattered = get_all_literals_no_arr_scattered_order();
+
+        
+        for (((l1, t1), l2), t2) in literals.iter()
+            .zip(ALL_TYPES_NO_ARR.iter())
+            .zip(literals_scattered.iter())
+            .zip(ALL_TYPES_NO_ARR_SCATTERED)
+        {
+            let pair_body = vec![return_stmt(vec![l1.clone(), l2.clone()])];
+            let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
+
+            let body = vec![
+                var_decl("a", t1.clone(), None),
+
+                Stmt::VarAssignMulti(MultiAssignment{
+                    names: vec!["a".to_string(), "b".to_string()],
+                    value: call_expr("pair", vec![]),
+                    span: span()
+                })
+            ];
+            let main = void_func("main", vec![], body);
+
+            let mut ast = AST { functions: vec![pair, main] };
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Use of undeclared variable `b`"));
+        }
+
+
+        // Same as above, but `a` is undeclared instead of `b`
+        for (((l1, t1), l2), t2) in literals.iter()
+            .zip(ALL_TYPES_NO_ARR.iter())
+            .zip(literals_scattered.iter())
+            .zip(ALL_TYPES_NO_ARR_SCATTERED)
+        {
+            let pair_body = vec![return_stmt(vec![l1.clone(), l2.clone()])];
+            let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
+
+            let body = vec![
+                var_decl("b", t1.clone(), None),
+
+                Stmt::VarAssignMulti(MultiAssignment{
+                    names: vec!["a".to_string(), "b".to_string()],
+                    value: call_expr("pair", vec![]),
+                    span: span()
+                })
+            ];
+            let main = void_func("main", vec![], body);
+
+            let mut ast = AST { functions: vec![pair, main] };
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Use of undeclared variable `a`"));
+        }
+
+
+        // Same as above, but both are undeclared
+        for (((l1, t1), l2), t2) in literals.iter()
+            .zip(ALL_TYPES_NO_ARR.iter())
+            .zip(literals_scattered.iter())
+            .zip(ALL_TYPES_NO_ARR_SCATTERED)
+        {
+            let pair_body = vec![return_stmt(vec![l1.clone(), l2.clone()])];
+            let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
+
+            let body = vec![
+                Stmt::VarAssignMulti(MultiAssignment{
+                    names: vec!["a".to_string(), "b".to_string()],
+                    value: call_expr("pair", vec![]),
+                    span: span()
+                })
+            ];
+            let main = void_func("main", vec![], body);
+
+            let mut ast = AST { functions: vec![pair, main] };
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Use of undeclared variable `a`"));
+            // assert!(result.unwrap_err().to_string().contains("Use of undeclared variable `b`"));
+        }
+    }
+
+
+    #[test]
+    fn test_multi_assign_use_of_moved_vars_errors() {
+        let literals = get_all_literals_no_arr();
+        let literals_scattered = get_all_literals_no_arr_scattered_order();
+
+        
+        for (((l1, t1), l2), t2) in literals.iter()
+            .zip(ALL_TYPES_NO_ARR.iter())
+            .zip(literals_scattered.iter())
+            .zip(ALL_TYPES_NO_ARR_SCATTERED)
+        {
+            let pair_body = vec![return_stmt(vec![l1.clone(), l2.clone()])];
+            let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
+
+            let body = vec![
+                var_decl("a", t1.clone(), None),
+                var_decl("b", t2.clone(), None),
+
+                var_decl("c", t1.clone(), Some(var_expr("a"))),
+
+                Stmt::VarAssignMulti(MultiAssignment{
+                    names: vec!["a".to_string(), "b".to_string()],
+                    value: call_expr("pair", vec![]),
+                    span: span()
+                })
+            ];
+            let main = void_func("main", vec![], body);
+
+            let mut ast = AST { functions: vec![pair, main] };
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Value assignment to moved variable `a`"));
+        }
+
+
+        // Same as above, but this time we move "b" instead of "a"
+        for (((l1, t1), l2), t2) in literals.iter()
+            .zip(ALL_TYPES_NO_ARR.iter())
+            .zip(literals_scattered.iter())
+            .zip(ALL_TYPES_NO_ARR_SCATTERED)
+        {
+            let pair_body = vec![return_stmt(vec![l1.clone(), l2.clone()])];
+            let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
+
+            let body = vec![
+                var_decl("a", t1.clone(), None),
+                var_decl("b", t2.clone(), None),
+
+                var_decl("c", t2.clone(), Some(var_expr("b"))),
+
+                Stmt::VarAssignMulti(MultiAssignment{
+                    names: vec!["a".to_string(), "b".to_string()],
+                    value: call_expr("pair", vec![]),
+                    span: span()
+                })
+            ];
+            let main = void_func("main", vec![], body);
+
+            let mut ast = AST { functions: vec![pair, main] };
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Value assignment to moved variable `b`"));
+        }
+
+
+        // Same as above, but this time we move both "a" and "b"
+        for (((l1, t1), l2), t2) in literals.iter()
+            .zip(ALL_TYPES_NO_ARR.iter())
+            .zip(literals_scattered.iter())
+            .zip(ALL_TYPES_NO_ARR_SCATTERED)
+        {
+            let pair_body = vec![return_stmt(vec![l1.clone(), l2.clone()])];
+            let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
+
+            let body = vec![
+                var_decl("a", t1.clone(), None),
+                var_decl("b", t2.clone(), None),
+
+                var_decl("c", t1.clone(), Some(var_expr("a"))),
+                var_decl("d", t2.clone(), Some(var_expr("b"))),
+
+                Stmt::VarAssignMulti(MultiAssignment{
+                    names: vec!["a".to_string(), "b".to_string()],
+                    value: call_expr("pair", vec![]),
+                    span: span()
+                })
+            ];
+            let main = void_func("main", vec![], body);
+
+            let mut ast = AST { functions: vec![pair, main] };
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Value assignment to moved variable `a`"));
+            // assert!(result.unwrap_err().to_string().contains("Value assignment to moved variable `b`"));
+        }
+    }
+
+
+    #[test]
+    fn test_multi_assign_locked_vars_errors() {
+        let literals = get_all_literals_no_arr();
+        let literals_scattered = get_all_literals_no_arr_scattered_order();
+
+        
+        for (((l1, t1), l2), t2) in literals.iter()
+            .zip(ALL_TYPES_NO_ARR.iter())
+            .zip(literals_scattered.iter())
+            .zip(ALL_TYPES_NO_ARR_SCATTERED)
+        {
+            let pair_body = vec![return_stmt(vec![l1.clone(), l2.clone()])];
+            let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
+
+            let body = vec![
+                var_decl("a", t1.clone(), None),
+                var_decl("b", t2.clone(), None),
+
+                Stmt::Lock(vec![var_expr("a")]),
+
+                Stmt::VarAssignMulti(MultiAssignment{
+                    names: vec!["a".to_string(), "b".to_string()],
+                    value: call_expr("pair", vec![]),
+                    span: span()
+                })
+            ];
+            let main = void_func("main", vec![], body);
+
+            let mut ast = AST { functions: vec![pair, main] };
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Variable `a` is locked"));
+        }
+
+
+        // Same as above, but this locks "b" instead of "a"
+        for (((l1, t1), l2), t2) in literals.iter()
+            .zip(ALL_TYPES_NO_ARR.iter())
+            .zip(literals_scattered.iter())
+            .zip(ALL_TYPES_NO_ARR_SCATTERED)
+        {
+            let pair_body = vec![return_stmt(vec![l1.clone(), l2.clone()])];
+            let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
+
+            let body = vec![
+                var_decl("a", t1.clone(), None),
+                var_decl("b", t2.clone(), None),
+
+                Stmt::Lock(vec![var_expr("b")]),
+
+                Stmt::VarAssignMulti(MultiAssignment{
+                    names: vec!["a".to_string(), "b".to_string()],
+                    value: call_expr("pair", vec![]),
+                    span: span()
+                })
+            ];
+            let main = void_func("main", vec![], body);
+
+            let mut ast = AST { functions: vec![pair, main] };
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Variable `b` is locked"));
+        }
+
+        for (((l1, t1), l2), t2) in literals.iter()
+            .zip(ALL_TYPES_NO_ARR.iter())
+            .zip(literals_scattered.iter())
+            .zip(ALL_TYPES_NO_ARR_SCATTERED)
+        {
+            let pair_body = vec![return_stmt(vec![l1.clone(), l2.clone()])];
+            let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
+
+            let body = vec![
+                var_decl("a", t1.clone(), None),
+                var_decl("b", t2.clone(), None),
+
+                Stmt::Lock(vec![var_expr("a"), var_expr("b")]),
+
+                Stmt::VarAssignMulti(MultiAssignment{
+                    names: vec!["a".to_string(), "b".to_string()],
+                    value: call_expr("pair", vec![]),
+                    span: span()
+                })
+            ];
+            let main = void_func("main", vec![], body);
+
+            let mut ast = AST { functions: vec![pair, main] };
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Variable `a` is locked"));
+            // assert!(result.unwrap_err().to_string().contains("Variable `b` is locked"));
+        }
+    }
+
+
+    #[test]
+    fn test_multi_assign_multi_return_not_func_call_errors() {
+        let literals = get_all_literals_no_arr();
+        let literals_scattered = get_all_literals_no_arr_scattered_order();
+
+
+        for (((l1, t1), l2), t2) in literals.iter()
+            .zip(ALL_TYPES_NO_ARR.iter())
+            .zip(literals_scattered.iter())
+            .zip(ALL_TYPES_NO_ARR_SCATTERED)
+        {
+            let pair_body = vec![return_stmt(vec![l1.clone(), l2.clone()])];
+            let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
+
+            let body = vec![
+                var_decl("a", t1.clone(), None),
+                var_decl("b", t2.clone(), None),
+
+                Stmt::Lock(vec![var_expr("a")]),
+
+                Stmt::VarAssignMulti(MultiAssignment{
+                    names: vec!["a".to_string(), "b".to_string()],
+                    value: l1.clone(),
+                    span: span()
+                })
+            ];
+            let main = void_func("main", vec![], body);
+
+            let mut ast = AST { functions: vec![pair, main] };
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Multi-assignment requires only a single function call on the right-hand side"));
+        }
+    }
+
+
+
+
+    #[test]
+    fn test_multi_assign_return_count_mismatch_errors() {
+        let literals = get_all_literals_no_arr();
+        let literals_scattered = get_all_literals_no_arr_scattered_order();
+
+        
+        for (((l1, t1), l2), t2) in literals.iter()
+            .zip(ALL_TYPES_NO_ARR.iter())
+            .zip(literals_scattered.iter())
+            .zip(ALL_TYPES_NO_ARR_SCATTERED)
+        {
+            let pair_body = vec![return_stmt(vec![l1.clone(), l2.clone()])];
+            let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
+
+            let body = vec![
+                var_decl("a", t1.clone(), None),
+
+                Stmt::VarAssignMulti(MultiAssignment{
+                    names: vec!["a".to_string()],
+                    value: call_expr("pair", vec![]),
+                    span: span()
+                })
+            ];
+            let main = void_func("main", vec![], body);
+
+            let mut ast = AST { functions: vec![pair, main] };
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Return length mismatch"));
+
+        }
+
+
+
+        // Same test b ut this time extra variable
+        for (((l1, t1), l2), t2) in literals.iter()
+            .zip(ALL_TYPES_NO_ARR.iter())
+            .zip(literals_scattered.iter())
+            .zip(ALL_TYPES_NO_ARR_SCATTERED)
+        {
+            let pair_body = vec![return_stmt(vec![l1.clone(), l2.clone()])];
+            let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
+
+            let body = vec![
+                var_decl("a", t1.clone(), None),
+                var_decl("b", t2.clone(), None),
+                var_decl("c", t2.clone(), None),
+
+                Stmt::VarAssignMulti(MultiAssignment{
+                    names: vec!["a".to_string(), "b".to_string(), "c".to_string()],
+                    value: call_expr("pair", vec![]),
+                    span: span()
+                })
+            ];
+            let main = void_func("main", vec![], body);
+
+            let mut ast = AST { functions: vec![pair, main] };
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Return length mismatch"));
+
+        }
+
+
+    }
+
+     
+
+
+
+
+
+
+    // return statement with multiple values (aka multi-return)
+    // with multi-declaration
     #[test]
     fn test_multi_return_decl_correct() {
         // func pair() (t1, t2,) { return l1, l2 }
@@ -2604,7 +4313,7 @@ mod blackbox_tests {
 
 
     #[test]
-    fn test_multi_return_count_mismatch_errors() {
+    fn test_multidec_return_count_mismatch_errors() {
         // pair returns 2 values, but programmer only binds 1 variable
 
         let literals = get_all_literals_no_arr();
