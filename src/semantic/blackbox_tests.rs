@@ -3939,19 +3939,6 @@ mod blackbox_tests {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
     // Test if statements with only literals, with no else, no elif, and no string/bool literals
     #[test]
     fn test_if_statements_ints_floats_literals_same_type() {
