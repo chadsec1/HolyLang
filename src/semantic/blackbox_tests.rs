@@ -2662,7 +2662,6 @@ mod blackbox_tests {
             }
         }
     }
-//
 
     #[test]
     fn test_break_statement_in_infinite_statements() {
@@ -2740,6 +2739,232 @@ mod blackbox_tests {
 
 
 
+    //
+    #[test]
+    fn test_break_statement_in_for_statement_with_arr() {
+        for t in ALL_TYPES_NO_ARR_NO_INFER {
+            let arr_lit = Expr::ArrayLiteral {
+                elements: vec![],
+                array_ty: t.clone(),
+                span: span(),
+            };
+
+            let body = vec![
+                var_decl("a", Type::Array(Box::new(t.clone())), Some(arr_lit)),
+                Stmt::For(ForStmt{
+                        holder_name: "x".to_string(),
+                        value: var_expr("a"),
+                        branch: vec![
+                            Stmt::Break(BreakStmt{
+                                span: span()
+                            }),
+                        ],
+                        span: span(),
+                    }),
+            ];
+
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_ok());
+        }
+    }
+
+
+    #[test]
+    fn test_break_statement_outside_for_statements_with_arr_errors() {
+        for t in ALL_TYPES_NO_ARR_NO_INFER {
+            let arr_lit = Expr::ArrayLiteral {
+                elements: vec![],
+                array_ty: t.clone(),
+                span: span(),
+            };
+
+            let body = vec![
+                Stmt::Break(BreakStmt{
+                    span: span()
+                }),
+
+                var_decl("a", Type::Array(Box::new(t.clone())), Some(arr_lit)),
+                Stmt::For(ForStmt{
+                        holder_name: "x".to_string(),
+                        value: var_expr("a"),
+                        branch: vec![
+                            // Just dummy declaration, so we don't get flagged by dead code because
+                            // of empty branch.
+                            var_decl("z", t.clone(), None),
+                        ],
+                        span: span(),
+                    }),
+            ];
+
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Break can only be used in loops"));
+        }
+
+        // Same test, but the `break` is after the infinite loop
+        for t in ALL_TYPES_NO_ARR_NO_INFER {
+            let arr_lit = Expr::ArrayLiteral {
+                elements: vec![],
+                array_ty: t.clone(),
+                span: span(),
+            };
+
+            let body = vec![
+                var_decl("a", Type::Array(Box::new(t.clone())), Some(arr_lit)),
+                Stmt::For(ForStmt{
+                    holder_name: "x".to_string(),
+                    value: var_expr("a"),
+                    branch: vec![
+                        // Just dummy declaration, so we don't get flagged by dead code because
+                        // of empty branch.
+                        var_decl("z", t.clone(), None),
+                    ],
+                    span: span(),
+                }),
+                Stmt::Break(BreakStmt{
+                    span: span()
+                }),
+            ];
+
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Break can only be used in loops"));
+        }
+    }
+
+
+    // Same as above for statement tests, but this time with RangeCall
+    //
+
+
+    
+    #[test]
+    fn test_break_statement_in_for_statement_with_range() {
+        let literals_ints = get_all_literals_no_arr_str_bool_float();
+        
+        for (l, t) in literals_ints.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![ 
+                Stmt::For(ForStmt{
+                    holder_name: "x".to_string(),
+                    value: Expr::RangeCall{
+                        start: Box::new(l.clone()),
+                        end: Box::new(l.clone()),
+                        span: span()
+                    },
+                    branch: vec![
+                        Stmt::Break(BreakStmt{
+                            span: span()
+                        }),
+                    ],
+                    span: span(),
+                }),
+            ];
+
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_ok());
+
+            if let Stmt::For(fs) = &ast.functions[0].body[0] {
+                assert_eq!(fs.holder_name, "x");
+
+                if let Expr::RangeCall { start, end, .. } = &fs.value {
+                    assert!(matches!(start.as_ref(), Expr::IntLiteral { value, .. } if value.get_type() == t.clone()));
+                    assert!(matches!(end.as_ref(), Expr::IntLiteral { value, .. } if value.get_type() == t.clone()));
+                } else { panic!("Expected RangeCall expression, instead got {:?}", fs.value) }
+
+                assert_eq!(fs.branch.len(), 1);
+                assert!( matches!(fs.branch[0], Stmt::Break(_)), "Expected break statement");
+            } else { panic!("Expected For statement") }
+
+
+
+        }
+    }
+
+
+    #[test]
+    fn test_break_statement_outside_for_statements_with_range_errors() {
+        let literals_ints = get_all_literals_no_arr_str_bool_float();
+        
+        for (l, t) in literals_ints.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![ 
+                Stmt::Break(BreakStmt{
+                    span: span()
+                }),
+
+                Stmt::For(ForStmt{
+                    holder_name: "x".to_string(),
+                    value: Expr::RangeCall{
+                        start: Box::new(l.clone()),
+                        end: Box::new(l.clone()),
+                        span: span()
+                    },
+                    branch: vec![
+                        // Just dummy declaration, so we don't get flagged by dead code because
+                        // of empty branch.
+                        var_decl("z", t.clone(), None),
+                    ],
+                    span: span(),
+                }),
+            ];
+
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Break can only be used in loops"));
+        }
+
+        // Same test, but the `break` is after the infinite loop
+
+        for (l, t) in literals_ints.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![  
+                Stmt::For(ForStmt{
+                    holder_name: "x".to_string(),
+                    value: Expr::RangeCall{
+                        start: Box::new(l.clone()),
+                        end: Box::new(l.clone()),
+                        span: span()
+                    },
+                    branch: vec![
+                        // Just dummy declaration, so we don't get flagged by dead code because
+                        // of empty branch.
+                        var_decl("z", t.clone(), None),
+                    ],
+                    span: span(),
+                }),
+                Stmt::Break(BreakStmt{
+                    span: span()
+                }),
+            ];
+
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Break can only be used in loops"));
+        }
+    }
+
+
+
 
 
 
@@ -2766,6 +2991,432 @@ mod blackbox_tests {
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("Continue can only be used in loops"));
     }
+
+
+
+
+    #[test]
+    fn test_continue_statement_in_while_statements() {
+        let literals_ints_floats = get_all_literals_no_arr_str_bool();
+
+        for l in literals_ints_floats {
+            for b in ALL_BIN_OP_KIND_COMP {
+                let condition = Expr::BinOp {
+                        left: Box::new(l.clone()),
+                        op: b,
+                        right: Box::new(l.clone()),
+                        span: span(),
+                    };
+
+                let body = vec![ 
+                    Stmt::While(WhileStmt{
+                        condition: condition,
+                        branch: vec![
+                            Stmt::Continue(ContinueStmt{
+                                span: span()
+                            }),
+                        ],
+                        span: span(),
+                    }),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+
+                assert!(result.is_ok());
+            }
+        }
+    }
+
+
+    #[test]
+    fn test_continue_statement_outside_while_statements_errors() {
+        let literals_ints_floats = get_all_literals_no_arr_str_bool();
+
+        for (l, t) in literals_ints_floats.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for b in ALL_BIN_OP_KIND_COMP {
+                let condition = Expr::BinOp {
+                        left: Box::new(l.clone()),
+                        op: b,
+                        right: Box::new(l.clone()),
+                        span: span(),
+                    };
+
+                let body = vec![ 
+                    Stmt::Continue(ContinueStmt{
+                        span: span()
+                    }),
+
+                    Stmt::While(WhileStmt{
+                        condition: condition,
+                        branch: vec![
+                            // Just dummy declaration, so we don't get flagged by dead code because
+                            // of empty branch.
+                            var_decl("z", t.clone(), None),
+
+                        ],
+                        span: span(),
+                    }),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+
+                let result = check_semantics(&mut ast);
+
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("Continue can only be used in loops"));
+            }
+        }
+        // Same test, but the `continue` is after the while loop
+
+        for (l, t) in literals_ints_floats.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for b in ALL_BIN_OP_KIND_COMP {
+                let condition = Expr::BinOp {
+                        left: Box::new(l.clone()),
+                        op: b,
+                        right: Box::new(l.clone()),
+                        span: span(),
+                    };
+
+                let body = vec![ 
+                    Stmt::While(WhileStmt{
+                        condition: condition,
+                        branch: vec![
+                            // Just dummy declaration, so we don't get flagged by dead code because
+                            // of empty branch.
+                            var_decl("z", t.clone(), None),
+
+                        ],
+                        span: span(),
+                    }),
+                    Stmt::Continue(ContinueStmt{
+                        span: span()
+                    }),
+
+
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+
+                let result = check_semantics(&mut ast);
+
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("Continue can only be used in loops"));
+            }
+        }
+    }
+
+    #[test]
+    fn test_continue_statement_in_infinite_statements() {
+        let body = vec![ 
+            Stmt::Infinite(InfiniteStmt{
+                branch: vec![
+                    Stmt::Continue(ContinueStmt{
+                        span: span()
+                    }),
+                ],
+                span: span(),
+            }),
+        ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+
+        assert!(result.is_ok());
+    }
+
+
+    #[test]
+    fn test_continue_statement_outside_infinite_statements_errors() {
+        for t in ALL_TYPES_NO_ARR_NO_INFER {
+            let body = vec![ 
+                Stmt::Continue(ContinueStmt{
+                    span: span()
+                }),
+
+                Stmt::Infinite(InfiniteStmt{
+                    branch: vec![
+                        // Just dummy declaration, so we don't get flagged by dead code because
+                        // of empty branch.
+                        var_decl("z", t.clone(), None),
+
+                    ],
+                    span: span(),
+                }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Continue can only be used in loops"));
+        }
+
+        // Same test, but the `continue` is after the infinite loop
+        for t in ALL_TYPES_NO_ARR_NO_INFER {
+            let body = vec![ 
+                Stmt::Infinite(InfiniteStmt{
+                    branch: vec![
+                        // Just dummy declaration, so we don't get flagged by dead code because
+                        // of empty branch.
+                        var_decl("z", t.clone(), None),
+
+                    ],
+                    span: span(),
+                }),
+                Stmt::Continue(ContinueStmt{
+                    span: span()
+                }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Continue can only be used in loops"));
+        }
+    }
+
+
+
+    #[test]
+    fn test_continue_statement_in_for_statement_with_arr() {
+        for t in ALL_TYPES_NO_ARR_NO_INFER {
+            let arr_lit = Expr::ArrayLiteral {
+                elements: vec![],
+                array_ty: t.clone(),
+                span: span(),
+            };
+
+            let body = vec![
+                var_decl("a", Type::Array(Box::new(t.clone())), Some(arr_lit)),
+                Stmt::For(ForStmt{
+                        holder_name: "x".to_string(),
+                        value: var_expr("a"),
+                        branch: vec![
+                            Stmt::Continue(ContinueStmt{
+                                span: span()
+                            }),
+                        ],
+                        span: span(),
+                    }),
+            ];
+
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_ok());
+        }
+    }
+
+
+    #[test]
+    fn test_continue_statement_outside_for_statements_with_arr_errors() {
+        for t in ALL_TYPES_NO_ARR_NO_INFER {
+            let arr_lit = Expr::ArrayLiteral {
+                elements: vec![],
+                array_ty: t.clone(),
+                span: span(),
+            };
+
+            let body = vec![
+                Stmt::Continue(ContinueStmt{
+                    span: span()
+                }),
+
+                var_decl("a", Type::Array(Box::new(t.clone())), Some(arr_lit)),
+                Stmt::For(ForStmt{
+                        holder_name: "x".to_string(),
+                        value: var_expr("a"),
+                        branch: vec![
+                            // Just dummy declaration, so we don't get flagged by dead code because
+                            // of empty branch.
+                            var_decl("z", t.clone(), None),
+                        ],
+                        span: span(),
+                    }),
+            ];
+
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Continue can only be used in loops"));
+        }
+
+        // Same test, but the `continue` is after the infinite loop
+        for t in ALL_TYPES_NO_ARR_NO_INFER {
+            let arr_lit = Expr::ArrayLiteral {
+                elements: vec![],
+                array_ty: t.clone(),
+                span: span(),
+            };
+
+            let body = vec![
+                var_decl("a", Type::Array(Box::new(t.clone())), Some(arr_lit)),
+                Stmt::For(ForStmt{
+                    holder_name: "x".to_string(),
+                    value: var_expr("a"),
+                    branch: vec![
+                        // Just dummy declaration, so we don't get flagged by dead code because
+                        // of empty branch.
+                        var_decl("z", t.clone(), None),
+                    ],
+                    span: span(),
+                }),
+                Stmt::Continue(ContinueStmt{
+                    span: span()
+                }),
+            ];
+
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Continue can only be used in loops"));
+        }
+    }
+
+
+    // Same as above for statement tests, but this time with RangeCall
+    //
+
+
+    
+    #[test]
+    fn test_continue_statement_in_for_statement_with_range() {
+        let literals_ints = get_all_literals_no_arr_str_bool_float();
+        
+        for (l, t) in literals_ints.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![ 
+                Stmt::For(ForStmt{
+                    holder_name: "x".to_string(),
+                    value: Expr::RangeCall{
+                        start: Box::new(l.clone()),
+                        end: Box::new(l.clone()),
+                        span: span()
+                    },
+                    branch: vec![
+                        Stmt::Continue(ContinueStmt{
+                            span: span()
+                        }),
+                    ],
+                    span: span(),
+                }),
+            ];
+
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_ok());
+
+            if let Stmt::For(fs) = &ast.functions[0].body[0] {
+                assert_eq!(fs.holder_name, "x");
+
+                if let Expr::RangeCall { start, end, .. } = &fs.value {
+                    assert!(matches!(start.as_ref(), Expr::IntLiteral { value, .. } if value.get_type() == t.clone()));
+                    assert!(matches!(end.as_ref(), Expr::IntLiteral { value, .. } if value.get_type() == t.clone()));
+                } else { panic!("Expected RangeCall expression, instead got {:?}", fs.value) }
+
+                assert_eq!(fs.branch.len(), 1);
+                assert!( matches!(fs.branch[0], Stmt::Continue(_)), "Expected continue statement");
+            } else { panic!("Expected For statement") }
+
+
+
+        }
+    }
+
+
+    #[test]
+    fn test_continue_statement_outside_for_statements_with_range_errors() {
+        let literals_ints = get_all_literals_no_arr_str_bool_float();
+        
+        for (l, t) in literals_ints.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![ 
+                Stmt::Continue(ContinueStmt{
+                    span: span()
+                }),
+
+                Stmt::For(ForStmt{
+                    holder_name: "x".to_string(),
+                    value: Expr::RangeCall{
+                        start: Box::new(l.clone()),
+                        end: Box::new(l.clone()),
+                        span: span()
+                    },
+                    branch: vec![
+                        // Just dummy declaration, so we don't get flagged by dead code because
+                        // of empty branch.
+                        var_decl("z", t.clone(), None),
+                    ],
+                    span: span(),
+                }),
+            ];
+
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Continue can only be used in loops"));
+        }
+
+        // Same test, but the `continue` is after the infinite loop
+
+        for (l, t) in literals_ints.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![  
+                Stmt::For(ForStmt{
+                    holder_name: "x".to_string(),
+                    value: Expr::RangeCall{
+                        start: Box::new(l.clone()),
+                        end: Box::new(l.clone()),
+                        span: span()
+                    },
+                    branch: vec![
+                        // Just dummy declaration, so we don't get flagged by dead code because
+                        // of empty branch.
+                        var_decl("z", t.clone(), None),
+                    ],
+                    span: span(),
+                }),
+                Stmt::Continue(ContinueStmt{
+                    span: span()
+                }),
+            ];
+
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Continue can only be used in loops"));
+        }
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
