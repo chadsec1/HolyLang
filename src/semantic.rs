@@ -943,16 +943,15 @@ fn check_call(
         }
 
         // If this arg is a variable, mark it moved (same semantics as before)
-        if let Expr::Var { name: vname, span: vspan } = arg_expr {
-            let v = locals.get_mut(vname).ok_or_else(|| {
-                HolyError::Semantic(format!("Use of undeclared variable `{}` (line {} column {})", vname, vspan.line, vspan.column))
-            })?;
+        if let Expr::Var { name: vname, span: _ } = arg_expr {
+            let v = locals.get_mut(vname).expect(
+                &format!("(Compiler bug) infer_expr_type should've already errored if source argument variable didnt exist, but it didnt. arg_expr: {:?}", arg_expr)
+            );
+            
             if v.moved {
-                return Err(HolyError::Semantic(format!(
-                    "Variable `{}` already moved (line {} column {})",
-                    vname, vspan.line, vspan.column
-                )));
+                panic!("(Compiler bug) infer_expr_type should've already errored if source variable is moved, but it didnt. arg_expr: {:?}", arg_expr)
             }
+
             v.moved = true;
         }
     }
