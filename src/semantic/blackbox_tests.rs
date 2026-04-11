@@ -2585,6 +2585,66 @@ mod blackbox_tests {
         }
     }
 
+    #[test]
+    fn test_break_statement_in_if_statement_in_while_statements() {
+        let literals_ints_floats = get_all_literals_no_arr_str_bool();
+
+        for (l, _) in literals_ints_floats.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for b in ALL_BIN_OP_KIND_COMP {
+                let condition = Expr::BinOp {
+                    left: Box::new(l.clone()),
+                    op: b,
+                    right: Box::new(l.clone()),
+                    span: span(),
+                };
+
+                let body = vec![ 
+                    Stmt::While(WhileStmt{
+                        condition: condition.clone(),
+                        branch: vec![
+                            Stmt::If(IfStmt{
+                                condition: condition.clone(),
+                                if_branch: vec![
+                                    Stmt::Break(BreakStmt{
+                                        span: span()
+                                    }),
+                                ],
+                                elif_branches: vec![],
+                                else_branch: None,
+                                span: span(),
+                            }),
+                        ],
+                        span: span(),
+                    }),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+                assert!(result.is_ok());
+
+                if let Stmt::While(ws) = &ast.functions[0].body[0] {
+                    assert_eq!(ws.condition, condition.clone());
+                    assert_eq!(ws.branch.len(), 1);
+                
+                    if let Stmt::If(ifstm) = &ws.branch[0] {
+                        assert_eq!(ifstm.if_branch.len(), 1);
+                        assert_eq!(ifstm.elif_branches.len(), 0);
+                        assert_eq!(ifstm.else_branch, None);
+
+                        assert!( matches!(ifstm.if_branch[0], Stmt::Break(_)), "Expected break statement");
+
+                    } else { panic!("Expected If statement") }
+
+                } else { panic!("Expected While loop statement") }
+            }
+        }
+    }
+
+
+
+
+
+
 
     #[test]
     fn test_break_statement_outside_while_statements_errors() {
@@ -2846,12 +2906,73 @@ mod blackbox_tests {
                 assert!( matches!(fs.branch[0], Stmt::Break(_)), "Expected break statement");
 
             } else { panic!("Expected For loop statement") }
-
-
-
-
         }
     }
+
+    #[test]
+    fn test_break_statement_in_if_statement_in_for_statements_with_arr() {
+        for t in ALL_TYPES_NO_ARR_NO_INFER {
+            let arr_lit = Expr::ArrayLiteral {
+                elements: vec![],
+                array_ty: t.clone(),
+                span: span(),
+            };
+
+            let body = vec![
+                var_decl("a", Type::Array(Box::new(t.clone())), Some(arr_lit.clone())),
+                Stmt::For(ForStmt{
+                        holder_name: "x".to_string(),
+                        value: var_expr("a"),
+                        branch: vec![
+                            Stmt::If(IfStmt{
+                                condition: bool_lit(false),
+                                if_branch: vec![
+                                    Stmt::Break(BreakStmt{
+                                        span: span()
+                                    }),
+                                ],
+                                elif_branches: vec![],
+                                else_branch: None,
+                                span: span(),
+                            }),
+                        ],
+                        span: span(),
+                    }),
+            ];
+
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_ok());
+
+            if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+                assert_eq!(v.name, "a");
+                assert_eq!(v.type_name, Type::Array(Box::new(t.clone())) );
+                assert_eq!(v.value, Some(arr_lit));
+
+            } else { panic!("Expected VarDecl statement") }
+
+            if let Stmt::For(fs) = &ast.functions[0].body[1] {
+                assert_eq!(fs.holder_name, "x");
+                assert_eq!(fs.value, var_expr("a"));
+                assert_eq!(fs.branch.len(), 1);
+            
+                if let Stmt::If(ifstm) = &fs.branch[0] {
+                    assert_eq!(ifstm.if_branch.len(), 1);
+                    assert_eq!(ifstm.elif_branches.len(), 0);
+                    assert_eq!(ifstm.else_branch, None);
+
+                    assert!( matches!(ifstm.if_branch[0], Stmt::Break(_)), "Expected break statement");
+
+                } else { panic!("Expected If statement") }
+
+            } else { panic!("Expected For loop statement") }
+        }
+    }
+
+
+
+
 
 
     #[test]
@@ -2970,11 +3091,70 @@ mod blackbox_tests {
                 assert_eq!(fs.branch.len(), 1);
                 assert!( matches!(fs.branch[0], Stmt::Break(_)), "Expected break statement");
             } else { panic!("Expected For statement") }
-
-
-
         }
     }
+
+
+    #[test]
+    fn test_break_statement_in_if_statement_in_for_statements_with_range() {
+        let literals_ints = get_all_literals_no_arr_str_bool_float();
+        
+        for (l, t) in literals_ints.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![ 
+                Stmt::For(ForStmt{
+                    holder_name: "x".to_string(),
+                    value: Expr::RangeCall{
+                        start: Box::new(l.clone()),
+                        end: Box::new(l.clone()),
+                        span: span()
+                    },
+                    branch: vec![
+                        Stmt::If(IfStmt{
+                            condition: bool_lit(false),
+                            if_branch: vec![
+                                Stmt::Break(BreakStmt{
+                                    span: span()
+                                }),
+                            ],
+                            elif_branches: vec![],
+                            else_branch: None,
+                            span: span(),
+                        }),
+                    ],
+                    span: span(),
+                }),
+            ];
+
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_ok());
+
+
+            if let Stmt::For(fs) = &ast.functions[0].body[0] {
+                assert_eq!(fs.holder_name, "x");
+
+                if let Expr::RangeCall { start, end, .. } = &fs.value {
+                    assert!(matches!(start.as_ref(), Expr::IntLiteral { value, .. } if value.get_type() == t.clone()));
+                    assert!(matches!(end.as_ref(), Expr::IntLiteral { value, .. } if value.get_type() == t.clone()));
+                } else { panic!("Expected RangeCall expression, instead got {:?}", fs.value) }
+            
+                if let Stmt::If(ifstm) = &fs.branch[0] {
+                    assert_eq!(ifstm.if_branch.len(), 1);
+                    assert_eq!(ifstm.elif_branches.len(), 0);
+                    assert_eq!(ifstm.else_branch, None);
+
+                    assert!( matches!(ifstm.if_branch[0], Stmt::Break(_)), "Expected break statement");
+
+                } else { panic!("Expected If statement") }
+
+            } else { panic!("Expected For loop statement") }
+        }
+    }
+
+
+
+
 
 
     #[test]
@@ -3118,6 +3298,65 @@ mod blackbox_tests {
             }
         }
     }
+
+
+    #[test]
+    fn test_continue_statement_in_if_statement_in_while_statements() {
+        let literals_ints_floats = get_all_literals_no_arr_str_bool();
+
+        for (l, _) in literals_ints_floats.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for b in ALL_BIN_OP_KIND_COMP {
+                let condition = Expr::BinOp {
+                    left: Box::new(l.clone()),
+                    op: b,
+                    right: Box::new(l.clone()),
+                    span: span(),
+                };
+
+                let body = vec![ 
+                    Stmt::While(WhileStmt{
+                        condition: condition.clone(),
+                        branch: vec![
+                            Stmt::If(IfStmt{
+                                condition: condition.clone(),
+                                if_branch: vec![
+                                    Stmt::Continue(ContinueStmt{
+                                        span: span()
+                                    }),
+                                ],
+                                elif_branches: vec![],
+                                else_branch: None,
+                                span: span(),
+                            }),
+                        ],
+                        span: span(),
+                    }),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+                assert!(result.is_ok());
+
+                if let Stmt::While(ws) = &ast.functions[0].body[0] {
+                    assert_eq!(ws.condition, condition.clone());
+                    assert_eq!(ws.branch.len(), 1);
+                
+                    if let Stmt::If(ifstm) = &ws.branch[0] {
+                        assert_eq!(ifstm.if_branch.len(), 1);
+                        assert_eq!(ifstm.elif_branches.len(), 0);
+                        assert_eq!(ifstm.else_branch, None);
+
+                        assert!( matches!(ifstm.if_branch[0], Stmt::Continue(_)), "Expected continue statement");
+
+                    } else { panic!("Expected If statement") }
+
+                } else { panic!("Expected While loop statement") }
+            }
+        }
+    }
+
+
+
 
 
     #[test]
@@ -3377,13 +3616,74 @@ mod blackbox_tests {
                 assert!( matches!(fs.branch[0], Stmt::Continue(_)), "Expected continue statement");
 
             } else { panic!("Expected For loop statement") }
-
-
-
-
-
         }
     }
+
+
+    #[test]
+    fn test_continue_statement_in_if_statement_in_for_statements_with_arr() {
+        for t in ALL_TYPES_NO_ARR_NO_INFER {
+            let arr_lit = Expr::ArrayLiteral {
+                elements: vec![],
+                array_ty: t.clone(),
+                span: span(),
+            };
+
+            let body = vec![
+                var_decl("a", Type::Array(Box::new(t.clone())), Some(arr_lit.clone())),
+                Stmt::For(ForStmt{
+                        holder_name: "x".to_string(),
+                        value: var_expr("a"),
+                        branch: vec![
+                            Stmt::If(IfStmt{
+                                condition: bool_lit(false),
+                                if_branch: vec![
+                                    Stmt::Continue(ContinueStmt{
+                                        span: span()
+                                    }),
+                                ],
+                                elif_branches: vec![],
+                                else_branch: None,
+                                span: span(),
+                            }),
+                        ],
+                        span: span(),
+                    }),
+            ];
+
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_ok());
+
+            if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+                assert_eq!(v.name, "a");
+                assert_eq!(v.type_name, Type::Array(Box::new(t.clone())) );
+                assert_eq!(v.value, Some(arr_lit));
+
+            } else { panic!("Expected VarDecl statement") }
+
+            if let Stmt::For(fs) = &ast.functions[0].body[1] {
+                assert_eq!(fs.holder_name, "x");
+                assert_eq!(fs.value, var_expr("a"));
+                assert_eq!(fs.branch.len(), 1);
+            
+                if let Stmt::If(ifstm) = &fs.branch[0] {
+                    assert_eq!(ifstm.if_branch.len(), 1);
+                    assert_eq!(ifstm.elif_branches.len(), 0);
+                    assert_eq!(ifstm.else_branch, None);
+
+                    assert!( matches!(ifstm.if_branch[0], Stmt::Continue(_)), "Expected continue statement");
+
+                } else { panic!("Expected If statement") }
+
+            } else { panic!("Expected For loop statement") }
+        }
+    }
+
+
+
+
 
 
     #[test]
@@ -3502,11 +3802,70 @@ mod blackbox_tests {
                 assert_eq!(fs.branch.len(), 1);
                 assert!( matches!(fs.branch[0], Stmt::Continue(_)), "Expected continue statement");
             } else { panic!("Expected For statement") }
-
-
-
         }
     }
+
+
+    #[test]
+    fn test_continue_statement_in_if_statement_in_for_statements_with_range() {
+        let literals_ints = get_all_literals_no_arr_str_bool_float();
+        
+        for (l, t) in literals_ints.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![ 
+                Stmt::For(ForStmt{
+                    holder_name: "x".to_string(),
+                    value: Expr::RangeCall{
+                        start: Box::new(l.clone()),
+                        end: Box::new(l.clone()),
+                        span: span()
+                    },
+                    branch: vec![
+                        Stmt::If(IfStmt{
+                            condition: bool_lit(false),
+                            if_branch: vec![
+                                Stmt::Continue(ContinueStmt{
+                                    span: span()
+                                }),
+                            ],
+                            elif_branches: vec![],
+                            else_branch: None,
+                            span: span(),
+                        }),
+                    ],
+                    span: span(),
+                }),
+            ];
+
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_ok());
+
+
+            if let Stmt::For(fs) = &ast.functions[0].body[0] {
+                assert_eq!(fs.holder_name, "x");
+
+                if let Expr::RangeCall { start, end, .. } = &fs.value {
+                    assert!(matches!(start.as_ref(), Expr::IntLiteral { value, .. } if value.get_type() == t.clone()));
+                    assert!(matches!(end.as_ref(), Expr::IntLiteral { value, .. } if value.get_type() == t.clone()));
+                } else { panic!("Expected RangeCall expression, instead got {:?}", fs.value) }
+            
+                if let Stmt::If(ifstm) = &fs.branch[0] {
+                    assert_eq!(ifstm.if_branch.len(), 1);
+                    assert_eq!(ifstm.elif_branches.len(), 0);
+                    assert_eq!(ifstm.else_branch, None);
+
+                    assert!( matches!(ifstm.if_branch[0], Stmt::Continue(_)), "Expected continue statement");
+
+                } else { panic!("Expected If statement") }
+
+            } else { panic!("Expected For loop statement") }
+        }
+    }
+
+
+
+
 
 
     #[test]
