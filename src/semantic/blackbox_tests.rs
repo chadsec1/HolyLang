@@ -2680,7 +2680,69 @@ mod blackbox_tests {
         let result = check_semantics(&mut ast);
 
         assert!(result.is_ok());
+        if let Stmt::Infinite(infs) = &ast.functions[0].body[0] {
+            assert_eq!(infs.branch.len(), 1);
+        
+            assert!( matches!(infs.branch[0], Stmt::Break(_)), "Expected break statement");
+
+        } else { panic!("Expected Infinite loop statement") }
     }
+
+    #[test]
+    fn test_break_statement_in_if_statement_in_infinite_statements() {
+        let literals_ints_floats = get_all_literals_no_arr_str_bool();
+
+        for (l, _) in literals_ints_floats.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for b in ALL_BIN_OP_KIND_COMP {
+                let condition = Expr::BinOp {
+                    left: Box::new(l.clone()),
+                    op: b,
+                    right: Box::new(l.clone()),
+                    span: span(),
+                };
+
+                let body = vec![ 
+                    Stmt::Infinite(InfiniteStmt{
+                        branch: vec![
+                            Stmt::If(IfStmt{
+                                condition: condition,
+                                if_branch: vec![
+                                    Stmt::Break(BreakStmt{
+                                        span: span()
+                                    }),
+                                ],
+                                elif_branches: vec![],
+                                else_branch: None,
+                                span: span(),
+                            }),
+                        ],
+                        span: span(),
+                    }),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+                assert!(result.is_ok());
+
+                if let Stmt::Infinite(infs) = &ast.functions[0].body[0] {
+                    assert_eq!(infs.branch.len(), 1);
+                
+                    if let Stmt::If(ifstm) = &infs.branch[0] {
+                        assert_eq!(ifstm.if_branch.len(), 1);
+                        assert_eq!(ifstm.elif_branches.len(), 0);
+                        assert_eq!(ifstm.else_branch, None);
+
+                        assert!( matches!(ifstm.if_branch[0], Stmt::Break(_)), "Expected break statement");
+
+                    } else { panic!("Expected If statement") }
+
+                } else { panic!("Expected Infinite loop statement") }
+            }
+        }
+    }
+
+
+
 
 
     #[test]
@@ -2750,7 +2812,7 @@ mod blackbox_tests {
             };
 
             let body = vec![
-                var_decl("a", Type::Array(Box::new(t.clone())), Some(arr_lit)),
+                var_decl("a", Type::Array(Box::new(t.clone())), Some(arr_lit.clone())),
                 Stmt::For(ForStmt{
                         holder_name: "x".to_string(),
                         value: var_expr("a"),
@@ -2768,6 +2830,26 @@ mod blackbox_tests {
             let result = check_semantics(&mut ast);
 
             assert!(result.is_ok());
+
+            if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+                assert_eq!(v.name, "a");
+                assert_eq!(v.type_name, Type::Array(Box::new(t.clone())) );
+                assert_eq!(v.value, Some(arr_lit));
+
+            } else { panic!("Expected VarDecl statement") }
+
+
+            if let Stmt::For(fs) = &ast.functions[0].body[1] {
+                assert_eq!(fs.holder_name, "x");
+                assert_eq!(fs.value, var_expr("a"));
+                assert_eq!(fs.branch.len(), 1);
+                assert!( matches!(fs.branch[0], Stmt::Break(_)), "Expected break statement");
+
+            } else { panic!("Expected For loop statement") }
+
+
+
+
         }
     }
 
@@ -3010,7 +3092,7 @@ mod blackbox_tests {
 
                 let body = vec![ 
                     Stmt::While(WhileStmt{
-                        condition: condition,
+                        condition: condition.clone(),
                         branch: vec![
                             Stmt::Continue(ContinueStmt{
                                 span: span()
@@ -3024,6 +3106,15 @@ mod blackbox_tests {
                 let result = check_semantics(&mut ast);
 
                 assert!(result.is_ok());
+
+                if let Stmt::While(ws) = &ast.functions[0].body[0] {
+                    assert_eq!(ws.condition, condition);
+                    assert_eq!(ws.branch.len(), 1);
+
+                    assert!( matches!(ws.branch[0], Stmt::Continue(_)), "Expected continue statement");
+
+                } else { panic!("Expected While loop statement") }
+
             }
         }
     }
@@ -3123,7 +3214,68 @@ mod blackbox_tests {
         let result = check_semantics(&mut ast);
 
         assert!(result.is_ok());
+        if let Stmt::Infinite(infs) = &ast.functions[0].body[0] {
+            assert_eq!(infs.branch.len(), 1);
+        
+            assert!( matches!(infs.branch[0], Stmt::Continue(_)), "Expected continue statement");
+
+        } else { panic!("Expected Infinite loop statement") }
     }
+
+
+    #[test]
+    fn test_continue_statement_in_if_statement_in_infinite_statements() {
+        let literals_ints_floats = get_all_literals_no_arr_str_bool();
+
+        for (l, _) in literals_ints_floats.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for b in ALL_BIN_OP_KIND_COMP {
+                let condition = Expr::BinOp {
+                    left: Box::new(l.clone()),
+                    op: b,
+                    right: Box::new(l.clone()),
+                    span: span(),
+                };
+
+                let body = vec![ 
+                    Stmt::Infinite(InfiniteStmt{
+                        branch: vec![
+                            Stmt::If(IfStmt{
+                                condition: condition,
+                                if_branch: vec![
+                                    Stmt::Continue(ContinueStmt{
+                                        span: span()
+                                    }),
+                                ],
+                                elif_branches: vec![],
+                                else_branch: None,
+                                span: span(),
+                            }),
+                        ],
+                        span: span(),
+                    }),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+                assert!(result.is_ok());
+
+                if let Stmt::Infinite(infs) = &ast.functions[0].body[0] {
+                    assert_eq!(infs.branch.len(), 1);
+                
+                    if let Stmt::If(ifstm) = &infs.branch[0] {
+                        assert_eq!(ifstm.if_branch.len(), 1);
+                        assert_eq!(ifstm.elif_branches.len(), 0);
+                        assert_eq!(ifstm.else_branch, None);
+
+                        assert!( matches!(ifstm.if_branch[0], Stmt::Continue(_)), "Expected continue statement");
+
+                    } else { panic!("Expected If statement") }
+
+                } else { panic!("Expected Infinite loop statement") }
+            }
+        }
+    }
+
 
 
     #[test]
@@ -3191,7 +3343,7 @@ mod blackbox_tests {
             };
 
             let body = vec![
-                var_decl("a", Type::Array(Box::new(t.clone())), Some(arr_lit)),
+                var_decl("a", Type::Array(Box::new(t.clone())), Some(arr_lit.clone())),
                 Stmt::For(ForStmt{
                         holder_name: "x".to_string(),
                         value: var_expr("a"),
@@ -3209,6 +3361,27 @@ mod blackbox_tests {
             let result = check_semantics(&mut ast);
 
             assert!(result.is_ok());
+
+            if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+                assert_eq!(v.name, "a");
+                assert_eq!(v.type_name, Type::Array(Box::new(t.clone())) );
+                assert_eq!(v.value, Some(arr_lit));
+
+            } else { panic!("Expected VarDecl statement") }
+
+
+            if let Stmt::For(fs) = &ast.functions[0].body[1] {
+                assert_eq!(fs.holder_name, "x");
+                assert_eq!(fs.value, var_expr("a"));
+                assert_eq!(fs.branch.len(), 1);
+                assert!( matches!(fs.branch[0], Stmt::Continue(_)), "Expected continue statement");
+
+            } else { panic!("Expected For loop statement") }
+
+
+
+
+
         }
     }
 
