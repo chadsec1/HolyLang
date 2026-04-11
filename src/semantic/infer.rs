@@ -70,7 +70,9 @@ pub fn infer_expr_type(
 
     // This is a global guard for all calls to infer_expr_type_handler, to catch most critical bugs
     // within the handler.
-    if t == Type::Infer {
+    // If inferred type is "Infer", or Array most inner type is infer, we panic.
+    //
+    if (t == Type::Infer) || ( matches!(t, Type::Array(_)) && *t.get_array_inner_most_type() == Type::Infer ) {
         panic!(
             "(Compiler bug) Inferred type of the expression is `Infer`, which shouldn't be possible and indicates a bug in either infer_expr_type_handler or in caller's logic.\nexpr: {:?}\nlocals: {:?}\nfun_sigs: {:?}\ninfer_hint: {:?}",
             expr, locals, fun_sigs, infer_hint
