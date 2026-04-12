@@ -19,7 +19,7 @@ mod parse_expr;
 
 
 
-/// Types for HolyLang
+/// Holy Types
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
     Int8,
@@ -41,9 +41,19 @@ pub enum Type {
     Bool,
     String,
     Array(Box<Type>),
+    FixedArray(Box<Type>, FixedArraySize),
+
     /// Indicates this needs to be inferred during semantic analysis
     Infer,
 }
+
+/// Fixed array size can only be represented as a const, or a literal usize.
+#[derive(Debug, Clone, PartialEq)]
+pub enum FixedArraySize {
+    Literal(usize),
+    Const(String)
+}
+
 
 impl Type {
     pub fn is_integer_type(&self) -> bool {
@@ -80,18 +90,40 @@ impl Type {
         return self.is_integer_type() || self.is_floating_type()
     }
 
+    pub fn is_array_type(&self) -> bool {
+        let is_dynm_arr = matches!(self, Type::Array(_));
+        
+        let is_fixed_arr = matches!(self, Type::FixedArray(_, _));
+
+
+        return is_dynm_arr || is_fixed_arr;
+    }
+
 
     pub fn get_array_inner_most_type(&self) -> &Type {
-        if !matches!(self, Type::Array(_)) {
-            panic!("(Compiler bug) Do not call get_inner_most_type unless you are sure Type is an array. Self: {:?}", self);
-        }
-        let mut current = self;
+        if matches!(self, Type::Array(_)) {
+            let mut current = self;
 
-        while let Type::Array(inner) = current {
-            current = inner;
+            while let Type::Array(inner) = current {
+                current = inner;
+            }
+
+            return current;
         }
 
-        current
+
+        if matches!(self, Type::FixedArray(_, _)) {
+            let mut current = self;
+
+            while let Type::FixedArray(inner, _) = current {
+                current = inner;
+            }
+
+            return current;
+        }
+
+
+        panic!("(Compiler bug) Do not call get_inner_most_type unless you are sure Type is an array. Self: {:?}", self);
     }
 }
 
@@ -1224,53 +1256,129 @@ fn parse_typed_array_literal(s: &str, span: Span) -> Result<Expr, HolyError> {
 
 
 
-/// Parse type token like "int32" into `Type`
+
+/// This is NOT meant to be used in any other functions, only within the following functions:
+/// parse_type, parse_array_suffix, parse_base_type
+enum InternalArraySuffix {
+    Dynamic,
+    Fixed(FixedArraySize),
+}
+
 fn parse_type(s: &str, span: &Span) -> Result<Type, HolyError> {
-    let mut token = s.trim();
+    let token = s.trim();
 
     if token.is_empty() {
         return Err(HolyError::Parse(format!(
-                    "Invalid type construction `{}` (line {} column {})",
-                    token, span.line, span.column
-                )))
+            "Invalid type construction `{}` (line {} column {})",
+            token, span.line, span.column
+        )));
     }
 
+    // Split into base name and bracket suffixes at the first '['
+    if let Some(bracket_start) = token.find('[') {
+        let base_str = token[..bracket_start].trim();
+        let suffix_str = &token[bracket_start..];
 
-    let mut depth = 0usize;
-    while token.ends_with("[]") {
-        depth += 1;
-        token = token[..token.len() - 2].trim_end();
+        let base_ty = parse_base_type(base_str, span)?;
+
+        // Collect all suffixes left-to-right: e.g. "[1][]" becomes [Fixed(1), Dynamic]
+        let suffixes = parse_array_suffixes(suffix_str, span)?;
+
+        // Apply them in REVERSE so the rightmost suffix wraps the base first (innermost),
+        // and the leftmost suffix becomes the outermost type.
+        //
+        // int32[1][]  suffixes=[Fixed(1), Dynamic]
+        //   reverse: 
+        //        Dynamic becomes Array(Int32)
+        //        Fixed(1) becomes FixedArray(Array(Int32), 1)
+        let mut ty = base_ty;
+        for suffix in suffixes.iter().rev() {
+            ty = match suffix {
+                InternalArraySuffix::Dynamic       => Type::Array(Box::new(ty)),
+                InternalArraySuffix::Fixed(size)   => Type::FixedArray(Box::new(ty), size.clone()),
+            };
+        }
+        return Ok(ty);
     }
 
-    let mut base = match token {
-        "int8" => Type::Int8,
-        "int16" => Type::Int16,
-        "int32" => Type::Int32,
-        "int64" => Type::Int64,
-        "int128" => Type::Int128,
+    parse_base_type(token, span)
+}
 
-        "byte" => Type::Byte,
-        "uint16" => Type::Uint16,
-        "uint32" => Type::Uint32,
-        "uint64" => Type::Uint64,
-        "uint128" => Type::Uint128,
+/// Parses a suffix string like "[][1][]" into an ordered Vec of InternalArraySuffix.
+fn parse_array_suffixes(s: &str, span: &Span) -> Result<Vec<InternalArraySuffix>, HolyError> {
+    let mut suffixes = Vec::new();
+    let mut rest = s;
 
-        "usize" => Type::Usize,
-        
-        "float32" => Type::Float32,
-        "float64" => Type::Float64,
-        "bool" => Type::Bool,
-        "string" => Type::String,
-        other => return Err(HolyError::Parse(format!(
-                    "Unknown type `{}` (line {} column {})",
-                    other, span.line, span.column
-                )))
-    };
-
-    for _ in 0..depth {
-        base = Type::Array(Box::new(base));
+    while !rest.is_empty() {
+        if rest.starts_with("[]") {
+            suffixes.push(InternalArraySuffix::Dynamic);
+            rest = &rest[2..];
+        } else if rest.starts_with('[') {
+            let close = rest.find(']').ok_or_else(|| {
+                HolyError::Parse(format!(
+                    "Unclosed '[' in type at line {} column {}",
+                    span.line, span.column
+                ))
+            })?;
+            let size_str = rest[1..close].trim();
+            // Empty brackets are handled by the "[]" branch above; reaching here
+            // with an empty size_str means something like "int32[ ]" which is invalid.
+            if size_str.is_empty() {
+                return Err(HolyError::Parse(format!(
+                    "Empty brackets in type at line {} column {}",
+                    span.line, span.column
+                )));
+            }
+            suffixes.push(InternalArraySuffix::Fixed(parse_fixed_array_size(size_str, span)?));
+            rest = &rest[close + 1..];
+        } else {
+            return Err(HolyError::Parse(format!(
+                "Unexpected characters in type suffix `{}` at line {} column {}",
+                rest, span.line, span.column
+            )));
+        }
     }
 
-    Ok(base)
+    Ok(suffixes)
+}
+
+/// Pure base-type lookup with no bracket handling.
+fn parse_base_type(token: &str, span: &Span) -> Result<Type, HolyError> {
+    match token {
+        "int8"    => Ok(Type::Int8),
+        "int16"   => Ok(Type::Int16),
+        "int32"   => Ok(Type::Int32),
+        "int64"   => Ok(Type::Int64),
+        "int128"  => Ok(Type::Int128),
+        "byte"    => Ok(Type::Byte),
+        "uint16"  => Ok(Type::Uint16),
+        "uint32"  => Ok(Type::Uint32),
+        "uint64"  => Ok(Type::Uint64),
+        "uint128" => Ok(Type::Uint128),
+        "usize"   => Ok(Type::Usize),
+        "float32" => Ok(Type::Float32),
+        "float64" => Ok(Type::Float64),
+        "bool"    => Ok(Type::Bool),
+        "string"  => Ok(Type::String),
+        other     => Err(HolyError::Parse(format!(
+            "Unknown type `{}` (line {} column {})",
+            other, span.line, span.column
+        ))),
+    }
+}
+
+
+fn parse_fixed_array_size(s: &str, span: &Span) -> Result<FixedArraySize, HolyError> {
+    if let Ok(n) = s.parse::<usize>() {
+        return Ok(FixedArraySize::Literal(n));
+    }
+
+    helpers::validate_identifier_name(&s)
+        .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+
+    Ok(FixedArraySize::Const(s.to_string()))
+
+
+
 }
 

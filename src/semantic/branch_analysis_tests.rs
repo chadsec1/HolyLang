@@ -1,6 +1,7 @@
 use super::*;
 
 use crate::parser::{
+    IntLiteralValue, FloatLiteralValue,
     ForStmt, IfStmt, WhileStmt, InfiniteStmt, BreakStmt
 };
 

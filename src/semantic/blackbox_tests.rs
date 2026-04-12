@@ -1,5 +1,7 @@
 use super::*;
 use crate::parser::{
+    FixedArraySize, IntLiteralValue, FloatLiteralValue, 
+    UnaryOpKind,
     Param, Variable, VariableAssignment, MultiAssignment, 
     IfStmt, WhileStmt, ForStmt, InfiniteStmt, BreakStmt, ContinueStmt
 };
@@ -5514,7 +5516,7 @@ mod blackbox_tests {
 
     // Invalid array construction (element types mismatch)
     #[test]
-    fn test_array_element_type_mismatch_errors() {
+    fn test_dynmaic_array_element_type_mismatch_errors() {
         let literals_no_ints = get_all_literals_no_arr_no_ints();
         let literals_scattered = get_all_literals_no_arr_scattered_order();
 
@@ -5594,6 +5596,91 @@ mod blackbox_tests {
                 }
             }       
         }
+    }
+
+
+    // Same test, but for fixed size arrays with literal size
+    #[test]
+    fn test_fixed_array_with_literal_size_element_type_mismatch_errors() {
+        let literals_no_ints = get_all_literals_no_arr_no_ints();
+        let literals_scattered = get_all_literals_no_arr_scattered_order();
+
+        
+        // We use no_ints here because if we included int literals, they would get inferred to
+        // correct type if they fit, and since functions return 1 for all ints, they would always
+        // fit.
+        for ((l1, t1), l2) in literals_scattered.iter()
+            .zip(ALL_TYPES_NO_ARR_SCATTERED.iter())
+            .zip(literals_no_ints.iter())
+        {
+            for i in 0..=100 {
+                let mut elements = vec![l1.clone(); i];
+
+                elements.push(l2.clone());
+                
+                let arr_lit = Expr::ArrayLiteral {
+                    elements: elements.clone(),
+                    array_ty: t1.clone(),
+                    span: span(),
+                };
+
+                for i2 in 0..i+1 {
+                    let access = Expr::ArraySingleAccess {
+                        array: Box::new(var_expr("x")),
+                        index: Box::new(usize_lit(i2)),
+                        span: span(),
+                    };
+                    let body = vec![
+                        var_decl("x", Type::FixedArray(Box::new(t1.clone()), FixedArraySize::Literal(i)), Some(arr_lit.clone())),
+                        var_decl("y", t1.clone(), Some(access)),
+                    ];
+                    let func = void_func("foo", vec![], body);
+                    let mut ast = ast_one(func);
+                    let result = check_semantics(&mut ast);
+                    assert!(result.is_err());
+                    assert!(result.unwrap_err().to_string().starts_with("Semantic error: Array element type mismatch: expected"));
+                }
+            }       
+        }
+
+
+        // Same as above, but this time we test with a variable. All literals.
+        let literals = get_all_literals_no_arr();
+        for (((l1, t1), l2), t2) in literals_scattered.iter()
+            .zip(ALL_TYPES_NO_ARR_SCATTERED.iter())
+            .zip(literals.iter())
+            .zip(ALL_TYPES_NO_ARR)
+        {
+            for i in 0..=100 {
+                let mut elements = vec![l1.clone(); i];
+
+                elements.push(var_expr("e"));
+                
+                let arr_lit = Expr::ArrayLiteral {
+                    elements: elements.clone(),
+                    array_ty: t1.clone(),
+                    span: span(),
+                };
+
+                for i2 in 0..i+1 {
+                    let access = Expr::ArraySingleAccess {
+                        array: Box::new(var_expr("x")),
+                        index: Box::new(usize_lit(i2)),
+                        span: span(),
+                    };
+                    let body = vec![
+                        var_decl("e", t2.clone(), Some(l2.clone())),
+                        var_decl("x", Type::FixedArray(Box::new(t1.clone()), FixedArraySize::Literal(i)), Some(arr_lit.clone())),
+                        var_decl("y", t1.clone(), Some(access)),
+                    ];
+                    let func = void_func("foo", vec![], body);
+                    let mut ast = ast_one(func);
+                    let result = check_semantics(&mut ast);
+                    assert!(result.is_err());
+                    assert!(result.unwrap_err().to_string().starts_with("Semantic error: Array element type mismatch: expected"));
+                }
+            }       
+        }
 
 
     }
@@ -5601,9 +5688,13 @@ mod blackbox_tests {
 
 
 
+
+
+
+
     // array invalid access patterns errors checks
     #[test]
-    fn test_array_out_of_bounds_single_access_errors() {
+    fn test_dynamic_array_out_of_bounds_single_access_errors() {
         // own arr t[] = [l, l, l]
         // own x t = arr[i]  (out of bounds)
         // i starts from 3 up to 10k
@@ -5636,8 +5727,47 @@ mod blackbox_tests {
         }
     }
 
+
+
     #[test]
-    fn test_array_access_not_usize_var_errors() {
+    fn test_fixed_array_out_of_bounds_single_access_errors() {
+        // own arr t[3] = [l, l, l]
+        // own x t = arr[i]  (out of bounds)
+        // i starts from 3 up to 10k
+
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for i in 3..=10000 {
+                let arr_lit = Expr::ArrayLiteral {
+                    elements: vec![l.clone(), l.clone(), l.clone()],
+                    array_ty: t.clone(),
+                    span: span(),
+                };
+                let access = Expr::ArraySingleAccess {
+                    array: Box::new(var_expr("arr")),
+                    index: Box::new(usize_lit(i)),
+                    span: span(),
+                };
+                let body = vec![
+                    var_decl("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(3)), Some(arr_lit.clone())),
+                    // var_decl("arr", Type::Array(Box::new(t.clone())), Some(arr_lit)),
+                    var_decl("x", t.clone(), Some(access)),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("out-of-bounds"));
+            }
+            
+        }
+    }
+
+
+
+    #[test]
+    fn test_dynamic_array_access_not_usize_var_errors() {
         let literals = get_all_literals_no_arr_no_usize();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR_NO_USIZE.iter()) {
@@ -5664,12 +5794,41 @@ mod blackbox_tests {
         }
     }
 
+    #[test]
+    fn test_fixed_array_access_not_usize_var_errors() {
+        let literals = get_all_literals_no_arr_no_usize();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR_NO_USIZE.iter()) {
+            let arr_lit = Expr::ArrayLiteral {
+                elements: vec![l.clone(), l.clone(), l.clone()],
+                array_ty: t.clone(),
+                span: span(),
+            };
+            let access = Expr::ArraySingleAccess {
+                array: Box::new(var_expr("arr")),
+                index: Box::new(var_expr("e")),
+                span: span(),
+            };
+            let body = vec![
+                var_decl("e", t.clone(), Some(l.clone())),
+                var_decl("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(3)), Some(arr_lit.clone())),
+                var_decl("x", t.clone(), Some(access)),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Expected array index to be of type"));
+        }
+    }
+
+
 
 
 
 
     #[test]
-    fn test_array_out_of_bounds_multiple_access_errors() {
+    fn test_dynamic_array_out_of_bounds_multiple_access_errors() {
         // own arr t[] = [l, l, l]
         // own x t = arr[0:i]  (out of bounds)
         // i starts from 3 up to 10k
@@ -5702,6 +5861,46 @@ mod blackbox_tests {
             }
         }
     }
+
+
+    #[test]
+    fn test_fixed_array_out_of_bounds_multiple_access_errors() {
+        // own arr t[3] = [l, l, l]
+        // own x t = arr[0:i]  (out of bounds)
+        // i starts from 3 up to 10k
+
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for i in 3..=10000 {
+                let arr_lit = Expr::ArrayLiteral {
+                    elements: vec![l.clone(), l.clone(), l.clone()],
+                    array_ty: t.clone(),
+                    span: span(),
+                };
+
+                let access = Expr::ArrayMultipleAccess {
+                    array: Box::new(var_expr("arr")),
+                    start: Some(Box::new(usize_lit(0))),
+                    end: Some(Box::new(usize_lit(i))),
+                    span: span(),
+                };
+                let body = vec![
+                    var_decl("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(3)), Some(arr_lit.clone())),
+                    var_decl("x", t.clone(), Some(access)),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("out-of-bounds"));
+            }
+        }
+    }
+
+
+
+
 
 
     #[test]

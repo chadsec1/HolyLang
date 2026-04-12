@@ -1,3 +1,7 @@
+use crate::parser::{
+    IntLiteralValue, FloatLiteralValue
+};
+
 use super::*;
 
 // When variable is declared like
