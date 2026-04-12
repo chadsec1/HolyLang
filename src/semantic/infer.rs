@@ -253,8 +253,13 @@ fn infer_expr_type_hazmat(
 
                     // Because we are accessing (or shall I say copying) a single element of an array
                     // we only care about the inner type, not the outer array type.
+                    //
                     if let Type::Array(unarrayed_ty) = &info.ty {
                         Ok(*unarrayed_ty.clone())
+
+                    } else if let Type::FixedArray(unarrayed_ty, _) = &info.ty {
+                        Ok(*unarrayed_ty.clone())
+                  
                     } else {
                         panic!("(Compiler bug) Expected array type, instead we got: {:?}", info.ty);
                     }
@@ -351,6 +356,12 @@ fn infer_expr_type_hazmat(
                         // We are fine returning Type wrapping in Aray, because thats what the
                         // caller should expect anyway. x[s:e] always returns an array.
                         Ok(info.ty.clone())
+
+                    // NOTE: Perhaps I should return a dynamic area when you slice a fixed array...
+                    // idk 
+                    } else if let Type::FixedArray(_, _) = &info.ty {
+                        Ok(info.ty.clone())
+
                     }  else {
                         panic!("(Compiler bug) Expected array type, instead we got: {:?}", info.ty);
                     }

@@ -1438,7 +1438,7 @@ mod blackbox_tests {
     }
 
     #[test]
-    fn test_default_array_is_empty() {
+    fn test_default_dynamic_array_is_empty() {
         for t in ALL_TYPES_NO_ARR_NO_INFER {
             let body = vec![var_decl("arr", Type::Array(Box::new(t.clone())), None)];
             let func = void_func("foo", vec![], body);
@@ -1455,6 +1455,25 @@ mod blackbox_tests {
             }
         }
     }
+
+
+    #[test]
+    fn test_default_fixed_array_errors() {
+        for t in ALL_TYPES_NO_ARR_NO_INFER {
+            for i in 0..=100 {
+                let body = vec![
+                    var_decl("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i)), None)
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("Default values are not allowed for fixed-size arrays"));
+            }
+        }
+    }
+
+
 
 
     #[test]
@@ -5900,12 +5919,8 @@ mod blackbox_tests {
 
 
 
-
-
-
     #[test]
-    fn test_array_valid_access_passes() {
-
+    fn test_dynamic_array_valid_access_passes() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -5937,9 +5952,44 @@ mod blackbox_tests {
     }
 
 
+    #[test]
+    fn test_fixed_array_valid_access_passes() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for i in 0..=100 {
+                let elements = vec![l.clone(); i + 1];
+                
+                let arr_lit = Expr::ArrayLiteral {
+                    elements: elements,
+                    array_ty: t.clone(),
+                    span: span(),
+                };
+
+                for i2 in 0..i+1 {
+                    let access = Expr::ArraySingleAccess {
+                        array: Box::new(var_expr("arr")),
+                        index: Box::new(usize_lit(i2)),
+                        span: span(),
+                    };
+                    let body = vec![
+                        var_decl("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), Some(arr_lit.clone())),
+                        var_decl("x", t.clone(), Some(access)),
+                    ];
+                    let func = void_func("foo", vec![], body);
+                    let mut ast = ast_one(func);
+                    check_semantics(&mut ast).unwrap();
+                }
+            }       
+        }
+    }
+
+
+
+
     // Because array access index variables are always copied.
     #[test]
-    fn test_array_valid_access_variable_copy_errors() {
+    fn test_dynamic_array_valid_access_variable_copy_errors() {
 
         let literals = get_all_literals_no_arr();
         
@@ -5978,6 +6028,51 @@ mod blackbox_tests {
             }       
         }
     }
+
+
+    #[test]
+    fn test_fixed_array_valid_access_variable_copy_errors() {
+
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for i in 0..=100 {
+                let elements = vec![l.clone(); i + 1];
+                
+            
+                
+                let arr_lit = Expr::ArrayLiteral {
+                    elements: elements,
+                    array_ty: t.clone(),
+                    span: span(),
+                };
+
+                for i2 in 0..i+1 {
+                
+                    let copy_var = Expr::CopyCall { expr: Box::new(var_expr("e")), span: span() };
+                    let access = Expr::ArraySingleAccess {
+                        array: Box::new(var_expr("arr")),
+                        index: Box::new(copy_var),
+                        span: span(),
+                    };
+
+                    let body = vec![
+                        var_decl("e", Type::Usize, Some(usize_lit(i2))),
+                        var_decl("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), Some(arr_lit.clone())),
+                        var_decl("x", t.clone(), Some(access)),
+                    ];
+                    let func = void_func("foo", vec![], body);
+                    let mut ast = ast_one(func);
+                    let result = check_semantics(&mut ast);
+                    assert!(result.is_err());
+                    assert!(result.unwrap_err().to_string().contains("You do not need to Copy an index when you are accessing an array, it is always copied. Remove the copy call"));
+                }
+            }       
+        }
+    }
+
+
+
 
 
 
@@ -6058,7 +6153,7 @@ mod blackbox_tests {
 
 
     #[test]
-    fn test_array_access_on_moved_variable_errors() {
+    fn test_dynamic_array_access_on_moved_variable_errors() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -6093,12 +6188,50 @@ mod blackbox_tests {
         }
     }
 
+    #[test]
+    fn test_fix_array_access_on_moved_variable_errors() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for i in 0..=100 {
+                let elements = vec![l.clone(); i + 1];
+                
+                let arr_lit = Expr::ArrayLiteral {
+                    elements: elements,
+                    array_ty: t.clone(),
+                    span: span(),
+                };
+
+                for i2 in 0..i+1 {
+                    let access = Expr::ArraySingleAccess {
+                        array: Box::new(var_expr("a")),
+                        index: Box::new(usize_lit(i2)),
+                        span: span(),
+                    };
+                    let body = vec![
+                        var_decl("a", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), Some(arr_lit.clone())),
+                        // move a to x
+                        var_decl("x", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), Some(var_expr("a"))),
+                        var_decl("y", t.clone(), Some(access)),
+                    ];
+                    let func = void_func("foo", vec![], body);
+                    let mut ast = ast_one(func);
+                    let result = check_semantics(&mut ast);
+                    assert!(result.is_err());
+                    assert!(result.unwrap_err().to_string().starts_with("Semantic error: Array access on moved variable `a`"));
+                }
+            }       
+        }
+    }
+
+
+
 
 
     // We dont use should_panic here because we test multiplecases like literals, arrays of
     // different types, etc.
     #[test]
-    fn test_array_multiple_access_without_start_and_end_panics() {
+    fn test_dynamic_array_multiple_access_without_start_and_end_panics() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -6134,8 +6267,43 @@ mod blackbox_tests {
 
 
     #[test]
-    fn test_array_valid_multiple_access_both_ends_passes() {
+    fn test_fixed_array_multiple_access_without_start_and_end_panics() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for i in 1..=100 {
+                let elements = vec![l.clone(); i + 1];
+                
+                let arr_lit = Expr::ArrayLiteral {
+                    elements: elements,
+                    array_ty: t.clone(),
+                    span: span(),
+                };
 
+                let access = Expr::ArrayMultipleAccess {
+                    array: Box::new(var_expr("arr")),
+                    start: None,
+                    end: None,
+                    span: span(),
+                };
+                let body = vec![
+                    var_decl("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), Some(arr_lit.clone())),
+                    var_decl("x", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), Some(access)),
+                ];
+                let func = void_func("foo", vec![], body);
+                let result = std::panic::catch_unwind(|| { 
+                    let mut ast = ast_one(func);
+                    let _ = check_semantics(&mut ast);
+                });
+
+                assert!(result.is_err(), "Expected panic for: {:?} {:?}", t, l);
+            }
+        }
+    }
+
+
+    #[test]
+    fn test_dynamic_array_valid_multiple_access_both_ends_passes() {
         // This is no black magic voodooo.. not too much of it at least.. idk..
         // This is just creating an array of dynamic sizes, and testing slicing it aka multiple
         // access
@@ -6173,7 +6341,7 @@ mod blackbox_tests {
 
     // Same as above test, but this makes start and end variables instead of literals
     #[test]
-    fn test_array_valid_multiple_access_both_ends_vars_passes() {
+    fn test_dynamic_array_valid_multiple_access_both_ends_vars_passes() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -6207,10 +6375,11 @@ mod blackbox_tests {
         }
     }
 
+
     // Same as above test, but this makes start usize var, but end is not usize
     // and vice versa.
     #[test]
-    fn test_array_valid_multiple_access_both_ends_vars_start_not_usize_errors() {
+    fn test_dynamic_array_valid_multiple_access_both_ends_vars_start_not_usize_errors() {
         let literals_no_usize = get_all_literals_no_arr_no_usize();
         
         for (l, t) in literals_no_usize.iter().zip(ALL_TYPES_NO_ARR_NO_USIZE.iter()) {
@@ -6280,6 +6449,170 @@ mod blackbox_tests {
     }
  
 
+    
+//
+
+
+    #[test]
+    fn test_fixed_array_valid_multiple_access_both_ends_passes() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for i in 2..100 {
+                let elements = vec![l.clone(); i + 1];
+                
+                let arr_lit = Expr::ArrayLiteral {
+                    elements: elements,
+                    array_ty: t.clone(),
+                    span: span(),
+                };
+
+                for i2 in 0..i-1 {
+                    let access = Expr::ArrayMultipleAccess {
+                        array: Box::new(var_expr("arr")),
+                        start: Some(Box::new(usize_lit(1))),
+                        end: Some(Box::new(usize_lit(i2+1))),
+                        span: span(),
+                    };
+                    let body = vec![
+                        var_decl("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), Some(arr_lit.clone())),
+                        var_decl("x", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), Some(access)),
+                    ];
+                    let func = void_func("foo", vec![], body);
+                    let mut ast = ast_one(func);
+                    check_semantics(&mut ast).unwrap();
+                }       
+            }
+        }
+    }
+
+
+    // Same as above test, but this makes start and end variables instead of literals
+    #[test]
+    fn test_fixed_array_valid_multiple_access_both_ends_vars_passes() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for i in 2..100 {
+                let elements = vec![l.clone(); i + 1];
+                
+                let arr_lit = Expr::ArrayLiteral {
+                    elements: elements,
+                    array_ty: t.clone(),
+                    span: span(),
+                };
+
+                for i2 in 0..i-1 {
+                    let access = Expr::ArrayMultipleAccess {
+                        array: Box::new(var_expr("arr")),
+                        start: Some(Box::new(var_expr("e"))),
+                        end: Some(Box::new(var_expr("h"))),
+                        span: span(),
+                    };
+                    let body = vec![
+                        var_decl("e", Type::Usize, Some(usize_lit(1))),
+                        var_decl("h", Type::Usize, Some(usize_lit(i2+1))),
+                        var_decl("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), Some(arr_lit.clone())),
+                        var_decl("x", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), Some(access)),
+                    ];
+                    let func = void_func("foo", vec![], body);
+                    let mut ast = ast_one(func);
+                    check_semantics(&mut ast).unwrap();
+                }       
+            }
+        }
+    }
+
+
+    // Same as above test, but this makes start usize var, but end is not usize
+    // and vice versa.
+    #[test]
+    fn test_fixed_array_valid_multiple_access_both_ends_vars_start_not_usize_errors() {
+        let literals_no_usize = get_all_literals_no_arr_no_usize();
+        
+        for (l, t) in literals_no_usize.iter().zip(ALL_TYPES_NO_ARR_NO_USIZE.iter()) {
+            for i in 2..100 {
+                let elements = vec![l.clone(); i + 1];
+                
+                let arr_lit = Expr::ArrayLiteral {
+                    elements: elements,
+                    array_ty: t.clone(),
+                    span: span(),
+                };
+
+                for i2 in 0..i-1 {
+                    let access = Expr::ArrayMultipleAccess {
+                        array: Box::new(var_expr("arr")),
+                        start: Some(Box::new(var_expr("e"))),
+                        end: Some(Box::new(var_expr("h"))),
+                        span: span(),
+                    };
+                    let body = vec![
+                        var_decl("e", t.clone(), Some(l.clone())),
+                        var_decl("h", Type::Usize, Some(usize_lit(i2+1))),
+                        var_decl("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), Some(arr_lit.clone())),
+                        var_decl("x", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), Some(access)),
+                    ];
+                    let func = void_func("foo", vec![], body);
+                    let mut ast = ast_one(func);
+                    let result = check_semantics(&mut ast);
+                    assert!(result.is_err());
+                    assert!(result.unwrap_err().to_string().starts_with("Semantic error: Expected start index to be of type `usize` for array"));
+
+                }       
+            }
+        }
+
+        // Same as above, but a little weaker because we can't do i2+1 for l.. its just always 1.
+
+        for (l, t) in literals_no_usize.iter().zip(ALL_TYPES_NO_ARR_NO_USIZE.iter()) {
+            for i in 2..100 {
+                let elements = vec![l.clone(); i + 1];
+                
+                let arr_lit = Expr::ArrayLiteral {
+                    elements: elements,
+                    array_ty: t.clone(),
+                    span: span(),
+                };
+
+                let access = Expr::ArrayMultipleAccess {
+                    array: Box::new(var_expr("arr")),
+                    start: Some(Box::new(var_expr("e"))),
+                    end: Some(Box::new(var_expr("h"))),
+                    span: span(),
+                };
+                let body = vec![
+                    var_decl("e", Type::Usize, Some(usize_lit(1))),
+                    var_decl("h", t.clone(), Some(l.clone())),
+                    var_decl("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), Some(arr_lit.clone())),
+                    var_decl("x", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), Some(access)),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().starts_with("Semantic error: Expected end index to be of type `usize` for array"));
+            }
+        }
+    }
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     // Similar to above test(s), except here we attempt to access a literal instead of array variable, which
     // should always error
     #[test]
@@ -6305,6 +6638,8 @@ mod blackbox_tests {
             }
         }
     }
+
+
 
 
     // Array access on non-array variable
