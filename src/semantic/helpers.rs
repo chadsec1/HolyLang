@@ -1,3 +1,7 @@
+use crate::parser::{
+    IntLiteralValue, FloatLiteralValue
+};
+
 use super::*;
 
 // When variable is declared like
@@ -20,7 +24,7 @@ pub fn assign_default_value_for_type(expr: &mut Option<Expr>, ty: &Type, span: S
                         ty, expr);
     }
         
-    if matches!(*ty, Type::Array(_)) {
+    if ty.is_array_type() {
         let inner_most_type = ty.get_array_inner_most_type();
 
         if *inner_most_type == Type::Infer {
@@ -44,51 +48,23 @@ pub fn assign_default_value_for_type(expr: &mut Option<Expr>, ty: &Type, span: S
 
     
     match ty {
-        Type::Int8 => {
-            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Int8(0), span: span })
-        }
-        Type::Int16 => {
-            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Int16(0), span: span })
-        }
-        Type::Int32 => {
-            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Int32(0), span: span })
-        }
-        Type::Int64 => {
-            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Int64(0), span: span })
-        }
-        Type::Int128 => {
-            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Int128(0), span: span })
-        }
-       
-        Type::Usize => {
-            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Usize(0), span: span })
-        }
-        Type::Byte => {
-            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Byte(0), span: span })
-        }
-        Type::Uint16 => {
-            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Uint16(0), span: span })
-        }
-        Type::Uint32 => {
-            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Uint32(0), span: span })
-        }
-        Type::Uint64 => {
-            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Uint64(0), span: span })
-        }
-        Type::Uint128 => {
-            *expr = Some(Expr::IntLiteral { value: IntLiteralValue::Uint128(0), span: span })
-        }
-
-        Type::Float32 => {
-            *expr = Some(Expr::FloatLiteral { value: FloatLiteralValue::Float32(0.0), span: span })
-        }
-
-        Type::Float64 => {
-            *expr = Some(Expr::FloatLiteral { value: FloatLiteralValue::Float64(0.0), span: span })
-        }
-
-        Type::Bool => {
-            *expr = Some(Expr::BoolLiteral { value: false, span: span })
+        Type::Int8 
+        | Type::Int16 
+        | Type::Int32
+        | Type::Int64 
+        | Type::Int128 
+        | Type::Byte
+        | Type::Uint16
+        | Type::Uint32
+        | Type::Uint64
+        | Type::Uint128
+        | Type::Usize
+        | Type::Float32
+        | Type::Float64
+        | Type::Bool
+        | Type::String
+            => {
+            *expr = Some(get_default_expr_for_type_hazmat(ty, span))
         }
 
         Type::Array(inner) => {
@@ -96,12 +72,18 @@ pub fn assign_default_value_for_type(expr: &mut Option<Expr>, ty: &Type, span: S
             *expr = Some(Expr::ArrayLiteral { elements: Vec::new(), array_ty: *inner_ty, span: span })
         }
 
-        Type::String => {
-            *expr = Some(Expr::StringLiteral { value: "".to_string(), span: span })
+
+        Type::FixedArray(_, _) => {
+            // TODO: In future, allow default fixed array types to have default values. up tp its
+            // size.
+            //
+            // for now i will just error
+            return Err(HolyError::Semantic(format!(
+                    "Default values are not allowed for fixed-size arrays (line {} column {})",
+                    span.line, span.column
+                )));
+
         }
-
-
-
 
         _ => {
             panic!("(Compiler bug) Cannot assign default value for type `{}` because the expression holder type is Non-literal. Expression: {:?}\nDont call this on non-literals.", 
@@ -111,6 +93,36 @@ pub fn assign_default_value_for_type(expr: &mut Option<Expr>, ty: &Type, span: S
 
     Ok(())
 }
+
+
+fn get_default_expr_for_type_hazmat(ty: &Type, span: Span) -> Expr {
+    match ty {
+        Type::Int8 => Expr::IntLiteral { value: IntLiteralValue::Int8(0), span: span },
+        Type::Int16 => Expr::IntLiteral { value: IntLiteralValue::Int16(0), span: span },
+        Type::Int32 => Expr::IntLiteral { value: IntLiteralValue::Int32(0), span: span },
+
+        Type::Int64 => Expr::IntLiteral { value: IntLiteralValue::Int64(0), span: span },
+        Type::Int128 => Expr::IntLiteral { value: IntLiteralValue::Int128(0), span: span },
+
+        Type::Usize => Expr::IntLiteral { value: IntLiteralValue::Usize(0), span: span },
+        Type::Byte => Expr::IntLiteral { value: IntLiteralValue::Byte(0), span: span },
+        Type::Uint16 => Expr::IntLiteral { value: IntLiteralValue::Uint16(0), span: span },
+        Type::Uint32 => Expr::IntLiteral { value: IntLiteralValue::Uint32(0), span: span },
+        Type::Uint64 => Expr::IntLiteral { value: IntLiteralValue::Uint64(0), span: span },
+        Type::Uint128 => Expr::IntLiteral { value: IntLiteralValue::Uint128(0), span: span },
+
+        Type::Float32 => Expr::FloatLiteral { value: FloatLiteralValue::Float32(0.0), span: span },
+        Type::Float64 => Expr::FloatLiteral { value: FloatLiteralValue::Float64(0.0), span: span },
+
+        Type::Bool => Expr::BoolLiteral { value: false, span: span },
+
+        Type::String => Expr::StringLiteral { value: "".to_string(), span: span },
+
+        other => panic!("(Compiler bug) do not call this function on `{:?}` types", other)
+    }
+}
+
+
 
 
 /// Decide whether two types are compatible for assignment / matching.

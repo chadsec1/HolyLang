@@ -1,5 +1,10 @@
 use super::*;
 
+
+use crate::parser::{
+    IntLiteralValue, FloatLiteralValue
+};
+
 use crate::tests_consts::{
     ALL_TYPES_NO_ARR,
     ALL_TYPES_NO_ARR_NO_INFER,

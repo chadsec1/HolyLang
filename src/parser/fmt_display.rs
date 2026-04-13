@@ -21,12 +21,24 @@ impl fmt::Display for Type {
             Type::Float64 => "float64",
             Type::Bool => "bool",
             Type::String => "string",
-            Type::Array(inner) => &format!("{}[]", inner),
+            Type::Array(inner_ty) => &format!("{}[]", inner_ty),
+            Type::FixedArray(inner_ty, size) => &format!("{}[{}]", inner_ty, size),
             Type::Infer => "infer",
         };
         write!(f, "{}", s)
     }
 }
+
+impl fmt::Display for FixedArraySize {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FixedArraySize::Literal(l) => write!(f, "{}", l),
+            FixedArraySize::Const(c) => write!(f, "{}", c)
+        }
+ 
+    }
+}
+
 
 impl fmt::Display for IntLiteralValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::error::HolyError;
 use crate::parser::{
-    AST, Expr, Function, Stmt, Type, Span, IntLiteralValue, FloatLiteralValue, UnaryOpKind, BinOpKind
+    AST, Expr, Function, Stmt, Type, Span
 };
 
 
@@ -183,6 +183,7 @@ fn check_stmts(
                         // infer::assign_infer_type_to_expr_value(expr, var.type_name.clone())?;
 
                         // Infer and check the expression type.
+
                         let expr_ty = infer::infer_expr_type(expr, locals, fun_sigs, Some(var.type_name.clone()))?;
                         if !helpers::type_compatible(&expr_ty, &var.type_name) {
                             return Err(HolyError::Semantic(format!(

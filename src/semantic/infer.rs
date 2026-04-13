@@ -1,3 +1,7 @@
+use crate::parser::{
+    IntLiteralValue, FloatLiteralValue, UnaryOpKind, BinOpKind, FixedArraySize
+};
+
 use super::*;
 
 
@@ -72,7 +76,7 @@ pub fn infer_expr_type(
     // within the handler.
     // If inferred type is "Infer", or Array most inner type is infer, we panic.
     //
-    if (t == Type::Infer) || ( matches!(t, Type::Array(_)) && *t.get_array_inner_most_type() == Type::Infer ) {
+    if (t == Type::Infer) || ( t.is_array_type() && *t.get_array_inner_most_type() == Type::Infer ) {
         panic!(
             "(Compiler bug) Inferred type of the expression is `Infer`, which shouldn't be possible and indicates a bug in either infer_expr_type_handler or in caller's logic.\nexpr: {:?}\nlocals: {:?}\nfun_sigs: {:?}\ninfer_hint: {:?}",
             expr, locals, fun_sigs, infer_hint
@@ -140,19 +144,80 @@ fn infer_expr_type_hazmat(
         }
         
         Expr::ArrayLiteral { elements, array_ty,  span } => {
-            // all elements must have same type as the array type
-            for e in elements.iter_mut() {
-                let ety = infer_expr_type(e, locals, fun_sigs, Some(array_ty.clone()))?;
-                if !helpers::type_compatible(&ety, &array_ty) {
+            // int32[1,2,3]
+            // ^^^ this is the constructor array literal
+            //
 
+
+            let elem_ih = match infer_hint.clone() {
+                Some(Type::FixedArray(t, _)) => {
+                    // Only check the innermost base type, not the container shape.
+                    // e.g. array_ty=Array(Int64) vs t=Array(Int32) is an error
+                    // but  array_ty=Array(Int32) vs t=FixedArray(Int32,N) is fine
+
+                    let hint_inner = if t.is_array_type() {
+                            t.get_array_inner_most_type()
+                        } else {
+                            &*t 
+                        };
+                    let decl_inner = if array_ty.is_array_type() {
+                            array_ty.get_array_inner_most_type()
+                        } else {
+                            array_ty 
+                        };
+
+
+                    if !helpers::type_compatible(decl_inner, hint_inner) {
+                        return Err(HolyError::Semantic(format!(
+                            "Array literal is of `{}` type, but we expected `{}` type (line {} column {})",
+                            decl_inner, hint_inner, span.line, span.column
+                        )));
+                    }
+
+                    *t
+
+                },
+                Some(Type::Array(t)) => *t,
+                _ => array_ty.clone()
+            };
+
+
+            // all elements must have same type as the array constructor type
+            for e in elements.iter_mut() {
+                let ety = infer_expr_type(e, locals, fun_sigs, Some(elem_ih.clone()))?;
+                if !helpers::type_compatible(&ety, &elem_ih) {
                     return Err(HolyError::Semantic(format!(
                         "Array element type mismatch: expected `{}` got `{}` (line {} column {})",
-                        array_ty, ety, span.line, span.column
+                        elem_ih, ety, span.line, span.column
                     )));
                 }
             }
 
-            Ok(Type::Array(Box::new(array_ty.clone())))
+            if infer_hint.is_some() {
+                match infer_hint.clone().unwrap() {
+                    Type::FixedArray(t, size) => {
+                        let size_usize = match size {
+                            FixedArraySize::Literal(n) => n,
+                            FixedArraySize::Const(_) => { panic!("Consts Still unimplemented") },
+                        };
+
+                        if elements.len() != size_usize {
+                            return Err(HolyError::Semantic(format!(
+                                "Expected array of `{}` size, instead found with `{}` size (line {} column {})",
+                                size_usize, elements.len(), span.line, span.column
+                            )));
+                        }
+
+
+                        return Ok(Type::FixedArray(Box::new(*t.clone()), size));
+                    },
+
+                    _ => {}
+                }
+            }
+
+
+            Ok(Type::Array(Box::new(elem_ih.clone())))
         }
 
         Expr::ArraySingleAccess { array, index,  span } => {
@@ -173,7 +238,7 @@ fn infer_expr_type_hazmat(
                     }
 
 
-                    if !matches!(&info.ty, Type::Array(_)) {
+                    if !info.ty.is_array_type() {
                         return Err(HolyError::Semantic(format!("Array access on non-array variable `{}` of type `{}` (line {} column {})", name, info.ty, span.line, span.column)));
                     }
 
@@ -188,8 +253,13 @@ fn infer_expr_type_hazmat(
 
                     // Because we are accessing (or shall I say copying) a single element of an array
                     // we only care about the inner type, not the outer array type.
+                    //
                     if let Type::Array(unarrayed_ty) = &info.ty {
                         Ok(*unarrayed_ty.clone())
+
+                    } else if let Type::FixedArray(unarrayed_ty, _) = &info.ty {
+                        Ok(*unarrayed_ty.clone())
+                  
                     } else {
                         panic!("(Compiler bug) Expected array type, instead we got: {:?}", info.ty);
                     }
@@ -221,7 +291,7 @@ fn infer_expr_type_hazmat(
                         panic!("(Compiler bug) We expected the parser to not allow such invalid syntax of no start and no end indexes in array multiple access");
                     }
 
-                    if !matches!(&info.ty, Type::Array(_)) {
+                    if !info.ty.is_array_type() {
                         return Err(HolyError::Semantic(format!("Array access on non-array variable `{}` (line {} column {})", name, span.line, span.column)));
                     }
 
@@ -273,9 +343,9 @@ fn infer_expr_type_hazmat(
                             if let Expr::IntLiteral { value: IntLiteralValue::Usize(end_num), .. } = end.as_deref().unwrap() {
                                 if start_num > end_num {
                                     return Err(HolyError::Semantic(format!(
-                                                "Start index `{}` cannot be larger than end index `{}` (line {} column {})", 
-                                                start_num, end_num, span.line, span.column
-                                            )));
+                                        "Start index `{}` cannot be larger than end index `{}` (line {} column {})", 
+                                        start_num, end_num, span.line, span.column
+                                    )));
                                 }
                             }
                         }
@@ -286,6 +356,12 @@ fn infer_expr_type_hazmat(
                         // We are fine returning Type wrapping in Aray, because thats what the
                         // caller should expect anyway. x[s:e] always returns an array.
                         Ok(info.ty.clone())
+
+                    // NOTE: Perhaps I should return a dynamic area when you slice a fixed array...
+                    // idk 
+                    } else if let Type::FixedArray(_, _) = &info.ty {
+                        Ok(info.ty.clone())
+
                     }  else {
                         panic!("(Compiler bug) Expected array type, instead we got: {:?}", info.ty);
                     }
