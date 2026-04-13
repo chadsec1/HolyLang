@@ -85,10 +85,6 @@ pub fn assign_default_value_for_type(expr: &mut Option<Expr>, ty: &Type, span: S
 
         }
 
-
-
-
-
         _ => {
             panic!("(Compiler bug) Cannot assign default value for type `{}` because the expression holder type is Non-literal. Expression: {:?}\nDont call this on non-literals.", 
                         ty, expr);

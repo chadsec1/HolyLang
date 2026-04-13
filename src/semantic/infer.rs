@@ -343,9 +343,9 @@ fn infer_expr_type_hazmat(
                             if let Expr::IntLiteral { value: IntLiteralValue::Usize(end_num), .. } = end.as_deref().unwrap() {
                                 if start_num > end_num {
                                     return Err(HolyError::Semantic(format!(
-                                                "Start index `{}` cannot be larger than end index `{}` (line {} column {})", 
-                                                start_num, end_num, span.line, span.column
-                                            )));
+                                        "Start index `{}` cannot be larger than end index `{}` (line {} column {})", 
+                                        start_num, end_num, span.line, span.column
+                                    )));
                                 }
                             }
                         }
