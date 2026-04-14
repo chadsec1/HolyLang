@@ -7,7 +7,6 @@ use crate::parser::{
 
 use crate::tests_consts::{
     ALL_TYPES_NO_ARR,
-    ALL_TYPES_NO_ARR_NO_INFER,
     ALL_TYPES_NO_ARR_NO_FLOAT
 };
 
@@ -69,7 +68,6 @@ mod type_tests {
             assert!(!Type::Array(Box::new(ty.clone())).is_integer_type());
         }
 
-        assert!(!Type::Infer.is_integer_type());
     }
 
     // Type::is_floating_type
@@ -123,15 +121,6 @@ mod type_tests {
         assert_eq!(IntLiteralValue::Usize(0).get_type(),   Type::Usize);
     }
 
-    // get_type must not return Infer, ever.
-    #[test]
-    fn int_literal_get_type_never_returns_infer() {
-        let variants = get_int_literals_value();
-
-        for v in variants {
-            assert_ne!(v.get_type(), Type::Infer, "{:?}.get_type() returned Infer", v);
-        }
-    }
 
     // IntLiteralValue::is_signed
 
@@ -396,7 +385,7 @@ mod helpers_tests {
 
     #[test]
     fn default_value_array_is_empty_with_correct_inner_type() {
-        for t in ALL_TYPES_NO_ARR_NO_INFER {
+        for t in ALL_TYPES_NO_ARR {
             let mut expr: Option<Expr> = None;
             let arr_t = Type::Array(Box::new(t.clone()));
             assign_default_value_for_type(&mut expr, &arr_t, dummy_span()).unwrap();
@@ -414,7 +403,7 @@ mod helpers_tests {
     // Nested array: inner type must also be preserved correctly
     #[test]
     fn default_value_nested_array_preserves_inner_type() {
-        for t in ALL_TYPES_NO_ARR_NO_INFER {
+        for t in ALL_TYPES_NO_ARR {
             let mut expr: Option<Expr> = None;
             let arr_t = Type::Array(Box::new(Type::Array(Box::new(t.clone()))));
             assign_default_value_for_type(&mut expr, &arr_t, dummy_span()).unwrap();
@@ -440,13 +429,6 @@ mod helpers_tests {
         assign_default_value_for_type(&mut expr, &Type::Int32, dummy_span()).unwrap();
     }
 
-    // Infer must panic, this is a compiler bug(s) guard
-    #[test]
-    #[should_panic(expected = "Compiler bug")]
-    fn default_value_panics_on_infer() {
-        let mut expr: Option<Expr> = None;
-        assign_default_value_for_type(&mut expr, &Type::Infer, dummy_span()).unwrap();
-    }
 
     // type_compatible
 

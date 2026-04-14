@@ -22,8 +22,7 @@ impl fmt::Display for Type {
             Type::Bool => "bool",
             Type::String => "string",
             Type::Array(inner_ty) => &format!("{}[]", inner_ty),
-            Type::FixedArray(inner_ty, size) => &format!("{}[{}]", inner_ty, size),
-            Type::Infer => "infer",
+            Type::FixedArray(inner_ty, size) => &format!("{}[{}]", inner_ty, size)
         };
         write!(f, "{}", s)
     }

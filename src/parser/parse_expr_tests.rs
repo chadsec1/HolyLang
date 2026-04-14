@@ -1,7 +1,7 @@
 use super::*;
 use crate::parser::parse_expr::parse_expr;
 use crate::tests_consts::{
-    ALL_BIN_OP_KIND, BIN_OP_KIND_SYMBOLS, ALL_TYPES_NO_ARR_NO_INFER
+    ALL_BIN_OP_KIND, BIN_OP_KIND_SYMBOLS, ALL_TYPES_NO_ARR
 };
 
 #[cfg(test)]
@@ -734,7 +734,7 @@ mod parse_expr_tests {
     fn test_typed_array_literals() {
         let literals = get_all_literals_as_str_no_arr();
 
-        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR_NO_INFER.iter()) {
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             match parse(&format!("{}[{}, {}, {}]", t, l, l, l)).unwrap() {
                 Expr::ArrayLiteral { elements, array_ty, .. } => {
                     assert_eq!(array_ty, t.clone());
@@ -747,7 +747,7 @@ mod parse_expr_tests {
 
     #[test]
     fn test_typed_array_literal_empty() {
-        for t in ALL_TYPES_NO_ARR_NO_INFER {
+        for t in ALL_TYPES_NO_ARR {
             match parse(&format!("{}[]", t)).unwrap() {
                 Expr::ArrayLiteral { elements, array_ty, .. } => {
                     assert_eq!(array_ty, t.clone());
@@ -764,7 +764,7 @@ mod parse_expr_tests {
         //
         let literals = get_all_literals_as_str_no_arr();
 
-        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR_NO_INFER.iter()) {
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             match parse(&format!("{}[][{}[{},{}], {}[{},{}]]", t, t, l, l, t, l, l)).unwrap() {
                 Expr::ArrayLiteral { elements, .. } => {
                     assert_eq!(elements.len(), 2);
@@ -781,7 +781,7 @@ mod parse_expr_tests {
     fn test_typed_array_with_expressions() {
         let literals = get_all_literals_as_str_no_arr();
 
-        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR_NO_INFER.iter()) {
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             match parse(&format!("{}[a + {}, b * {}]", t, l, l)).unwrap() {
                 Expr::ArrayLiteral { elements, array_ty, .. } => {
                     assert_eq!(elements.len(), 2);

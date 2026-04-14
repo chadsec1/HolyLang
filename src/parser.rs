@@ -41,10 +41,7 @@ pub enum Type {
     Bool,
     String,
     Array(Box<Type>),
-    FixedArray(Box<Type>, FixedArraySize),
-
-    /// Indicates this needs to be inferred during semantic analysis
-    Infer,
+    FixedArray(Box<Type>, FixedArraySize)
 }
 
 /// Fixed array size can only be represented as a const, or a literal usize.
@@ -360,7 +357,6 @@ pub struct Param {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Variable {
     pub name: String,
-    /// Always present; Type::Infer means "infer in semantic phase"
     pub type_name: Type,
     pub value: Option<Expr>,
     pub span: Span,
@@ -510,16 +506,6 @@ fn parse_function(lines: &Vec<&str>, start_i: usize) -> Result<(Function, usize)
     let after_func = &header_raw["func ".len()..];
 
 
-    /*
-    let open_parenthesis_count = header_raw.chars().filter(|&c| c == '(').count();
-    let close_parenthesis_count = header_raw.chars().filter(|&c| c == ')').count();
-
-    if open_parenthesis_count != close_parenthesis_count {
-        return Err(HolyError::Parse(format!("Invalid function header: there is extra parenthesis in the function declaration header `{}` at line {}", header_raw, start_i + 1)));
-    }
-    */
-
-
     // find '(' matching for params
     let open_paren = after_func.find('(').ok_or_else(|| {
         HolyError::Parse(format!("Invalid function header (no '(') at line {}: `{}`", start_i + 1, header_raw))
@@ -566,7 +552,7 @@ fn parse_function(lines: &Vec<&str>, start_i: usize) -> Result<(Function, usize)
             let inner = &return_type_str[1..return_type_str.len()-1];
             let mut types = Vec::new();
             if !inner.trim().is_empty() {
-                let split_parts = helpers::split_comma_top_level(inner)
+                let split_parts = helpers::split_char_top_level(',', inner)
                     .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
 
 
@@ -859,7 +845,7 @@ fn parse_for_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), Ho
     if parts[1].starts_with("range(") && parts[1].ends_with(")") {
         let range_str = parts[1]["range(".len()..].strip_suffix(")").unwrap();
 
-        let split_args = helpers::split_comma_top_level(range_str)
+        let split_args = helpers::split_char_top_level(',', range_str)
             .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
 
         if split_args.len() != 2 {
@@ -998,7 +984,7 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
         // Check if return is like: return a, b, ...
         // then split, parse each element, and return the vec.
         // Otherwise create new vec of single parsed element.
-        let top_parts = helpers::split_comma_top_level(expr_str)
+        let top_parts = helpers::split_char_top_level(',', expr_str)
             .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
 
         if top_parts.len() > 1 {
@@ -1083,11 +1069,10 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
     // Variable declaration: own ...
     if line.starts_with("own ") {
         // possibilities:
-        // own name = expr
-        // own name type = expr
-        // own name type
-        // special-case: own name = int32[1,2,3]  (typed array literal on RHS)
-        // special-case: own x, y = call() (just example, declared can be as many as you want.)
+        // own var_name type_name = expression
+        // own var_name type_name (all types have default values.)
+        // 
+        // special-case multi-declaration: own x T2, y T2 = call() (just example, declared can be as many as you want, but RHS can only be a single expression) 
         //
         let rest = line["own ".len()..].trim();
         // check for assignment '='
@@ -1095,48 +1080,48 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
             let left = rest[..eq_pos].trim();
             let right = rest[eq_pos + 1..].trim() ;
 
-
             // Multiple variable declarations
             if left.contains(',') {
-                let mut names = vec![];
+                let mut var_names: Vec<String> = vec![];
+                let mut var_types: Vec<Type> = vec![];
+                
                 for part in left.split(',') {
-                    let n = part.trim();
-                    // disallow typed multi-declaration for now (keep parser simple)
-                    if n.split_whitespace().count() != 1 {
-                        return Err(HolyError::Parse(format!("Invalid multi-variable declaration `{}` at line {}", left, line_no)));
+                    let name_type_arr: Vec<&str> = part.trim().split_whitespace().collect();
+
+                    if name_type_arr.len() != 2 {
+                        return Err(HolyError::Parse(format!("Invalid multi-variable declaration `{}` at line {}", line, line_no)));
                     }
 
-                    helpers::validate_identifier_name(n)
+                    let name = name_type_arr[0].to_string();
+                    let typ = parse_type(name_type_arr[1], &span)?;
+
+                    helpers::validate_identifier_name(&name)
                         .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
 
-                    names.push(n.to_string());
+                    var_names.push(name.to_string());
+                    var_types.push(typ);
                 }
 
                 let value = parse_expr::parse_expr(right, span)?;
-                // create multiple variables with Infer type; inference happens in semantic phase
+
                 let mut vars = vec![];
-                for n in &names {
-                    vars.push(Variable { name: n.clone(), type_name: Type::Infer, value: None, span });
+                for (n, t) in var_names.iter().zip(var_types.iter()) {
+                    vars.push(Variable { name: n.clone(), type_name: t.clone(), value: None, span });
                 }
                 return Ok(Stmt::VarDeclMulti(vars, value));
             }
 
-
-
-
-            // left can be "name" or "name type"
+            // Otherwise a single declaration.
+            //
             let left_parts: Vec<&str> = left.split_whitespace().collect();
-            let (name, var_type) = match left_parts.len() {
-                1 => (left_parts[0].to_string(), Type::Infer),
-                2 => {
-                    let tp = parse_type(left_parts[1], &span)?;
-                    (left_parts[0].to_string(), tp)
-                }
-                _ => return Err(HolyError::Parse(format!("Invalid variable declaration `{}` at line {}", line, line_no))),
-            };
+            if left_parts.len() != 2 {
+                return Err(HolyError::Parse(format!("Invalid variable declaration `{}` at line {}", line, line_no)));
+            }
 
+            let name = left_parts[0].to_string();
+            let var_type = parse_type(left_parts[1], &span)?;
            
-            // ensure name doesnt have special characters, except _, and doesnt start with a
+            // ensure variable name doesnt have special characters, except _, and doesnt start with a
             // number.
             helpers::validate_identifier_name(&name)
                 .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
@@ -1224,7 +1209,7 @@ fn parse_typed_array_literal(s: &str, span: Span) -> Result<Expr, HolyError> {
         Ok(inner_ty) => {
             let mut elems: Vec<Expr> = Vec::new();
             if !elems_str.trim().is_empty() {
-                let split_parts = helpers::split_comma_top_level(elems_str)
+                let split_parts = helpers::split_char_top_level(',', elems_str)
                                     .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
 
                 for part in split_parts {

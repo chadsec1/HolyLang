@@ -129,80 +129,17 @@ pub fn find_top_level_op_any(s: &str) -> Option<(usize, &str)> {
     best
 }
 
-/*
-
-pub fn find_top_level_op_any(s: &str, ops: &[char]) -> Option<(usize, char)> {
-    fn precedence(c: char, next: Option<char>) -> u8 {
-        match c {
-            '=' if next == Some('=') => 1,
-            '!' if next == Some('=') => 1,
-            '>' | '<'               => 1,  // handles >= and <= too
-            '+' | '-'               => 2,
-            '*' | '/'               => 3,
-            _                       => u8::MAX,
-        }
-    }
-
-    let chars: Vec<(usize, char)> = s.char_indices().collect();
-    let mut depth    = 0usize;
-    let mut best: Option<(usize, char)> = None;
-    let mut best_prec = u8::MAX;
-
-    let mut i = 0;
-    while i < chars.len() {
-        let (idx, c) = chars[i];
-        match c {
-            '(' => depth += 1,
-            ')' => { if depth > 0 { depth -= 1; } }
-            _ if depth == 0 && ops.contains(&c) => {
-                if c == '-' {
-
-                    // Skip whitespaces
-                    let prev_non_ws = (0..i).rev()
-                        .map(|j| chars[j].1)
-                        .find(|ch| !ch.is_whitespace());
-
-                    match prev_non_ws {
-                        // start of string, unary
-                        None => { 
-                            i += 1; 
-                            continue; 
-                        } 
-                        // unary
-                        Some(prev) if ops.contains(&prev) || prev == '(' => { 
-                            i += 1; 
-                            continue; 
-                        }
-                        // binary, fall through
-                        _ => {} 
-                    }
-                }
-
-                let next = chars.get(i + 1).map(|(_, nc)| *nc);
-                let prec = precedence(c, next);
-                // <= gives us rightmost of lowest precedence (left-associativity)
-                if prec <= best_prec {
-                    best_prec = prec;
-                    best = Some((idx, c));
-                }
-            }
-            _ => {}
-        }
-        i += 1;
-    }
-
-    best
-}
-*/
 
 
-
-
-/// Split comma-separated args at top-level only.
+/// Split "char"-separated args at top-level only.
 /// - respects nested (), [], {}
 /// - respects "..." and '...' with backslash escapes
 /// - returns slices into `s` (no allocation for substrings beyond the Vec)
-pub fn split_comma_top_level(s: &str) -> Result<Vec<&str>, HolyError> {
+pub fn split_char_top_level(split_char: char, s: &str) -> Result<Vec<&str>, HolyError> {
+    if (split_char != ',') && (split_char != ':') {
+        panic!("(Compiler bug guard) You are most likely misusing split_char_top_level, we expected char to be a comma or a :, but instead we got `{}`", split_char);
+    }
+
     let mut parts = Vec::new();
     let mut start = 0usize;
     let mut stack: Vec<char> = Vec::new();
@@ -236,7 +173,7 @@ pub fn split_comma_top_level(s: &str) -> Result<Vec<&str>, HolyError> {
                         i
                     )));
                 }
-                // clear the flag on the first non-whitespace (so "hi" ) or comma or bracket clears it)
+                // clear the flag on the first non-whitespace (so "hi" ) or split_char or bracket clears it)
                 if !c.is_whitespace() {
                     just_closed_string = false;
                 }
@@ -262,7 +199,7 @@ pub fn split_comma_top_level(s: &str) -> Result<Vec<&str>, HolyError> {
                     if matches!(stack.last(), Some('{')) { stack.pop(); }
                     just_closed_string = false;
                 }
-                ',' => {
+                c if c == split_char => {
                     if stack.is_empty() && in_string.is_none() {
                         parts.push(s[start..i].trim());
                         start = i + c.len_utf8();

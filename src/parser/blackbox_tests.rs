@@ -2,9 +2,10 @@ use super::*;
 
 use crate::consts;
 use crate::tests_consts::{
-    ALL_TYPES_NO_ARR_NO_INFER,
+    ALL_TYPES_NO_ARR,
     ALL_BIN_OP_KIND_COMP, ALL_BIN_OP_KIND_ARTH,
-    BIN_OP_KIND_ARTH_SYMBOLS, BIN_OP_KIND_COMP_SYMBOLS
+    BIN_OP_KIND_ARTH_SYMBOLS, BIN_OP_KIND_COMP_SYMBOLS,
+    BIN_OP_KIND_SYMBOLS,
 };
  
 
@@ -32,6 +33,51 @@ fn assert_parse_err(src: &str) {
     );
 }
 
+
+// all literals and variable names.
+fn get_all_literals_edge_cases() -> [String; 40] {
+    return [
+        i8::MIN.to_string(), i8::MAX.to_string(),
+        i16::MIN.to_string(), i16::MAX.to_string(),
+        i32::MIN.to_string(), i32::MAX.to_string(),
+        i64::MIN.to_string(), i64::MAX.to_string(),
+        i128::MIN.to_string(), i128::MAX.to_string(),
+        
+        u8::MIN.to_string(), u8::MAX.to_string(),
+        u16::MIN.to_string(), u16::MAX.to_string(),
+        u32::MIN.to_string(), u32::MAX.to_string(),
+        u64::MIN.to_string(), u64::MAX.to_string(),
+        u128::MIN.to_string(), u128::MAX.to_string(),
+        usize::MIN.to_string(), usize::MAX.to_string(),
+        
+        format!("{}.0", f32::MIN.to_string()), format!("{}.0", f32::MAX.to_string()), 
+        format!("{}.0", f64::MIN.to_string()), format!("{}.0", f64::MAX.to_string()), 
+
+        "false".to_string(), "true".to_string(),
+        "\"\"".to_string(), "\"h\"".to_string(), "\"hi\"".to_string(),
+        "i".to_string(), "arr".to_string(), "x".to_string(), "y".to_string(), "xyz".to_string(),
+        "arr[i]".to_string(), "arr[:i]".to_string(), "arr[i:]".to_string(), "arr[e:h]".to_string()
+    ]
+}
+
+
+// all integer literals
+fn get_all_ints_literals_edge_cases() -> [String; 22] {
+    return [
+        i8::MIN.to_string(), i8::MAX.to_string(),
+        i16::MIN.to_string(), i16::MAX.to_string(),
+        i32::MIN.to_string(), i32::MAX.to_string(),
+        i64::MIN.to_string(), i64::MAX.to_string(),
+        i128::MIN.to_string(), i128::MAX.to_string(),
+        
+        u8::MIN.to_string(), u8::MAX.to_string(),
+        u16::MIN.to_string(), u16::MAX.to_string(),
+        u32::MIN.to_string(), u32::MAX.to_string(),
+        u64::MIN.to_string(), u64::MAX.to_string(),
+        u128::MIN.to_string(), u128::MAX.to_string(),
+        usize::MIN.to_string(), usize::MAX.to_string(),
+    ]
+}
 
 
 
@@ -80,7 +126,7 @@ mod tests {
 
     #[test]
     fn parse_function_with_returns_missing_opening_parenthesis_errors() {
-        for t in ALL_TYPES_NO_ARR_NO_INFER {
+        for t in ALL_TYPES_NO_ARR {
             let result = parse(&format!("func main) {} {{\n}}\n", t));
 
             assert!(result.is_err());
@@ -90,7 +136,7 @@ mod tests {
 
     #[test]
     fn parse_function_with_returns_missing_closing_parenthesis_errors() {
-        for t in ALL_TYPES_NO_ARR_NO_INFER {
+        for t in ALL_TYPES_NO_ARR {
             let result = parse(&format!("func main( {} {{\n}}\n", t));
 
             assert!(result.is_err());
@@ -100,8 +146,8 @@ mod tests {
 
     #[test]
     fn parse_function_missing_opening_parenthesis_with_multiple_returns_errors() {
-        for t1 in ALL_TYPES_NO_ARR_NO_INFER {
-            for t2 in ALL_TYPES_NO_ARR_NO_INFER {
+        for t1 in ALL_TYPES_NO_ARR {
+            for t2 in ALL_TYPES_NO_ARR {
                 let result = parse(&format!("func main) ({}, {}) {{\n}}\n", t1, t2));
 
                 assert!(result.is_err());
@@ -113,8 +159,8 @@ mod tests {
 
     #[test]
     fn parse_function_missing_closing_parenthesis_with_multiple_returns_errors() {
-        for t1 in ALL_TYPES_NO_ARR_NO_INFER {
-            for t2 in ALL_TYPES_NO_ARR_NO_INFER {
+        for t1 in ALL_TYPES_NO_ARR {
+            for t2 in ALL_TYPES_NO_ARR {
                 let result = parse(&format!("func main( ({}, {}) {{\n}}\n", t1, t2));
 
                 assert!(result.is_err());
@@ -155,7 +201,7 @@ mod tests {
 
     #[test]
     fn parse_function_single_return_type() {
-        for t in ALL_TYPES_NO_ARR_NO_INFER {
+        for t in ALL_TYPES_NO_ARR {
             let ast = parse(&format!("func foo() {} {{\n}}\n", t)).unwrap();
             let f = &ast.functions[0];
 
@@ -235,7 +281,7 @@ mod tests {
 
     #[test]
     fn parse_function_array_return_type() {
-        for t in ALL_TYPES_NO_ARR_NO_INFER {
+        for t in ALL_TYPES_NO_ARR {
             let ast = parse(&format!("func foo() {}[] {{\n}}\n", t)).unwrap();
             let f = &ast.functions[0];
             assert_eq!(f.return_type, Some(vec![Type::Array(Box::new(t.clone()))]));
@@ -244,7 +290,7 @@ mod tests {
 
     #[test]
     fn parse_function_nested_array_return_type() {
-        for t in ALL_TYPES_NO_ARR_NO_INFER {
+        for t in ALL_TYPES_NO_ARR {
             let mut s1 = String::with_capacity(200);
 
             for i in 1..100 {
@@ -289,7 +335,7 @@ mod tests {
 
     #[test]
     fn for_statements_literal() {
-        for t in ALL_TYPES_NO_ARR_NO_INFER {
+        for t in ALL_TYPES_NO_ARR {
             let stmts = parse_body(&format!("for i in {}[12,\"hi\", true, 6.9, {}[]] {{\n\n}}", t, t));
             assert_eq!(stmts.len(), 1);
             if let Stmt::For(f) = &stmts[0] {
@@ -1234,21 +1280,13 @@ mod tests {
     // Variable declarations
 
     #[test]
-    fn var_decl_inferred_int() {
-        let stmts = parse_body("own x = 1");
-        assert_eq!(stmts.len(), 1);
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            assert_eq!(v.name, "x");
-            assert_eq!(v.type_name, Type::Infer);
-            assert!(v.value.is_some());
-        } else {
-            panic!("Expected VarDecl");
-        }
+    fn var_decl_no_type_errors() {
+        assert_parse_err(&wrap("own x = 1"));
     }
 
     #[test]
-    fn var_decl_explicit_type() {
-        for t in ALL_TYPES_NO_ARR_NO_INFER {
+    fn var_decl() {
+        for t in ALL_TYPES_NO_ARR {
             let stmts = parse_body(&format!("own x {} = 2", t));
             if let Stmt::VarDecl(v) = &stmts[0] {
                 assert_eq!(v.type_name, t.clone());
@@ -1260,7 +1298,7 @@ mod tests {
 
     #[test]
     fn var_decl_no_value() {
-        for t in ALL_TYPES_NO_ARR_NO_INFER {
+        for t in ALL_TYPES_NO_ARR {
             let stmts = parse_body(&format!("own x {}", t));
             if let Stmt::VarDecl(v) = &stmts[0] {
                 assert_eq!(v.name, "x");
@@ -1277,112 +1315,146 @@ mod tests {
     // respective literals. So it's worth double checking here again.
     #[test]
     fn var_decl_float_types() {
-        parse_body("own x float32 = 1.0");
-        parse_body("own x float64 = 1.0");
+        let stmts = parse_body("own x float32 = 1.0\nown y float64 = 1.0");
+        assert_eq!(stmts.len(), 2);
+        if let Stmt::VarDecl(v) = &stmts[0] {
+            assert_eq!(v.name, "x");
+            assert_eq!(v.type_name, Type::Float32);
+
+            if let Some(Expr::FloatLiteral { value, .. }) = &v.value {
+                assert!(matches!(value, FloatLiteralValue::Float32(1.0)));
+            } else { panic!("Expected FloatLiteral"); }
+        } else { panic!("Expected VarDecl"); }
+
+
+        if let Stmt::VarDecl(v) = &stmts[1] {
+            assert_eq!(v.name, "y");
+            assert_eq!(v.type_name, Type::Float64);
+
+            if let Some(Expr::FloatLiteral { value, .. }) = &v.value {
+                // not bug,... its up to semantic phase to correct the literals to correct types.
+                assert!(matches!(value, FloatLiteralValue::Float32(1.0)));
+            } else { panic!("Expected FloatLiteral"); }
+        } else { panic!("Expected VarDecl"); }    
+
     }
 
     #[test]
     fn var_decl_bool_type() {
         let stmts = parse_body("own x bool = true");
+        assert_eq!(stmts.len(), 1);
         if let Stmt::VarDecl(v) = &stmts[0] {
+            assert_eq!(v.name, "x");
             assert_eq!(v.type_name, Type::Bool);
-        } else {
-            panic!();
-        }
+        } else { panic!("Expected VarDecl"); }    
     }
 
     #[test]
     fn var_decl_string_type() {
         let stmts = parse_body(r#"own x string = "hello""#);
+        assert_eq!(stmts.len(), 1);
+
         if let Stmt::VarDecl(v) = &stmts[0] {
+            assert_eq!(v.name, "x");
             assert_eq!(v.type_name, Type::String);
-        } else {
-            panic!();
-        }
+        } else { panic!("Expected VarDecl"); }    
     }
 
     #[test]
     fn var_decl_array_explicit_type() {
-        for t in ALL_TYPES_NO_ARR_NO_INFER {
+        for t in ALL_TYPES_NO_ARR {
             let stmts = parse_body(&format!("own x {}[] = {}[1, 2, 3]", t, t));
-            if let Stmt::VarDecl(v) = &stmts[0] {
-                assert_eq!(v.type_name, Type::Array(Box::new(t.clone())));
-            } else {
-                panic!("Expected VarDecl");
-            }
-        }
-    }
+            assert_eq!(stmts.len(), 1);
 
-    #[test]
-    fn var_decl_array_inferred() {
-        for t in ALL_TYPES_NO_ARR_NO_INFER {
-            let stmts = parse_body(&format!("own x = {}[1, 2, 3]", t));
             if let Stmt::VarDecl(v) = &stmts[0] {
-                assert_eq!(v.type_name, Type::Infer);
+                assert_eq!(v.name, "x");
+                assert_eq!(v.type_name, Type::Array(Box::new(t.clone())));
+
                 if let Some(Expr::ArrayLiteral { array_ty, elements, .. }) = &v.value {
                     assert_eq!(*array_ty, t.clone());
                     assert_eq!(elements.len(), 3);
                 } else {
                     panic!("Expected ArrayLiteral");
                 }
-            } else {
-                panic!("Expected VarDecl");
-            }
+
+            } else { panic!("Expected VarDecl");}
+        }
+    }
+
+    #[test]
+    fn var_decl_array_no_type_errors() {
+        for t in ALL_TYPES_NO_ARR {
+            assert_parse_err(&wrap(&format!("own x = {}[1, 2, 3]", t)));
         }
     }
 
     #[test]
     fn var_decl_empty_array() {
-        for t in ALL_TYPES_NO_ARR_NO_INFER {
-            let stmts = parse_body(&format!("own x = {}[]", t));
+        for t in ALL_TYPES_NO_ARR {
+            let stmts = parse_body(&format!("own x {} = {}[]", t, t));
+            assert_eq!(stmts.len(), 1);
+            
             if let Stmt::VarDecl(v) = &stmts[0] {
+                assert_eq!(v.name, "x");
+                assert_eq!(v.type_name, t.clone());
+
                 if let Some(Expr::ArrayLiteral { elements, .. }) = &v.value {
                     assert!(elements.is_empty());
                 } else {
                     panic!("Expected ArrayLiteral");
                 }
-            }
+            } else { panic!("Expected VarDecl");}
         }
     }
 
     #[test]
     fn var_decl_nested_array() {
-        for t in ALL_TYPES_NO_ARR_NO_INFER {
-            let stmts = parse_body(&format!("own x = {}[][{}[1,2], {}[3,4]]", t, t, t));
+        for t in ALL_TYPES_NO_ARR {
+            let stmts = parse_body(&format!("own x {} = {}[][{}[1,2], {}[3,4]]", t, t, t, t));
+            assert_eq!(stmts.len(), 1);
+
             if let Stmt::VarDecl(v) = &stmts[0] {
+                assert_eq!(v.name, "x");
+                assert_eq!(v.type_name, t.clone());
+
                 if let Some(Expr::ArrayLiteral { elements, .. }) = &v.value {
                     assert_eq!(elements.len(), 2);
                     assert!(matches!(elements[0], Expr::ArrayLiteral { .. }));
                 } else {
                     panic!("Expected ArrayLiteral");
                 }
-            }
+            } else { panic!("Expected VarDecl");}
         }
     }
 
     #[test]
     fn var_decl_nested_array_empty() {
-        for t in ALL_TYPES_NO_ARR_NO_INFER {
-            let stmts = parse_body(&format!("own x = {}[][]", t));
+        for t in ALL_TYPES_NO_ARR {
+            let stmts = parse_body(&format!("own x {} = {}[][]", t, t));
+            assert_eq!(stmts.len(), 1);
+
             if let Stmt::VarDecl(v) = &stmts[0] {
+                assert_eq!(v.name, "x");
+                assert_eq!(v.type_name, t.clone());
+
                 if let Some(Expr::ArrayLiteral { elements, .. }) = &v.value {
                     assert_eq!(elements.len(), 0);
                 } else {
                     panic!("Expected ArrayLiteral");
                 }
-            }
+            } else { panic!("Expected VarDecl");}
         }
     }
 
 
     #[test]
     fn var_decl_deeply_nested_array() {
-        for t in ALL_TYPES_NO_ARR_NO_INFER {
+        for t in ALL_TYPES_NO_ARR {
             let mut s1 = String::with_capacity(200);
 
             for _ in 1..100 {
                 s1.push_str("[]");
-                let stmts = parse_body(&format!("own x = {}[][]{}", t, s1 ));
+                let stmts = parse_body(&format!("own x {} = {}[][]{}", t, t, s1 ));
                 if let Stmt::VarDecl(v) = &stmts[0] {
                     if let Some(Expr::ArrayLiteral { elements, .. }) = &v.value {
                         assert_eq!(elements.len(), 0);
@@ -1397,22 +1469,37 @@ mod tests {
 
     #[test]
     fn var_decl_multi() {
-        let stmts = parse_body("own x, y, z = give_3_numbers()");
-        assert!(matches!(stmts[0], Stmt::VarDeclMulti(_, _)));
-        if let Stmt::VarDeclMulti(vars, _) = &stmts[0] {
-            assert_eq!(vars.len(), 3);
-            assert_eq!(vars[0].name, "x");
-            assert_eq!(vars[1].name, "y");
-            assert_eq!(vars[2].name, "z");
+        for t1 in ALL_TYPES_NO_ARR {
+            for t2 in ALL_TYPES_NO_ARR {
+                for t3 in ALL_TYPES_NO_ARR {
+                    let stmts = parse_body(&format!("own x {}, y {}, z {} = give_3_numbers()", t1, t2, t3));
+                    assert!(matches!(stmts[0], Stmt::VarDeclMulti(_, _)));
+                    if let Stmt::VarDeclMulti(vars, _) = &stmts[0] {
+                        assert_eq!(vars.len(), 3);
+                        assert_eq!(vars[0].name, "x");
+                        assert_eq!(vars[0].type_name, t1.clone());
+                        assert_eq!(vars[1].name, "y");
+                        assert_eq!(vars[1].type_name, t2.clone());
+                        assert_eq!(vars[2].name, "z");
+                        assert_eq!(vars[2].type_name, t3.clone());
+                    } else { panic!("Expected VarDeclMulti"); }
+                }
+            }
         }
     }
 
     #[test]
     fn var_decl_unknown_type_errors() {
+        let literals_edge_cases = get_all_literals_edge_cases(); 
+
         assert_parse_err(&wrap("own x badtype = 1"));
         assert_parse_err(&wrap("own x badtype"));
         assert_parse_err(&wrap("own x x = 1"));
         assert_parse_err(&wrap("own x x"));
+
+        for l in &literals_edge_cases {
+            assert_parse_err(&wrap(&format!("own x {}", l)));
+        }
     }
 
     #[test]
@@ -1423,11 +1510,14 @@ mod tests {
 
     #[test]
     fn var_decl_keyword_name_errors() {
+        let literals_edge_cases = get_all_literals_edge_cases(); 
 
         for kw in consts::RESERVED_KEYWORDS { 
-            for t in ALL_TYPES_NO_ARR_NO_INFER {
-                assert_parse_err(&wrap(&format!("own {} = 1", kw)));
-                assert_parse_err(&wrap(&format!("own {} {}", kw, t)));
+            for t in ALL_TYPES_NO_ARR {
+                for l in &literals_edge_cases {
+                    assert_parse_err(&wrap(&format!("own {} {}", kw, t)));
+                    assert_parse_err(&wrap(&format!("own {} {} = {}", kw, t, l)));
+                }
             }
         }
     }
@@ -1435,15 +1525,24 @@ mod tests {
     // Variable assignment
     #[test]
     fn var_assign() {
-        for t in ALL_TYPES_NO_ARR_NO_INFER {
-            let stmts = parse_body(&format!("own x {}\nx = 5", t));
-            assert_eq!(stmts.len(), 2);
-            if let Stmt::VarAssign(va) = &stmts[1] {
-                assert_eq!(va.name, "x");
-            } else {
-                panic!("Expected VarAssign");
+        let literals_edge_cases = get_all_literals_edge_cases(); 
+        for t in ALL_TYPES_NO_ARR {
+            for l in &literals_edge_cases {
+                let stmts = parse_body(&format!("own x {}\nx = {}", t, l));
+                assert_eq!(stmts.len(), 2);
+
+                if let Stmt::VarDecl(v) = &stmts[0] {
+                    assert_eq!(v.name, "x");
+                    assert_eq!(v.type_name, t.clone());
+                } else { panic!("Expected VarDecl"); }    
+
+
+                if let Stmt::VarAssign(va) = &stmts[1] {
+                    assert_eq!(va.name, "x");
+                } else {
+                    panic!("Expected VarAssign");
+                }
             }
-            
         }
     }
 
@@ -1472,9 +1571,30 @@ mod tests {
 
     #[test]
     fn return_multiple_values() {
-        let stmts = parse_body("return 1, 2, 3");
+        let stmts = parse_body("return 1, 2, 300, 69640");
+
+        assert_eq!(stmts.len(), 1);
         if let Stmt::Return(exprs) = &stmts[0] {
-            assert_eq!(exprs.len(), 3);
+            assert_eq!(exprs.len(), 4);
+
+            if let Expr::IntLiteral { value, .. } = &exprs[0] {
+                assert!(matches!(value, IntLiteralValue::Int8(1)));
+            } else { panic!("Expcted IntLiteral"); }
+
+            if let Expr::IntLiteral { value, .. } = &exprs[1] {
+                assert!(matches!(value, IntLiteralValue::Int8(2)));
+            } else { panic!("Expcted IntLiteral"); }
+
+            if let Expr::IntLiteral { value, .. } = &exprs[2] {
+                assert!(matches!(value, IntLiteralValue::Int16(300)));
+            } else { panic!("Expcted IntLiteral"); }
+
+
+            if let Expr::IntLiteral { value, .. } = &exprs[3] {
+                assert!(matches!(value, IntLiteralValue::Int32(69640)));
+            } else { panic!("Expcted IntLiteral"); }
+
+
         } else {
             panic!("Expected Return");
         }
@@ -1487,155 +1607,269 @@ mod tests {
 
     #[test]
     fn return_variable() {
-        let stmts = parse_body("own x = 1\nreturn x");
-        if let Stmt::Return(exprs) = &stmts[1] {
-            assert_eq!(exprs.len(), 1);
-            assert!(matches!(exprs[0], Expr::Var { .. }));
-        } else {
-            panic!("Expected Return");
+        let literals_edge_cases = get_all_literals_edge_cases(); 
+        for t in ALL_TYPES_NO_ARR {
+            for l in &literals_edge_cases {
+                let stmts = parse_body(&format!("own x {} = {}\nreturn x", t, l));
+
+                assert_eq!(stmts.len(), 2);
+
+                if let Stmt::VarDecl(v) = &stmts[0] {
+                    assert_eq!(v.name, "x");
+                    assert_eq!(v.type_name, t.clone());
+                } else { panic!("Expected VarDecl"); }    
+
+                if let Stmt::Return(exprs) = &stmts[1] {
+                    assert_eq!(exprs.len(), 1);
+                    assert!(matches!(exprs[0], Expr::Var { .. }));
+                } else {
+                    panic!("Expected Return");
+                }
+            }
         }
     }
 
     // Integer literals, correct type inferrence tests
     #[test]
     fn integer_literal_fits_int8() {
-        let stmts = parse_body("own x = 1");
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            if let Some(Expr::IntLiteral { value, .. }) = &v.value {
-                assert!(matches!(value, IntLiteralValue::Int8(1)));
-            } else { panic!(); }
+        for t in ALL_TYPES_NO_ARR {
+            let stmts = parse_body(&format!("own x {} = 1", t));
+                
+            assert_eq!(stmts.len(), 1);
+
+            if let Stmt::VarDecl(v) = &stmts[0] {
+                assert_eq!(v.name, "x");
+                assert_eq!(v.type_name, t.clone());
+
+                if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                    assert!(matches!(value, IntLiteralValue::Int8(1)));
+                } else { panic!("Expected IntLiteral"); }
+            } else { panic!("Expected VarDecl"); }
         }
     }
 
     #[test]
     fn integer_literal_int8_boundary() {
-        // 127 fits int8, 128 does not
-        let stmts = parse_body("own a = 127\nown b = 128");
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            if let Some(Expr::IntLiteral { value, .. }) = &v.value {
-                assert!(matches!(value, IntLiteralValue::Int8(127)));
-            }
-        }
-        if let Stmt::VarDecl(v) = &stmts[1] {
-            if let Some(Expr::IntLiteral { value, .. }) = &v.value {
-                assert!(!matches!(value, IntLiteralValue::Int8(_)));
-            }
+        for t in ALL_TYPES_NO_ARR {
+            // 127 fits int8, 128 does not
+            let stmts = parse_body(&format!("own a {} = 127\nown b {} = 128", t, t));
+            
+            assert_eq!(stmts.len(), 2);
+
+            if let Stmt::VarDecl(v) = &stmts[0] {
+                assert_eq!(v.name, "a");
+                assert_eq!(v.type_name, t.clone());
+
+                if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                    assert!(matches!(value, IntLiteralValue::Int8(127)));
+                } else { panic!("Expected IntLiteral"); }
+            } else { panic!("Expected VarDecl"); }
+            
+            if let Stmt::VarDecl(v) = &stmts[1] {
+                assert_eq!(v.name, "b");
+                assert_eq!(v.type_name, t.clone());
+
+                if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                    assert!(matches!(value, IntLiteralValue::Int16(128)));
+                } else { panic!("Expected IntLiteral"); }
+            } else { panic!("Expected VarDecl"); }
         }
     }
 
-
     #[test]
     fn integer_literal_fits_int16() {
-        let stmts = parse_body("own x = 128");
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            if let Some(Expr::IntLiteral { value, .. }) = &v.value {
-                assert!(matches!(value, IntLiteralValue::Int16(128)));
-            } else { panic!(); }
+        for t in ALL_TYPES_NO_ARR {
+            let stmts = parse_body(&format!("own x {} = 128", t));
+            assert_eq!(stmts.len(), 1);
+            
+            if let Stmt::VarDecl(v) = &stmts[0] {
+                assert_eq!(v.name, "x");
+                assert_eq!(v.type_name, t.clone());
+
+                if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                    assert!(matches!(value, IntLiteralValue::Int16(128)));
+                } else { panic!("Expected IntLiteral"); }
+            } else { panic!("Expected VarDecl"); }
         }
     }
 
     #[test]
     fn integer_literal_int16_boundary() {
-        // 32767 fits int16, 32768 does not
-        let stmts = parse_body("own a = 32767\nown b = 32768");
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            if let Some(Expr::IntLiteral { value, .. }) = &v.value {
-                assert!(matches!(value, IntLiteralValue::Int16(32767)));
-            }
-        }
-        if let Stmt::VarDecl(v) = &stmts[1] {
-            if let Some(Expr::IntLiteral { value, .. }) = &v.value {
-                assert!(!matches!(value, IntLiteralValue::Int16(_)));
-            }
+        for t in ALL_TYPES_NO_ARR {
+            // 32767 fits int16, 32768 does not
+            let stmts = parse_body(&format!("own a {} = 32767\nown b {} = 32768", t, t));
+
+            assert_eq!(stmts.len(), 2);
+
+            if let Stmt::VarDecl(v) = &stmts[0] {
+                assert_eq!(v.name, "a");
+                assert_eq!(v.type_name, t.clone());
+
+                if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                    assert!(matches!(value, IntLiteralValue::Int16(32767)));
+                } else { panic!("Expected IntLiteral"); }
+
+            } else { panic!("Expected VarDecl"); }
+
+            if let Stmt::VarDecl(v) = &stmts[1] {
+                assert_eq!(v.name, "b");
+                assert_eq!(v.type_name, t.clone());
+
+                if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                    assert!(matches!(value, IntLiteralValue::Int32(32768)));
+                } else { panic!("Expected IntLiteral"); }
+            } else { panic!("Expected VarDecl"); }
         }
     }
 
     #[test]
     fn integer_literal_fits_int32() {
-        let stmts = parse_body("own x = 32768");
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            if let Some(Expr::IntLiteral { value, .. }) = &v.value {
-                assert!(matches!(value, IntLiteralValue::Int32(32768)));
-            } else { panic!(); }
+        for t in ALL_TYPES_NO_ARR {
+            let stmts = parse_body(&format!("own x {} = 32768", t));
+            assert_eq!(stmts.len(), 1);
+            
+            if let Stmt::VarDecl(v) = &stmts[0] {
+                assert_eq!(v.name, "x");
+                assert_eq!(v.type_name, t.clone());
+
+                if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                    assert!(matches!(value, IntLiteralValue::Int32(32768)));
+                } else { panic!(); }
+            } else { panic!("Expected VarDecl"); }
         }
     }
 
     #[test]
     fn integer_literal_int32_boundary() {
-        // 2147483647 fits int32, 2147483648 does not
-        let stmts = parse_body("own a = 2147483647\nown b = 2147483648");
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            if let Some(Expr::IntLiteral { value, .. }) = &v.value {
-                assert!(matches!(value, IntLiteralValue::Int32(2147483647)));
-            }
-        }
-        if let Stmt::VarDecl(v) = &stmts[1] {
-            if let Some(Expr::IntLiteral { value, .. }) = &v.value {
-                assert!(!matches!(value, IntLiteralValue::Int32(_)));
-            }
+        for t in ALL_TYPES_NO_ARR {
+            // 2147483647 fits int32, 2147483648 does not
+            let stmts = parse_body(&format!("own a {} = 2147483647\nown b {} = 2147483648", t, t));
+
+            assert_eq!(stmts.len(), 2);
+
+            if let Stmt::VarDecl(v) = &stmts[0] {
+                assert_eq!(v.name, "a");
+                assert_eq!(v.type_name, t.clone());
+
+                if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                    assert!(matches!(value, IntLiteralValue::Int32(2147483647)));
+                } else { panic!("Expcted IntLiteral"); }
+            } else { panic!("Expected VarDecl"); }
+            
+            if let Stmt::VarDecl(v) = &stmts[1] {
+                assert_eq!(v.name, "b");
+                assert_eq!(v.type_name, t.clone());
+
+                if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                    assert!(matches!(value, IntLiteralValue::Int64(2147483648)));
+                } else { panic!("Expcted IntLiteral"); }
+            } else { panic!("Expected VarDecl"); }
         }
     }
 
 
     #[test]
     fn integer_literal_fits_int64() {
-        let stmts = parse_body("own x = 2147483648");
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            if let Some(Expr::IntLiteral { value, .. }) = &v.value {
-                assert!(matches!(value, IntLiteralValue::Int64(2147483648)));
-            } else { panic!(); }
+        for t in ALL_TYPES_NO_ARR {
+            let stmts = parse_body(&format!("own x {} = 2147483648", t));
+            
+            assert_eq!(stmts.len(), 1);
+            if let Stmt::VarDecl(v) = &stmts[0] {
+                assert_eq!(v.name, "x");
+                assert_eq!(v.type_name, t.clone());
+
+                if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                    assert!(matches!(value, IntLiteralValue::Int64(2147483648)));
+                } else { panic!("Expcted IntLiteral"); }
+            } else { panic!("Expected VarDecl"); }
         }
     }
 
     #[test]
     fn integer_literal_int64_boundary() {
-        // 9223372036854775807 fits int64, 9223372036854775808 does not
-        let stmts = parse_body("own a = 9223372036854775807\nown b = 9223372036854775808");
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            if let Some(Expr::IntLiteral { value, .. }) = &v.value {
-                assert!(matches!(value, IntLiteralValue::Int64(9223372036854775807)));
-            }
-        }
-        if let Stmt::VarDecl(v) = &stmts[1] {
-            if let Some(Expr::IntLiteral { value, .. }) = &v.value {
-                assert!(!matches!(value, IntLiteralValue::Int64(_)));
-            }
+        for t in ALL_TYPES_NO_ARR {
+            // 9223372036854775807 fits int64, 9223372036854775808 does not
+            let stmts = parse_body(&format!("own a {} = 9223372036854775807\nown b {} = 9223372036854775808", t, t));
+            
+            assert_eq!(stmts.len(), 2);
+            if let Stmt::VarDecl(v) = &stmts[0] {
+                assert_eq!(v.name, "a");
+                assert_eq!(v.type_name, t.clone());
+
+                if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                    assert!(matches!(value, IntLiteralValue::Int64(9223372036854775807)));
+                } else { panic!("Expcted IntLiteral"); }
+            } else { panic!("Expected VarDecl"); }
+
+            if let Stmt::VarDecl(v) = &stmts[1] {
+                assert_eq!(v.name, "b");
+                assert_eq!(v.type_name, t.clone());
+
+                if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                    assert!(matches!(value, IntLiteralValue::Int128(9223372036854775808)));
+                } else { panic!("Expcted IntLiteral"); }
+            } else { panic!("Expected VarDecl"); }
         }
     }
 
     #[test]
     fn integer_literal_fits_int128() {
-        let stmts = parse_body("own x = 9223372036854775808");
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            if let Some(Expr::IntLiteral { value, .. }) = &v.value {
-                assert!(matches!(value, IntLiteralValue::Int128(9223372036854775808)));
-            } else { panic!(); }
-        }
+        for t in ALL_TYPES_NO_ARR {
+            let stmts = parse_body(&format!("own x {} = 9223372036854775808", t));
+            assert_eq!(stmts.len(), 1);
+            
+            if let Stmt::VarDecl(v) = &stmts[0] {
+                assert_eq!(v.name, "x");
+                assert_eq!(v.type_name, t.clone());
+
+                if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                    assert!(matches!(value, IntLiteralValue::Int128(9223372036854775808)));
+                } else { panic!("Expcted IntLiteral"); }
+            } else { panic!("Expected VarDecl"); }
+        } 
     }
 
     #[test]
     fn integer_literal_int128_boundary() {
         // 170141183460469231731687303715884105727 fits int128,  170141183460469231731687303715884105728 does not
-        let stmts = parse_body("own a = 170141183460469231731687303715884105727\nown b = 170141183460469231731687303715884105728");
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            if let Some(Expr::IntLiteral { value, .. }) = &v.value {
-                assert!(matches!(value, IntLiteralValue::Int128(170141183460469231731687303715884105727)));
-            }
-        }
-        if let Stmt::VarDecl(v) = &stmts[1] {
-            if let Some(Expr::IntLiteral { value, .. }) = &v.value {
-                assert!(!matches!(value, IntLiteralValue::Int128(_)));
-            }
+        for t in ALL_TYPES_NO_ARR {
+            let stmts = parse_body(&format!("own a {} = 170141183460469231731687303715884105727\nown b {} = 170141183460469231731687303715884105728", t, t));
+            
+            assert_eq!(stmts.len(), 2);
+            
+            if let Stmt::VarDecl(v) = &stmts[0] {
+                assert_eq!(v.name, "a");
+                assert_eq!(v.type_name, t.clone());
+
+                if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                    assert!(matches!(value, IntLiteralValue::Int128(170141183460469231731687303715884105727)));
+                } else { panic!("Expcted IntLiteral"); }
+            } else { panic!("Expected VarDecl"); }
+
+            if let Stmt::VarDecl(v) = &stmts[1] {
+                assert_eq!(v.name, "b");
+                assert_eq!(v.type_name, t.clone());
+
+                if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                    assert!(matches!(value, IntLiteralValue::Uint128(170141183460469231731687303715884105728)));
+                } else { panic!("Expcted IntLiteral"); }
+            } else { panic!("Expected VarDecl"); }
         }
     }
 
     #[test]
     fn integer_literal_fits_uint128() {
-        let stmts = parse_body("own x = 170141183460469231731687303715884105728");
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            if let Some(Expr::IntLiteral { value, .. }) = &v.value {
-                assert!(matches!(value, IntLiteralValue::Uint128(170141183460469231731687303715884105728)));
-            } else { panic!(); }
+        for t in ALL_TYPES_NO_ARR {
+            let stmts = parse_body(&format!("own x {} = 340282366920938463463374607431768211455", t));
+            assert_eq!(stmts.len(), 1);
+            if let Stmt::VarDecl(v) = &stmts[0] {
+                assert_eq!(v.name, "x");
+                assert_eq!(v.type_name, t.clone());
+
+                if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                    assert!(matches!(value, IntLiteralValue::Uint128(340282366920938463463374607431768211455)));
+                } else { panic!(); }
+            } else { panic!("Expected VarDecl"); }
         }
     }
 
@@ -1643,9 +1877,16 @@ mod tests {
 
     #[test]
     fn integer_literal_negative() {
-        let stmts = parse_body("own x = -128");
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Int8(-128), .. })));
+        for t in ALL_TYPES_NO_ARR {
+            let stmts = parse_body(&format!("own x {} = -128", t));
+            assert_eq!(stmts.len(), 1);
+            
+            if let Stmt::VarDecl(v) = &stmts[0] {
+                assert_eq!(v.name, "x");
+                assert_eq!(v.type_name, t.clone());
+
+                assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Int8(-128), .. })))
+            } else { panic!("Expected VarDecl"); }
         }
     }
 
@@ -1653,52 +1894,78 @@ mod tests {
     fn integer_overflow_u128_errors() {
         // A number larger than u128::MAX should produce a parse error
         let huge = "340282366920938463463374607431768211456"; // u128::MAX + 1
-        assert_parse_err(&wrap(&format!("own x = {}", huge)));
+                                                              //
+        for t in ALL_TYPES_NO_ARR {
+            assert_parse_err(&wrap(&format!("own x {} = {}", t, huge)));
+        }
     }
 
     // Float literals
 
     #[test]
     fn float_literal_f32() {
-        let stmts = parse_body("own x = 1.0");
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            if let Some(Expr::FloatLiteral { value, .. }) = &v.value {
-                assert!(matches!(value, FloatLiteralValue::Float32(_)));
-            } else { panic!("Expected FloatLiteral"); }
+        for t in ALL_TYPES_NO_ARR {
+            let stmts = parse_body(&format!("own x {} = 1.0", t));
+            assert_eq!(stmts.len(), 1);
+
+            if let Stmt::VarDecl(v) = &stmts[0] {
+                assert_eq!(v.name, "x");
+                assert_eq!(v.type_name, t.clone());
+
+                if let Some(Expr::FloatLiteral { value, .. }) = &v.value {
+                    assert!(matches!(value, FloatLiteralValue::Float32(_)));
+                } else { panic!("Expected FloatLiteral"); }
+            } else { panic!("Expected VarDecl"); }
         }
     }
 
     #[test]
     fn float_literal_f64_high_precision() {
         // More than 8 significant digits, then it must be f64
-        let stmts = parse_body("own x = 1.123456789");
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            if let Some(Expr::FloatLiteral { value, .. }) = &v.value {
-                assert!(matches!(value, FloatLiteralValue::Float64(_)));
-            } else { panic!("Expected FloatLiteral"); }
+        for t in ALL_TYPES_NO_ARR {
+            let stmts = parse_body(&format!("own x {} = 1.123456789", t));
+            assert_eq!(stmts.len(), 1);
+            if let Stmt::VarDecl(v) = &stmts[0] {
+                assert_eq!(v.name, "x");
+                assert_eq!(v.type_name, t.clone());
+
+                if let Some(Expr::FloatLiteral { value, .. }) = &v.value {
+                    assert!(matches!(value, FloatLiteralValue::Float64(_)));
+                } else { panic!("Expected FloatLiteral"); }
+            } else { panic!("Expected VarDecl"); }
         }
     }
 
     #[test]
     fn float_literal_multiple_dots_errors() {
-        assert_parse_err(&wrap("own x = 1.2.3"));
+        for t in ALL_TYPES_NO_ARR {
+            assert_parse_err(&wrap(&format!("own x {} = 1.2.3", t)));
+        }
     }
 
     // Bool literals
 
     #[test]
     fn bool_literal_true() {
-        let stmts = parse_body("own x = true");
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            assert!(matches!(v.value, Some(Expr::BoolLiteral { value: true, .. })));
+        for t in ALL_TYPES_NO_ARR {
+            let stmts = parse_body(&format!("own x {} = true", t));
+            assert_eq!(stmts.len(), 1);
+            if let Stmt::VarDecl(v) = &stmts[0] {
+                assert_eq!(v.type_name, t.clone());
+                assert!(matches!(v.value, Some(Expr::BoolLiteral { value: true, .. })));
+            } else { panic!("Expected VarDecl"); }
         }
     }
 
     #[test]
     fn bool_literal_false() {
-        let stmts = parse_body("own x = false");
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            assert!(matches!(v.value, Some(Expr::BoolLiteral { value: false, .. })));
+        for t in ALL_TYPES_NO_ARR {
+            let stmts = parse_body(&format!("own x {} = false", t));
+            assert_eq!(stmts.len(), 1);
+            if let Stmt::VarDecl(v) = &stmts[0] {
+                assert_eq!(v.type_name, t.clone());
+                assert!(matches!(v.value, Some(Expr::BoolLiteral { value: false, .. })));
+            } else { panic!("Expected VarDecl"); }
         }
     }
 
@@ -1706,70 +1973,114 @@ mod tests {
 
     #[test]
     fn string_literal_basic() {
-        let stmts = parse_body(r#"own x = "hello""#);
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            if let Some(Expr::StringLiteral { value, .. }) = &v.value {
-                assert_eq!(value, "hello");
-            } else { panic!("Expected StringLiteral"); }
+        for t in ALL_TYPES_NO_ARR {
+            let stmts = parse_body(&format!("own x {} = \"hello\"", t));
+            assert_eq!(stmts.len(), 1);
+
+            if let Stmt::VarDecl(v) = &stmts[0] {
+                assert_eq!(v.name, "x");
+                assert_eq!(v.type_name, t.clone());
+
+                if let Some(Expr::StringLiteral { value, .. }) = &v.value {
+                    assert_eq!(value, "hello");
+                } else { panic!("Expected StringLiteral"); }
+            } else { panic!("Expected VarDecl"); }
         }
     }
 
     #[test]
     fn string_literal_escape_sequences() {
-        let stmts = parse_body(r#"own x = "hello\nworld""#);
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            if let Some(Expr::StringLiteral { value, .. }) = &v.value {
-                assert_eq!(value, "hello\nworld");
-            } else { panic!(); }
+        for t in ALL_TYPES_NO_ARR {
+            let stmts = parse_body(&format!("own x {} = \"hello\\nworld\"", t));
+            assert_eq!(stmts.len(), 1);
+
+            if let Stmt::VarDecl(v) = &stmts[0] {
+                assert_eq!(v.name, "x");
+                assert_eq!(v.type_name, t.clone());
+
+                if let Some(Expr::StringLiteral { value, .. }) = &v.value {
+                    assert_eq!(value, "hello\nworld");
+                } else { panic!("Expected StringLiteral"); }
+            } else { panic!("Expected VarDecl"); }
         }
     }
 
     #[test]
     fn string_literal_with_escaped_quote() {
-        let stmts = parse_body(r#"own x = "say \"hi\"""#);
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            if let Some(Expr::StringLiteral { value, .. }) = &v.value {
-                assert_eq!(value, r#"say "hi""#);
-            } else { panic!(); }
+        for t in ALL_TYPES_NO_ARR {
+            let stmts = parse_body(&format!("own x {} = \"say \\\"hi\\\"\"", t));
+            assert_eq!(stmts.len(), 1);
+            
+            if let Stmt::VarDecl(v) = &stmts[0] {
+                assert_eq!(v.name, "x");
+                assert_eq!(v.type_name, t.clone());
+
+                if let Some(Expr::StringLiteral { value, .. }) = &v.value {
+                    assert_eq!(value, r#"say "hi""#);
+                } else { panic!(); }
+            } else { panic!("Expected VarDecl"); }
         }
     }
 
     #[test]
     fn string_literal_unclosed_errors() {
-        assert_parse_err(&wrap(r#"own x = "unclosed"#));
+        for t in ALL_TYPES_NO_ARR {
+            assert_parse_err(&wrap(&format!("own x {} = \"unclosed", t)));
+        }
     }
 
     #[test]
     fn string_literal_containing_hash_not_comment() {
-        // '#' inside a string must not be stripped as a comment
-        let stmts = parse_body(r#"own x = "hello # world""#);
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            if let Some(Expr::StringLiteral { value, .. }) = &v.value {
-                assert_eq!(value, "hello # world");
-            } else { panic!(); }
+        for t in ALL_TYPES_NO_ARR {
+            // '#' inside a string must not be stripped as a comment
+            let stmts = parse_body(&format!("own x {} = \"hello # world\"", t));
+            assert_eq!(stmts.len(), 1);
+
+            if let Stmt::VarDecl(v) = &stmts[0] {
+                assert_eq!(v.name, "x");
+                assert_eq!(v.type_name, t.clone());
+
+                if let Some(Expr::StringLiteral { value, .. }) = &v.value {
+                    assert_eq!(value, "hello # world");
+                } else { panic!(); }
+            } else { panic!("Expected VarDecl"); }
         }
     }
 
 
     #[test]
     fn string_literal_containing_curly_brackets_end() {
-        // '}' inside a string must not be treated as a function closing curly bracket.
-        let stmts = parse_body(r#"own x = "hello } world""#);
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            if let Some(Expr::StringLiteral { value, .. }) = &v.value {
-                assert_eq!(value, "hello } world");
-            } else { panic!(); }
+        for t in ALL_TYPES_NO_ARR {
+            // '}' inside a string must not be treated as a function closing curly bracket.
+            let stmts = parse_body(&format!("own x {} = \"hello }} world\"", t));
+            assert_eq!(stmts.len(), 1);
+            
+            if let Stmt::VarDecl(v) = &stmts[0] {
+                assert_eq!(v.name, "x");
+                assert_eq!(v.type_name, t.clone());
+
+                if let Some(Expr::StringLiteral { value, .. }) = &v.value {
+                    assert_eq!(value, "hello } world");
+                } else { panic!(); }
+            } else { panic!("Expected VarDecl"); }
         }
     }
 
     #[test]
     fn string_literal_containing_curly_brackets_start() {
-        // '{' inside a string must not be treated as a function start curly bracket.
-        let stmts = parse_body(r#"own x = "hello { world""#);
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            if let Some(Expr::StringLiteral { value, .. }) = &v.value {
-                assert_eq!(value, "hello { world");
-            } else { panic!(); }
+        for t in ALL_TYPES_NO_ARR {
+            // '}' inside a string must not be treated as a function closing curly bracket.
+            let stmts = parse_body(&format!("own x {} = \"hello {{ world\"", t));
+            assert_eq!(stmts.len(), 1);
+            
+            if let Stmt::VarDecl(v) = &stmts[0] {
+                assert_eq!(v.name, "x");
+                assert_eq!(v.type_name, t.clone());
+
+                if let Some(Expr::StringLiteral { value, .. }) = &v.value {
+                    assert_eq!(value, "hello { world");
+                } else { panic!(); }
+            } else { panic!("Expected VarDecl"); }
         }
     }
 
@@ -1799,8 +2110,9 @@ mod tests {
         for (en1, et1) in edge_cases_numbers.iter().zip(edge_cases_types.iter()) {    
             for (en2, et2) in edge_cases_numbers.iter().zip(edge_cases_types.iter()) {    
                 for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
-                    let stmts = parse_body(&format!("own x = {} {} {}", en1, s, en2));
+                    let stmts = parse_body(&format!("own x {} = {} {} {}", et2, en1, s, en2));
                     if let Stmt::VarDecl(v) = &stmts[0] {
+                        assert_eq!(v.type_name, et2.clone());
                         if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
                             assert_eq!(op, b);
 
@@ -1872,8 +2184,9 @@ mod tests {
         for (en1, et1) in edge_cases_numbers.iter().zip(edge_cases_types.iter()) {    
             for (en2, et2) in edge_cases_numbers.iter().zip(edge_cases_types.iter()) {    
                 for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
-                    let stmts = parse_body(&format!("own x = {} {} {}", en1, s, en2));
+                    let stmts = parse_body(&format!("own x {} = {} {} {}", et2, en1, s, en2));
                     if let Stmt::VarDecl(v) = &stmts[0] {
+                        assert_eq!(v.type_name, et2.clone());
                         if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
                             assert_eq!(op, b);
 
@@ -1919,19 +2232,22 @@ mod tests {
 
     #[test]
     fn binop_arth_vars_only() {
-        for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
-            let stmts = parse_body(&format!("own x = a {} b", s));
-            if let Stmt::VarDecl(v) = &stmts[0] {
-                if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
-                    assert_eq!(op, b);
+        for t in ALL_TYPES_NO_ARR {
+            for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
+                let stmts = parse_body(&format!("own x {} = a {} b", t, s));
+                if let Stmt::VarDecl(v) = &stmts[0] {
+                    assert_eq!(v.type_name, t.clone());
+                    if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
+                        assert_eq!(op, b);
 
-                    assert!(matches!(**left, Expr::Var { .. }));
-                    assert!(matches!(**right, Expr::Var { .. }));
+                        assert!(matches!(**left, Expr::Var { .. }));
+                        assert!(matches!(**right, Expr::Var { .. }));
 
-                } else {
-                    panic!("Expected {:?}, instead we got {:?}", b, &v.value);
-                }
-            } else { panic!("Expected VarDecl, instead we got {:?}", &stmts[0]) }
+                    } else {
+                        panic!("Expected {:?}, instead we got {:?}", b, &v.value);
+                    }
+                } else { panic!("Expected VarDecl, instead we got {:?}", &stmts[0]) }
+            }
         }
     }
 
@@ -1959,8 +2275,9 @@ mod tests {
 
         for (en, et) in edge_cases_numbers.iter().zip(edge_cases_types.iter()) {    
             for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
-                let stmts = parse_body(&format!("own x = a {} {}", s, en));
+                let stmts = parse_body(&format!("own x {} = a {} {}", et, s, en));
                 if let Stmt::VarDecl(v) = &stmts[0] {
+                    assert_eq!(v.type_name, et.clone());
                     if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
                         assert_eq!(op, b);
 
@@ -1984,8 +2301,9 @@ mod tests {
 
 
             for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
-                let stmts = parse_body(&format!("own x = {} {} a", en, s));
+                let stmts = parse_body(&format!("own x {} = {} {} a", et, en, s));
                 if let Stmt::VarDecl(v) = &stmts[0] {
+                    assert_eq!(v.type_name, et.clone());
                     if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
                         assert_eq!(op, b);
 
@@ -2043,8 +2361,9 @@ mod tests {
 
         for (en, et) in edge_cases_numbers.iter().zip(edge_cases_types.iter()) {    
             for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
-                let stmts = parse_body(&format!("own x = a {} {}", s, en));
+                let stmts = parse_body(&format!("own x {} = a {} {}", et, s, en));
                 if let Stmt::VarDecl(v) = &stmts[0] {
+                    assert_eq!(v.type_name, et.clone());
                     if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
                         assert_eq!(op, b);
 
@@ -2070,8 +2389,9 @@ mod tests {
 
 
             for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
-                let stmts = parse_body(&format!("own x = {} {} a", en, s));
+                let stmts = parse_body(&format!("own x {} = {} {} a", et, en, s));
                 if let Stmt::VarDecl(v) = &stmts[0] {
+                    assert_eq!(v.type_name, et.clone());
                     if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
                         assert_eq!(op, b);
 
@@ -2098,130 +2418,247 @@ mod tests {
     }
 
 
-
-
-
-
     #[test]
     fn binop_missing_right_operand_errors() {
-        assert_parse_err(&wrap("own x = 1 +"));
+        let literals_edge_cases = get_all_literals_edge_cases();
+        for t in ALL_TYPES_NO_ARR {
+            for l in &literals_edge_cases {
+                for b in BIN_OP_KIND_SYMBOLS {
+                    assert_parse_err(&wrap(&format!("own x {} = {} {}", t, l, b)));
+                }
+            }
+        }
     }
 
     #[test]
     fn binop_missing_left_operand_errors() {
-        assert_parse_err(&wrap("own x = + 2"));
+        let literals_edge_cases = get_all_literals_edge_cases();
+        for t in ALL_TYPES_NO_ARR {
+            for l in &literals_edge_cases {
+                for b in BIN_OP_KIND_SYMBOLS {
+                    // So it's not unary, like -1, which is correct and wouldn't error.
+                    if b == "-" {
+                        continue
+                    }
+                    assert_parse_err(&wrap(&format!("own x {} = {} {}", t, b, l)));
+                }
+            }
+        }
     }
 
     #[test]
     fn binop_nested_via_parens() {
-        for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
-            let stmts = parse_body(&format!("own x = (1 + 2) {} 3", s));
-            if let Stmt::VarDecl(v) = &stmts[0] {
-                if let Some(Expr::BinOp { op, left, .. }) = &v.value {
-                    assert_eq!(op, b);
-                    assert!(matches!(**left, Expr::BinOp { .. }));
-                } else {
-                    panic!("Expected {:?}, instead we got {:?}", b, &v.value);
+        // e.g. own x int32 = (1 + 1) + 4
+        // .. etc
+        let literals_edge_cases = get_all_literals_edge_cases();
+        for t in ALL_TYPES_NO_ARR {
+            for l in &literals_edge_cases {
+                for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
+                    let stmts = parse_body(&format!("own x {} = ({} {} {}) {} {}", t, l, s, l, s, l));
+                    if let Stmt::VarDecl(v) = &stmts[0] {
+                        assert_eq!(v.type_name, t.clone());
+                        if let Some(Expr::BinOp { op, left, .. }) = &v.value {
+                            assert_eq!(op, b);
+                            assert!(matches!(**left, Expr::BinOp { .. }));
+                        } else {
+                            panic!("Expected {:?}, instead we got {:?}", b, &v.value);
+                        }
+                    } else { panic!("Expected VarDecl, instead we got {:?}", &stmts[0]) }
                 }
-            } else { panic!("Expected VarDecl, instead we got {:?}", &stmts[0]) }
+            }
         }
     }
 
     // Unary negate
 
     #[test]
-    fn literals_doesnt_produce_unary_negate() {
-        let stmts = parse_body("own x = -42");
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Int8(-42), .. })));
-        } else { panic!("Expected VarDecl"); }
+    fn int_literals_doesnt_produce_unary_negate() {
+        let literals_ints_edge_cases = get_all_ints_literals_edge_cases();
+
+        for t in ALL_TYPES_NO_ARR {
+            for l in &literals_ints_edge_cases {
+                // Because if l is -, it would become a float
+                if *l == u128::MAX.to_string() {
+                    continue
+                }
+                let stmts = parse_body(&format!("own x {} = -{}", t, l));
+                if let Stmt::VarDecl(v) = &stmts[0] {
+                    assert_eq!(v.type_name, t.clone());
+
+                    // a negative value would produce unary though because - earlier makes it do
+                    // so. since theres no expressions before it. (--1 is -1 negated, etc)
+                    if l.starts_with("-") {
+                        if let Some(Expr::UnaryOp { op, expr, .. }) = &v.value {
+                            assert_eq!(*op, UnaryOpKind::Negate);
+                            if let Expr::IntLiteral { value, .. } = &**expr {
+                                if value.is_signed() {
+                                    let val_l = value.as_i128();
+                                    assert_eq!(&val_l.to_string(), l);
+                                } else {
+                                    let val_l = value.as_u128();
+                                    assert_eq!(&val_l.to_string(), l);
+                                }   
+
+                            } else { panic!("Expected IntLiteral"); }
+                        } else { panic!("Expected Unary negate"); }
+                    
+                    } else {
+                        if let Expr::IntLiteral { value, .. } = v.value.clone().unwrap() {
+                            if value.is_signed() {
+                                let val_l = value.as_i128();
+                                if val_l == 0 {
+                                    assert_eq!(&val_l.to_string(), l);
+                                } else {
+                                    assert_eq!(val_l.to_string(), format!("-{}", l));
+                                }
+                            } else {
+                                let val_l = value.as_u128();
+                                assert_eq!(&val_l.to_string(), l);
+                            }
+                        } else { panic!("Expected IntLiteral"); }
+                    }
+
+
+                } else { panic!("Expected VarDecl"); }
+            }
+        }
     }
 
     #[test]
     fn unary_negate_variable() {
-        let stmts = parse_body("own x = -y");
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            if let Some(Expr::UnaryOp { op, expr, .. }) = &v.value {
-                assert_eq!(*op, UnaryOpKind::Negate);
-                assert!(matches!(**expr, Expr::Var { .. }));
-            } else { panic!("Expected Unary negate"); }
-        } else { panic!("Expected VarDecl"); }
+        for t in ALL_TYPES_NO_ARR {
+            let stmts = parse_body(&format!("own x {} = -y", t));
+            if let Stmt::VarDecl(v) = &stmts[0] {
+                assert_eq!(v.type_name, t.clone());
+                if let Some(Expr::UnaryOp { op, expr, .. }) = &v.value {
+                    assert_eq!(*op, UnaryOpKind::Negate);
+                    assert!(matches!(**expr, Expr::Var { .. }));
+                } else { panic!("Expected Unary negate"); }
+            } else { panic!("Expected VarDecl"); }
+        }
     }
 
     #[test]
+    fn unary_negate_array_access() {
+        let literals_edge_cases = get_all_literals_edge_cases();
+        for t in ALL_TYPES_NO_ARR {
+            for l in &literals_edge_cases {
+                let stmts = parse_body(&format!("own x {} = -y[{}]", t, l));
+                if let Stmt::VarDecl(v) = &stmts[0] {
+                    assert_eq!(v.type_name, t.clone());
+                    if let Some(Expr::UnaryOp { op, expr, .. }) = &v.value {
+                        assert_eq!(*op, UnaryOpKind::Negate);
+                        assert!(matches!(**expr, Expr::ArraySingleAccess { .. }));
+                    } else { panic!("Expected Unary negate"); }
+                } else { panic!("Expected VarDecl"); }
+            }
+        }
+    }
+
+
+
+    #[test]
     fn unary_negate_dangling_errors() {
-        assert_parse_err(&wrap("own x = -"));
+        for t in ALL_TYPES_NO_ARR {
+            assert_parse_err(&wrap(&format!("own x {} = -", t)));
+        }
     }
 
     // Function calls
 
     #[test]
     fn call_no_args() {
-        let stmts = parse_body("own x = noop()");
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            if let Some(Expr::Call { name, args, .. }) = &v.value {
-                assert_eq!(name, "noop");
-                assert!(args.is_empty());
-            } else { panic!("Expected Call"); }
-    }
+        for t in ALL_TYPES_NO_ARR {
+            let stmts = parse_body(&format!("own x {} = noop()", t));
+
+            if let Stmt::VarDecl(v) = &stmts[0] {
+                if let Some(Expr::Call { name, args, .. }) = &v.value {
+                    assert_eq!(name, "noop");
+                    assert!(args.is_empty());
+                } else { panic!("Expected Call"); }
+            }       
+        }
     }
 
     #[test]
     fn call_with_args_literals_only() {
-        let stmts = parse_body("own x = add(1, \"Hi!1\\\"\")");
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            if let Some(Expr::Call { name, args, .. }) = &v.value {
-                assert_eq!(name, "add");
-                assert_eq!(args.len(), 2);
-                assert!(matches!(args[0], Expr::IntLiteral { .. }));
-                assert!(matches!(args[1], Expr::StringLiteral { .. }));
-            } else { panic!("Expected Call"); }
+        let literals_edge_cases = get_all_literals_edge_cases();
+        
+        for t in ALL_TYPES_NO_ARR {
+            for l in &literals_edge_cases {
+                let stmts = parse_body(&format!("own x {} = add({}, \"Hi!1\\\"\")", t, l));
+                if let Stmt::VarDecl(v) = &stmts[0] {
+                    assert_eq!(v.name, "x");
+                    assert_eq!(v.type_name, t.clone());
+
+                    if let Some(Expr::Call { name, args, .. }) = &v.value {
+                        assert_eq!(name, "add");
+                        assert_eq!(args.len(), 2);
+                        assert!(matches!(args[1], Expr::StringLiteral { .. }));
+                    } else { panic!("Expected Call"); }
+                } else { panic!("Expected VarDecl"); }
+            }
         }
     }
 
     #[test]
     fn call_with_args_vars_only() {
-        let stmts = parse_body("own x = add(a, b)");
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            if let Some(Expr::Call { name, args, .. }) = &v.value {
-                assert_eq!(name, "add");
-                assert_eq!(args.len(), 2);
-                assert!(matches!(args[0], Expr::Var { .. }));
-                assert!(matches!(args[1], Expr::Var { .. }));
-            } else { panic!("Expected Call"); }
+        for t in ALL_TYPES_NO_ARR {
+            let stmts = parse_body(&format!("own x {} = add(a, b)", t));
+            if let Stmt::VarDecl(v) = &stmts[0] {
+                assert_eq!(v.name, "x");
+                assert_eq!(v.type_name, t.clone());
+                   
+                if let Some(Expr::Call { name, args, .. }) = &v.value {
+                    assert_eq!(name, "add");
+                    assert_eq!(args.len(), 2);
+                    assert!(matches!(args[0], Expr::Var { .. }));
+                    assert!(matches!(args[1], Expr::Var { .. }));
+                } else { panic!("Expected Call"); }
+            } else { panic!("Expected VarDecl"); }
         }
     }
 
 
     #[test]
     fn call_with_args_mixed() {
-        let stmts = parse_body("own x = add(a, 69)");
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            if let Some(Expr::Call { name, args, .. }) = &v.value {
-                assert_eq!(name, "add");
-                assert_eq!(args.len(), 2);
-                assert!(matches!(args[0], Expr::Var { .. }));
-                assert!(matches!(args[1], Expr::IntLiteral { .. }));
-            } else { panic!("Expected Call"); }
+        let literals_edge_cases = get_all_literals_edge_cases();
+        for t in ALL_TYPES_NO_ARR {
+            for l in &literals_edge_cases {
+                let stmts = parse_body(&format!("own x {} = add(a, {})", t, l));
+                if let Stmt::VarDecl(v) = &stmts[0] {
+                    assert_eq!(v.name, "x");
+                    assert_eq!(v.type_name, t.clone());
+                    if let Some(Expr::Call { name, args, .. }) = &v.value {
+                        assert_eq!(name, "add");
+                        assert_eq!(args.len(), 2);
+                        assert!(matches!(args[0], Expr::Var { .. }));
+                    } else { panic!("Expected Call"); }
+                } else { panic!("Expected VarDecl"); }
+            }
         }
     }
 
-
     #[test]
     fn call_nested_args() {
-        let stmts = parse_body("own x = outer(inner(1, 2), 3)");
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            if let Some(Expr::Call { name, args, .. }) = &v.value {
-                assert_eq!(name, "outer");
-                assert_eq!(args.len(), 2);
-            
-                assert!(matches!(args[1], Expr::IntLiteral { .. }));
-                if let Expr::Call { name, args, .. } = &args[0] {
-                    assert_eq!(name, "inner");
-                    assert!(matches!(args[0], Expr::IntLiteral { .. }));
-                    assert!(matches!(args[1], Expr::IntLiteral { .. }));
-                } else { panic!("Expected Call"); }
-            } else { panic!("Expected Call"); }
+        let literals_edge_cases = get_all_literals_edge_cases();
+        for t in ALL_TYPES_NO_ARR {
+            for l in &literals_edge_cases {
+                let stmts = parse_body(&format!("own x {} = outer(inner({}, {}), {})", t, l, l, l));
+                if let Stmt::VarDecl(v) = &stmts[0] {
+                    assert_eq!(v.name, "x");
+                    assert_eq!(v.type_name, t.clone());
+                    if let Some(Expr::Call { name, args, .. }) = &v.value {
+                        assert_eq!(name, "outer");
+                        assert_eq!(args.len(), 2);
+                    
+                        if let Expr::Call { name, args: args2, .. } = &args[0] {
+                            assert_eq!(name, "inner");
+                            assert_eq!(args2.len(), 2);
+                        } else { panic!("Expected Call"); }
+                    } else { panic!("Expected Call"); }
+                } else { panic!("Expected VarDecl"); }
+            }
         }
     }
 
@@ -2244,147 +2681,252 @@ mod tests {
 
     #[test]
     fn copy_call() {
-        let stmts = parse_body("own z = copy(y)");
-        assert_eq!(stmts.len(), 1);
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            assert!(matches!(v.value, Some(Expr::CopyCall { .. })));
-        } else { panic!("Expected VarDecl"); }
+        let literals_edge_cases = get_all_literals_edge_cases();
+        for t in ALL_TYPES_NO_ARR {
+            for l in &literals_edge_cases { 
+                let stmts = parse_body(&format!("own z {} = copy({})", t, l));
+                assert_eq!(stmts.len(), 1);
+                if let Stmt::VarDecl(v) = &stmts[0] {
+                    assert_eq!(v.name, "z");
+                    assert_eq!(v.type_name, t.clone());
+                    assert!(matches!(v.value, Some(Expr::CopyCall { .. })));
+                } else { panic!("Expected VarDecl"); }
+            }
+        }
     }
 
     #[test]
     fn copy_wrong_arg_count_errors() {
-        assert_parse_err(&wrap("own z = copy(a, b)"));
-        assert_parse_err(&wrap("own z = copy()"));
+        let literals_edge_cases = get_all_literals_edge_cases();
+        for t in ALL_TYPES_NO_ARR {
+            for l in &literals_edge_cases { 
+                assert_parse_err(&wrap(&format!("own z {} = copy({}, {})", t, l, l)));
+                assert_parse_err(&wrap(&format!("own z {} = copy()", t)));
+            }
+        }
     }
 
     // Built-in: format()
 
     #[test]
     fn format_call_binop_expr() {
-        let stmts = parse_body(r#"own s = format("Your age is {17 + 1}")"#);
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            assert!(matches!(v.value, Some(Expr::FormatCall { .. })));
-        } else { panic!("Expected VarDecl"); }
+        let literals_ints_edge_cases = get_all_ints_literals_edge_cases();
+        for t in ALL_TYPES_NO_ARR {
+            for l in &literals_ints_edge_cases { 
+                let stmts = parse_body(&format!("own s {} = format(\"Your age is {{{} + {}}}\")", t, l, l));
+                if let Stmt::VarDecl(v) = &stmts[0] {
+                    assert_eq!(v.name, "s");
+                    assert_eq!(v.type_name, t.clone());
 
+                    assert!(matches!(v.value, Some(Expr::FormatCall { .. })));
+                } else { panic!("Expected VarDecl"); }
+
+            }
+        }
     }
-
 
     #[test]
     fn format_call_variable() {
-        let stmts = parse_body("own x = \"World\"\n own s = format(\"Hello, {x}!\")");
-        if let Stmt::VarDecl(v) = &stmts[1] {
-            assert!(matches!(v.value, Some(Expr::FormatCall { .. })));
-        } else { panic!("Expected VarDecl"); }
+        let literals_edge_cases = get_all_literals_edge_cases();
+        for t in ALL_TYPES_NO_ARR {
+            for l in &literals_edge_cases { 
+                let stmts = parse_body(&format!("own x {} = {}\n own s {} = format(\"Hello, {{x}}!\")", t, l, t));
 
+                assert_eq!(stmts.len(), 2);
+
+                if let Stmt::VarDecl(v) = &stmts[0] {
+                    assert_eq!(v.name, "x");
+                    assert_eq!(v.type_name, t.clone());
+                } else { panic!("Expected VarDecl"); }
+
+
+                if let Stmt::VarDecl(v) = &stmts[1] {
+                    assert_eq!(v.name, "s");
+                    assert_eq!(v.type_name, t.clone());
+                    assert!(matches!(v.value, Some(Expr::FormatCall { .. })));
+                } else { panic!("Expected VarDecl"); }
+            }
+        }
     }
 
     #[test]
     fn format_invalid_args_errors() {
-        assert_parse_err(&wrap("own s = format()"));
-        assert_parse_err(&wrap("own s = format(a, b)"));
-        assert_parse_err(&wrap("own s = format(1)"));
-        assert_parse_err(&wrap("own s = format(true)"));
-        assert_parse_err(&wrap("own s = format(int32[1,2,3])"));
-        assert_parse_err(&wrap("own s = format(format(\"Hi\"))"));
-        
-        assert_parse_err(&wrap("own s = format(\"{}\")"));
-        assert_parse_err(&wrap("own s = format(\"Hi {}\")"));
-        assert_parse_err(&wrap("own s = format(\"Hi\")"));
+        let literals_edge_cases = get_all_literals_edge_cases();
+        for t in ALL_TYPES_NO_ARR {
+            for l in &literals_edge_cases {
+                assert_parse_err(&wrap(&format!("own s {} = format({})", t, l)));
+            }
+            assert_parse_err(&wrap(&format!("own s {} = format({}[])", t, t)));
+            assert_parse_err(&wrap(&format!("own s {} = format({{}})", t)));
+            assert_parse_err(&wrap(&format!("own s {} = format(\"{{}}\")", t)));
+            assert_parse_err(&wrap(&format!("own s {} = format(\"Hi {{}}\")", t)));
+            assert_parse_err(&wrap(&format!("own s {} = format(\"Hi\")", t)));
+        }
     }
 
     // Array access — single element
 
     #[test]
     fn array_single_access() {
-        let stmts = parse_body("own v = arr[0]");
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            assert!(matches!(v.value, Some(Expr::ArraySingleAccess { .. })));
-        } else { panic!("Expected VarDecl"); }
+        let literals_edge_cases = get_all_literals_edge_cases();
+
+        for t in ALL_TYPES_NO_ARR {
+            for l in &literals_edge_cases {
+                let stmts = parse_body(&format!("own v {} = arr[{}]", t, l));
+                if let Stmt::VarDecl(v) = &stmts[0] {
+                    assert_eq!(v.type_name, t.clone());
+                    assert!(matches!(v.value, Some(Expr::ArraySingleAccess { .. })));
+                } else { panic!("Expected VarDecl"); }
+            }
+        }
     }
+
+    #[test]
+    fn array_single_access_no_type_errors() {
+        assert_parse_err(&wrap("own v = arr[0]"));
+    }
+
 
     #[test]
     fn array_access_variable_index() {
-        let stmts = parse_body("own v = arr[i]");
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            if let Some(Expr::ArraySingleAccess { index, .. }) = &v.value {
-                assert!(matches!(**index, Expr::Var { .. }));
-            } else { panic!(); }
+        let literals_edge_cases = get_all_literals_edge_cases();
+        
+        for t in ALL_TYPES_NO_ARR {
+            for l in &literals_edge_cases {
+                let stmts = parse_body(&format!("own v {} = arr[{}]", t, l));
+                if let Stmt::VarDecl(v) = &stmts[0] {
+                    assert_eq!(v.type_name, t.clone());
+                    assert!(matches!(v.value, Some(Expr::ArraySingleAccess { .. })));
+                } else { panic!("Expected VarDecl"); }
+            }
         }
     }
 
-    // Array access — slice
+
+    #[test]
+    fn array_access_variable_index_no_type_errors() {
+        assert_parse_err(&wrap("own v = arr[i]"));
+    }
+
+
+    // Array access (slicing)
 
     #[test]
     fn array_slice_both_bounds() {
-        let stmts = parse_body("own v = arr[1:3]");
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            if let Some(Expr::ArrayMultipleAccess { start, end, .. }) = &v.value {
-                assert!(start.is_some());
-                assert!(end.is_some());
-            } else { panic!("Expected ArrayMultipleAccess"); }
+        let literals_edge_cases = get_all_literals_edge_cases();
+
+        for t in ALL_TYPES_NO_ARR {
+            for l in &literals_edge_cases {
+                let stmts = parse_body(&format!("own v {} = arr[{}:{}]", t, l, l));
+                if let Stmt::VarDecl(v) = &stmts[0] {
+                    if let Some(Expr::ArrayMultipleAccess { start, end, .. }) = &v.value {
+                        assert!(start.is_some());
+                        assert!(end.is_some());
+                    } else { panic!("Expected ArrayMultipleAccess"); }
+                }
+            }
         }
+    }
+
+    #[test]
+    fn array_slice_both_bounds_no_type_errors() {
+        assert_parse_err(&wrap("own v = arr[1:3]"));
     }
 
     #[test]
     fn array_slice_open_start() {
-        let stmts = parse_body("own v = arr[:5]");
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            if let Some(Expr::ArrayMultipleAccess { start, end, .. }) = &v.value {
-                assert!(start.is_none());
-                assert!(end.is_some());
-            } else { panic!(); }
+        let literals_edge_cases = get_all_literals_edge_cases();
+
+        for t in ALL_TYPES_NO_ARR {
+            for l in &literals_edge_cases {
+                let stmts = parse_body(&format!("own v {} = arr[:{}]", t, l));
+                if let Stmt::VarDecl(v) = &stmts[0] {
+                    if let Some(Expr::ArrayMultipleAccess { start, end, .. }) = &v.value {
+                        assert!(start.is_none());
+                        assert!(end.is_some());
+                    } else { panic!("Expected VarDecl"); }
+                }
+            }
         }
     }
 
     #[test]
     fn array_slice_open_end() {
-        let stmts = parse_body("own v = arr[2:]");
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            if let Some(Expr::ArrayMultipleAccess { start, end, .. }) = &v.value {
-                assert!(start.is_some());
-                assert!(end.is_none());
-            } else { panic!(); }
+        let literals_edge_cases = get_all_literals_edge_cases();
+
+        for t in ALL_TYPES_NO_ARR {
+            for l in &literals_edge_cases {
+                let stmts = parse_body(&format!("own v {} = arr[{}:]", t, l));
         
-        } else { panic!("Expected VarDecl"); }
+                if let Stmt::VarDecl(v) = &stmts[0] {
+                    if let Some(Expr::ArrayMultipleAccess { start, end, .. }) = &v.value {
+                        assert!(start.is_some());
+                        assert!(end.is_none());
+                    } else { panic!(); }
+                
+                } else { panic!("Expected VarDecl"); }
+            }
+        }
     }
 
     #[test]
     fn array_access_errors() {
-        assert_parse_err(&wrap("own v = arr[:]"));
-        assert_parse_err(&wrap("own v = arr[]"));
+        for t in ALL_TYPES_NO_ARR {
+            assert_parse_err(&wrap(&format!("own v {} = arr[:]", t)));
+            assert_parse_err(&wrap(&format!("own v {} = arr[]", t)));
+        }
     }
 
     // Inline comment stripping
 
     #[test]
     fn inline_comment_stripped() {
-        // Statement followed by inline comment should still parse cleanly
-        let stmts = parse_body("own x = 1 # this is a comment");
-        assert_eq!(stmts.len(), 1);
-        assert!(matches!(stmts[0], Stmt::VarDecl(_)));
+        let literals_edge_cases = get_all_literals_edge_cases();
+
+        for t in ALL_TYPES_NO_ARR {
+            for l in &literals_edge_cases {
+                // Statement followed by inline comment should still parse cleanly
+                let stmts = parse_body(&format!("own x {} = {} # this is {} a comment", t, l, t));
+                assert_eq!(stmts.len(), 1);
+                assert!(matches!(stmts[0], Stmt::VarDecl(_)));
+            }
+        }
     }
 
     #[test]
     fn hash_inside_string_not_comment() {
-        let stmts = parse_body(r#"own x = "val # not comment""#);
-        assert_eq!(stmts.len(), 1);
-        if let Stmt::VarDecl(v) = &stmts[0] {
-            assert_eq!(v.name, "x");
-            if let Expr::StringLiteral { value, .. } = v.value.clone().unwrap() {
-                assert_eq!(value, "val # not comment");
-            } else { panic!("Expected Var Expression"); }
-        } else { panic!("Expected VarDecl"); }
+        for t in ALL_TYPES_NO_ARR {
+            let stmts = parse_body(&format!("own x {} = \"val # not comment\"", t));
+            assert_eq!(stmts.len(), 1);
+            if let Stmt::VarDecl(v) = &stmts[0] {
+                assert_eq!(v.name, "x");
+                assert_eq!(v.type_name, t.clone());
+                if let Expr::StringLiteral { value, .. } = v.value.clone().unwrap() {
+                    assert_eq!(value, "val # not comment");
+                } else { panic!("Expected Var Expression"); }
+            } else { panic!("Expected VarDecl"); }
+        }
     }
 
     // Span tracking
 
     #[test]
     fn span_line_number_is_correct() {
-        let src = "func main() {\n\n\nown x = 1\n}\n";
-        let ast = parse(src).unwrap();
-        if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
-            // Line 4 in the source (1-indexed)
-            assert_eq!(v.span.line, 4);
+        let literals_edge_cases = get_all_literals_edge_cases();
+
+        for t in ALL_TYPES_NO_ARR {
+            for l in &literals_edge_cases {
+                let src = format!("func main() {{\n\n\nown x {} = {}\n}}", t, l);
+                let ast = parse(&src).unwrap();
+                if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+                    // Line 4 in the source (1-indexed)
+                    assert_eq!(v.span.line, 4);
+
+                    assert_eq!(v.name, "x");
+                    assert_eq!(v.type_name, t.clone());
+
+                }
+            }    
         }
     }
 
@@ -2432,93 +2974,147 @@ mod tests {
     // Signed literals casted as u128 should trigger a safety panic
     #[test]
     #[should_panic]
-    fn int_literal_int8_as_u128_unsafe_panics_on_signed() {
-        for i in i8::MIN..=i8::MAX {
-            IntLiteralValue::Int8(i).as_u128();
-        }
+    fn int_literal_int8_min_as_u128_unsafe_panics_on_signed() {
+        IntLiteralValue::Int8(i8::MIN).as_u128();
+    }
+
+
+    #[test]
+    #[should_panic]
+    fn int_literal_int8_max_as_u128_unsafe_panics_on_signed() {
+        IntLiteralValue::Int8(i8::MAX).as_u128();
+    }
+
+
+    #[test]
+    #[should_panic]
+    fn int_literal_int16_min_as_u128_unsafe_panics_on_signed() {
+        IntLiteralValue::Int16(i16::MIN).as_u128();
     }
 
     #[test]
     #[should_panic]
-    fn int_literal_int16_as_u128_unsafe_panics_on_signed() {
-        for i in i16::MIN..=i16::MAX {
-            IntLiteralValue::Int16(i).as_u128();
-        }
+    fn int_literal_int16_max_as_u128_unsafe_panics_on_signed() {
+        IntLiteralValue::Int16(i16::MAX).as_u128();
+    }
+
+
+    #[test]
+    #[should_panic]
+    fn int_literal_int32_min_as_u128_unsafe_panics_on_signed() {
+        IntLiteralValue::Int32(i32::MIN).as_u128();
+    }
+
+
+    #[test]
+    #[should_panic]
+    fn int_literal_int32_max_as_u128_unsafe_panics_on_signed() {
+        IntLiteralValue::Int32(i32::MAX).as_u128();
+    }
+
+
+    #[test]
+    #[should_panic]
+    fn int_literal_int64_min_as_u128_unsafe_panics_on_signed() {
+        IntLiteralValue::Int64(i64::MIN).as_u128();
     }
 
     #[test]
     #[should_panic]
-    fn int_literal_int32_as_u128_unsafe_panics_on_signed() {
-        for i in i32::MIN..=i32::MAX {
-            IntLiteralValue::Int32(i).as_u128();
-        }
+    fn int_literal_int64_max_as_u128_unsafe_panics_on_signed() {
+        IntLiteralValue::Int64(i64::MAX).as_u128();
+    }
+
+
+    #[test]
+    #[should_panic]
+    fn int_literal_int128_min_as_u128_unsafe_panics_on_signed() {
+        IntLiteralValue::Int128(i128::MIN).as_u128();
     }
 
     #[test]
     #[should_panic]
-    fn int_literal_int64_as_u128_unsafe_panics_on_signed() {
-        for i in i64::MIN..=i64::MAX {
-            IntLiteralValue::Int64(i).as_u128();
-        }
-    }
-
-    #[test]
-    #[should_panic]
-    fn int_literal_int128_as_u128_unsafe_panics_on_signed() {
-        for i in i128::MIN..=i128::MAX {
-            IntLiteralValue::Int128(i).as_u128();
-        }
+    fn int_literal_int128_max_as_u128_unsafe_panics_on_signed() {
+        IntLiteralValue::Int128(i128::MAX).as_u128();
     }
 
 
     // Unsigned literals casted as i128 should trigger a safety panic
     #[test]
     #[should_panic]
-    fn int_literal_byte_as_i128_panics_on_unsigned() {
-        for i in u8::MIN..=u8::MAX {
-            IntLiteralValue::Byte(i).as_i128();
-        }
-    }
-
-    #[test]
-    #[should_panic]
-    fn int_literal_uint16_as_i128_panics_on_unsigned() {
-        for i in u16::MIN..=u16::MAX {
-            IntLiteralValue::Uint16(i).as_i128();
-        }
-    }
-
-    #[test]
-    #[should_panic]
-    fn int_literal_uint32_as_i128_panics_on_unsigned() {
-        for i in u32::MIN..=u32::MAX {
-            IntLiteralValue::Uint32(i).as_i128();
-        }
-    }
-
-    #[test]
-    #[should_panic]
-    fn int_literal_uint64_as_i128_panics_on_unsigned() {
-        for i in u64::MIN..=u64::MAX {
-            IntLiteralValue::Uint64(i).as_i128();
-        }
-    }
-
-    #[test]
-    #[should_panic]
-    fn int_literal_uint128_as_i128_panics_on_unsigned() {
-        for i in u128::MIN..=u128::MAX {
-            IntLiteralValue::Uint128(i).as_i128();
-        }
+    fn int_literal_byte_min_as_i128_panics_on_unsigned() {
+        IntLiteralValue::Byte(u8::MIN).as_i128();
     }
 
 
     #[test]
     #[should_panic]
-    fn int_literal_usize_as_i128_panics_on_unsigned() {
-        for i in usize::MIN..=usize::MAX {
-            IntLiteralValue::Usize(i).as_i128();
-        }
+    fn int_literal_byte_max_as_i128_panics_on_unsigned() {
+        IntLiteralValue::Byte(u8::MAX).as_i128();
+    }
+
+    #[test]
+    #[should_panic]
+    fn int_literal_uint16_min_as_i128_panics_on_unsigned() {
+        IntLiteralValue::Uint16(u16::MIN).as_i128();
+    }
+
+
+    #[test]
+    #[should_panic]
+    fn int_literal_uint16_max_as_i128_panics_on_unsigned() {
+        IntLiteralValue::Uint16(u16::MAX).as_i128();
+    }
+
+    #[test]
+    #[should_panic]
+    fn int_literal_uint32_min_as_i128_panics_on_unsigned() {
+        IntLiteralValue::Uint32(u32::MIN).as_i128();
+    }
+
+    #[test]
+    #[should_panic]
+    fn int_literal_uint32_max_as_i128_panics_on_unsigned() {
+        IntLiteralValue::Uint32(u32::MAX).as_i128();
+    }
+
+
+    #[test]
+    #[should_panic]
+    fn int_literal_uint64_min_as_i128_panics_on_unsigned() {
+        IntLiteralValue::Uint64(u64::MIN).as_i128();
+    }
+
+    #[test]
+    #[should_panic]
+    fn int_literal_uint64_max_as_i128_panics_on_unsigned() {
+        IntLiteralValue::Uint64(u64::MAX).as_i128();
+    }
+
+    #[test]
+    #[should_panic]
+    fn int_literal_uint128_min_as_i128_panics_on_unsigned() {
+        IntLiteralValue::Uint128(u128::MIN).as_i128();
+    }
+
+    #[test]
+    #[should_panic]
+    fn int_literal_uint128_max_as_i128_panics_on_unsigned() {
+        IntLiteralValue::Uint128(u128::MAX).as_i128();
+    }
+
+
+    #[test]
+    #[should_panic]
+    fn int_literal_usize_min_as_i128_panics_on_unsigned() {
+        IntLiteralValue::Usize(usize::MIN).as_i128();
+    }
+
+
+    #[test]
+    #[should_panic]
+    fn int_literal_usize_max_as_i128_panics_on_unsigned() {
+        IntLiteralValue::Usize(usize::MAX).as_i128();
     }
 
 
@@ -2553,19 +3149,28 @@ mod tests {
         assert_eq!(Type::String.to_string(), "string");
         assert_eq!(Type::Array(Box::new(Type::Int32)).to_string(), "int32[]");
         assert_eq!(Type::Array(Box::new(Type::Array(Box::new(Type::Int32)))).to_string(), "int32[][]");
-        assert_eq!(Type::Infer.to_string(), "infer");
     }
 
     // Variable shadowing (allowed by the spec)
 
+    // Not allowed in semantics phase, but,  this is **syntaxally** correct
     #[test]
     fn variable_shadowing_allowed() {
-        // Declaring the same name twice should produce two VarDecl nodes without error
-        // as long as its in the same scope
-        let stmts = parse_body("own x = 1\nown x = 2");
-        assert_eq!(stmts.len(), 2);
-        assert!(matches!(stmts[0], Stmt::VarDecl(_)));
-        assert!(matches!(stmts[1], Stmt::VarDecl(_)));
+        for t in ALL_TYPES_NO_ARR {
+            let stmts = parse_body(&format!("own x {} = 1\nown x {} = 2", t, t));
+            assert_eq!(stmts.len(), 2);
+
+            if let Stmt::VarDecl(v) = &stmts[0] {
+                assert_eq!(v.type_name, t.clone());
+                assert!(matches!(v.value, Some(Expr::IntLiteral { .. })));
+            } else { panic!("Expected VarDecl"); }
+
+
+            if let Stmt::VarDecl(v) = &stmts[1] {
+                assert_eq!(v.type_name, t.clone());
+                assert!(matches!(v.value, Some(Expr::IntLiteral { .. })));
+            } else { panic!("Expected VarDecl"); }
+        }
     }
 
     // Empty expression / edge-case errors
@@ -2573,18 +3178,30 @@ mod tests {
     #[test]
     fn untyped_array_literal_edge_cases_errors() {
         // '[' without a type prefix is not allowed
-        assert_parse_err(&wrap("own x = [1, 2, 3]"));
-        assert_parse_err(&wrap("own x = [[1, 2, 3]]"));
-        assert_parse_err(&wrap("own x = 1, 2, 3"));
-        
-        assert_parse_err(&wrap("own x = [int32[1, 2, 3]]"));
-        assert_parse_err(&wrap("own x = int32[[1, 2, 3]]"));
+        for t in ALL_TYPES_NO_ARR {
+            assert_parse_err(&wrap(&format!("own x {} = [1, 2, 3]", t)));
+            assert_parse_err(&wrap(&format!("own x {} = [[1, 2, 3]]", t)));
+            assert_parse_err(&wrap(&format!("own x {} = 1, 2, 3", t)));
+            assert_parse_err(&wrap(&format!("own x {} = [int32[1, 2, 3]]", t)));
+            assert_parse_err(&wrap(&format!("own x {} = int32[[1, 2, 3]]", t)));
+        }
     }
 
     #[test]
-    fn empty_expression_in_call_arg_not_crash() {
-        // Ensure we don't silently accept malformed call
-        assert_parse_err(&wrap("own x = foo(,)"));
+    fn empty_expression_in_call_arg_errors() {
+        let literals_edge_cases = get_all_literals_edge_cases(); 
+        for t in ALL_TYPES_NO_ARR {
+            for l in &literals_edge_cases {
+                // Ensure we don't silently accept malformed call
+                assert_parse_err(&wrap(&format!("own x {} = foo(,)", t)));
+                assert_parse_err(&wrap(&format!("own x {} = foo({},)", t, l)));
+                assert_parse_err(&wrap(&format!("own x {} = foo(,{})", t, l)));
+                assert_parse_err(&wrap(&format!("own x {} = foo(,{},)", t, l)));
+                assert_parse_err(&wrap(&format!("own x {} = foo({},{},)", t, l, l)));
+            }
+        }
     }
 }
+
+
 
