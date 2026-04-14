@@ -102,7 +102,9 @@ mod tests {
 
     #[test]
     fn parse_statement_outside_function_errors() {
-        assert_parse_err("own x = 1");
+        for t in ALL_TYPES_NO_ARR {
+            assert_parse_err(&format!("own x {} = 1", t));
+        }
     }
 
     // Functions
@@ -243,7 +245,9 @@ mod tests {
 
     #[test]
     fn parse_function_unterminated_errors() {
-        assert_parse_err("func bad() {\n own x = 1\n");
+        for t in ALL_TYPES_NO_ARR {
+            assert_parse_err(&format!("func bad() {{\n own x {} = 1\n", t));
+        }
     }
 
     #[test]
@@ -255,14 +259,18 @@ mod tests {
 
     #[test]
     fn parse_function_space_in_name_errors() {
-        assert_parse_err("func bad name() {own x = 1\n}\n");
+        for t in ALL_TYPES_NO_ARR {
+            assert_parse_err(&format!("func bad name() {{own x {} = 1\n}}\n", t));
+        }
     }
 
     #[test]
     fn parse_function_inline_statements_in_braces_errors() {
-        assert_parse_err("func bad() {own x = 1\n}\n");
-        
-        assert_parse_err("func bad() {\nown x = 1}\n");
+        for t in ALL_TYPES_NO_ARR {
+            assert_parse_err(&format!("func bad() {{own x {} = 1\n}}\n", t));
+            
+            assert_parse_err(&format!("func bad() {{\nown x {} = 1}}\n", t));
+        }
     }
 
     #[test]
