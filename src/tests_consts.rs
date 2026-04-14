@@ -140,28 +140,9 @@ pub const BIN_OP_KIND_ARTH_SYMBOLS: [&str; 8] = [
 
 
 
-// No array, no infer types.
-pub const ALL_TYPES_NO_ARR_NO_INFER: &[Type] = &[
-    Type::Int8,
-    Type::Int16,
-    Type::Int32,
-    Type::Int64,
-    Type::Int128,
-    Type::Byte,
-    Type::Uint16,
-    Type::Uint32,
-    Type::Uint64,
-    Type::Uint128,
-    Type::Usize,
-    Type::Float32,
-    Type::Float64,
-    Type::Bool,
-    Type::String
-];
 
-
-// Only integers, no array, no infer, etc
-pub const ALL_INT_TYPES_NO_ARR_NO_INFER: &[Type] = &[
+// Only integers, no array, etc.
+pub const ALL_INT_TYPES_NO_ARR: &[Type] = &[
     Type::Int8,
     Type::Int16,
     Type::Int32,
@@ -191,7 +172,6 @@ pub const ALL_TYPES_NO_ARR_NO_FLOAT: &[Type] = &[
     Type::Usize,
     Type::Bool,
     Type::String,
-    Type::Infer,
 ];
 
 
@@ -201,19 +181,7 @@ pub const ALL_TYPES_NO_INTS_NO_ARR: &[Type] = &[
     Type::Float64,
     Type::Bool,
     Type::String,
-    Type::Infer,
 ];
-
-
-
-// No integers, no array type, no infer type
-pub const ALL_TYPES_NO_INTS_NO_ARR_NO_INFER: &[Type] = &[
-    Type::Float32,
-    Type::Float64,
-    Type::Bool,
-    Type::String,
-];
-
 
 
 pub const ALL_FLOATS_TYPES: &[Type] = &[
@@ -224,6 +192,57 @@ pub const ALL_FLOATS_TYPES: &[Type] = &[
 
 
 
+// No array type, no bool
+pub const ALL_TYPES_NO_ARR_NO_BOOL: &[Type] = &[
+    Type::Int8,
+    Type::Int16,
+    Type::Int32,
+    Type::Int64,
+    Type::Int128,
+    Type::Byte,
+    Type::Uint16,
+    Type::Uint32,
+    Type::Uint64,
+    Type::Uint128,
+    Type::Usize,
+    Type::Float32,
+    Type::Float64,
+    Type::String,
+];
+
+
+// No array type, no bool, no string
+pub const ALL_TYPES_NO_ARR_NO_BOOL_NO_STRING: &[Type] = &[
+    Type::Int8,
+    Type::Int16,
+    Type::Int32,
+    Type::Int64,
+    Type::Int128,
+    Type::Byte,
+    Type::Uint16,
+    Type::Uint32,
+    Type::Uint64,
+    Type::Uint128,
+    Type::Usize,
+    Type::Float32,
+    Type::Float64,
+];
+
+pub const ALL_TYPES_NO_ARR_NO_BOOL_NO_STRING_SCATTERED: &[Type] = &[
+    Type::Uint32,
+    Type::Int8,
+    Type::Int64,
+    Type::Uint128,
+    Type::Float32,
+    Type::Uint16,
+    Type::Usize,
+    Type::Int16,
+    Type::Byte,
+    Type::Float64,
+    Type::Uint64,
+    Type::Int128,
+    Type::Int32,
+];
 
 
 // No array type
@@ -243,7 +262,6 @@ pub const ALL_TYPES_NO_ARR: &[Type] = &[
     Type::Float64,
     Type::Bool,
     Type::String,
-    Type::Infer,
 ];
 
 
@@ -264,8 +282,6 @@ pub const ALL_TYPES_NO_ARR_SCATTERED: &[Type] = &[
     Type::Byte,
     Type::Int32,
     Type::Usize,
-
-    Type::Infer,
 ];
 
 // No array type, no usize type
@@ -284,7 +300,6 @@ pub const ALL_TYPES_NO_ARR_NO_USIZE: &[Type] = &[
     Type::Float64,
     Type::Bool,
     Type::String,
-    Type::Infer,
 ];
 
 
@@ -298,7 +313,6 @@ pub const ALL_SIGNED_TYPES_NO_ARR: &[Type] = &[
     Type::Int128,
     Type::Float32,
     Type::Float64,
-    Type::Infer,
 ];
 
 
@@ -309,7 +323,6 @@ pub const ALL_UNSIGNED_TYPES_NO_ARR: &[Type] = &[
     Type::Uint64,
     Type::Uint128,
     Type::Usize,
-    Type::Infer,
 ];
 
 

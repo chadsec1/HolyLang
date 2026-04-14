@@ -15,25 +15,6 @@ use super::*;
 pub fn assign_default_value_for_type(expr: &mut Option<Expr>, ty: &Type, span: Span) -> Result<(), HolyError> {
         
 
-    // Guards to ensure that I dont do mistakes and call this function on things I am not supposed to.
-    // And to also catch compiler bugs.
-    //
-    if *ty == Type::Infer {
-
-        panic!("(Compiler bug) Cannot assign default value for type `{}` because the expression holder type is Infer. Expression: {:?}\nDont call this on things of type Infer.", 
-                        ty, expr);
-    }
-        
-    if ty.is_array_type() {
-        let inner_most_type = ty.get_array_inner_most_type();
-
-        if *inner_most_type == Type::Infer {
-            panic!("(Compiler bug) Cannot assign default value for type `{}` because inner most type is Infer. Expression: {:?}.", 
-                        ty, expr);
-        }
-    }
-
-
     // Reason why we don't just take a &mut Expr, is because variables values are defined as
     // Option<Expr>.
     //
@@ -83,11 +64,6 @@ pub fn assign_default_value_for_type(expr: &mut Option<Expr>, ty: &Type, span: S
                     span.line, span.column
                 )));
 
-        }
-
-        _ => {
-            panic!("(Compiler bug) Cannot assign default value for type `{}` because the expression holder type is Non-literal. Expression: {:?}\nDont call this on non-literals.", 
-                        ty, expr);
         }
     }
 

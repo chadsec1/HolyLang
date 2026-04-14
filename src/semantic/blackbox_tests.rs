@@ -8,10 +8,12 @@ use crate::parser::{
 
 
 use crate::tests_consts::{
-    ALL_TYPES_NO_ARR, ALL_TYPES_NO_ARR_SCATTERED, ALL_TYPES_NO_ARR_NO_USIZE, ALL_TYPES_NO_ARR_NO_INFER, ALL_TYPES_NO_INTS_NO_ARR,
-    ALL_TYPES_NO_INTS_NO_ARR_NO_INFER,
+    ALL_TYPES_NO_ARR, ALL_TYPES_NO_ARR_SCATTERED, ALL_TYPES_NO_ARR_NO_USIZE, ALL_TYPES_NO_INTS_NO_ARR,
+ 
+    ALL_TYPES_NO_ARR_NO_BOOL,
+    ALL_TYPES_NO_ARR_NO_BOOL_NO_STRING, ALL_TYPES_NO_ARR_NO_BOOL_NO_STRING_SCATTERED,
 
-    ALL_INT_TYPES_NO_ARR_NO_INFER,
+    ALL_INT_TYPES_NO_ARR,
     ALL_FLOATS_TYPES,
 
     ALL_UNSIGNED_TYPES_NO_ARR, ALL_SIGNED_TYPES_NO_ARR,
@@ -544,33 +546,34 @@ mod blackbox_tests {
 
     #[test]
     fn test_non_returning_func_in_expr_errors() {
-        let callee = void_func("bar", vec![], vec![]);
-        let body = vec![
-            var_decl("x", Type::Infer, Some(call_expr("bar", vec![])))
-        ];
-        let caller = void_func("main", vec![], body);
-        let mut ast = AST { functions: vec![callee, caller] };
+        for t in ALL_TYPES_NO_ARR {
+            let callee = void_func("bar", vec![], vec![]);
+            let body = vec![
+                var_decl("x", t.clone(), Some(call_expr("bar", vec![])))
+            ];
+            let caller = void_func("main", vec![], body);
+            let mut ast = AST { functions: vec![callee, caller] };
 
-        let result = check_semantics(&mut ast);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("has no return type declared but is used in an expression"));
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("has no return type declared but is used in an expression"));
+        }
     }
 
 
 
-    // variables declaration / assignment, and type inference tests
+    // variables declaration / assignment
 
     #[test]
-    fn test_infer_type_literal() {
+    fn test_vardecl_literal_coerion() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             // a literal of type T with infer type should be inferred correctly as T
-            let body = vec![var_decl("x", Type::Infer, Some(l.clone()))];
+            let body = vec![var_decl("x", t.clone(), Some(l.clone()))];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             check_semantics(&mut ast).unwrap();
-            // After check, the VarDecl type should be T
             if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
                 assert_eq!(v.type_name, t.clone());
                 assert_eq!(v.value, Some(l.clone()));
@@ -637,7 +640,7 @@ mod blackbox_tests {
     fn test_var_decl_type_mismatch_errors() {
         let literals_no_ints = get_all_literals_no_arr_no_ints();
 
-        for t in ALL_INT_TYPES_NO_ARR_NO_INFER {
+        for t in ALL_INT_TYPES_NO_ARR {
             for l in &literals_no_ints {
                 let body = vec![var_decl("x", t.clone(), Some(l.clone()))];
                 let func = void_func("foo", vec![], body);
@@ -784,7 +787,7 @@ mod blackbox_tests {
 
 
     #[test]
-    fn test_vardecl_overshadowing_upstream_var_in_for_loop_errors() {
+    fn test_vardecl_overshadowing_var_in_for_loop_errors() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -811,14 +814,14 @@ mod blackbox_tests {
 
             let result = check_semantics(&mut ast);
             assert!(result.is_err());
-            assert!(result.unwrap_err().to_string().contains("you cannot overshadow upstream variables"));
+            assert!(result.unwrap_err().to_string().contains("is already declared"));
         }
     }
 
 
 
     #[test]
-    fn test_vardecl_overshadowing_upstream_var_in_while_loop_errors() {
+    fn test_vardecl_overshadowing_var_in_while_loop_errors() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -837,12 +840,12 @@ mod blackbox_tests {
 
             let result = check_semantics(&mut ast);
             assert!(result.is_err());
-            assert!(result.unwrap_err().to_string().contains("you cannot overshadow upstream variables"));
+            assert!(result.unwrap_err().to_string().contains("is already declared"));
         }
     }
 
     #[test]
-    fn test_vardecl_overshadowing_upstream_var_in_infinite_loop_errors() {
+    fn test_vardecl_overshadowing_var_in_infinite_loop_errors() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -860,14 +863,14 @@ mod blackbox_tests {
 
             let result = check_semantics(&mut ast);
             assert!(result.is_err());
-            assert!(result.unwrap_err().to_string().contains("you cannot overshadow upstream variables"));
+            assert!(result.unwrap_err().to_string().contains("is already declared"));
         }
     }
 
 
 
     #[test]
-    fn test_vardecl_overshadowing_upstream_var_in_if_main_branch_errors() {
+    fn test_vardecl_overshadowing_var_in_if_main_branch_errors() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -888,13 +891,13 @@ mod blackbox_tests {
 
             let result = check_semantics(&mut ast);
             assert!(result.is_err());
-            assert!(result.unwrap_err().to_string().contains("you cannot overshadow upstream variables"));
+            assert!(result.unwrap_err().to_string().contains("is already declared"));
         }
     }
 
 
     #[test]
-    fn test_vardecl_overshadowing_upstream_var_in_if_else_branch_errors() {
+    fn test_vardecl_overshadowing_var_in_if_else_branch_errors() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -920,13 +923,13 @@ mod blackbox_tests {
 
             let result = check_semantics(&mut ast);
             assert!(result.is_err());
-            assert!(result.unwrap_err().to_string().contains("you cannot overshadow upstream variables"));
+            assert!(result.unwrap_err().to_string().contains("is already declared"));
         }
     }
 
 
     #[test]
-    fn test_vardecl_overshadowing_upstream_var_in_if_elif_branch_errors() {
+    fn test_vardecl_overshadowing_var_in_if_elif_branch_errors() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -953,7 +956,7 @@ mod blackbox_tests {
 
             let result = check_semantics(&mut ast);
             assert!(result.is_err());
-            assert!(result.unwrap_err().to_string().contains("you cannot overshadow upstream variables"));
+            assert!(result.unwrap_err().to_string().contains("is already declared"));
         }
     }
 
@@ -994,7 +997,7 @@ mod blackbox_tests {
         let literals_ints = get_all_literals_no_arr_str_bool_float() ;
         
         for l in literals_ints {
-            for t in ALL_TYPES_NO_INTS_NO_ARR_NO_INFER {
+            for t in ALL_TYPES_NO_INTS_NO_ARR {
                 let body = vec![
                     var_decl("x", t.clone(), None),
                     var_assign("x", l.clone())
@@ -1005,7 +1008,7 @@ mod blackbox_tests {
                 let result = check_semantics(&mut ast);
 
                 assert!(result.is_err());
-                assert!(result.unwrap_err().to_string().contains("Cannot assign"));
+                assert!(result.unwrap_err().to_string().contains("Type mismatch assigning to"));
             }
         }
     }
@@ -1036,7 +1039,7 @@ mod blackbox_tests {
 
     #[test]
     fn test_varassign_uses_non_declared_var_errors() {
-        for t in ALL_TYPES_NO_ARR_NO_INFER {
+        for t in ALL_TYPES_NO_ARR {
             let body = vec![
                 var_decl("x", t.clone(), None), 
                 var_assign("x", var_expr("y"))
@@ -1055,7 +1058,7 @@ mod blackbox_tests {
     fn test_varassign_uses_moved_var_errors() {
         let literals = get_all_literals_no_arr();
         
-        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR_NO_INFER.iter()) {
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
                 var_decl("x", t.clone(), Some(l.clone())),
                 var_decl("y", t.clone(), Some(var_expr("x"))),
@@ -1166,16 +1169,6 @@ mod blackbox_tests {
 
 
 
-    #[should_panic(expected = "Compiler bug")]
-    #[test]
-    fn test_infer_requires_initializer_or_explicit_type() {
-        // Variables declared with Infer type and no value should've been caught by parser phase
-        // but if it i didn't, semantic should always panic.
-        let body = vec![var_decl("x", Type::Infer, None)];
-        let func = void_func("foo", vec![], body);
-        let mut ast = ast_one(func);
-        let _ = check_semantics(&mut ast);
-    }
 
     // type mismatch tests
 
@@ -1439,7 +1432,7 @@ mod blackbox_tests {
 
     #[test]
     fn test_default_dynamic_array_is_empty() {
-        for t in ALL_TYPES_NO_ARR_NO_INFER {
+        for t in ALL_TYPES_NO_ARR {
             let body = vec![var_decl("arr", Type::Array(Box::new(t.clone())), None)];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
@@ -1459,7 +1452,7 @@ mod blackbox_tests {
 
     #[test]
     fn test_default_fixed_array_errors() {
-        for t in ALL_TYPES_NO_ARR_NO_INFER {
+        for t in ALL_TYPES_NO_ARR {
             for i in 0..=100 {
                 let body = vec![
                     var_decl("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i)), None)
@@ -1478,7 +1471,7 @@ mod blackbox_tests {
 
     #[test]
     fn test_default_nested_array_is_empty() {
-        for t in ALL_TYPES_NO_ARR_NO_INFER {
+        for t in ALL_TYPES_NO_ARR {
             for i in 1..=200 {
                 let mut nested_ty = Type::Array(Box::new(t.clone()));
 
@@ -1512,14 +1505,14 @@ mod blackbox_tests {
     // move semantics 
 
     #[test]
-    fn test_use_after_move_errors_explicit_type() {
+    fn test_vardecl_with_literal_use_after_move_errors() {
         // own a t = 5
         // own b t = a   (moves `a`)
         // own c t = a   (this must error because `a` already moved)
 
         let literals = get_all_literals_no_arr();
         
-        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR_NO_INFER.iter()) {
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
                 var_decl("a", t.clone(), Some(l.clone())),
                 var_decl("b", t.clone(), Some(var_expr("a"))),
@@ -1534,40 +1527,16 @@ mod blackbox_tests {
     }
 
     #[test]
-    fn test_use_after_move_errors_infer_type() {
+    fn test_vardecl_without_literal_use_after_move_errors() {
         // own a = 5
         // own b = a   (moves `a`)
         // own c = a   (this must error because `a` already moved)
 
-        let literals = get_all_literals_no_arr();
         
-        for l in literals {
+        for t in ALL_TYPES_NO_ARR {
             let body = vec![
-                var_decl("a", Type::Infer, Some(l.clone())),
-                var_decl("b", Type::Infer, Some(var_expr("a"))),
-                var_decl("c", Type::Infer, Some(var_expr("a"))),
-            ];
-            let func = void_func("foo", vec![], body);
-            let mut ast = ast_one(func);
-            let result = check_semantics(&mut ast);
-            assert!(result.is_err());
-            assert!(result.unwrap_err().to_string().contains("moved"));
-        }
-    }
-
-    #[test]
-    fn test_use_after_move_errors_explicit_and_infer_type() {
-        // own a T = 5
-        // own b = a   (moves `a`)
-        // own c T = a   (this must error because `a` already moved)
-        //
-
-        let literals = get_all_literals_no_arr();
-        
-        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR_NO_INFER.iter()) {
-            let body = vec![
-                var_decl("a", t.clone(), Some(l.clone())),
-                var_decl("b", Type::Infer, Some(var_expr("a"))),
+                var_decl("a", t.clone(), None),
+                var_decl("b", t.clone(), Some(var_expr("a"))),
                 var_decl("c", t.clone(), Some(var_expr("a"))),
             ];
             let func = void_func("foo", vec![], body);
@@ -1643,45 +1612,49 @@ mod blackbox_tests {
     }
 
     #[test]
-    fn test_overshadow_locked_variable_same_type_and_literal_errors() {
+    fn test_assign_locked_variable_same_literal_errors() {
         let literals = get_all_literals_no_arr();
        
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
                 var_decl("x", t.clone(), Some(l.clone())),
                 Stmt::Lock(vec![var_expr("x")]),
-                var_decl("x", t.clone(), Some(l.clone())),
+                var_assign("x", l.clone()),
             ];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             let result = check_semantics(&mut ast);
             assert!(result.is_err());
-            assert!(result.unwrap_err().to_string().contains("locked"));
+            assert!(result.unwrap_err().to_string().contains("is locked"));
         }
     }
 
-    // Same test as above, but re-declartion use a different type and literal
+    // Same test as above, but re-declartion use a different literal
     #[test]
-    fn test_overshadow_locked_variable_different_type_and_literal_errors() {
+    fn test_assign_locked_variable_different_literal_errors() {
         let literals = get_all_literals_no_arr();
         let literals_scattered = get_all_literals_no_arr_scattered_order();
 
 
-        for (((l1, t1), l2), t2) in literals.iter()
+        for ((l1, t), l2) in literals.iter()
             .zip(ALL_TYPES_NO_ARR.iter())
             .zip(literals_scattered.iter())
-            .zip(ALL_TYPES_NO_ARR_SCATTERED)
         {
             let body = vec![
-                var_decl("x", t1.clone(), Some(l1.clone())),
+                var_decl("x", t.clone(), Some(l1.clone())),
                 Stmt::Lock(vec![var_expr("x")]),
-                var_decl("x", t2.clone(), Some(l2.clone())),
+                var_assign("x", l2.clone()),
             ];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             let result = check_semantics(&mut ast);
             assert!(result.is_err());
-            assert!(result.unwrap_err().to_string().contains("locked"));
+
+            let assert_cond = result.unwrap_err().to_string();
+            let assert_cond = assert_cond.contains("is locked") |
+                                assert_cond.contains("Type mismatch assigning to");
+
+            assert!(assert_cond);
         }
     }
 
@@ -1705,7 +1678,7 @@ mod blackbox_tests {
 
 
     #[test]
-    fn test_unlock_allows_redeclare_same_type() {
+    fn test_unlock_allows_assignment_same_literal() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -1713,7 +1686,7 @@ mod blackbox_tests {
                 var_decl("x", t.clone(), Some(l.clone())),
                 Stmt::Lock(vec![var_expr("x")]),
                 Stmt::Unlock(vec![var_expr("x")]),
-                var_decl("x", t.clone(), Some(l.clone())),
+                var_assign("x", l.clone()),
             ];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
@@ -1721,26 +1694,28 @@ mod blackbox_tests {
         }
     }
 
-    // Same test as above, but re-declartion use a different type and literal
+    // Same test as above, but re-declartion use a different litral of a different type
     #[test]
-    fn test_unlock_allows_redeclare_different_type() {
-        let literals = get_all_literals_no_arr();
-        let literals_scattered = get_all_literals_no_arr_scattered_order();
+    fn test_unlock_allows_assigment_but_different_literal_type_errors() {
+        let literals = get_all_literals_no_arr_few_ints();
+        let literals_scattered = get_all_literals_no_arr_few_ints_scattered();
 
-        for (((l1, t1), l2), t2) in literals.iter()
+        for ((l1, t), l2) in literals.iter()
             .zip(ALL_TYPES_NO_ARR.iter())
             .zip(literals_scattered.iter())
-            .zip(ALL_TYPES_NO_ARR_SCATTERED)
         {
             let body = vec![
-                var_decl("x", t1.clone(), Some(l1.clone())),
+                var_decl("x", t.clone(), Some(l1.clone())),
                 Stmt::Lock(vec![var_expr("x")]),
                 Stmt::Unlock(vec![var_expr("x")]),
-                var_decl("x", t2.clone(), Some(l2.clone())),
+                var_assign("x", l2.clone()),
             ];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
-            check_semantics(&mut ast).unwrap();
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Type mismatch assigning to"));
         }
     }
 
@@ -1855,7 +1830,6 @@ mod blackbox_tests {
                 Stmt::Unlock(vec![var_expr("x")]),
                 Stmt::Lock(vec![var_expr("x")]),
                 Stmt::Unlock(vec![var_expr("x")]),
-                var_decl("x", t.clone(), Some(l.clone())),
             ];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
@@ -1932,8 +1906,9 @@ mod blackbox_tests {
         }
     }
 
+    // overshadowing is not allowed at all in holylang
     #[test]
-    fn test_shadowing_locked_variable_errors() {
+    fn test_shadowing_variable_lockek_errors() {
         let literals = get_all_literals_no_arr();
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
@@ -1945,7 +1920,7 @@ mod blackbox_tests {
             let mut ast = ast_one(func);
             let result = check_semantics(&mut ast);
             assert!(result.is_err());
-            assert!(result.unwrap_err().to_string().contains("is locked, therefore you cannot overshadow it"));
+            assert!(result.unwrap_err().to_string().contains("is already declared"));
         }
     }
 
@@ -2280,7 +2255,7 @@ mod blackbox_tests {
 
     #[test]
     fn test_infinite_statements_pass() {
-        for t in ALL_TYPES_NO_ARR_NO_INFER {
+        for t in ALL_TYPES_NO_ARR {
             let body = vec![ 
                 Stmt::Infinite(InfiniteStmt{
                     branch: vec![
@@ -2829,7 +2804,7 @@ mod blackbox_tests {
     #[test]
     fn test_break_statement_outside_infinite_statements_errors() {
 
-        for t in ALL_TYPES_NO_ARR_NO_INFER {
+        for t in ALL_TYPES_NO_ARR {
             let body = vec![ 
                 Stmt::Break(BreakStmt{
                     span: span()
@@ -2855,7 +2830,7 @@ mod blackbox_tests {
         }
 
         // Same test, but the `break` is after the infinite loop
-        for t in ALL_TYPES_NO_ARR_NO_INFER {
+        for t in ALL_TYPES_NO_ARR {
             let body = vec![ 
                 Stmt::Infinite(InfiniteStmt{
                     branch: vec![
@@ -2885,7 +2860,7 @@ mod blackbox_tests {
     //
     #[test]
     fn test_break_statement_in_for_statement_with_arr() {
-        for t in ALL_TYPES_NO_ARR_NO_INFER {
+        for t in ALL_TYPES_NO_ARR {
             let arr_lit = Expr::ArrayLiteral {
                 elements: vec![],
                 array_ty: t.clone(),
@@ -2932,7 +2907,7 @@ mod blackbox_tests {
 
     #[test]
     fn test_break_statement_in_if_statement_in_for_statements_with_arr() {
-        for t in ALL_TYPES_NO_ARR_NO_INFER {
+        for t in ALL_TYPES_NO_ARR {
             let arr_lit = Expr::ArrayLiteral {
                 elements: vec![],
                 array_ty: t.clone(),
@@ -2998,7 +2973,7 @@ mod blackbox_tests {
 
     #[test]
     fn test_break_statement_outside_for_statements_with_arr_errors() {
-        for t in ALL_TYPES_NO_ARR_NO_INFER {
+        for t in ALL_TYPES_NO_ARR {
             let arr_lit = Expr::ArrayLiteral {
                 elements: vec![],
                 array_ty: t.clone(),
@@ -3033,7 +3008,7 @@ mod blackbox_tests {
         }
 
         // Same test, but the `break` is after the infinite loop
-        for t in ALL_TYPES_NO_ARR_NO_INFER {
+        for t in ALL_TYPES_NO_ARR {
             let arr_lit = Expr::ArrayLiteral {
                 elements: vec![],
                 array_ty: t.clone(),
@@ -3540,7 +3515,7 @@ mod blackbox_tests {
 
     #[test]
     fn test_continue_statement_outside_infinite_statements_errors() {
-        for t in ALL_TYPES_NO_ARR_NO_INFER {
+        for t in ALL_TYPES_NO_ARR {
             let body = vec![ 
                 Stmt::Continue(ContinueStmt{
                     span: span()
@@ -3566,7 +3541,7 @@ mod blackbox_tests {
         }
 
         // Same test, but the `continue` is after the infinite loop
-        for t in ALL_TYPES_NO_ARR_NO_INFER {
+        for t in ALL_TYPES_NO_ARR {
             let body = vec![ 
                 Stmt::Infinite(InfiniteStmt{
                     branch: vec![
@@ -3595,7 +3570,7 @@ mod blackbox_tests {
 
     #[test]
     fn test_continue_statement_in_for_statement_with_arr() {
-        for t in ALL_TYPES_NO_ARR_NO_INFER {
+        for t in ALL_TYPES_NO_ARR {
             let arr_lit = Expr::ArrayLiteral {
                 elements: vec![],
                 array_ty: t.clone(),
@@ -3643,7 +3618,7 @@ mod blackbox_tests {
 
     #[test]
     fn test_continue_statement_in_if_statement_in_for_statements_with_arr() {
-        for t in ALL_TYPES_NO_ARR_NO_INFER {
+        for t in ALL_TYPES_NO_ARR {
             let arr_lit = Expr::ArrayLiteral {
                 elements: vec![],
                 array_ty: t.clone(),
@@ -3709,7 +3684,7 @@ mod blackbox_tests {
 
     #[test]
     fn test_continue_statement_outside_for_statements_with_arr_errors() {
-        for t in ALL_TYPES_NO_ARR_NO_INFER {
+        for t in ALL_TYPES_NO_ARR {
             let arr_lit = Expr::ArrayLiteral {
                 elements: vec![],
                 array_ty: t.clone(),
@@ -3744,7 +3719,7 @@ mod blackbox_tests {
         }
 
         // Same test, but the `continue` is after the infinite loop
-        for t in ALL_TYPES_NO_ARR_NO_INFER {
+        for t in ALL_TYPES_NO_ARR {
             let arr_lit = Expr::ArrayLiteral {
                 elements: vec![],
                 array_ty: t.clone(),
@@ -4728,7 +4703,7 @@ mod blackbox_tests {
 
     #[test]
     fn test_multi_assign_func_not_return_errors() {
-        for (t1, t2) in ALL_TYPES_NO_ARR_NO_INFER.iter().zip(ALL_TYPES_NO_ARR_SCATTERED)
+        for (t1, t2) in ALL_TYPES_NO_ARR.iter().zip(ALL_TYPES_NO_ARR_SCATTERED)
         {
             let pair = void_func("pair", vec![], vec![]);
 
@@ -5199,52 +5174,13 @@ mod blackbox_tests {
     }
 
 
-    // Same as above test, but this lets variables infer their types from return types
     #[test]
-    fn test_multi_return_decl_infer_correct() {
-        let literals = get_all_literals_no_arr();
-        let literals_scattered = get_all_literals_no_arr_scattered_order();
-
-        
-        for (((l1, t1), l2), t2) in literals.iter()
-            .zip(ALL_TYPES_NO_ARR.iter())
-            .zip(literals_scattered.iter())
-            .zip(ALL_TYPES_NO_ARR_SCATTERED)
-        {
-            let pair_body = vec![return_stmt(vec![l1.clone(), l2.clone()])];
-            let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
-
-            let vars = vec![
-                Variable { name: "a".to_string(), type_name: Type::Infer, value: None, span: span() },
-                Variable { name: "b".to_string(), type_name: Type::Infer, value: None, span: span() },
-            ];
-            let body = vec![Stmt::VarDeclMulti(vars, call_expr("pair", vec![]))];
-            let main = void_func("main", vec![], body);
-
-            let mut ast = AST { functions: vec![pair, main] };
-            check_semantics(&mut ast).unwrap();
-
-        
-            if let Stmt::VarDeclMulti(vs, ce) = &ast.functions[1].body[0] {
-                assert_eq!(vs.len(), 2, "Expected 2 variable declarations");
-                assert_eq!(vs[0].type_name, t1.clone());
-                assert_eq!(vs[1].type_name, t2.clone());
-            
-                if let Expr::Call { name, .. } = ce {
-                    assert_eq!(name, "pair");
-                } else { panic!("Expected Call expression, instead got {:?}", ce) }
-
-            } else { panic!("Expected VarDecl") }
-        }
-    }
-
-    #[test]
-    fn test_multi_return_decl_one_variable_locked_errors() {
+    fn test_multi_return_assign_one_variable_locked_errors() {
         // func pair() (t1, t2,) { return l1, l2 }
         // func main() { 
         // own a t1
         // lock a
-        // own a, b = pair() }
+        // a, b = pair() }
 
         let literals = get_all_literals_no_arr();
         let literals_scattered = get_all_literals_no_arr_scattered_order();
@@ -5258,15 +5194,16 @@ mod blackbox_tests {
             let pair_body = vec![return_stmt(vec![l1.clone(), l2.clone()])];
             let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
 
-            let vars = vec![
-                Variable { name: "a".to_string(), type_name: t1.clone(), value: None, span: span() },
-                Variable { name: "b".to_string(), type_name: t2.clone(), value: None, span: span() },
-            ];
             let body = vec![
                 var_decl("a", t1.clone(), None),
+                var_decl("b", t2.clone(), None),
                 Stmt::Lock(vec![var_expr("a")]),
 
-                Stmt::VarDeclMulti(vars, call_expr("pair", vec![]))
+                Stmt::VarAssignMulti(MultiAssignment{
+                    names: vec!["a".to_string(), "b".to_string()],
+                    value: call_expr("pair", vec![]),
+                    span: span()
+                })
             ];
             let main = void_func("main", vec![], body);
 
@@ -5288,15 +5225,16 @@ mod blackbox_tests {
             let pair_body = vec![return_stmt(vec![l1.clone(), l2.clone()])];
             let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
 
-            let vars = vec![
-                Variable { name: "a".to_string(), type_name: t1.clone(), value: None, span: span() },
-                Variable { name: "b".to_string(), type_name: t2.clone(), value: None, span: span() },
-            ];
             let body = vec![
-                var_decl("b", t1.clone(), None),
+                var_decl("a", t1.clone(), None),
+                var_decl("b", t2.clone(), None),
                 Stmt::Lock(vec![var_expr("b")]),
 
-                Stmt::VarDeclMulti(vars, call_expr("pair", vec![]))
+                Stmt::VarAssignMulti(MultiAssignment{
+                    names: vec!["a".to_string(), "b".to_string()],
+                    value: call_expr("pair", vec![]),
+                    span: span()
+                })
             ];
             let main = void_func("main", vec![], body);
 
@@ -5311,7 +5249,7 @@ mod blackbox_tests {
 
     // Same test, but both `a` and `b` are locked
     #[test]
-    fn test_multi_return_decl_two_variables_locked_errors() {
+    fn test_multi_return_assign_two_variables_locked_errors() {
         let literals = get_all_literals_no_arr();
         let literals_scattered = get_all_literals_no_arr_scattered_order();
         
@@ -5323,16 +5261,16 @@ mod blackbox_tests {
             let pair_body = vec![return_stmt(vec![l1.clone(), l2.clone()])];
             let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
 
-            let vars = vec![
-                Variable { name: "a".to_string(), type_name: t1.clone(), value: None, span: span() },
-                Variable { name: "b".to_string(), type_name: t2.clone(), value: None, span: span() },
-            ];
             let body = vec![
                 var_decl("a", t1.clone(), None),
                 var_decl("b", t1.clone(), None),
                 Stmt::Lock(vec![var_expr("a"), var_expr("b")]),
 
-                Stmt::VarDeclMulti(vars, call_expr("pair", vec![]))
+                Stmt::VarAssignMulti(MultiAssignment{
+                    names: vec!["a".to_string(), "b".to_string()],
+                    value: call_expr("pair", vec![]),
+                    span: span()
+                })
             ];
             let main = void_func("main", vec![], body);
 
@@ -5349,12 +5287,70 @@ mod blackbox_tests {
 
     // Cuz u can't overshadow variables declared in upstream scopes
     #[test]
-    fn test_multi_return_decl_one_variable_upstream_errors() {
+    fn test_multi_return_decl_one_already_declared_variable_errors() {
         // This tests against function arguments considering they are upstream
         let literals = get_all_literals_no_arr();
         let literals_scattered = get_all_literals_no_arr_scattered_order();
         
-        // Lets leave them locked.
+        // `a` is a `main` argument, aka it is already declared
+        for (((l1, t1), l2), t2) in literals.iter()
+            .zip(ALL_TYPES_NO_ARR.iter())
+            .zip(literals_scattered.iter())
+            .zip(ALL_TYPES_NO_ARR_SCATTERED)
+        {
+            let pair_body = vec![return_stmt(vec![l1.clone(), l2.clone()])];
+            let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
+
+            let vars = vec![
+                Variable { name: "a".to_string(), type_name: t1.clone(), value: None, span: span() },
+                Variable { name: "b".to_string(), type_name: t2.clone(), value: None, span: span() },
+            ];
+            let body = vec![
+                Stmt::VarDeclMulti(vars, call_expr("pair", vec![]))
+            ];
+            let main = void_func("main", vec![param("a", t1.clone())], body);
+
+            let mut ast = AST { functions: vec![pair, main] };
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Variable `a` is already declared, overshadowing is not allowed."));
+        }
+
+
+        // Same but this time for `b`
+        for (((l1, t1), l2), t2) in literals.iter()
+            .zip(ALL_TYPES_NO_ARR.iter())
+            .zip(literals_scattered.iter())
+            .zip(ALL_TYPES_NO_ARR_SCATTERED)
+        {
+            let pair_body = vec![return_stmt(vec![l1.clone(), l2.clone()])];
+            let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
+
+            let vars = vec![
+                Variable { name: "a".to_string(), type_name: t1.clone(), value: None, span: span() },
+                Variable { name: "b".to_string(), type_name: t2.clone(), value: None, span: span() },
+            ];
+            let body = vec![
+                Stmt::VarDeclMulti(vars, call_expr("pair", vec![]))
+            ];
+            let main = void_func("main", vec![param("b", t2.clone())], body);
+
+            let mut ast = AST { functions: vec![pair, main] };
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Variable `b` is already declared, overshadowing is not allowed."));
+        }
+    }
+
+    #[test]
+    fn test_multi_return_decl_two_already_declared_variable_errors() {
+        // This tests against function arguments considering they are upstream
+        let literals = get_all_literals_no_arr();
+        let literals_scattered = get_all_literals_no_arr_scattered_order();
+        
+        // `a` is a `main` argument, aka it is already declared
         for (((l1, t1), l2), t2) in literals.iter()
             .zip(ALL_TYPES_NO_ARR.iter())
             .zip(literals_scattered.iter())
@@ -5376,10 +5372,12 @@ mod blackbox_tests {
             let result = check_semantics(&mut ast);
 
             assert!(result.is_err());
-            assert!(result.unwrap_err().to_string().contains("Variable `a` is already defined upstream"));
-            // assert!(result.unwrap_err().to_string().contains("Variable `b` is already defined upstream"));
+            assert!(result.unwrap_err().to_string().contains("Variable `a` is already declared, overshadowing is not allowed."));
+            // assert!(result.unwrap_err().to_string().contains("Variable `b` is already declared, overshadowing is not allowed."));
         }
     }
+
+
 
 
     #[test]
@@ -6826,32 +6824,6 @@ mod blackbox_tests {
             assert!(result.is_err());
             assert!(result.unwrap_err().to_string().contains("Start index"));
         }
-
-
-        // Same test but for arrays of infer
-        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            let arr_lit = Expr::ArrayLiteral {
-                elements: vec![l.clone(), l.clone(), l.clone(), l.clone()],
-                array_ty: t.clone(),
-                span: span(),
-            };
-            let slice = Expr::ArrayMultipleAccess {
-                array: Box::new(var_expr("arr")),
-                start: Some(Box::new(usize_lit(3))),
-                end: Some(Box::new(usize_lit(1))),
-                span: span(),
-            };
-            let body = vec![
-                var_decl("arr", Type::Infer, Some(arr_lit)),
-                var_decl("s", Type::Infer, Some(slice)),
-            ];
-            let func = void_func("foo", vec![], body);
-            let mut ast = ast_one(func);
-            let result = check_semantics(&mut ast);
-            assert!(result.is_err());
-            assert!(result.unwrap_err().to_string().contains("Start index"));
-        }
-
     }
 
     // unary operations 
@@ -6930,11 +6902,16 @@ mod blackbox_tests {
                     right: Box::new(l.clone()),
                     span: span(),
                 };
-                let body = vec![var_decl("s", Type::Infer, Some(bin))];
+                let body = vec![var_decl("s", Type::Bool, Some(bin.clone()))];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
                 let result = check_semantics(&mut ast);
                 assert!(result.is_ok());
+
+                if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+                    assert_eq!(v.type_name, Type::Bool);
+                    assert_eq!(v.value, Some(bin));
+                } else { panic!("expected VarDecl");}
             }
         }
     }
@@ -6947,15 +6924,19 @@ mod blackbox_tests {
         let literals = get_all_literals_no_arr_few_ints();
         let literals_scattered = get_all_literals_no_arr_few_ints_scattered();
 
-        for (l, ls) in literals.iter().zip(literals_scattered.iter()) {
+
+        for ((l1, t), l2) in literals.iter()
+            .zip(ALL_TYPES_NO_ARR.iter())
+            .zip(literals_scattered.iter())
+        {
             for b in ALL_BIN_OP_KIND_COMP_EQ {
                 let bin = Expr::BinOp {
-                    left: Box::new(l.clone()),
+                    left: Box::new(l1.clone()),
                     op: b,
-                    right: Box::new(ls.clone()),
+                    right: Box::new(l2.clone()),
                     span: span(),
                 };
-                let body = vec![var_decl("s", Type::Infer, Some(bin))];
+                let body = vec![var_decl("s", t.clone(), Some(bin))];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
                 let result = check_semantics(&mut ast);
@@ -6968,8 +6949,9 @@ mod blackbox_tests {
     #[test]
     fn test_all_literals_binop_comp_arth_errors() {
         let literals_str_bool = [str_lit("hi"), bool_lit(false)];
+        let literals_types = [Type::String, Type::Bool];
 
-        for l in literals_str_bool {
+        for (l, t) in literals_str_bool.iter().zip(literals_types.iter()) {
             for b in ALL_BIN_OP_KIND_COMP_ARTH {
                 let bin = Expr::BinOp {
                     left: Box::new(l.clone()),
@@ -6977,7 +6959,7 @@ mod blackbox_tests {
                     right: Box::new(l.clone()),
                     span: span(),
                 };
-                let body = vec![var_decl("s", Type::Infer, Some(bin))];
+                let body = vec![var_decl("s", t.clone(), Some(bin))];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
                 let result = check_semantics(&mut ast);
@@ -6993,15 +6975,19 @@ mod blackbox_tests {
         let literals = get_all_literals_no_arr_few_ints();
         let literals_scattered = get_all_literals_no_arr_few_ints_scattered();
 
-        for (l, ls) in literals.iter().zip(literals_scattered.iter()) {
+
+        for ((l1, t), l2) in literals.iter()
+            .zip(ALL_TYPES_NO_ARR.iter())
+            .zip(literals_scattered.iter())
+        {
             for b in ALL_BIN_OP_KIND_COMP_ARTH {
                 let bin = Expr::BinOp {
-                    left: Box::new(l.clone()),
+                    left: Box::new(l1.clone()),
                     op: b,
-                    right: Box::new(ls.clone()),
+                    right: Box::new(l2.clone()),
                     span: span(),
                 };
-                let body = vec![var_decl("s", Type::Infer, Some(bin))];
+                let body = vec![var_decl("s", t.clone(), Some(bin))];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
                 let result = check_semantics(&mut ast);
@@ -7036,10 +7022,11 @@ mod blackbox_tests {
                     };
 
 
-                    let body = vec![var_decl("s", Type::Infer, Some(bin))];
+                    let body = vec![var_decl("s", Type::Bool, Some(bin))];
                     let func = void_func("foo", vec![], body);
                     let mut ast = ast_one(func);
                     let result = check_semantics(&mut ast);
+
                     assert!(result.is_ok());
                 }
             }
@@ -7061,7 +7048,7 @@ mod blackbox_tests {
                     right: Box::new(bv.clone()),
                     span: span(),
                 };
-                let body = vec![var_decl("s", Type::Infer, Some(bin))];
+                let body = vec![var_decl("s", Type::Bool, Some(bin))];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
                 let result = check_semantics(&mut ast);
@@ -7088,7 +7075,7 @@ mod blackbox_tests {
                 };
                 let body = vec![
                     var_decl("a", t.clone(), Some(l.clone())),
-                    var_decl("s", Type::Infer, Some(bin))
+                    var_decl("s", t.clone(), Some(bin))
                 ];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
@@ -7101,15 +7088,12 @@ mod blackbox_tests {
 
 
 
-
-
-
     // Non boolean left or right with logical "AND" or "OR" should error
     #[test]
     fn test_non_boolean_binop_logical_errors() {
         let literals = get_all_literals_no_arr_bool();
 
-        for l in &literals {
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR_NO_BOOL.iter()) {
             for b in ALL_BIN_OP_KIND_LOGIC {
                 let bin = Expr::BinOp {
                     left: Box::new(l.clone()),
@@ -7117,7 +7101,7 @@ mod blackbox_tests {
                     right: Box::new(l.clone()),
                     span: span(),
                 };
-                let body = vec![var_decl("s", Type::Infer, Some(bin))];
+                let body = vec![var_decl("s", t.clone(), Some(bin))];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
                 let result = check_semantics(&mut ast);
@@ -7126,10 +7110,9 @@ mod blackbox_tests {
             }
         }
 
-
         let bool_values = [false, true];
         // Same test, but left is a bool (false and true)
-        for l in &literals {
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR_NO_BOOL.iter()) {
             for b in ALL_BIN_OP_KIND_LOGIC {
                 for bv in bool_values {
                     let bin = Expr::BinOp {
@@ -7138,7 +7121,7 @@ mod blackbox_tests {
                         right: Box::new(l.clone()),
                         span: span(),
                     };
-                    let body = vec![var_decl("s", Type::Infer, Some(bin))];
+                    let body = vec![var_decl("s", t.clone(), Some(bin))];
                     let func = void_func("foo", vec![], body);
                     let mut ast = ast_one(func);
                     let result = check_semantics(&mut ast);
@@ -7150,7 +7133,7 @@ mod blackbox_tests {
 
 
         // Same test, but right is a bool (false and true)
-        for l in &literals {
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR_NO_BOOL.iter()) {
             for b in ALL_BIN_OP_KIND_LOGIC {
                 for bv in bool_values {
                     let bin = Expr::BinOp {
@@ -7159,7 +7142,7 @@ mod blackbox_tests {
                         right: Box::new(bool_lit(bv)),
                         span: span(),
                     };
-                    let body = vec![var_decl("s", Type::Infer, Some(bin))];
+                    let body = vec![var_decl("s", t.clone(), Some(bin))];
                     let func = void_func("foo", vec![], body);
                     let mut ast = ast_one(func);
                     let result = check_semantics(&mut ast);
@@ -7729,22 +7712,25 @@ mod blackbox_tests {
         for int in &int_literals {
             for non_int in &non_int_literals {
                 for b in ALL_BIN_OP_KIND_ARTH {
-                    let bin = Expr::BinOp {
-                        left: Box::new(int.clone()),
-                        right: Box::new(non_int.clone()),
-                        op: b,
-                        span: span(),
-                    };
-                    let body = vec![var_decl("x", Type::Infer, Some(bin))];
-                    let func = void_func("foo", vec![], body);
-                    let mut ast = ast_one(func);
-                    let result = check_semantics(&mut ast);
-                    assert!(result.is_err());
-                    let assert_condition = result.unwrap_err().to_string();
-                    let assert_condition = assert_condition.contains("Type mismatch in binary") 
-                                           || assert_condition.contains("You cannot perform arithmetic");
+                    for t in ALL_TYPES_NO_ARR {
+                        let bin = Expr::BinOp {
+                            left: Box::new(int.clone()),
+                            right: Box::new(non_int.clone()),
+                            op: b.clone(),
+                            span: span(),
+                        };
+                        let body = vec![var_decl("x", t.clone(), Some(bin))];
+                        let func = void_func("foo", vec![], body);
+                        let mut ast = ast_one(func);
+                        let result = check_semantics(&mut ast);
+                        assert!(result.is_err());
+                        let assert_condition = result.unwrap_err().to_string();
+                        let assert_condition = assert_condition.contains("Type mismatch in binary") 
+                                               || assert_condition.contains("You cannot perform arithmetic")
+                                               || assert_condition.contains("is of type `float64`, but we expected type `float32`");
 
-                    assert!(assert_condition);
+                        assert!(assert_condition);
+                    }
                 }
             }
         }
@@ -7753,22 +7739,25 @@ mod blackbox_tests {
         for int in &int_literals {
             for non_int in &non_int_literals {
                 for b in ALL_BIN_OP_KIND_ARTH {
-                    let bin = Expr::BinOp {
-                        left: Box::new(non_int.clone()),
-                        right: Box::new(int.clone()),
-                        op: b,
-                        span: span(),
-                    };
-                    let body = vec![var_decl("x", Type::Infer, Some(bin))];
-                    let func = void_func("foo", vec![], body);
-                    let mut ast = ast_one(func);
-                    let result = check_semantics(&mut ast);
-                    assert!(result.is_err());
-                    let assert_condition = result.unwrap_err().to_string();
-                    let assert_condition = assert_condition.contains("Type mismatch in binary") 
-                                           || assert_condition.contains("You cannot perform arithmetic");
+                    for t in ALL_TYPES_NO_ARR {
+                        let bin = Expr::BinOp {
+                            left: Box::new(non_int.clone()),
+                            right: Box::new(int.clone()),
+                            op: b.clone(),
+                            span: span(),
+                        };
+                        let body = vec![var_decl("x", t.clone(), Some(bin))];
+                        let func = void_func("foo", vec![], body);
+                        let mut ast = ast_one(func);
+                        let result = check_semantics(&mut ast);
+                        assert!(result.is_err());
+                        let assert_condition = result.unwrap_err().to_string();
+                        let assert_condition = assert_condition.contains("Type mismatch in binary") 
+                                               || assert_condition.contains("You cannot perform arithmetic")
+                                               || assert_condition.contains("is of type `float64`, but we expected type `float32`");
 
-                    assert!(assert_condition);
+                        assert!(assert_condition);
+                    }
                 }
             }
         }
@@ -7783,7 +7772,12 @@ mod blackbox_tests {
 
         let literals_ints_floats_scat = get_all_literals_no_arr_str_bool_scattered();
 
-        for (l1, l2) in literals_ints_floats.iter().zip(literals_ints_floats_scat.iter()) {
+        for (((l1, t1), l2), t2) in literals_ints_floats.iter()
+            .zip(ALL_TYPES_NO_ARR_NO_BOOL_NO_STRING.iter())
+            .zip(literals_ints_floats_scat.iter())
+            .zip(ALL_TYPES_NO_ARR_NO_BOOL_NO_STRING_SCATTERED)
+        {
+
             for b in ALL_BIN_OP_KIND_ARTH {
                 // We declare variables here, because had we used literals, it would get inferred
                 // in the binary operation expression
@@ -7796,9 +7790,9 @@ mod blackbox_tests {
                 };
 
                 let body = vec![
-                    var_decl("x", Type::Infer, Some(l1.clone())),
-                    var_decl("y", Type::Infer, Some(l2.clone())),
-                    var_decl("z", Type::Infer, Some(bin))
+                    var_decl("x", t1.clone(), Some(l1.clone())),
+                    var_decl("y", t2.clone(), Some(l2.clone())),
+                    var_decl("z", t1.clone(), Some(bin))
                 ];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
@@ -7813,6 +7807,46 @@ mod blackbox_tests {
                 assert!(assert_condition);
             }
         }
+
+
+        // Same, but z is t2, instead of t1
+        for (((l1, t1), l2), t2) in literals_ints_floats.iter()
+            .zip(ALL_TYPES_NO_ARR_NO_BOOL_NO_STRING.iter())
+            .zip(literals_ints_floats_scat.iter())
+            .zip(ALL_TYPES_NO_ARR_NO_BOOL_NO_STRING_SCATTERED)
+        {
+
+            for b in ALL_BIN_OP_KIND_ARTH {
+                // We declare variables here, because had we used literals, it would get inferred
+                // in the binary operation expression
+                //
+                let bin = Expr::BinOp {
+                    left: Box::new(var_expr("x")),
+                    right: Box::new(var_expr("y")),
+                    op: b,
+                    span: span(),
+                };
+
+                let body = vec![
+                    var_decl("x", t1.clone(), Some(l1.clone())),
+                    var_decl("y", t2.clone(), Some(l2.clone())),
+                    var_decl("z", t2.clone(), Some(bin))
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+
+                assert!(result.is_err());
+
+                let assert_condition = result.unwrap_err().to_string();
+                let assert_condition = assert_condition.contains("Type mismatch in binary arithmetic operation") |
+                                        assert_condition.contains("Type mismatch in binary bitwise operation");
+
+                assert!(assert_condition);
+            }
+        }
+
+
     }
 
 
@@ -7824,9 +7858,9 @@ mod blackbox_tests {
     fn test_copy_of_literals_errors() {
         let literals = get_all_literals_no_arr();
 
-        for l in &literals {
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let copy_lit = Expr::CopyCall { expr: Box::new(l.clone()), span: span() };
-            let body = vec![var_decl("x", Type::Infer, Some(copy_lit))];
+            let body = vec![var_decl("x", t.clone(), Some(copy_lit))];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             let result = check_semantics(&mut ast);
@@ -7844,33 +7878,37 @@ mod blackbox_tests {
             span: span()
         };
 
-        let copy_expr = Expr::CopyCall { expr: Box::new(call_expr), span: span() };
-        let body = vec![var_decl("x", Type::Infer, Some(copy_expr))];
-        let func = void_func("foo", vec![], body);
-        let mut ast = ast_one(func);
-        let result = check_semantics(&mut ast);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Copy call expects a variable"));
+        for t in ALL_TYPES_NO_ARR {
+            let copy_expr = Expr::CopyCall { expr: Box::new(call_expr.clone()), span: span() };
+            let body = vec![var_decl("x", t.clone(), Some(copy_expr))];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Copy call expects a variable"));
+        }
     }
 
 
     #[test]
     fn test_copy_of_array_access_errors() {
         for i in 0..1000 {
-            let array_expr = Expr::ArraySingleAccess {
-                array: Box::new(var_expr("e")),
-                index: Box::new(usize_lit(i)),
-                span: span(),
-            };
+            for t in ALL_TYPES_NO_ARR {
+                let array_expr = Expr::ArraySingleAccess {
+                    array: Box::new(var_expr("e")),
+                    index: Box::new(usize_lit(i)),
+                    span: span(),
+                };
 
 
-            let copy_expr = Expr::CopyCall { expr: Box::new(array_expr), span: span() };
-            let body = vec![var_decl("x", Type::Infer, Some(copy_expr))];
-            let func = void_func("foo", vec![], body);
-            let mut ast = ast_one(func);
-            let result = check_semantics(&mut ast);
-            assert!(result.is_err());
-            assert!(result.unwrap_err().to_string().contains("Copying is not needed for array access, when you access or slice an array or a string, a new copy is made. Remove the copy call and use operation directly."));
+                let copy_expr = Expr::CopyCall { expr: Box::new(array_expr), span: span() };
+                let body = vec![var_decl("x", t.clone(), Some(copy_expr))];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("Copying is not needed for array access, when you access or slice an array or a string, a new copy is made. Remove the copy call and use operation directly."));
+            }
         }
     }
 
@@ -7878,21 +7916,23 @@ mod blackbox_tests {
     #[test]
     fn test_copy_of_array_multiple_access_errors() {
         for i in 0..=1000 {
-            let array_expr = Expr::ArrayMultipleAccess {
-                    array: Box::new(var_expr("arr")),
-                    start: Some(Box::new(usize_lit(0))),
-                    end: Some(Box::new(usize_lit(i))),
-                    span: span(),
-                };
+            for t in ALL_TYPES_NO_ARR {
+                let array_expr = Expr::ArrayMultipleAccess {
+                        array: Box::new(var_expr("arr")),
+                        start: Some(Box::new(usize_lit(0))),
+                        end: Some(Box::new(usize_lit(i))),
+                        span: span(),
+                    };
 
 
-            let copy_expr = Expr::CopyCall { expr: Box::new(array_expr), span: span() };
-            let body = vec![var_decl("x", Type::Infer, Some(copy_expr))];
-            let func = void_func("foo", vec![], body);
-            let mut ast = ast_one(func);
-            let result = check_semantics(&mut ast);
-            assert!(result.is_err());
-            assert!(result.unwrap_err().to_string().contains("Copying is not needed for array access, when you access or slice an array or a string, a new copy is made. Remove the copy call and use operation directly."));
+                let copy_expr = Expr::CopyCall { expr: Box::new(array_expr), span: span() };
+                let body = vec![var_decl("x", t.clone(), Some(copy_expr))];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("Copying is not needed for array access, when you access or slice an array or a string, a new copy is made. Remove the copy call and use operation directly."));
+            }
         }
     }
 
@@ -7903,10 +7943,10 @@ mod blackbox_tests {
     fn test_double_copy_errors() {
         let literals = get_all_literals_no_arr();
 
-        for l in &literals {
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
-                var_decl("a", Type::Infer, Some(l.clone())),
-                var_decl("b", Type::Infer, Some(
+                var_decl("a", t.clone(), Some(l.clone())),
+                var_decl("b", t.clone(), Some(
                     Expr::CopyCall {
                         expr: Box::new(Expr::CopyCall { expr: Box::new(var_expr("a")), span: span() }),
                         span: span(),
@@ -7999,7 +8039,7 @@ mod blackbox_tests {
     #[test]
     fn test_params_are_in_scope_basic() {
         // Checks if function parameters are in scope, without testing for inner scopes.
-        for t in ALL_TYPES_NO_ARR_NO_INFER {
+        for t in ALL_TYPES_NO_ARR {
             let body = vec![return_stmt(vec![var_expr("n")])];
             let func = returning_func("foo", vec![param("n", t.clone())], vec![t.clone()], body);
             let mut ast = ast_one(func);
@@ -8053,14 +8093,14 @@ mod blackbox_tests {
     fn test_format_call_with_variable_passes() {
         let literals = get_all_literals_no_arr();
 
-        for l in &literals {
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let fmt = Expr::FormatCall {
                 template: "value: {}".to_string(),
                 expressions: vec![var_expr("n")],
                 span: span(),
             };
             let body = vec![
-                var_decl("n", Type::Infer, Some(l.clone())),
+                var_decl("n", t.clone(), Some(l.clone())),
                 var_decl("s", Type::String, Some(fmt)),
             ];
             let func = void_func("foo", vec![], body);
@@ -8076,8 +8116,7 @@ mod blackbox_tests {
     fn test_format_call_with_expressions_copied_errors() {
         let literals = get_all_literals_no_arr();
 
-        for l in &literals {
-            
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let copy_n = Expr::CopyCall { expr: Box::new(var_expr("n")), span: span() };
             let fmt = Expr::FormatCall {
                 template: "value: {}".to_string(),
@@ -8085,7 +8124,7 @@ mod blackbox_tests {
                 span: span(),
             };
             let body = vec![
-                var_decl("n", Type::Infer, Some(l.clone())),
+                var_decl("n", t.clone(), Some(l.clone())),
                 var_decl("s", Type::String, Some(fmt)),
             ];
             let func = void_func("foo", vec![], body);
@@ -8102,7 +8141,7 @@ mod blackbox_tests {
     fn test_nested_format_call_errors() {
         let literals = get_all_literals_no_arr();
 
-        for l in &literals {
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let fmt = Expr::FormatCall {
                 template: "value: {}".to_string(),
                 expressions: vec![var_expr("n")], 
@@ -8117,7 +8156,7 @@ mod blackbox_tests {
 
 
             let body = vec![
-                var_decl("n", Type::Infer, Some(l.clone())),
+                var_decl("n", t.clone(), Some(l.clone())),
                 var_decl("s", Type::String, Some(fmt)),
             ];
             

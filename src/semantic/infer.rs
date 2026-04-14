@@ -62,61 +62,67 @@ pub fn advanced_infer_2_types(
 
 
 
-/// Guard wrapper function around infer_expr_type_hazmat
-pub fn infer_expr_type(
-    expr: &mut Expr,
-    locals: &mut HashMap<String, VarInfo>,
-    fun_sigs: &HashMap<String, (Vec<Type>, Option<Vec<Type>>)>,
-    infer_hint: Option<Type>
-) -> Result<Type, HolyError> {
- 
-    let t = infer_expr_type_hazmat(expr, locals, fun_sigs, infer_hint.clone())?;
 
-    // This is a global guard for all calls to infer_expr_type_handler, to catch most critical bugs
-    // within the handler.
-    // If inferred type is "Infer", or Array most inner type is infer, we panic.
-    //
-    if (t == Type::Infer) || ( t.is_array_type() && *t.get_array_inner_most_type() == Type::Infer ) {
-        panic!(
-            "(Compiler bug) Inferred type of the expression is `Infer`, which shouldn't be possible and indicates a bug in either infer_expr_type_handler or in caller's logic.\nexpr: {:?}\nlocals: {:?}\nfun_sigs: {:?}\ninfer_hint: {:?}",
-            expr, locals, fun_sigs, infer_hint
-            );
-    }
 
-    Ok(t)
-}
+
+
+
+
+
+
+
+
 
 /// Infer the type of an expression, and update literal nodes (and nested nodes) where possible.
 /// Returns the deduced Type for the expression.
 ///
-/// NOTE: This function is not to be called directly, always call the guard function instead unless
-/// you absolutely sure of what you're doing.
-fn infer_expr_type_hazmat(
+/// NOTE: Unfortuntely I couldn't decouple the coerion logic, from getting type from expression,
+/// from enforcing the expression's legality. This is not a design limitation, but a limitations on
+/// all compilers pretty much. We have to both get type and try to coerce, AND enforce legality in
+/// the same function.
+///
+pub fn infer_expr_type(
     expr: &mut Expr,
     locals: &mut HashMap<String, VarInfo>,
     fun_sigs: &HashMap<String, (Vec<Type>, Option<Vec<Type>>)>,
-    infer_hint: Option<Type>
+    infer_hint: Option<Type> // For type coercion
 ) -> Result<Type, HolyError> {
     match expr {
+        // NOTE: If `infer_hint` is set, we **TRY** to coerce the expression value into infer_hint (if
+        // possible), and error if we can't (BUT we do NOT error if we didnt attempt coercion (i.e.
+        // if its impossible to coerce, like its impossible to coerce a string to a different type., so infer_hint is ignored there, etc). ).
+        //
+        // This function is NOT meant to type validating, it's a function that does 3 things:
+        // 1. Resolve expression type(s) and ensure they are compatiable in complex expressions
+        //    (like `range`, etc.)
+        //
+        // 2. Get expression "final" type. 
+        // 3. **Attempt** to "soft" coerce an expression type to a hint. (only possible SOMETIME,
+        //                                                                  and this is NOT full type validating)
+        //
+        //  It's still completely the caller's responsiblity to check if the returned type matches
+        //  what he expects.
+        //
+        //  This function only does type validating on complex expressions like BinOp, Range, etc.
+        //  to ensure Left and Right are same type, both integer/same types, etc. and error if not.
+        //
 
-        // Note: If infer hint is set, we alter the value to fit the hint, if we can.
+
         Expr::IntLiteral { value, span } => {
-            if infer_hint.is_some() {
-                let infer_hint = infer_hint.unwrap();
-                match infer_hint {
-                    Type::Int8 | Type::Int16 | Type::Int32 | Type::Int64 | Type::Int128 | Type::Usize | Type::Byte | Type::Uint16 | Type::Uint32 | Type::Uint64 | Type::Uint128 => {
-                        *value = infer_integer_literal_helper(infer_hint, *value, *span)?;
-                    }
+            if let Some(infer_hint) = infer_hint {
 
-                    _ => {}
-                    
+                // If the hint is an integer, we try to coerce and error if we can't. if hint is not integer, we simply return type of value
+                if infer_hint.is_integer_type() {
+                    *value = infer_integer_literal_helper(infer_hint, *value, *span)?;
                 }
             }
             Ok(value.get_type())
         }
         Expr::FloatLiteral { value, span } => {
-            if infer_hint.is_some() {
-                match infer_hint.unwrap() {
+
+            // Float type coercion
+            if let Some(infer_hint) = infer_hint {
+                match infer_hint {
                     Type::Float32 => {
                         if let FloatLiteralValue::Float64(f) = value {
                             return Err(HolyError::Semantic(format!("Float literal `{}` is of type `float64`, but we expected type `float32` (line {} column {})", f, span.line, span.column)));
@@ -128,7 +134,6 @@ fn infer_expr_type_hazmat(
                         }
                     }
                     _ => {}
-             
                 }
             }
 
@@ -149,28 +154,29 @@ fn infer_expr_type_hazmat(
             //
 
 
-            let elem_ih = match infer_hint.clone() {
+            let elem_expected_ty = match infer_hint.clone() {
                 Some(Type::FixedArray(t, _)) => {
                     // Only check the innermost base type, not the container shape.
                     // e.g. array_ty=Array(Int64) vs t=Array(Int32) is an error
                     // but  array_ty=Array(Int32) vs t=FixedArray(Int32,N) is fine
 
-                    let hint_inner = if t.is_array_type() {
-                            t.get_array_inner_most_type()
-                        } else {
-                            &*t 
-                        };
+                    let expected_ty_inner = if t.is_array_type() {
+                                                t.get_array_inner_most_type()
+                                            } else {
+                                                &*t 
+                                            };
+
                     let decl_inner = if array_ty.is_array_type() {
-                            array_ty.get_array_inner_most_type()
-                        } else {
-                            array_ty 
-                        };
+                                        array_ty.get_array_inner_most_type()
+                                    } else {
+                                        array_ty 
+                                    };
 
 
-                    if !helpers::type_compatible(decl_inner, hint_inner) {
+                    if decl_inner != expected_ty_inner {
                         return Err(HolyError::Semantic(format!(
                             "Array literal is of `{}` type, but we expected `{}` type (line {} column {})",
-                            decl_inner, hint_inner, span.line, span.column
+                            decl_inner, expected_ty_inner, span.line, span.column
                         )));
                     }
 
@@ -184,17 +190,18 @@ fn infer_expr_type_hazmat(
 
             // all elements must have same type as the array constructor type
             for e in elements.iter_mut() {
-                let ety = infer_expr_type(e, locals, fun_sigs, Some(elem_ih.clone()))?;
-                if !helpers::type_compatible(&ety, &elem_ih) {
+                let ety = infer_expr_type(e, locals, fun_sigs, Some(elem_expected_ty.clone()))?;
+                if ety != elem_expected_ty {
                     return Err(HolyError::Semantic(format!(
                         "Array element type mismatch: expected `{}` got `{}` (line {} column {})",
-                        elem_ih, ety, span.line, span.column
+                        elem_expected_ty, ety, span.line, span.column
                     )));
                 }
             }
 
-            if infer_hint.is_some() {
-                match infer_hint.clone().unwrap() {
+
+            if let Some(infer_hint) = infer_hint {
+                match infer_hint {
                     Type::FixedArray(t, size) => {
                         let size_usize = match size {
                             FixedArraySize::Literal(n) => n,
@@ -208,7 +215,6 @@ fn infer_expr_type_hazmat(
                             )));
                         }
 
-
                         return Ok(Type::FixedArray(Box::new(*t.clone()), size));
                     },
 
@@ -217,7 +223,7 @@ fn infer_expr_type_hazmat(
             }
 
 
-            Ok(Type::Array(Box::new(elem_ih.clone())))
+            Ok(Type::Array(Box::new(elem_expected_ty.clone())))
         }
 
         Expr::ArraySingleAccess { array, index,  span } => {
@@ -233,7 +239,7 @@ fn infer_expr_type_hazmat(
                 
                     // Ensure that the type of the index expression is usize.
                     let ety = infer_expr_type(index, locals, fun_sigs, Some(Type::Usize))?;
-                    if !helpers::type_compatible(&ety, &Type::Usize) {
+                    if ety != Type::Usize {
                         return Err(HolyError::Semantic(format!("Expected array index to be of type `usize`, instead we got `{}` (line {} column {})", ety, span.line, span.column)));
                     }
 
@@ -386,6 +392,7 @@ fn infer_expr_type_hazmat(
 
                 // TODO: Maybe also recursively check value type ?
                 // not sure.
+                //
                 
                 Ok(info.ty.clone())
             } else {
@@ -395,16 +402,16 @@ fn infer_expr_type_hazmat(
 
 
         Expr::UnaryOp{ op, expr, span } => {
-            let ety = infer_expr_type(expr, locals, fun_sigs, infer_hint)?;
+            let expr_ty = infer_expr_type(expr, locals, fun_sigs, infer_hint.clone())?;
             
-            // Ensure that no negate unary operation is allowed on an unsigned integer.
+            // Ensure that negate unary operations is only allowed on floating points, and signed integers.
             if *op == UnaryOpKind::Negate {
-                if !matches!(ety, Type::Int8 | Type::Int16 | Type::Int32 | Type::Int64 | Type::Int128 | Type::Float32 | Type::Float64) {
-                    return Err(HolyError::Semantic(format!("{} cannot have negate unary operation. (line {} column {})", ety, span.line, span.column)))
+                if !matches!(expr_ty, Type::Int8 | Type::Int16 | Type::Int32 | Type::Int64 | Type::Int128 | Type::Float32 | Type::Float64) {
+                    return Err(HolyError::Semantic(format!("type `{}` cannot have negate unary operation. (line {} column {})", expr_ty, span.line, span.column)))
                 }
             }
 
-            Ok(ety)
+            Ok(expr_ty)
         
         }
 
@@ -677,14 +684,14 @@ pub fn check_usize_literal_to_src(expr: &Expr, len: usize, span: Span, locals: H
 }
 
 
-pub fn infer_integer_literal_helper(infer_ty: Type, value: IntLiteralValue, span: Span) -> Result<IntLiteralValue, HolyError> {
+pub fn infer_integer_literal_helper(expected_ty: Type, value: IntLiteralValue, span: Span) -> Result<IntLiteralValue, HolyError> {
     if !value.get_type().is_integer_type() {
         panic!("(Compiler bug) Value `{}` of type `{}` is not an integer type", value, value.get_type());
     }
 
     let range_err = || HolyError::Semantic(format!(
         "Integer literal `{}` out of range for type `{}` (line {} column {})",
-        value, infer_ty, span.line, span.column
+        value, expected_ty, span.line, span.column
     ));
 
     // Normalize up front. One or both may be None if the value can't be represented that way.
@@ -701,7 +708,7 @@ pub fn infer_integer_literal_helper(infer_ty: Type, value: IntLiteralValue, span
     let fits_signed   = |min: i128, max: i128| as_signed.filter(|&v| v >= min && v <= max).ok_or_else(range_err);
     let fits_unsigned = |max: u128|            as_unsigned.filter(|&v| v <= max).ok_or_else(range_err);
 
-    match infer_ty {
+    match expected_ty {
         Type::Int8   => Ok(IntLiteralValue::Int8  (fits_signed(i8::MIN   as i128, i8::MAX   as i128)? as i8)),
         Type::Int16  => Ok(IntLiteralValue::Int16 (fits_signed(i16::MIN  as i128, i16::MAX  as i128)? as i16)),
         Type::Int32  => Ok(IntLiteralValue::Int32 (fits_signed(i32::MIN  as i128, i32::MAX  as i128)? as i32)),

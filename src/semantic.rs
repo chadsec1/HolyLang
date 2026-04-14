@@ -166,57 +166,34 @@ fn check_stmts(
                             )));
 
                 }
-                // If var has explicit type: keep it. If Infer: try infer from initializer.
-                if var.type_name == Type::Infer {
-                    if let Some(expr) = &mut var.value {
-                        let ty = infer::infer_expr_type(expr, locals, fun_sigs, None)?;
-                        // assign inferred type to variable
-                        var.type_name = ty.clone();
-                    } else {
-                        panic!("(Compiler bug) parser phase shouldnt have let this invalid code reach this far, Since var is of type infer, it must've had a value for declaration. Var: {:?}", var);
+                // if `own x TYPE = EXPRESSION`, check if EXPRESSION is a literal, and if so, see if it is compatiable with TYPE
+                if let Some(expr) = &mut var.value {
+                    // On second thought, I don't think this is needed.
+                    // infer::assign_infer_type_to_expr_value(expr, var.type_name.clone())?;
+
+                    // Infer and check the expression type.
+
+                    let expr_ty = infer::infer_expr_type(expr, locals, fun_sigs, Some(var.type_name.clone()))?;
+                    if !helpers::type_compatible(&expr_ty, &var.type_name) {
+                        return Err(HolyError::Semantic(format!(
+                            "Type mismatch assigning to `{}`: got `{}`, expected `{}` (line {} column {})",
+                            var.name, expr_ty, var.type_name, var.span.line, var.span.column
+                        )));
                     }
+
                 } else {
-                    // explicit type, if initializer present, ensure initializer is compatible
-                    
-                    if let Some(expr) = &mut var.value {
-                        // On second thought, I don't think this is needed.
-                        // infer::assign_infer_type_to_expr_value(expr, var.type_name.clone())?;
-
-                        // Infer and check the expression type.
-
-                        let expr_ty = infer::infer_expr_type(expr, locals, fun_sigs, Some(var.type_name.clone()))?;
-                        if !helpers::type_compatible(&expr_ty, &var.type_name) {
-                            return Err(HolyError::Semantic(format!(
-                                "Type mismatch assigning to `{}`: got `{}`, expected `{}` (line {} column {})",
-                                var.name, expr_ty, var.type_name, var.span.line, var.span.column
-                            )));
-                        }
-
-                    } else {
-                        helpers::assign_default_value_for_type(&mut var.value, &var.type_name, var.span)?;
-                    }
+                    helpers::assign_default_value_for_type(&mut var.value, &var.type_name, var.span)?;
                 }
 
             
-                // You cannot overshadow variables declared in upstream scopes.
-                if upstream_var_names.contains(&var.name) {
+
+                // HolyLang commandment 1. You shall not overshadow variables
+                if let Some(_) = locals.get(&var.name) {
                     return Err(HolyError::Semantic(format!(
-                                "Variable `{}` is already defined upstream, you cannot overshadow upstream variables (line {} column {})", 
-                                &var.name, var.span.line, var.span.column
-                            )));
+                            "Variable `{}` is already declared, overshadowing is not allowed. (line {} column {})", 
+                            &var.name, var.span.line, var.span.column
+                        )));
                 }
-
-                // Check if variable exists in locals and if its locked.
-                if let Some(info) = locals.get(&var.name) {
-                    if info.locked {
-                        return Err(HolyError::Semantic(format!(
-                                "Variable `{}` is locked, therefore you cannot overshadow it (line {} column {})", 
-                                &var.name, var.span.line, var.span.column
-                            )));
-                    }
-                }
-
-
 
 
                 let mut value_len: Option<usize> = None;
@@ -295,32 +272,21 @@ fn check_stmts(
 
                     // assign types and register locals
                     for (var, ret_ty) in var_list.iter_mut().zip(ret_vec.iter()) {
-                        if var.type_name == Type::Infer {
-                            var.type_name = ret_ty.clone();
-                        } else if !helpers::type_compatible(&var.type_name, ret_ty) {
+                        if !helpers::type_compatible(&var.type_name, ret_ty) {
                             return Err(HolyError::Semantic(format!(
                                 "Type mismatch for variable `{}`: declared `{}` but call returns `{}` (line {} column {})",
                                 var.name, var.type_name, ret_ty, var.span.line, var.span.column
                             )));
                         }
 
-                        if upstream_var_names.contains(&var.name) {
+
+                        // HolyLang commandment 1. You shall not overshadow variables
+                        if let Some(_) = locals.get(&var.name) {
                             return Err(HolyError::Semantic(format!(
-                                        "Variable `{}` is already defined upstream, you cannot overshadow upstream variables (line {} column {})", 
-                                        &var.name, var.span.line, var.span.column
-                                    )));
+                                    "Variable `{}` is already declared, overshadowing is not allowed. (line {} column {})", 
+                                    &var.name, var.span.line, var.span.column
+                                )));
                         }
-
-                        // Check if variable exists in locals and if its locked.
-                        if let Some(info) = locals.get(&var.name) {
-                            if info.locked {
-                                return Err(HolyError::Semantic(format!(
-                                        "Variable `{}` is locked, therefore you cannot overshadow it (line {} column {})", 
-                                        &var.name, var.span.line, var.span.column
-                                    )));
-                            }
-                        }
-
 
                         // insert into locals
                         //
@@ -356,10 +322,10 @@ fn check_stmts(
                 // reflected back in locals. I think.
 
                 let expr_ty = infer::infer_expr_type(&mut assign.value.clone(), locals, fun_sigs, Some(varinfo.ty.clone()))?;
-                if !helpers::type_compatible(&expr_ty, &varinfo.ty) {
+                if expr_ty != varinfo.ty {
                     return Err(HolyError::Semantic(format!(
-                        "Cannot assign `{}` to `{}` of type `{}` (line {} column {})",
-                        expr_ty, assign.name, varinfo.ty, assign.span.line, assign.span.column
+                            "Type mismatch assigning to `{}`: got `{}`, expected `{}` (line {} column {})",
+                            assign.name, expr_ty, varinfo.ty, assign.span.line, assign.span.column
                     )));
                 }
 
@@ -929,14 +895,7 @@ fn check_call(
     // check each arg type and apply moves
     for (i, (arg_expr, param_ty)) in args.iter_mut().zip(param_tys.iter()).enumerate() {
         let arg_ty = infer::infer_expr_type(arg_expr, locals, fun_sigs, Some(param_ty.clone()))?;
-        if arg_ty == Type::Infer {
-            panic!(
-                "(Compiler bug) argument inferred type is Infer, that's an impossible condition. name: {:?}\nargs: {:?}\nlocals: {:?}\nfun_sigs: {:?}\nrequire_ret: {:?}\nspan: {:?}", 
-                name, args, locals, fun_sigs, require_ret, span
-                )
-
-            // infer::assign_infer_type_to_expr_value(arg_expr, param_ty.clone())?;
-        } else if !helpers::type_compatible(&arg_ty, param_ty) {
+        if !helpers::type_compatible(&arg_ty, param_ty) {
             return Err(HolyError::Semantic(format!(
                 "Argument number `{}` type mismatch in call to `{}`: expected `{}`, got `{}` (line {} column {})",
                 i + 1, name, param_ty, arg_ty, span.line, span.column,

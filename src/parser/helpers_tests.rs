@@ -1,7 +1,7 @@
 use super::*;
 use crate::consts;
 use crate::tests_consts::{
-    ALL_TYPES_NO_ARR_NO_INFER
+    ALL_TYPES_NO_ARR
 };
 
 #[cfg(test)]
@@ -213,62 +213,62 @@ mod tests {
 
         #[test]
         fn empty_string_gives_one_empty_part() {
-            let result = helpers::split_comma_top_level("").unwrap();
+            let result = helpers::split_char_top_level(',', "").unwrap();
             assert_eq!(result, vec![""]);
         }
 
         #[test]
         fn single_arg_no_comma() {
-            let result = helpers::split_comma_top_level("hello").unwrap();
+            let result = helpers::split_char_top_level(',', "hello").unwrap();
             assert_eq!(result, vec!["hello"]);
         }
 
         #[test]
         fn two_simple_args() {
-            let result = helpers::split_comma_top_level("a, b").unwrap();
+            let result = helpers::split_char_top_level(',', "a, b").unwrap();
             assert_eq!(result, vec!["a", "b"]);
         }
 
         #[test]
         fn three_args_with_whitespace() {
-            let result = helpers::split_comma_top_level("  x ,  y ,  z  ").unwrap();
+            let result = helpers::split_char_top_level(',', "  x ,  y ,  z  ").unwrap();
             assert_eq!(result, vec!["x", "y", "z"]);
         }
 
         #[test]
         fn nested_parens_hide_comma() {
-            let result = helpers::split_comma_top_level("f(a, b), c").unwrap();
+            let result = helpers::split_char_top_level(',', "f(a, b), c").unwrap();
             assert_eq!(result, vec!["f(a, b)", "c"]);
         }
 
         #[test]
         fn nested_square_brackets_hide_comma() {
-            let result = helpers::split_comma_top_level("[1, 2], [3, 4]").unwrap();
+            let result = helpers::split_char_top_level(',', "[1, 2], [3, 4]").unwrap();
             assert_eq!(result, vec!["[1, 2]", "[3, 4]"]);
         }
 
         #[test]
         fn nested_curly_braces_hide_comma() {
-            let result = helpers::split_comma_top_level("{a: 1, b: 2}, c").unwrap();
+            let result = helpers::split_char_top_level(',', "{a: 1, b: 2}, c").unwrap();
             assert_eq!(result, vec!["{a: 1, b: 2}", "c"]);
         }
 
         #[test]
         fn double_quoted_string_hides_comma() {
-            let result = helpers::split_comma_top_level(r#""hello, world", x"#).unwrap();
+            let result = helpers::split_char_top_level(',', r#""hello, world", x"#).unwrap();
             assert_eq!(result, vec![r#""hello, world""#, "x"]);
         }
 
         #[test]
         fn single_quoted_string_hides_comma() {
-            let result = helpers::split_comma_top_level("'a, b', c").unwrap();
+            let result = helpers::split_char_top_level(',', "'a, b', c").unwrap();
             assert_eq!(result, vec!["'a, b'", "c"]);
         }
 
         #[test]
         fn backslash_escaped_quote_inside_string() {
             // The comma after the escaped quote should NOT split
-            let result = helpers::split_comma_top_level(r#""he said \"hi, there\"", x"#).unwrap();
+            let result = helpers::split_char_top_level(',', r#""he said \"hi, there\"", x"#).unwrap();
             assert_eq!(result.len(), 2);
             assert_eq!(result[1], "x");
         }
@@ -276,50 +276,50 @@ mod tests {
         #[test]
         fn backslash_at_end_of_string_is_error() {
             // Trailing backslash outside string is invalid
-            let result = helpers::split_comma_top_level(r#""abc\"#);
+            let result = helpers::split_char_top_level(',', r#""abc\"#);
             assert!(result.is_err(), "expected error for unclosed string");
         }
 
         #[test]
         fn unclosed_double_quote_is_error() {
-            let result = helpers::split_comma_top_level(r#""unclosed"#);
+            let result = helpers::split_char_top_level(',', r#""unclosed"#);
             assert!(result.is_err());
         }
 
         #[test]
         fn adjacent_string_literals_are_error() {
             // Two string literals back-to-back with no separator
-            let result = helpers::split_comma_top_level(r#""a""b""#);
+            let result = helpers::split_char_top_level(',', r#""a""b""#);
             assert!(result.is_err(), "adjacent string literals should be an error");
         }
 
         #[test]
         fn comma_only_gives_two_empty_parts() {
-            let result = helpers::split_comma_top_level(",").unwrap();
+            let result = helpers::split_char_top_level(',', ",").unwrap();
             assert_eq!(result, vec!["", ""]);
         }
 
         #[test]
         fn trailing_comma_gives_empty_last_part() {
-            let result = helpers::split_comma_top_level("a,").unwrap();
+            let result = helpers::split_char_top_level(',', "a,").unwrap();
             assert_eq!(result, vec!["a", ""]);
         }
 
         #[test]
         fn leading_comma_gives_empty_first_part() {
-            let result = helpers::split_comma_top_level(",a").unwrap();
+            let result = helpers::split_char_top_level(',', ",a").unwrap();
             assert_eq!(result, vec!["", "a"]);
         }
 
         #[test]
         fn deeply_nested_structure() {
-            let result = helpers::split_comma_top_level("f(g(h(1, 2), 3), 4), 5").unwrap();
+            let result = helpers::split_char_top_level(',', "f(g(h(1, 2), 3), 4), 5").unwrap();
             assert_eq!(result, vec!["f(g(h(1, 2), 3), 4)", "5"]);
         }
 
         #[test]
         fn mixed_bracket_types_nested() {
-            let result = helpers::split_comma_top_level("([{a, b}]), c").unwrap();
+            let result = helpers::split_char_top_level(',', "([{a, b}]), c").unwrap();
             assert_eq!(result, vec!["([{a, b}])", "c"]);
         }
 
@@ -327,65 +327,65 @@ mod tests {
         fn string_with_escaped_backslash() {
             // "\\" is a single backslash — the quote after it should close the string
             let s = r#""back\\slash", next"#;
-            let result = helpers::split_comma_top_level(s).unwrap();
+            let result = helpers::split_char_top_level(',', s).unwrap();
             assert_eq!(result.len(), 2);
             assert_eq!(result[1], "next");
         }
 
         #[test]
         fn empty_string_literal_as_arg() {
-            let result = helpers::split_comma_top_level(r#""", x"#).unwrap();
+            let result = helpers::split_char_top_level(',', r#""", x"#).unwrap();
             assert_eq!(result.len(), 2);
         }
 
         #[test]
         fn whitespace_only_parts_are_trimmed() {
-            let result = helpers::split_comma_top_level("  ,  ").unwrap();
+            let result = helpers::split_char_top_level(',', "  ,  ").unwrap();
             assert_eq!(result, vec!["", ""]);
         }
 
         #[test]
         fn unicode_in_args() {
-            let result = helpers::split_comma_top_level("héllo, wörld").unwrap();
+            let result = helpers::split_char_top_level(',', "héllo, wörld").unwrap();
             assert_eq!(result, vec!["héllo", "wörld"]);
         }
 
         #[test]
         fn single_item() {
-            let result = helpers::split_comma_top_level("a").unwrap();
+            let result = helpers::split_char_top_level(',', "a").unwrap();
             assert_eq!(result, vec!["a"]);
         }
 
         #[test]
         fn multiple_items() {
-            let result = helpers::split_comma_top_level("a, b, c").unwrap();
+            let result = helpers::split_char_top_level(',', "a, b, c").unwrap();
             assert_eq!(result, vec!["a", "b", "c"]);
         }
 
         #[test]
         fn nested_parens_not_split() {
-            let result = helpers::split_comma_top_level("foo(a, b), c").unwrap();
+            let result = helpers::split_char_top_level(',', "foo(a, b), c").unwrap();
             assert_eq!(result, vec!["foo(a, b)", "c"]);
         }
 
         #[test]
         fn nested_brackets_not_split() {
-            for t in ALL_TYPES_NO_ARR_NO_INFER {
+            for t in ALL_TYPES_NO_ARR {
                 let f = format!("{}[1, 2], {}[3, 4]", t.clone(), t.clone());
-                let result = helpers::split_comma_top_level(&f).unwrap();
+                let result = helpers::split_char_top_level(',', &f).unwrap();
                 assert_eq!(result, vec![format!("{}[1, 2]", t), format!("{}[3, 4]", t)]);
             }
 
 
-            for t in ALL_TYPES_NO_ARR_NO_INFER {
+            for t in ALL_TYPES_NO_ARR {
                 let f = format!("{}[\"Hi\", \"There\"], {}[\"Lol\", \"xD\"]", t.clone(), t.clone());
-                let result = helpers::split_comma_top_level(&f).unwrap();
+                let result = helpers::split_char_top_level(',', &f).unwrap();
                 assert_eq!(result, vec![format!("{}[\"Hi\", \"There\"]", t), format!("{}[\"Lol\", \"xD\"]", t)]);
             }
             
-            for t in ALL_TYPES_NO_ARR_NO_INFER {
+            for t in ALL_TYPES_NO_ARR {
                 let f = format!("{}[\"Hi,!!\", \"The,re\"], {}[\"Lo, l!\", \", xD\"]", t.clone(), t.clone());
-                let result = helpers::split_comma_top_level(&f).unwrap();
+                let result = helpers::split_char_top_level(',', &f).unwrap();
                 assert_eq!(result, vec![format!("{}[\"Hi,!!\", \"The,re\"]", t), format!("{}[\"Lo, l!\", \", xD\"]", t)]);
             }
                 
@@ -394,13 +394,13 @@ mod tests {
 
         #[test]
         fn string_containing_comma() {
-            let result = helpers::split_comma_top_level(r#""hello, world", b"#).unwrap();
+            let result = helpers::split_char_top_level(',', r#""hello, world", b"#).unwrap();
             assert_eq!(result, vec![r#""hello, world""#, "b"]);
         }
 
         #[test]
         fn unclosed_string_errors() {
-            assert!(helpers::split_comma_top_level(r#""unclosed, x"#).is_err());
+            assert!(helpers::split_char_top_level(',', r#""unclosed, x"#).is_err());
         }
     }
 
@@ -1147,7 +1147,7 @@ mod tests {
         fn stripped_comment_then_split() {
             let raw = "a, b, c # trailing comment";
             let stripped = helpers::strip_inline_comment(raw);
-            let parts = helpers::split_comma_top_level(&stripped).unwrap();
+            let parts = helpers::split_char_top_level(',', &stripped).unwrap();
             assert_eq!(parts, vec!["a", "b", "c"]);
         }
 
