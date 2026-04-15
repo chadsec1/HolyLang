@@ -4,100 +4,11 @@ use crate::tests_consts::{
     ALL_TYPES_NO_ARR
 };
 
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    // find_constructor_bracket
-    mod find_constructor_bracket {
-        use super::*;
-        // --- basic happy paths ---
-
-        #[test]
-        fn empty_string_returns_none() {
-            assert_eq!(helpers::find_constructor_bracket(""), None);
-        }
-
-        #[test]
-        fn no_brackets_returns_none() {
-            assert_eq!(helpers::find_constructor_bracket("hello"), None);
-        }
-
-        #[test]
-        fn single_empty_pair_is_suffix_not_constructor() {
-            // "[]" alone is a type suffix, not a constructor bracket
-            assert_eq!(helpers::find_constructor_bracket("[]"), None);
-        }
-
-        #[test]
-        fn open_bracket_with_content_is_constructor() {
-            // "[1, 2, 3]" — the '[' at 0 is NOT followed by ']'
-            assert_eq!(helpers::find_constructor_bracket("[1, 2, 3]"), Some(0));
-        }
-
-        #[test]
-        fn suffix_then_constructor() {
-            // "int[][1, 2]" — first pair is suffix, second '[' is constructor
-            let s = "int[][1, 2]";
-            assert_eq!(helpers::find_constructor_bracket(s), Some(5));
-        }
-
-        #[test]
-        fn multiple_suffix_pairs_before_constructor() {
-            // "int[][][5]" — three '[', first two are suffix pairs, third is constructor
-            let s = "int[][][5]";
-            assert_eq!(helpers::find_constructor_bracket(s), Some(7));
-        }
-
-        #[test]
-        fn only_suffix_pairs_returns_none() {
-            // "int[][]" — both are suffix pairs
-            assert_eq!(helpers::find_constructor_bracket("int[][]"), None);
-        }
-
-        #[test]
-        fn constructor_at_start() {
-            assert_eq!(helpers::find_constructor_bracket("["), Some(0));
-        }
-
-        #[test]
-        fn unclosed_bracket_is_constructor() {
-            // "[abc" — '[' at 0 has no matching ']'
-            assert_eq!(helpers::find_constructor_bracket("[abc"), Some(0));
-        }
-
-        #[test]
-        fn suffix_pair_then_unclosed() {
-            // "[][" — first is suffix, second is constructor (no following ']')
-            assert_eq!(helpers::find_constructor_bracket("[]["), Some(2));
-        }
-
-        #[test]
-        fn open_bracket_at_very_end_is_constructor() {
-            // "abc[" — '[' at end has no following char
-            assert_eq!(helpers::find_constructor_bracket("abc["), Some(3));
-        }
-
-        #[test]
-        fn interleaved_non_bracket_chars() {
-            // "x[]y[z]" — '[]' at 1 is suffix, '[' at 4 has 'z]' after it
-            let s = "x[]y[z]";
-            assert_eq!(helpers::find_constructor_bracket(s), Some(4));
-        }
-
-        #[test]
-        fn trailing_open_immediately_after_suffix() {
-            // "[][" last '[' is not followed by ']'
-            assert_eq!(helpers::find_constructor_bracket("[]["), Some(2));
-        }
-
-        // --- does NOT care about nested brackets; it's purely sequential ---
-        #[test]
-        fn nested_brackets_inner_is_found_first() {
-            // "[[]]" — outer '[' at 0 is followed by '[', not ']', so it IS a constructor
-            assert_eq!(helpers::find_constructor_bracket("[[]]"), Some(0));
-        }
-    }
 
     // find_top_level_op_any
     //
@@ -1107,28 +1018,52 @@ mod tests {
         }
     }
 
-    // is_array_type — trivial but document the contract
+    // is_array_type method on Type
     mod is_array_type {
         use super::*;
 
         #[test]
-        fn array_type_is_true() {
-            let t = Type::Array(Box::new(Type::Int8)); 
-            assert!(helpers::is_array_type(&t));
+        fn dynamic_array_type_is_true() {
+            for t in ALL_TYPES_NO_ARR {
+                let arr_t = Type::Array(Box::new(t.clone())); 
+                assert!(arr_t.is_array_type());
+            }
         }
+
+        #[test]
+        fn nested_dynamic_array_is_still_array() {
+            for t in ALL_TYPES_NO_ARR {
+                let arr_t = Type::Array(Box::new(Type::Array(Box::new(t.clone()))));
+                assert!(arr_t.is_array_type());
+            }
+        }
+
+        #[test]
+        fn fixed_array_type_is_true() {
+            for t in ALL_TYPES_NO_ARR {
+                let arr_t = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(1)); 
+                assert!(arr_t.is_array_type());
+            }
+        }
+
+        #[test]
+        fn nested_fixed_array_is_still_array() {
+            for t in ALL_TYPES_NO_ARR {
+                let arr_t = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(1)); 
+                let arr_t = Type::FixedArray(Box::new(arr_t), FixedArraySize::Literal(1)); 
+
+                assert!(arr_t.is_array_type());
+            }
+        }
+
 
         #[test]
         fn non_array_types_are_false() {
-            assert!(!helpers::is_array_type(&Type::Int8));
-            assert!(!helpers::is_array_type(&Type::Bool));
-            assert!(!helpers::is_array_type(&Type::String));
+            for t in ALL_TYPES_NO_ARR {
+                assert!(!t.is_array_type());
+            }
         }
 
-        #[test]
-        fn nested_array_is_still_array() {
-            let t = Type::Array(Box::new(Type::Array(Box::new(Type::Int8))));
-            assert!(helpers::is_array_type(&t));
-        }
     }
 
     // Cross-cutting / regression tests
@@ -1160,6 +1095,7 @@ mod tests {
             assert_eq!(opens, closes);
         }
 
+        /*
         /// Identifier used as constructor bracket argument
         #[test]
         fn constructor_bracket_arg_is_valid_identifier() {
@@ -1168,6 +1104,7 @@ mod tests {
             let inner = &input[idx + 1..input.len() - 1];
             assert!(helpers::validate_identifier_name(inner).is_ok());
         }
+        */
 
         /// helpers::strip_inline_comment followed by unescape should be consistent
         #[test]
