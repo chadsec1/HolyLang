@@ -48,9 +48,8 @@ pub fn assign_default_value_for_type(expr: &mut Option<Expr>, ty: &Type, span: S
             *expr = Some(get_default_expr_for_type_hazmat(ty, span))
         }
 
-        Type::Array(inner) => {
-            let inner_ty = inner.clone();
-            *expr = Some(Expr::ArrayLiteral { elements: Vec::new(), array_ty: *inner_ty, span: span })
+        Type::Array(_) => {
+            *expr = Some(Expr::ArrayLiteral { elements: Vec::new(), span: span })
         }
 
 

@@ -714,7 +714,6 @@ mod blackbox_tests {
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let arr_lit = Expr::ArrayLiteral {
                 elements: vec![],
-                array_ty: t.clone(),
                 span: span(),
             };
 
@@ -757,7 +756,6 @@ mod blackbox_tests {
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let arr_lit = Expr::ArrayLiteral {
                 elements: vec![],
-                array_ty: t.clone(),
                 span: span(),
             };
 
@@ -793,7 +791,6 @@ mod blackbox_tests {
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let arr_lit = Expr::ArrayLiteral {
                 elements: vec![],
-                array_ty: t.clone(),
                 span: span(),
             };
 
@@ -1137,7 +1134,6 @@ mod blackbox_tests {
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let arr_lit = Expr::ArrayLiteral {
                 elements: vec![],
-                array_ty: t.clone(),
                 span: span(),
             };
 
@@ -1439,9 +1435,8 @@ mod blackbox_tests {
             check_semantics(&mut ast).unwrap();
             if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
                 assert_eq!(v.type_name, Type::Array(Box::new(t.clone())));
-                if let Some(Expr::ArrayLiteral { elements, array_ty, .. }) = &v.value {
+                if let Some(Expr::ArrayLiteral { elements, .. }) = &v.value {
                     assert!(elements.is_empty());
-                    assert_eq!(array_ty, t);
                 } else {
                     panic!("expected empty ArrayLiteral");
                 }
@@ -1485,14 +1480,8 @@ mod blackbox_tests {
                 check_semantics(&mut ast).unwrap();
                 if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
                     assert_eq!(v.type_name, nested_ty);
-                    if let Some(Expr::ArrayLiteral { elements, array_ty, .. }) = &v.value {
+                    if let Some(Expr::ArrayLiteral { elements, .. }) = &v.value {
                         assert!(elements.is_empty());
-                        // This is to add the outer most array type wrapping, so variable 
-                        // type == array_ty
-                        //
-                        let array_ty_wraped = Type::Array(Box::new(array_ty.clone()));
-                        assert_eq!(array_ty_wraped, nested_ty);
-
                     } else {
                         panic!("expected empty ArrayLiteral");
                     }
@@ -1788,7 +1777,6 @@ mod blackbox_tests {
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let arr_lit = Expr::ArrayLiteral {
                 elements: vec![],
-                array_ty: t.clone(),
                 span: span(),
             };
 
@@ -1977,7 +1965,6 @@ mod blackbox_tests {
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let arr_lit = Expr::ArrayLiteral {
                 elements: vec![],
-                array_ty: t.clone(),
                 span: span(),
             };
 
@@ -2020,7 +2007,6 @@ mod blackbox_tests {
 
                 let arr_lit = Expr::ArrayLiteral {
                     elements: elements.clone(),
-                    array_ty: t.clone(),
                     span: span(),
                 };
 
@@ -2194,7 +2180,6 @@ mod blackbox_tests {
 
                 let arr_lit = Expr::ArrayLiteral {
                     elements: elements.clone(),
-                    array_ty: t.clone(),
                     span: span(),
                 };
 
@@ -2333,7 +2318,6 @@ mod blackbox_tests {
 
                 let arr_lit = Expr::ArrayLiteral {
                     elements: elements.clone(),
-                    array_ty: t.clone(),
                     span: span(),
                 };
 
@@ -2863,7 +2847,6 @@ mod blackbox_tests {
         for t in ALL_TYPES_NO_ARR {
             let arr_lit = Expr::ArrayLiteral {
                 elements: vec![],
-                array_ty: t.clone(),
                 span: span(),
             };
 
@@ -2910,7 +2893,6 @@ mod blackbox_tests {
         for t in ALL_TYPES_NO_ARR {
             let arr_lit = Expr::ArrayLiteral {
                 elements: vec![],
-                array_ty: t.clone(),
                 span: span(),
             };
 
@@ -2976,7 +2958,6 @@ mod blackbox_tests {
         for t in ALL_TYPES_NO_ARR {
             let arr_lit = Expr::ArrayLiteral {
                 elements: vec![],
-                array_ty: t.clone(),
                 span: span(),
             };
 
@@ -3011,7 +2992,6 @@ mod blackbox_tests {
         for t in ALL_TYPES_NO_ARR {
             let arr_lit = Expr::ArrayLiteral {
                 elements: vec![],
-                array_ty: t.clone(),
                 span: span(),
             };
 
@@ -3573,7 +3553,6 @@ mod blackbox_tests {
         for t in ALL_TYPES_NO_ARR {
             let arr_lit = Expr::ArrayLiteral {
                 elements: vec![],
-                array_ty: t.clone(),
                 span: span(),
             };
 
@@ -3621,7 +3600,6 @@ mod blackbox_tests {
         for t in ALL_TYPES_NO_ARR {
             let arr_lit = Expr::ArrayLiteral {
                 elements: vec![],
-                array_ty: t.clone(),
                 span: span(),
             };
 
@@ -3687,7 +3665,6 @@ mod blackbox_tests {
         for t in ALL_TYPES_NO_ARR {
             let arr_lit = Expr::ArrayLiteral {
                 elements: vec![],
-                array_ty: t.clone(),
                 span: span(),
             };
 
@@ -3722,7 +3699,6 @@ mod blackbox_tests {
         for t in ALL_TYPES_NO_ARR {
             let arr_lit = Expr::ArrayLiteral {
                 elements: vec![],
-                array_ty: t.clone(),
                 span: span(),
             };
 
@@ -5552,7 +5528,6 @@ mod blackbox_tests {
                 
                 let arr_lit = Expr::ArrayLiteral {
                     elements: elements.clone(),
-                    array_ty: t1.clone(),
                     span: span(),
                 };
 
@@ -5570,7 +5545,12 @@ mod blackbox_tests {
                     let mut ast = ast_one(func);
                     let result = check_semantics(&mut ast);
                     assert!(result.is_err());
-                    assert!(result.unwrap_err().to_string().starts_with("Semantic error: Array element type mismatch: expected"));
+
+                    let assert_cond = result.unwrap_err().to_string();
+                    let assert_cond = assert_cond.contains("Array element type mismatch:") | 
+                                        assert_cond.contains("Type mismatch assigning to `x`");
+
+                    assert!(assert_cond);
                 }
             }       
         }
@@ -5590,7 +5570,6 @@ mod blackbox_tests {
                 
                 let arr_lit = Expr::ArrayLiteral {
                     elements: elements.clone(),
-                    array_ty: t1.clone(),
                     span: span(),
                 };
 
@@ -5609,7 +5588,11 @@ mod blackbox_tests {
                     let mut ast = ast_one(func);
                     let result = check_semantics(&mut ast);
                     assert!(result.is_err());
-                    assert!(result.unwrap_err().to_string().starts_with("Semantic error: Array element type mismatch: expected"));
+                    let assert_cond = result.unwrap_err().to_string();
+                    let assert_cond = assert_cond.contains("Array element type mismatch:") | 
+                                        assert_cond.contains("Type mismatch assigning to `x`");
+
+                    assert!(assert_cond);
                 }
             }       
         }
@@ -5637,7 +5620,6 @@ mod blackbox_tests {
                 
                 let arr_lit = Expr::ArrayLiteral {
                     elements: elements.clone(),
-                    array_ty: t1.clone(),
                     span: span(),
                 };
 
@@ -5655,7 +5637,13 @@ mod blackbox_tests {
                     let mut ast = ast_one(func);
                     let result = check_semantics(&mut ast);
                     assert!(result.is_err());
-                    assert!(result.unwrap_err().to_string().starts_with("Semantic error: Array element type mismatch: expected"));
+
+                    let assert_cond = result.unwrap_err().to_string();
+                    let assert_cond = assert_cond.contains("Array element type mismatch:") | 
+                                        assert_cond.contains("Type mismatch assigning to `x`") |
+                                        assert_cond.contains("Array literal is of");
+
+                    assert!(assert_cond);
                 }
             }       
         }
@@ -5675,7 +5663,6 @@ mod blackbox_tests {
                 
                 let arr_lit = Expr::ArrayLiteral {
                     elements: elements.clone(),
-                    array_ty: t1.clone(),
                     span: span(),
                 };
 
@@ -5694,7 +5681,13 @@ mod blackbox_tests {
                     let mut ast = ast_one(func);
                     let result = check_semantics(&mut ast);
                     assert!(result.is_err());
-                    assert!(result.unwrap_err().to_string().starts_with("Semantic error: Array element type mismatch: expected"));
+
+                    let assert_cond = result.unwrap_err().to_string();
+                    let assert_cond = assert_cond.contains("Array element type mismatch:") | 
+                                        assert_cond.contains("Type mismatch assigning to `x`") |
+                                        assert_cond.contains("Array literal is of");
+
+                    assert!(assert_cond);
                 }
             }       
         }
@@ -5722,7 +5715,6 @@ mod blackbox_tests {
             for i in 3..=10000 {
                 let arr_lit = Expr::ArrayLiteral {
                     elements: vec![l.clone(), l.clone(), l.clone()],
-                    array_ty: t.clone(),
                     span: span(),
                 };
                 let access = Expr::ArraySingleAccess {
@@ -5758,7 +5750,6 @@ mod blackbox_tests {
             for i in 3..=10000 {
                 let arr_lit = Expr::ArrayLiteral {
                     elements: vec![l.clone(), l.clone(), l.clone()],
-                    array_ty: t.clone(),
                     span: span(),
                 };
                 let access = Expr::ArraySingleAccess {
@@ -5790,7 +5781,6 @@ mod blackbox_tests {
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR_NO_USIZE.iter()) {
             let arr_lit = Expr::ArrayLiteral {
                 elements: vec![l.clone(), l.clone(), l.clone()],
-                array_ty: t.clone(),
                 span: span(),
             };
             let access = Expr::ArraySingleAccess {
@@ -5818,7 +5808,6 @@ mod blackbox_tests {
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR_NO_USIZE.iter()) {
             let arr_lit = Expr::ArrayLiteral {
                 elements: vec![l.clone(), l.clone(), l.clone()],
-                array_ty: t.clone(),
                 span: span(),
             };
             let access = Expr::ArraySingleAccess {
@@ -5856,7 +5845,6 @@ mod blackbox_tests {
             for i in 3..=10000 {
                 let arr_lit = Expr::ArrayLiteral {
                     elements: vec![l.clone(), l.clone(), l.clone()],
-                    array_ty: t.clone(),
                     span: span(),
                 };
 
@@ -5892,7 +5880,6 @@ mod blackbox_tests {
             for i in 3..=10000 {
                 let arr_lit = Expr::ArrayLiteral {
                     elements: vec![l.clone(), l.clone(), l.clone()],
-                    array_ty: t.clone(),
                     span: span(),
                 };
 
@@ -5927,7 +5914,6 @@ mod blackbox_tests {
                 
                 let arr_lit = Expr::ArrayLiteral {
                     elements: elements,
-                    array_ty: t.clone(),
                     span: span(),
                 };
 
@@ -5960,7 +5946,6 @@ mod blackbox_tests {
                 
                 let arr_lit = Expr::ArrayLiteral {
                     elements: elements,
-                    array_ty: t.clone(),
                     span: span(),
                 };
 
@@ -5999,7 +5984,6 @@ mod blackbox_tests {
                 
                 let arr_lit = Expr::ArrayLiteral {
                     elements: elements,
-                    array_ty: t.clone(),
                     span: span(),
                 };
 
@@ -6041,7 +6025,6 @@ mod blackbox_tests {
                 
                 let arr_lit = Expr::ArrayLiteral {
                     elements: elements,
-                    array_ty: t.clone(),
                     span: span(),
                 };
 
@@ -6160,7 +6143,6 @@ mod blackbox_tests {
                 
                 let arr_lit = Expr::ArrayLiteral {
                     elements: elements,
-                    array_ty: t.clone(),
                     span: span(),
                 };
 
@@ -6196,7 +6178,6 @@ mod blackbox_tests {
                 
                 let arr_lit = Expr::ArrayLiteral {
                     elements: elements,
-                    array_ty: t.clone(),
                     span: span(),
                 };
 
@@ -6238,7 +6219,6 @@ mod blackbox_tests {
                 
                 let arr_lit = Expr::ArrayLiteral {
                     elements: elements,
-                    array_ty: t.clone(),
                     span: span(),
                 };
 
@@ -6274,7 +6254,6 @@ mod blackbox_tests {
                 
                 let arr_lit = Expr::ArrayLiteral {
                     elements: elements,
-                    array_ty: t.clone(),
                     span: span(),
                 };
 
@@ -6313,7 +6292,6 @@ mod blackbox_tests {
                 
                 let arr_lit = Expr::ArrayLiteral {
                     elements: elements,
-                    array_ty: t.clone(),
                     span: span(),
                 };
 
@@ -6348,7 +6326,6 @@ mod blackbox_tests {
                 
                 let arr_lit = Expr::ArrayLiteral {
                     elements: elements,
-                    array_ty: t.clone(),
                     span: span(),
                 };
 
@@ -6386,7 +6363,6 @@ mod blackbox_tests {
                 
                 let arr_lit = Expr::ArrayLiteral {
                     elements: elements,
-                    array_ty: t.clone(),
                     span: span(),
                 };
 
@@ -6421,7 +6397,6 @@ mod blackbox_tests {
                 
                 let arr_lit = Expr::ArrayLiteral {
                     elements: elements,
-                    array_ty: t.clone(),
                     span: span(),
                 };
 
@@ -6461,7 +6436,6 @@ mod blackbox_tests {
                 
                 let arr_lit = Expr::ArrayLiteral {
                     elements: elements,
-                    array_ty: t.clone(),
                     span: span(),
                 };
 
@@ -6496,7 +6470,6 @@ mod blackbox_tests {
                 
                 let arr_lit = Expr::ArrayLiteral {
                     elements: elements,
-                    array_ty: t.clone(),
                     span: span(),
                 };
 
@@ -6534,7 +6507,6 @@ mod blackbox_tests {
                 
                 let arr_lit = Expr::ArrayLiteral {
                     elements: elements,
-                    array_ty: t.clone(),
                     span: span(),
                 };
 
@@ -6569,7 +6541,6 @@ mod blackbox_tests {
                 
                 let arr_lit = Expr::ArrayLiteral {
                     elements: elements,
-                    array_ty: t.clone(),
                     span: span(),
                 };
 
@@ -6679,7 +6650,6 @@ mod blackbox_tests {
                 
                 let arr_lit = Expr::ArrayLiteral {
                     elements: elements,
-                    array_ty: t.clone(),
                     span: span(),
                 };
 
@@ -6750,7 +6720,6 @@ mod blackbox_tests {
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let arr_lit = Expr::ArrayLiteral {
                 elements: vec![l.clone(), l.clone(), l.clone()],
-                array_ty: t.clone(),
                 span: span(),
             };
             let access = Expr::ArrayMultipleAccess {
@@ -6777,7 +6746,6 @@ mod blackbox_tests {
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let arr_lit = Expr::ArrayLiteral {
                 elements: vec![l.clone(), l.clone(), l.clone()],
-                array_ty: t.clone(),
                 span: span(),
             };
             let access = Expr::ArrayMultipleAccess {
@@ -6805,7 +6773,6 @@ mod blackbox_tests {
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let arr_lit = Expr::ArrayLiteral {
                 elements: vec![l.clone(), l.clone(), l.clone(), l.clone()],
-                array_ty: t.clone(),
                 span: span(),
             };
             let slice = Expr::ArrayMultipleAccess {
