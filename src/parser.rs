@@ -260,7 +260,6 @@ pub enum Expr {
     },
     ArrayLiteral {
         elements: Vec<Expr>,
-        array_ty: Type,
         span: Span,
     },
     StringLiteral {
@@ -1190,56 +1189,6 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
 }
 
 
-fn parse_typed_array_literal(s: &str, span: Span) -> Result<Expr, HolyError> {
-    let s = s.trim();
-    // find the constructor '[' that starts the element list
-    let ctor_pos = helpers::find_constructor_bracket(s).ok_or_else(|| {
-        HolyError::Parse(format!("Malformed typed array literal `{}` (line {} column {})", s, span.line, span.column))
-    })?;
-
-    if !s.ends_with(']') {
-        return Err(HolyError::Parse(format!("Typed array literal missing trailing ']' (line {} column {})", span.line, span.column)));
-    }
-
-    let type_str = s[..ctor_pos].trim();
-    let elems_str = &s[ctor_pos + 1..s.len() - 1]; // between constructor '[' and final ']'
-
-    // parse the base/inner type (may be nested literal like "int32[]") we let  parse_type handle it
-    match parse_type(type_str, &span) {
-        Ok(inner_ty) => {
-            let mut elems: Vec<Expr> = Vec::new();
-            if !elems_str.trim().is_empty() {
-                let split_parts = helpers::split_char_top_level(',', elems_str)
-                                    .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
-
-                for part in split_parts {
-                    let part = part.trim();
-                    // If the part itself looks like a typed-array-literal (i.e. has a constructor bracket),
-                    // parse it recursively; otherwise use parse_expr for general expressions.
-                    if helpers::find_constructor_bracket(part).is_some() {
-                        let nested = parse_typed_array_literal(part, span)?;
-                        elems.push(nested);
-                    } else {
-                        let expr = parse_expr::parse_expr(part, span)?;
-                        elems.push(expr);
-                    }
-                }
-            }
-
-            Ok(Expr::ArrayLiteral { elements: elems, array_ty: inner_ty, span })
-                
-        }
-
-        // If its not a type constructor, we gonna assume it's an expression (like an array access)
-        Err(_) => {     
-            let expr = parse_expr::parse_expr(s, span)?;
-
-            Ok(expr)
-        }
-    }
-}
-
-
 
 
 /// This is NOT meant to be used in any other functions, only within the following functions:
@@ -1259,13 +1208,14 @@ fn parse_type(s: &str, span: &Span) -> Result<Type, HolyError> {
         )));
     }
 
-    // Split into base name and bracket suffixes at the first '['
-    if let Some(bracket_start) = token.find('[') {
-        let base_str = token[..bracket_start].trim();
-        let suffix_str = &token[bracket_start..];
+    // Split into base name and bracket suffixes
+    // e.g. []int32 becomes "int32" base, with "[]" suffix
+    if let Some(last_bracket) = token.rfind(']') {
+        let base_str = token[last_bracket + 1..].trim();
+        let suffix_str = &token[..last_bracket + 1];
 
         let base_ty = parse_base_type(base_str, span)?;
-
+        
         // Collect all suffixes left-to-right: e.g. "[1][]" becomes [Fixed(1), Dynamic]
         let suffixes = parse_array_suffixes(suffix_str, span)?;
 
