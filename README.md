@@ -21,125 +21,111 @@ It still lacks: structs, enums, unsafe blocks, and actual binary generation phas
 # This is a comment
 
 func main() {
-    # `own` is the variable declaration keyword 
+    # `own` is the variable declaration keyword
+    # Declaration syntax is:
+    # own VAR_NAME VAR_TYPE = EXPRESSION
     #
-    # since x has no explicit value, the type of the right hand expression type become the type of x
-    # This is just a simple inference systme, nothing complex or fancy like other languages
-    #
 
-    own x = 1
+    own x int32 = 1
 
-
-    # Shadowing a declared variable within the same scope it is declared in, is allowed
-    own x = 2
+    # Assignment example
+    x = 2
 
 
-    # You can explicitly specify the variable type.
-    # if the right hand expression type does not match `x` explicit type, the compiler would error.
-    own x int32 = 2
+    # Variable overshadowing is not allowed.
+    # own x int64 = 2 # This would've been a compile-time error if I uncomment it.
 
-
-    # Arrays are supported too
-    own x int32[] = int32[1, 2, 3, 4, 5]
-
-    # They can be type inferred as well
-    own x = int32[1, 2, 3, 4, 5]
+    # Array literals example
+    own arr []int32 = [1, 2, 3, 4, 5]
 
 
     # Array access example (array accessing is always a copy)
-    own y = x[0] # This is equal to 1st element in array x, which is 1
+    own first_element int32 = arr[0] # This is equal to 1st element in array `arr`, which is 1
 
     # Array slicing example (array slicing is always a copy)
-    own y = x[1:3] # this creates new array starting from x's 2nd element up to 4th element
+    own arr_slice []int32 = arr[1:3] # this creates new array starting from `arr`s 2nd element up to 4th element
 
 
     # Nested arrays example
-    own x int32[][] = int32[][int32[1,2], int32[3,4], int32[5,6]]
+    own nested_arr [][]int32 = [ [1,2], [3,4], [5,6]]
 
 
     # Example of the move-or-copy safety model, where there is only one owner of a variable,
     # Holylang does not support references, borrowing, aliases, etc.
-    # You either move, or copy.
-       
+    # You either move a variable, or copy it.
+    #
 
-    own x = 1
-    own y = x
+    own a int32 = 1
+    own b int32 = x
 
     # This is invalid, it would not compile if I uncomment it.
-    # x = 2
+    # a = 2
 
-    own z = copy(y)
-    # This is valid, because z did not move y, it only copied it.
-    y = 3
+    own c int32 = copy(b)
+    # This is valid, because `c` did not move `b`, it only copied it.
+    b = 3
 
 
 
-    # All basic primitive types have a default value 
+    # All basic primitive types have a default value
     # (0 for integers, 0.0 for floats, false for booleans, empty arrays for arrays, "" for string)
     #
-    own x int32
-    # x has value of 0
+    own h int32
+    # h has value of 0
 
 
-    # 1 and 2 are integer literals and evaluated as expressions to determine their 
-    # type, with infer hint of the function arguments list
-    own x = add(1, 2)
+    # Function calls example
+    own res int32 = add(1, 2)
 
 
 
     # This is multi declaration
-    own x, y, z = give_3_numbers()
+    own n1 int32, n2 int32, n3 int32 = give_3_numbers()
 
     # You can also do multi assignment
-    x, y, z = give_3_numbers()
+    n1, n2, n3 = give_3_numbers()
 
 
     # Strings example
-    own name = "John"
+    own name string = "John"
 
     # Format takes one string argument, placeholders are directly in string
     # To escape a placeholder use {{}}
-    own greeting_str = format("Hello, {name}! How are you ?")
+    own greeting_str string = format("Hello, {name}! How are you ?")
 
 
 
-    own x = 1
+    own v int32 = 1
 
-    # Variable locking prevents overshadowing it, and assigning to it.
+    # Variable locking prevents assigning to it.
     # You can still move or copy it though.
-    lock x
+    lock v
 
-    # x = 2 # If I uncomment this, it will be compiler error
-    # own x = 3 # Same thing here.
+    # v = 2 # If I uncomment this, it will be compiler error
 
 
     # You can unlock variables.
-    unlock x
+    unlock v
 
-    # Now these work fine! 
-    x = 2
-    own x = 3
+    # Now these work fine!
+    v = 2
 
 
     # If statements example
-    own x = 1
-    own y = 2
+    own one int32 = 1
+    own two int32 = 2
 
-    if y > x {
-        x = 2
-
-        # Shadowing variables declared outside scope of if statement is an error
-        # this wont compile if i uncomment this
-        # own x = 3
+    if two > one {
+        one = 2
     }
 
 
     # While loops
-    while y > x {
-        if x == 3 {
+    while two > one {
+        if one == 3 {
             break
         } else {
-            x = x + 1
+            one = one + 1
         }
     }
 
@@ -147,8 +133,8 @@ func main() {
 
     # For loops
 
-    own x = string["john", "jane", "jack", "jeffrey", "epstein"]
-    for s in x {
+    own names []string = ["john", "jane", "jack", "jeffrey", "epstein"]
+    for s in names {
         if s == "jack" {
             break
         }
@@ -164,14 +150,14 @@ func main() {
 
 
     # Infinite loops
-    own x int32
+    own num int32
     infinite {
 
         # When you use variables in expressions, they are copied automatically, you dont need copy().
-        x = add(x + 1, x + 2)
+        num = add(num + 1, num + 2)
 
 
-        if x >= 1000 {
+        if num >= 1000 {
             break
         }
     }
@@ -181,7 +167,7 @@ func main() {
 
 # Function that adds 2 numbers together and returns result
 func add(a int32, b int32) int32 {
-    own result = a + b
+    own result int32 = a + b
     return result
 }
 
@@ -194,5 +180,4 @@ func give_3_numbers() (int32, int32, int32) {
 
     return a, b, c
 }
-
 ```
