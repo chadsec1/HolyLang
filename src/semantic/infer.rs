@@ -236,10 +236,8 @@ pub fn infer_expr_type(
                 return Ok(Type::Array(Box::new(elem_expected_ty.clone())))
             }
 
-            // TODO: Just return a default array(int8) type or something instead of panicing, because
-            // caller can not always give infer hint.
             if infer_hint.is_none() {
-                panic!("(Compiler bug) infer_hint is none, and array has no elements.. We cant give you type if you dont provide infer_hint when the expression is an empty array literal.");
+                return Ok(Type::Array(Box::new(Type::Int8)))
             }
 
             Ok(infer_hint.unwrap())
