@@ -2,26 +2,6 @@ use super::*;
 
 use crate::consts;
 
-/// Returns the index of the first `[` that does NOT immediately form a `[]` pair.
-/// Useful to distinguish type-suffix `[]` from the constructor `...[ ... ]`.
-pub fn find_constructor_bracket(s: &str) -> Option<usize> {
-    let bytes = s.as_bytes();
-    let mut i = 0usize;
-    while i < bytes.len() {
-        if bytes[i] == b'[' {
-            // if this '[' is immediately followed by ']' => it's a suffix pair "[]", skip both
-            if i + 1 < bytes.len() && bytes[i + 1] == b']' {
-                i += 2;
-                continue;
-            } else {
-                return Some(i);
-            }
-        } else {
-            i += 1;
-        }
-    }
-    None
-}
 
 
 pub fn find_top_level_op_any(s: &str) -> Option<(usize, &str)> {
@@ -272,9 +252,6 @@ pub fn strip_outer_quotes_and_unescape(s: &str) -> Result<String, HolyError> {
 
 
 
-pub fn is_array_type(t: &Type) -> bool {
-    matches!(t, Type::Array(_))
-}
 
 
 /// Checks if a given name is a valid HolyLang identifier.
