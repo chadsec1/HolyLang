@@ -148,64 +148,72 @@ pub fn infer_expr_type(
             Ok(Type::String)
         }
         
-        Expr::ArrayLiteral { elements, array_ty,  span } => {
-            // int32[1,2,3]
-            // ^^^ this is the constructor array literal
+        Expr::ArrayLiteral { elements, span } => {
+            // Array literals e.g. [1,2,3]
+            // Array literals type determining method differs based on array elements:
+            // - If the array is not empty, the first expression element type becomes the array type,
+            //      and all other elements types are checked against it.
+            //
+            // - If the array is empty, then it is "ceorcied" into the same type as infer_hint.
+            //   NOTE: If infer_hint is empty in this case, it would trigger a compiler bug guard
+            //          panic. So be careful how you call this.
+            //
             //
 
 
-            let elem_expected_ty = match infer_hint.clone() {
-                Some(Type::FixedArray(t, _)) => {
-                    // Only check the innermost base type, not the container shape.
-                    // e.g. array_ty=Array(Int64) vs t=Array(Int32) is an error
-                    // but  array_ty=Array(Int32) vs t=FixedArray(Int32,N) is fine
 
-                    let expected_ty_inner = if t.is_array_type() {
-                                                t.get_array_inner_most_type()
-                                            } else {
-                                                &*t 
-                                            };
+            if !elements.is_empty() {
+                let elem_ih = match infer_hint.clone() {
+                    Some(Type::FixedArray(t, _)) => {
+                        let fixed_inner = if t.is_array_type() {
+                            t.get_array_inner_most_type()
+                        } else {
+                            &*t
+                        };
+                        
+                        let array_ty = infer_expr_type(&mut elements[0], locals, fun_sigs, Some(*t.clone()))?;
 
-                    let decl_inner = if array_ty.is_array_type() {
-                                        array_ty.get_array_inner_most_type()
-                                    } else {
-                                        array_ty 
-                                    };
+                        let arr_inner = if array_ty.is_array_type() {
+                            array_ty.get_array_inner_most_type()
+                        } else {
+                            &array_ty
+                        };
+
+                        if fixed_inner != arr_inner {
+                               return Err(HolyError::Semantic(format!(
+                                    "Array literal is of `{}` type, but we expected `{}` type (line {} column {})",
+                                    arr_inner, fixed_inner, span.line, span.column
+                                )))
+                        }
+
+                        *t
+                    }
+                    Some(Type::Array(t)) => *t,
+                    _ => {
+                        // First element type
+                        let t = infer_expr_type(&mut elements[0], locals, fun_sigs, None)?;
+                        t
+                    }
+                };
+
+                let elem_expected_ty = infer_expr_type(&mut elements[0], locals, fun_sigs, Some(elem_ih))?;
 
 
-                    if decl_inner != expected_ty_inner {
+                for e in elements.iter_mut() {
+                    let ety = infer_expr_type(e, locals, fun_sigs, Some(elem_expected_ty.clone()))?;
+                    if ety != elem_expected_ty {
                         return Err(HolyError::Semantic(format!(
-                            "Array literal is of `{}` type, but we expected `{}` type (line {} column {})",
-                            decl_inner, expected_ty_inner, span.line, span.column
+                            "Array element type mismatch: expected `{}` got `{}` (line {} column {})",
+                            elem_expected_ty, ety, span.line, span.column
                         )));
                     }
-
-                    *t
-
-                },
-                Some(Type::Array(t)) => *t,
-                _ => array_ty.clone()
-            };
-
-
-            // all elements must have same type as the array constructor type
-            for e in elements.iter_mut() {
-                let ety = infer_expr_type(e, locals, fun_sigs, Some(elem_expected_ty.clone()))?;
-                if ety != elem_expected_ty {
-                    return Err(HolyError::Semantic(format!(
-                        "Array element type mismatch: expected `{}` got `{}` (line {} column {})",
-                        elem_expected_ty, ety, span.line, span.column
-                    )));
                 }
-            }
 
-
-            if let Some(infer_hint) = infer_hint {
-                match infer_hint {
-                    Type::FixedArray(t, size) => {
+                match infer_hint.clone() {
+                    Some(Type::FixedArray(t, size)) => {
                         let size_usize = match size {
                             FixedArraySize::Literal(n) => n,
-                            FixedArraySize::Const(_) => { panic!("Consts Still unimplemented") },
+                            FixedArraySize::Const(_) => panic!("(WORK-IN-PROGRESS) Consts are still unimplemented"),
                         };
 
                         if elements.len() != size_usize {
@@ -215,15 +223,27 @@ pub fn infer_expr_type(
                             )));
                         }
 
+                
                         return Ok(Type::FixedArray(Box::new(*t.clone()), size));
+
                     },
 
                     _ => {}
                 }
+
+
+
+                return Ok(Type::Array(Box::new(elem_expected_ty.clone())))
             }
 
+            // TODO: Just return a default array(int8) type or something instead of panicing, because
+            // caller can not always give infer hint.
+            if infer_hint.is_none() {
+                panic!("(Compiler bug) infer_hint is none, and array has no elements.. We cant give you type if you dont provide infer_hint when the expression is an empty array literal.");
+            }
 
-            Ok(Type::Array(Box::new(elem_expected_ty.clone())))
+            Ok(infer_hint.unwrap())
+
         }
 
         Expr::ArraySingleAccess { array, index,  span } => {

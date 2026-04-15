@@ -228,7 +228,7 @@ fn check_stmts(
                 }
 
                 match var.value.clone().unwrap() {
-                    Expr::ArrayLiteral{elements, array_ty: _, span: _} => {
+                    Expr::ArrayLiteral{elements, span: _} => {
                         value_len = Some(elements.len())
                     }
 
@@ -380,7 +380,7 @@ fn check_stmts(
                 }
 
                 match assign.value.clone() {
-                    Expr::ArrayLiteral{elements, array_ty: _, span: _} => {
+                    Expr::ArrayLiteral{elements, span: _} => {
                         value_len = Some(elements.len());
                     }
 

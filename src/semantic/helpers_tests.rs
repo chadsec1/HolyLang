@@ -390,9 +390,8 @@ mod helpers_tests {
             let arr_t = Type::Array(Box::new(t.clone()));
             assign_default_value_for_type(&mut expr, &arr_t, dummy_span()).unwrap();
             match expr.unwrap() {
-                Expr::ArrayLiteral { elements, array_ty, .. } => {
+                Expr::ArrayLiteral { elements, .. } => {
                     assert!(elements.is_empty(), "Default array must be empty");
-                    assert_eq!(array_ty, t.clone(), "Inner type must be preserved");
                 }
                 other => panic!("Expected ArrayLiteral, got {:?}", other),
             }
@@ -408,10 +407,8 @@ mod helpers_tests {
             let arr_t = Type::Array(Box::new(Type::Array(Box::new(t.clone()))));
             assign_default_value_for_type(&mut expr, &arr_t, dummy_span()).unwrap();
             match expr.unwrap() {
-                Expr::ArrayLiteral { elements, array_ty, .. } => {
+                Expr::ArrayLiteral { elements, .. } => {
                     assert!(elements.is_empty());
-                    // inner type should be Array(t)
-                    assert_eq!(array_ty, Type::Array(Box::new(t.clone())));
                 }
                 other => panic!("Expected nested ArrayLiteral, got {:?}", other),
             }
