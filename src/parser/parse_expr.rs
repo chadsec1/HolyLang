@@ -3,11 +3,13 @@ use super::*;
 
 /// Expression parser:
 /// - handles binary operations (left-associative),
-/// - handles unary operations (like negate)
+/// - handles unary operations (like negate, logical not, bitwise not )
 /// - function calls like add(x, y),
 /// - Internal "function" calls (like CopyCall, FormatCall, etc),
 /// - integer literals,
 /// - float literals
+/// - string literals
+/// - array literals
 /// - variables
 pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
     let s = s.trim();
@@ -20,13 +22,6 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
     }
 
     
-    if s.starts_with('[') {
-        return Err(HolyError::Parse(format!(
-                "Array literal requires an explicit type on right-hand side, e.g. `own x = int32[1,2,3]` (line {} column {})",
-                span.line, span.column
-            )));
-    }    
-
     // String Literal ?
     if s.starts_with('"') {
         // Find the matching closing quote
@@ -336,10 +331,64 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
 
 
 
-    // special-case: typed array literal on RHS: e.g. "int32[1, 2, 3]" 
-    // detect pattern: "<type_without_brackets>[ ... ]"
-   
-    if let Some(first_bracket) = helpers::find_constructor_bracket(&s) {
+    // special-case: array literal: 
+    // e.g. "[1, 2, 3]", "[]", "[1, [2, 3], 4, 5]"
+    // detect pattern: "[ ... ]"
+    //
+
+    if s.starts_with("[") {
+        // Find the bracket that actually closes this opening '[', not just the last ']'
+        let matching_close = {
+            let mut depth = 0usize;
+            let mut found = None;
+            for (i, c) in s[1..].char_indices() {
+                match c {
+                    '[' => depth += 1,
+                    ']' => {
+                        if depth == 0 {
+                            found = Some(1 + i);
+                            break;
+                        }
+                        depth -= 1;
+                    }
+                    _ => {}
+                }
+            }
+            found
+        };
+
+        // Only take the array path if the matching ']' is the very last character.
+        // If it isn't (e.g. `arr_a[e] + arr_b[b]`), then we just let it fall through to other expression detections.
+        //
+        if let Some(close_pos) = matching_close {
+            if close_pos == s.len() - 1 {
+                let elems_str = &s[1..s.len() - 1];
+
+                let mut elems: Vec<Expr> = Vec::new();
+                if !elems_str.trim().is_empty() {
+                    let split_parts = helpers::split_char_top_level(',', elems_str)
+                                        .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+
+                    for part in split_parts {
+                        let part = part.trim();
+                        let expr = parse_expr(part.trim(), span)?;
+                        elems.push(expr);
+                    }
+                }
+
+                return Ok(
+                    Expr::ArrayLiteral { 
+                        elements: elems, 
+                        span,
+                    });
+            }
+        }
+    }
+
+
+    // Array access
+    // e.g. "x[0]", "x[0:1]", etc.
+    if let Some(first_bracket) = s.find("[") {
         // Find the bracket that actually closes this opening '[', not just the last ']'
         let matching_close = {
             let mut depth = 0usize;
@@ -360,148 +409,71 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
             found
         };
 
-        // Only take the array path if the matching ']' is the very last character.
-        // If it isn't (e.g. `arr_a[e] + arr_b[b]`), fall through to binary-op detection.
         if let Some(close_pos) = matching_close {
             if close_pos == s.len() - 1 {
-                let constructor_type_str = s[..first_bracket].trim();
-                let elems_str = &s[first_bracket + 1..s.len() - 1];
+                let arr_expr = parse_expr(&s[..first_bracket], span)?;
 
-                if !constructor_type_str.is_empty() {
-                    match parse_type(constructor_type_str, &span) {
-                        Ok(inner_ty) => {
-                            // wrap into array type for the variable
-                            let rhs_var_type = Type::Array(Box::new(inner_ty.clone()));
+                // like whats inside the a[...]
+                let inner_str = &s[first_bracket + 1 .. s.len() - 1];
 
-                            let mut elems: Vec<Expr> = Vec::new();
-                            if !elems_str.trim().is_empty() {
-                                let split_parts = helpers::split_char_top_level(',', elems_str)
-                                                    .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+                let indx_parts = helpers::split_char_top_level(':', inner_str)
+                                            .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+                
+                // Treat as access to a single element. 
+                if indx_parts.len() == 1 {
+                    let index = parse_expr(indx_parts[0], span)?;
+                    
+                    let value = Expr::ArraySingleAccess { array: Box::new(arr_expr), index: Box::new(index), span };
 
-                                for part in split_parts {
-                                    let part = part.trim();
-                                    if helpers::find_constructor_bracket(part).is_some() {
-                                        let nested = parse_typed_array_literal(part, span )?;
-                                        elems.push(nested);
-
-                                    } else {
-                                        let expr = parse_expr(part.trim(), span)?;
-                                        // I could override expression's type here because we already
-                                        // know array's type, but I leave it up to semantic analysis 
-                                        // to determine types and error according.
-                                        elems.push(expr);
-                                    }
-                                }
-                            }
+                    return Ok(value);
 
 
-                            // This is so it allows programmer to optionally explicitly set type of
-                            // array on left hand side. 
-                            // we still require rhs var type though, the optional left hand side
-                            // type of array is useful when you calling a function and want to lock
-                            // your code to expect a specific type and error otherwise.
-                            // Example:
-                            // own x int32[] = int32[1, 2, 3] # This is valid
-                            // own x = int32[1, 2, 3] # This is also valid
-                            // own x uint32[] = int32[1, 2, 3] # This is invalid.
-                            //
-                            let mut value = Expr::ArrayLiteral { elements: elems.clone(), span, array_ty: inner_ty.clone() };
-                            if helpers::is_array_type(&rhs_var_type) {
-                                if let Type::Array(inner_array_ty) = rhs_var_type.clone() {
-                                    value = Expr::ArrayLiteral { elements: elems, span, array_ty: *inner_array_ty };
-                                }
-                            }
+                // Otherwise this is a slicing operation
+                // We do >= here because indx_parts could themselves contain
+                // expressions of array access. 
+                // We only care about first, and last indx_parts.
+                } else if indx_parts.len() >= 2 {
+                    let start = indx_parts[0].trim();
+                    let end = indx_parts[indx_parts.len() - 1].trim();
 
-                            return Ok(value);
+                    let mut start_expr: Option<Box<Expr>> = None;
+                    let mut end_expr: Option<Box<Expr>> = None;
+
+                    if start.is_empty() && end.is_empty() {
+                        return Err(HolyError::Parse(format!(
+                                    "Start and or end index are empty! (line {} column {})",
+                                    span.line, span.column
+                                )));
                     }
-                    // Not an array literal, but an array access
-                    Err(_) => {
-                        let array = parse_expr(constructor_type_str, span)?;
-                        let indx_parts = helpers::split_char_top_level(':', elems_str)
-                                                    .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
 
-
-                        // Treat as access to a single element. 
-                        if indx_parts.len() == 1 {
-                            let index = parse_expr(indx_parts[0], span)?;
-                            
-                            let value = Expr::ArraySingleAccess { array: Box::new(array), index: Box::new(index), span };
-
-                            return Ok(value);
-                        
-                        // We do >= here because indx_parts could themselves contain
-                        // expressions of array access. 
-                        // We only care about first, and last indx_parts.
-                        } else if indx_parts.len() >= 2 {
-                            let start = indx_parts[0].trim();
-                            let end = indx_parts[indx_parts.len() - 1].trim();
-
-                            let mut start_expr: Option<Box<Expr>> = None;
-                            let mut end_expr: Option<Box<Expr>> = None;
-
-                            if start.is_empty() && end.is_empty() {
-                                return Err(HolyError::Parse(format!(
-                                            "Start and or end index are empty! (line {} column {})",
-                                            span.line, span.column
-                                        )));
-                            }
-
-                            // i.e. x[:10]
-                            if start.is_empty() {
-                                end_expr = Some(Box::new(parse_expr(end, span)?));
-                            }
-
-                            // i.e. x[1:]
-                            if end.is_empty() {
-                                start_expr = Some(Box::new(parse_expr(start, span)?));
-                            }
-
-                            // i.e. x[1:10]
-                            if !start.is_empty() && !end.is_empty() {
-                                start_expr = Some(Box::new(parse_expr(start, span)?));
-                                end_expr = Some(Box::new(parse_expr(end, span)?));
-                            }
-
-                            
-                            let value = Expr::ArrayMultipleAccess { array: Box::new(array), start: start_expr, end: end_expr, span };
-
-                            return Ok(value);
-                        }
+                    // i.e. x[:EXPRESSION]
+                    if start.is_empty() {
+                        end_expr = Some(Box::new(parse_expr(end, span)?));
                     }
+
+                    // i.e. x[EXPRESSION:]
+                    if end.is_empty() {
+                        start_expr = Some(Box::new(parse_expr(start, span)?));
+                    }
+
+                    // i.e. x[EXPRESSION:EXPRESSION]
+                    if !start.is_empty() && !end.is_empty() {
+                        start_expr = Some(Box::new(parse_expr(start, span)?));
+                        end_expr = Some(Box::new(parse_expr(end, span)?));
+                    }
+
+                    
+                    return Ok(
+                        Expr::ArrayMultipleAccess { 
+                            array: Box::new(arr_expr), 
+                            start: start_expr,
+                            end: end_expr,
+                            span 
+                        });
                 }
             }
-
         }
     }
-       
-    // handle empty typed-array literal like:
-    // own x = int32[]
-    } else if s.ends_with("[]") {
-        let type_str = s[..s.len() - 2].trim();
-        if !type_str.is_empty() {
-            // parse the inner element type (may be nested like "int32[]", parse_type handles nesting)
-            let inner_ty = parse_type(type_str, &span)?;
-
-            let rhs_var_type = Type::Array(Box::new(inner_ty.clone()));
-
-            // create empty array literal (no elements)
-            let mut value = Expr::ArrayLiteral {
-                elements: Vec::new(),
-                array_ty: inner_ty.clone(),
-                span,
-            };
-
-            if helpers::is_array_type(&rhs_var_type) {
-                if let Type::Array(inner_array_ty) = rhs_var_type.clone() {
-                    value = Expr::ArrayLiteral { elements: Vec::new(), span, array_ty: *inner_array_ty };
-                }
-            }
-            return Ok(value);
-        }
-    }
-
-
-
 
 
 
@@ -605,3 +577,54 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
 }
 
 
+
+/*
+fn parse_typed_array_literal(s: &str, span: Span) -> Result<Expr, HolyError> {
+    let s = s.trim();
+    // find the constructor '[' that starts the element list
+    let ctor_pos = helpers::find_constructor_bracket(s).ok_or_else(|| {
+        HolyError::Parse(format!("Malformed typed array literal `{}` (line {} column {})", s, span.line, span.column))
+    })?;
+
+    if !s.ends_with(']') {
+        return Err(HolyError::Parse(format!("Typed array literal missing trailing ']' (line {} column {})", span.line, span.column)));
+    }
+
+    let type_str = s[..ctor_pos].trim();
+    let elems_str = &s[ctor_pos + 1..s.len() - 1]; // between constructor '[' and final ']'
+
+    // parse the base/inner type (may be nested literal like "int32[]") we let  parse_type handle it
+    match parse_type(type_str, &span) {
+        Ok(inner_ty) => {
+            let mut elems: Vec<Expr> = Vec::new();
+            if !elems_str.trim().is_empty() {
+                let split_parts = helpers::split_char_top_level(',', elems_str)
+                                    .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+
+                for part in split_parts {
+                    let part = part.trim();
+                    // If the part itself looks like a typed-array-literal (i.e. has a constructor bracket),
+                    // parse it recursively; otherwise use parse_expr for general expressions.
+                    if helpers::find_constructor_bracket(part).is_some() {
+                        let nested = parse_typed_array_literal(part, span)?;
+                        elems.push(nested);
+                    } else {
+                        let expr = parse_expr::parse_expr(part, span)?;
+                        elems.push(expr);
+                    }
+                }
+            }
+
+            Ok(Expr::ArrayLiteral { elements: elems, array_ty: inner_ty, span })
+                
+        }
+
+        // If its not a type constructor, we gonna assume it's an expression (like an array access)
+        Err(_) => {     
+            let expr = parse_expr::parse_expr(s, span)?;
+
+            Ok(expr)
+        }
+    }
+}
+*/
