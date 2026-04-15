@@ -290,7 +290,7 @@ mod tests {
     #[test]
     fn parse_function_array_return_type() {
         for t in ALL_TYPES_NO_ARR {
-            let ast = parse(&format!("func foo() {}[] {{\n}}\n", t)).unwrap();
+            let ast = parse(&format!("func foo() []{} {{\n}}\n", t)).unwrap();
             let f = &ast.functions[0];
             assert_eq!(f.return_type, Some(vec![Type::Array(Box::new(t.clone()))]));
         }
@@ -303,7 +303,7 @@ mod tests {
 
             for i in 1..100 {
                 s1.push_str("[]");
-                let ast = parse(&format!("func foo() {}[]{} {{\n}}\n", t, s1)).unwrap();
+                let ast = parse(&format!("func foo() []{}{} {{\n}}\n", s1, t)).unwrap();
                 let f = &ast.functions[0];
 
                 assert_eq!(f.return_type.clone().unwrap().len(), 1);
@@ -343,48 +343,44 @@ mod tests {
 
     #[test]
     fn for_statements_literal() {
-        for t in ALL_TYPES_NO_ARR {
-            let stmts = parse_body(&format!("for i in {}[12,\"hi\", true, 6.9, {}[]] {{\n\n}}", t, t));
-            assert_eq!(stmts.len(), 1);
-            if let Stmt::For(f) = &stmts[0] {
-                assert_eq!(f.holder_name, "i");
-                assert_eq!(f.branch.len(), 0);
+        let stmts = parse_body("for i in [12,\"hi\", true, 6.9, []] {\n\n}");
+        assert_eq!(stmts.len(), 1);
+        if let Stmt::For(f) = &stmts[0] {
+            assert_eq!(f.holder_name, "i");
+            assert_eq!(f.branch.len(), 0);
 
-                if let Expr::ArrayLiteral { array_ty, elements, .. } = &f.value {
-                    assert_eq!(*array_ty, t.clone());
-                    assert_eq!(elements.len(), 5);
+            if let Expr::ArrayLiteral { elements, .. } = &f.value {
+                assert_eq!(elements.len(), 5);
 
-                    if let Expr::IntLiteral { value, .. } = &elements[0] {
-                        assert!(matches!(value, IntLiteralValue::Int8(12)));
-                    } else { panic!("Expected IntLiteral"); }
+                if let Expr::IntLiteral { value, .. } = &elements[0] {
+                    assert!(matches!(value, IntLiteralValue::Int8(12)));
+                } else { panic!("Expected IntLiteral"); }
 
-                    if let Expr::StringLiteral { value, .. } = &elements[1] {
-                        assert_eq!(value, "hi");
-                    } else { panic!("Expected StringLiteral"); }
+                if let Expr::StringLiteral { value, .. } = &elements[1] {
+                    assert_eq!(value, "hi");
+                } else { panic!("Expected StringLiteral"); }
 
-                    if let Expr::BoolLiteral { value, .. } = &elements[2] {
-                        assert_eq!(value, &true);
-                    } else { panic!("Expected BoolLiteral"); }
+                if let Expr::BoolLiteral { value, .. } = &elements[2] {
+                    assert_eq!(value, &true);
+                } else { panic!("Expected BoolLiteral"); }
 
-                    if let Expr::FloatLiteral { value, .. } = &elements[3] {
-                        assert!(matches!(value, FloatLiteralValue::Float32(6.9)));
-                    } else { panic!("Expected FloatLiteral"); }
+                if let Expr::FloatLiteral { value, .. } = &elements[3] {
+                    assert!(matches!(value, FloatLiteralValue::Float32(6.9)));
+                } else { panic!("Expected FloatLiteral"); }
 
-                    if let Expr::ArrayLiteral { array_ty, elements, .. } = &elements[4] {
-                        assert_eq!(*array_ty, t.clone());
-                        assert_eq!(elements.len(), 0);
-                    } else {
-                        panic!("Expected ArrayLiteral");
-                    }
-
-
+                if let Expr::ArrayLiteral { elements, .. } = &elements[4] {
+                    assert_eq!(elements.len(), 0);
                 } else {
                     panic!("Expected ArrayLiteral");
                 }
 
+
             } else {
-                panic!("expected while statement");
+                panic!("Expected ArrayLiteral");
             }
+
+        } else {
+            panic!("expected while statement");
         }
     }
 
@@ -1369,17 +1365,16 @@ mod tests {
     }
 
     #[test]
-    fn var_decl_array_explicit_type() {
+    fn var_decl_array() {
         for t in ALL_TYPES_NO_ARR {
-            let stmts = parse_body(&format!("own x {}[] = {}[1, 2, 3]", t, t));
+            let stmts = parse_body(&format!("own x []{} = [1, 2, 3]", t));
             assert_eq!(stmts.len(), 1);
 
             if let Stmt::VarDecl(v) = &stmts[0] {
                 assert_eq!(v.name, "x");
                 assert_eq!(v.type_name, Type::Array(Box::new(t.clone())));
 
-                if let Some(Expr::ArrayLiteral { array_ty, elements, .. }) = &v.value {
-                    assert_eq!(*array_ty, t.clone());
+                if let Some(Expr::ArrayLiteral { elements, .. }) = &v.value {
                     assert_eq!(elements.len(), 3);
                 } else {
                     panic!("Expected ArrayLiteral");
@@ -1391,15 +1386,17 @@ mod tests {
 
     #[test]
     fn var_decl_array_no_type_errors() {
-        for t in ALL_TYPES_NO_ARR {
-            assert_parse_err(&wrap(&format!("own x = {}[1, 2, 3]", t)));
+        let literals_edge_cases = get_all_literals_edge_cases(); 
+
+        for l in &literals_edge_cases {
+            assert_parse_err(&wrap(&format!("own x = [{}, {}, {}]", l, l, l)));
         }
     }
 
     #[test]
     fn var_decl_empty_array() {
         for t in ALL_TYPES_NO_ARR {
-            let stmts = parse_body(&format!("own x {} = {}[]", t, t));
+            let stmts = parse_body(&format!("own x {} = []", t));
             assert_eq!(stmts.len(), 1);
             
             if let Stmt::VarDecl(v) = &stmts[0] {
@@ -1417,28 +1414,33 @@ mod tests {
 
     #[test]
     fn var_decl_nested_array() {
+        let literals_edge_cases = get_all_literals_edge_cases(); 
+        
         for t in ALL_TYPES_NO_ARR {
-            let stmts = parse_body(&format!("own x {} = {}[][{}[1,2], {}[3,4]]", t, t, t, t));
-            assert_eq!(stmts.len(), 1);
+            for l in &literals_edge_cases {
+                let stmts = parse_body(&format!("own x []{} = [[{},{},{}], [{},{},{},{}]]", t, l, l, l, l, l, l, l));
+                assert_eq!(stmts.len(), 1);
 
-            if let Stmt::VarDecl(v) = &stmts[0] {
-                assert_eq!(v.name, "x");
-                assert_eq!(v.type_name, t.clone());
+                if let Stmt::VarDecl(v) = &stmts[0] {
+                    assert_eq!(v.name, "x");
+                    assert_eq!(v.type_name, Type::Array(Box::new(t.clone())));
 
-                if let Some(Expr::ArrayLiteral { elements, .. }) = &v.value {
-                    assert_eq!(elements.len(), 2);
-                    assert!(matches!(elements[0], Expr::ArrayLiteral { .. }));
-                } else {
-                    panic!("Expected ArrayLiteral");
-                }
-            } else { panic!("Expected VarDecl");}
+                    if let Some(Expr::ArrayLiteral { elements, .. }) = &v.value {
+                        assert_eq!(elements.len(), 2);
+                        assert!(matches!(elements[0], Expr::ArrayLiteral { .. }));
+                        assert!(matches!(elements[1], Expr::ArrayLiteral { .. }));
+                    } else {
+                        panic!("Expected ArrayLiteral");
+                    }
+                } else { panic!("Expected VarDecl");}
+            }
         }
     }
 
     #[test]
     fn var_decl_nested_array_empty() {
         for t in ALL_TYPES_NO_ARR {
-            let stmts = parse_body(&format!("own x {} = {}[][]", t, t));
+            let stmts = parse_body(&format!("own x {} = []", t));
             assert_eq!(stmts.len(), 1);
 
             if let Stmt::VarDecl(v) = &stmts[0] {
@@ -1458,14 +1460,17 @@ mod tests {
     #[test]
     fn var_decl_deeply_nested_array() {
         for t in ALL_TYPES_NO_ARR {
-            let mut s1 = String::with_capacity(200);
+            let mut s1 = String::with_capacity(100);
+            let mut s2 = String::with_capacity(100);
 
             for _ in 1..100 {
-                s1.push_str("[]");
-                let stmts = parse_body(&format!("own x {} = {}[][]{}", t, t, s1 ));
+                s1.push_str("[");
+                s2.push_str("]");
+                let stmts = parse_body(&format!("own x {} = [{}{}]", t, s1, s2 ));
                 if let Stmt::VarDecl(v) = &stmts[0] {
                     if let Some(Expr::ArrayLiteral { elements, .. }) = &v.value {
-                        assert_eq!(elements.len(), 0);
+                        assert_eq!(elements.len(), 1);
+
                     } else {
                         panic!("Expected ArrayLiteral");
                     }
@@ -3155,8 +3160,59 @@ mod tests {
         assert_eq!(Type::Float64.to_string(), "float64");
         assert_eq!(Type::Bool.to_string(), "bool");
         assert_eq!(Type::String.to_string(), "string");
-        assert_eq!(Type::Array(Box::new(Type::Int32)).to_string(), "int32[]");
-        assert_eq!(Type::Array(Box::new(Type::Array(Box::new(Type::Int32)))).to_string(), "int32[][]");
+
+
+        assert_eq!(Type::Array(Box::new(Type::Int8)).to_string(), "[]int8");
+        assert_eq!(Type::Array(Box::new(Type::Array(Box::new(Type::Int8)))).to_string(), "[][]int8");
+
+        assert_eq!(Type::Array(Box::new(Type::Int16)).to_string(), "[]int16");
+        assert_eq!(Type::Array(Box::new(Type::Array(Box::new(Type::Int16)))).to_string(), "[][]int16");
+
+        assert_eq!(Type::Array(Box::new(Type::Int32)).to_string(), "[]int32");
+        assert_eq!(Type::Array(Box::new(Type::Array(Box::new(Type::Int32)))).to_string(), "[][]int32");
+
+        assert_eq!(Type::Array(Box::new(Type::Int64)).to_string(), "[]int64");
+        assert_eq!(Type::Array(Box::new(Type::Array(Box::new(Type::Int64)))).to_string(), "[][]int64");
+
+        assert_eq!(Type::Array(Box::new(Type::Int128)).to_string(), "[]int128");
+        assert_eq!(Type::Array(Box::new(Type::Array(Box::new(Type::Int128)))).to_string(), "[][]int128");
+
+
+
+
+        assert_eq!(Type::Array(Box::new(Type::Byte)).to_string(), "[]byte");
+        assert_eq!(Type::Array(Box::new(Type::Array(Box::new(Type::Byte)))).to_string(), "[][]byte");
+
+        assert_eq!(Type::Array(Box::new(Type::Uint16)).to_string(), "[]uint16");
+        assert_eq!(Type::Array(Box::new(Type::Array(Box::new(Type::Uint16)))).to_string(), "[][]uint16");
+
+        assert_eq!(Type::Array(Box::new(Type::Uint32)).to_string(), "[]uint32");
+        assert_eq!(Type::Array(Box::new(Type::Array(Box::new(Type::Uint32)))).to_string(), "[][]uint32");
+
+        assert_eq!(Type::Array(Box::new(Type::Uint64)).to_string(), "[]uint64");
+        assert_eq!(Type::Array(Box::new(Type::Array(Box::new(Type::Uint64)))).to_string(), "[][]uint64");
+
+        assert_eq!(Type::Array(Box::new(Type::Uint128)).to_string(), "[]uint128");
+        assert_eq!(Type::Array(Box::new(Type::Array(Box::new(Type::Uint128)))).to_string(), "[][]uint128");
+
+        assert_eq!(Type::Array(Box::new(Type::Usize)).to_string(), "[]usize");
+        assert_eq!(Type::Array(Box::new(Type::Array(Box::new(Type::Usize)))).to_string(), "[][]usize");
+
+
+        assert_eq!(Type::Array(Box::new(Type::Float32)).to_string(), "[]float32");
+        assert_eq!(Type::Array(Box::new(Type::Array(Box::new(Type::Float32)))).to_string(), "[][]float32");
+
+        assert_eq!(Type::Array(Box::new(Type::Float64)).to_string(), "[]float64");
+        assert_eq!(Type::Array(Box::new(Type::Array(Box::new(Type::Float64)))).to_string(), "[][]float64");
+
+
+        assert_eq!(Type::Array(Box::new(Type::String)).to_string(), "[]string");
+        assert_eq!(Type::Array(Box::new(Type::Array(Box::new(Type::String)))).to_string(), "[][]string");
+
+        assert_eq!(Type::Array(Box::new(Type::Bool)).to_string(), "[]bool");
+        assert_eq!(Type::Array(Box::new(Type::Array(Box::new(Type::Bool)))).to_string(), "[][]bool");
+
+
     }
 
     // Variable shadowing (allowed by the spec)
@@ -3184,11 +3240,8 @@ mod tests {
     // Empty expression / edge-case errors
 
     #[test]
-    fn untyped_array_literal_edge_cases_errors() {
-        // '[' without a type prefix is not allowed
+    fn array_literal_edge_cases_errors() {
         for t in ALL_TYPES_NO_ARR {
-            assert_parse_err(&wrap(&format!("own x {} = [1, 2, 3]", t)));
-            assert_parse_err(&wrap(&format!("own x {} = [[1, 2, 3]]", t)));
             assert_parse_err(&wrap(&format!("own x {} = 1, 2, 3", t)));
             assert_parse_err(&wrap(&format!("own x {} = [int32[1, 2, 3]]", t)));
             assert_parse_err(&wrap(&format!("own x {} = int32[[1, 2, 3]]", t)));

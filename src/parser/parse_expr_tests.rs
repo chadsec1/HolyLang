@@ -1,7 +1,7 @@
 use super::*;
 use crate::parser::parse_expr::parse_expr;
 use crate::tests_consts::{
-    ALL_BIN_OP_KIND, BIN_OP_KIND_SYMBOLS, ALL_TYPES_NO_ARR
+    ALL_BIN_OP_KIND, BIN_OP_KIND_SYMBOLS
 };
 
 #[cfg(test)]
@@ -726,18 +726,21 @@ mod parse_expr_tests {
     // Array literals
 
     #[test]
-    fn test_bare_array_literal_without_type_errors() {
-        assert_parse_err("[1, 2, 3]");
+    fn test_empty_array_literal() {
+        match parse("[]").unwrap() {
+            Expr::ArrayLiteral { elements, .. } => {
+                assert_eq!(elements.len(), 0);
+            }
+            other => panic!("expected ArrayLiteral, got {:?}", other),
+        }
     }
 
     #[test]
-    fn test_typed_array_literals() {
+    fn test_array_literals() {
         let literals = get_all_literals_as_str_no_arr();
-
-        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            match parse(&format!("{}[{}, {}, {}]", t, l, l, l)).unwrap() {
-                Expr::ArrayLiteral { elements, array_ty, .. } => {
-                    assert_eq!(array_ty, t.clone());
+        for l in literals {
+            match parse(&format!("[{}, {}, {}]", l, l, l)).unwrap() {
+                Expr::ArrayLiteral { elements, .. } => {
                     assert_eq!(elements.len(), 3);
                 }
                 other => panic!("expected ArrayLiteral, got {:?}", other),
@@ -745,27 +748,15 @@ mod parse_expr_tests {
         }
     }
 
-    #[test]
-    fn test_typed_array_literal_empty() {
-        for t in ALL_TYPES_NO_ARR {
-            match parse(&format!("{}[]", t)).unwrap() {
-                Expr::ArrayLiteral { elements, array_ty, .. } => {
-                    assert_eq!(array_ty, t.clone());
-                    assert!(elements.is_empty());
-                }
-                other => panic!("expected ArrayLiteral, got {:?}", other),
-            }
-        }
-    }
 
     #[test]
-    fn test_typed_array_literal_nested() {
+    fn test_array_literal_nested() {
         // array of arrays
         //
         let literals = get_all_literals_as_str_no_arr();
 
-        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            match parse(&format!("{}[][{}[{},{}], {}[{},{}]]", t, t, l, l, t, l, l)).unwrap() {
+        for l in literals {
+            match parse(&format!("[[{},{}], [{},{}]]", l, l, l, l)).unwrap() {
                 Expr::ArrayLiteral { elements, .. } => {
                     assert_eq!(elements.len(), 2);
                     for elem in &elements {
@@ -778,14 +769,13 @@ mod parse_expr_tests {
     }
 
     #[test]
-    fn test_typed_array_with_expressions() {
+    fn test_array_literal_with_expressions() {
         let literals = get_all_literals_as_str_no_arr();
 
-        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            match parse(&format!("{}[a + {}, b * {}]", t, l, l)).unwrap() {
-                Expr::ArrayLiteral { elements, array_ty, .. } => {
+        for l in literals {
+            match parse(&format!("[a + {}, b * {}]", l, l)).unwrap() {
+                Expr::ArrayLiteral { elements, .. } => {
                     assert_eq!(elements.len(), 2);
-                    assert_eq!(array_ty, t.clone());
                     assert!(matches!(&elements[0], Expr::BinOp { op: BinOpKind::Add, .. }));
                     assert!(matches!(&elements[1], Expr::BinOp { op: BinOpKind::Multiply, .. }));
                 }
@@ -1064,34 +1054,60 @@ mod parse_expr_tests {
 
     #[test]
     fn test_copy_of_array_single_access() {
-        match parse("copy(arr[0])").unwrap() {
-            Expr::CopyCall { expr, .. } => {
-                assert!(matches!(*expr, Expr::ArraySingleAccess { .. }));
+        let literals = get_all_literals_as_str_no_arr();
+        for l in literals {
+            match parse(&format!("copy(arr[{}])", l)).unwrap() {
+                Expr::CopyCall { expr, .. } => {
+                    assert!(matches!(*expr, Expr::ArraySingleAccess { .. }));
+                }
+                other => panic!("expected CopyCall, got {:?}", other),
             }
-            other => panic!("expected CopyCall, got {:?}", other),
         }
     }
 
+
     #[test]
     fn test_copy_of_array_multiple_access() {
-        match parse("copy(arr[0:2])").unwrap() {
-            Expr::CopyCall { expr, .. } => {
-                assert!(matches!(*expr, Expr::ArrayMultipleAccess { .. }));
+        let literals = get_all_literals_as_str_no_arr();
+        for l in literals {
+            match parse(&format!("copy(arr[{}:{}])", l, l)).unwrap() {
+                Expr::CopyCall { expr, .. } => {
+                    match *expr {
+                        Expr::ArrayMultipleAccess{ array, .. } => {
+                            if let Expr::Var{ name, ..} = *array {
+                                assert_eq!(name, "arr");
+                            } else { panic!("expected Var, got {:?}", array); }
+                        }
+                        
+                        other => panic!("expected nested ArrayMultipleAccess, got {:?}", other),
+                    }
+
+                }
+                other => panic!("expected CopyCall, got {:?}", other),
             }
-            other => panic!("expected CopyCall, got {:?}", other),
         }
     }
 
 
     #[test]
     fn test_function_call_with_array_literal_arg() {
-        match parse("foo(int32[1, 2])").unwrap() {
-            Expr::Call { name, args, .. } => {
-                assert_eq!(name, "foo");
-                assert_eq!(args.len(), 1);
-                assert!(matches!(&args[0], Expr::ArrayLiteral { array_ty: Type::Int32, .. }));
+        let literals = get_all_literals_as_str_no_arr();
+        for l in literals {
+            match parse(&format!("foo([{}, {}])", l, l)).unwrap() {
+                Expr::Call { name, args, .. } => {
+                    assert_eq!(name, "foo");
+                    assert_eq!(args.len(), 1);
+
+                    match &args[0] {
+                        Expr::ArrayLiteral { elements, .. } => {
+                            assert_eq!(elements.len(), 2);
+                        }
+                        
+                        other => panic!("expected nested ArrayLiteral, got {:?}", other),
+                    }
+                }
+                other => panic!("expected Call, got {:?}", other),
             }
-            other => panic!("expected Call, got {:?}", other),
         }
     }
 
