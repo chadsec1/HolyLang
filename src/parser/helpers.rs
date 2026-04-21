@@ -261,19 +261,19 @@ pub fn strip_outer_quotes_and_unescape(s: &str) -> Result<String, HolyError> {
 /// - Must not contain a reserved language keyword (i.e. `own`, etc)
 pub fn validate_identifier_name(name: &str) -> Result<(), HolyError> {
     if name.is_empty() {
-        return Err(HolyError::Parse("Empty variable name (You most likely have invalid syntax)".to_string()));
+        return Err(HolyError::Parse("Empty binding identifier name (You most likely have invalid syntax)".to_string()));
     }
 
     // Check first character is not a number
     let first = name.chars().next().unwrap();
     if first.is_ascii_digit() {
-        return Err(HolyError::Parse(format!("Variable name `{}` cannot start with a number!", name)));
+        return Err(HolyError::Parse(format!("Binding identifier name `{}` cannot start with a number!", name)));
     }
 
     // Check allowed characters: a-z, A-Z, 0-9, _
     if !name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
         return Err(HolyError::Parse(format!(
-            "Variable name `{}` contains invalid characters (only letters, numbers, and `_` allowed)",
+            "Binding identifier name `{}` contains invalid characters (only letters, numbers, and `_` allowed)",
             name
         )));
     }
@@ -284,7 +284,7 @@ pub fn validate_identifier_name(name: &str) -> Result<(), HolyError> {
     let name_lower = name.to_string();
     let name_lower = name_lower.to_lowercase(); 
     if consts::RESERVED_KEYWORDS.contains(&name_lower.as_ref()) {
-        return Err(HolyError::Parse(format!("Variable name `{}` is a reserved keyword", name)));
+        return Err(HolyError::Parse(format!("Binding identifier name `{}` is a reserved keyword", name)));
     }
 
     Ok(())

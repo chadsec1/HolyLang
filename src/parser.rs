@@ -359,8 +359,16 @@ pub struct Variable {
     pub type_name: Type,
     pub value: Option<Expr>,
     pub span: Span,
-
 }
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Constant {
+    pub name: String,
+    pub type_name: Type,
+    pub value: Expr,
+    pub span: Span,
+}
+
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Function {
@@ -434,6 +442,7 @@ pub enum Stmt {
     VarDeclMulti(Vec<Variable>, Expr),
     VarAssign(VariableAssignment),
     VarAssignMulti(MultiAssignment),
+    Const(Constant),
     Expr(Expr),
     Lock(Vec<Expr>),
     Unlock(Vec<Expr>),
@@ -458,6 +467,7 @@ pub struct Span {
 /// Program AST
 #[derive(Debug)]
 pub struct AST {
+    pub globals: Vec<Stmt>,
     pub functions: Vec<Function>,
 }
 
@@ -465,7 +475,10 @@ pub struct AST {
 pub fn parse(source: &str) -> Result<AST, HolyError> {
     let lines: Vec<&str> = source.lines().collect();
     let mut i = 0usize;
-    let mut ast = AST { functions: vec![] };
+    let mut ast = AST {
+        globals: vec![],
+        functions: vec![]
+    };
 
     while i < lines.len() {
         let raw = lines[i];
@@ -476,10 +489,19 @@ pub fn parse(source: &str) -> Result<AST, HolyError> {
             continue;
         }
 
+        // Either the start of a function
         if line.starts_with("func ") {
             // Parse function header and body
             let (func, new_i) = parse_function(&lines, i)?;
             ast.functions.push(func);
+            i = new_i;
+            continue;
+
+        // Or the start of a global statement.
+        // It's up to semantic phase to validate if the statement is legal or not.
+        } else {
+            let (stmt, new_i) = parse_stmt_at(&lines, i)?;
+            ast.globals.push(stmt);
             i = new_i;
             continue;
         }
@@ -959,7 +981,7 @@ fn parse_stmt_at(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), Hol
     Ok((stmt, start_i + 1))
 }
 
-/// Parse a single statement from a trimmed line. `line_no` used for error messages.
+/// Parse a single statement from a comments-removed trimmed line. `line_no` used for error messages.
 fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
     let span = Span { line: line_no, column: 0 };
 
@@ -1065,13 +1087,43 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
         return Ok(Stmt::Unlock(expr_vec));
     }
 
-    // Variable declaration: own ...
+
+    // Constant declaration: CONST CONST_NAME TYPE_NAME = EXPRESSION
+    if line.starts_with("const ") {
+        let rest = line["const ".len()..].trim();
+        if let Some(eq_pos) = rest.find('=') {
+            let left = rest[..eq_pos].trim();
+            let right = rest[eq_pos + 1..].trim() ;
+
+            let left_parts: Vec<&str> = left.split_whitespace().collect();
+            if left_parts.len() != 2 {
+                return Err(HolyError::Parse(format!("Invalid constant declaration `{}` at line {}", line, line_no)));
+            }
+
+            let name = left_parts[0].to_string();
+            let var_type = parse_type(left_parts[1], &span)?;
+           
+            // ensure constant name doesnt have special characters, except _, and doesnt start with a
+            // number.
+            helpers::validate_identifier_name(&name)
+                .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+
+            let value = parse_expr::parse_expr(right, span)?;
+
+            return Ok(Stmt::Const(Constant { name, type_name: var_type, value: value, span: span }));
+        } else {
+            return Err(HolyError::Parse(format!("Invalid constant declaration `{}` at line {}", line, line_no)));
+        }
+    }
+
+    // Variable declaration: own VAR_NAME ...
     if line.starts_with("own ") {
         // possibilities:
-        // own var_name type_name = expression
-        // own var_name type_name (all types have default values.)
+        // own VAR_NAME TYPE_NAME = EXPRESSION
+        // own VAR_NAME TYPE_NAME (all types have default values.)
         // 
-        // special-case multi-declaration: own x T2, y T2 = call() (just example, declared can be as many as you want, but RHS can only be a single expression) 
+        // special-case multi-declaration: own x TYPE_1, y TYPE_2 = call() 
+        // (just example, declared can be as many as you want, but RHS can only be a single expression) 
         //
         let rest = line["own ".len()..].trim();
         // check for assignment '='
