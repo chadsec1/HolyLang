@@ -177,17 +177,11 @@ pub const ALL_TYPES_NO_ARR_NO_FLOAT: &[Type] = &[
 
 // No integers, no array type
 pub const ALL_TYPES_NO_INTS_NO_ARR: &[Type] = &[
-    Type::Float32,
     Type::Float64,
     Type::Bool,
     Type::String,
 ];
 
-
-pub const ALL_FLOATS_TYPES: &[Type] = &[
-    Type::Float32,
-    Type::Float64,
-];
 
 
 
@@ -205,7 +199,6 @@ pub const ALL_TYPES_NO_ARR_NO_BOOL: &[Type] = &[
     Type::Uint64,
     Type::Uint128,
     Type::Usize,
-    Type::Float32,
     Type::Float64,
     Type::String,
 ];
@@ -224,7 +217,6 @@ pub const ALL_TYPES_NO_ARR_NO_BOOL_NO_STRING: &[Type] = &[
     Type::Uint64,
     Type::Uint128,
     Type::Usize,
-    Type::Float32,
     Type::Float64,
 ];
 
@@ -233,7 +225,6 @@ pub const ALL_TYPES_NO_ARR_NO_BOOL_NO_STRING_SCATTERED: &[Type] = &[
     Type::Int8,
     Type::Int64,
     Type::Uint128,
-    Type::Float32,
     Type::Uint16,
     Type::Usize,
     Type::Int16,
@@ -258,7 +249,6 @@ pub const ALL_TYPES_NO_ARR: &[Type] = &[
     Type::Uint64,
     Type::Uint128,
     Type::Usize,
-    Type::Float32,
     Type::Float64,
     Type::Bool,
     Type::String,
@@ -270,9 +260,8 @@ pub const ALL_TYPES_NO_ARR_SCATTERED: &[Type] = &[
     Type::Int128,
     Type::Int8,
     Type::Uint64,
-    Type::Float32,
-    Type::Int64,
     Type::Uint16,
+    Type::Int64,
     Type::String,
     Type::Uint128,
     Type::Float64,
@@ -296,7 +285,6 @@ pub const ALL_TYPES_NO_ARR_NO_USIZE: &[Type] = &[
     Type::Uint32,
     Type::Uint64,
     Type::Uint128,
-    Type::Float32,
     Type::Float64,
     Type::Bool,
     Type::String,
@@ -311,7 +299,6 @@ pub const ALL_SIGNED_TYPES_NO_ARR: &[Type] = &[
     Type::Int32,
     Type::Int64,
     Type::Int128,
-    Type::Float32,
     Type::Float64,
 ];
 

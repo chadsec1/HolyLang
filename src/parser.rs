@@ -36,7 +36,6 @@ pub enum Type {
 
     Usize,
     
-    Float32,
     Float64,
     Bool,
     String,
@@ -75,7 +74,6 @@ impl Type {
 
     pub fn is_floating_type(&self) -> bool {
         match self {
-            Type::Float32 |
             Type::Float64 => true,
 
             _ => false
@@ -97,30 +95,20 @@ impl Type {
     }
 
 
+    // TODO: Add tests to cover this
     pub fn get_array_inner_most_type(&self) -> &Type {
-        if matches!(self, Type::Array(_)) {
-            let mut current = self;
-
-            while let Type::Array(inner) = current {
-                current = inner;
-            }
-
-            return current;
+        if !matches!(self, Type::Array(_) | Type::FixedArray(_, _)) {
+            panic!("(Compiler bug) Do not call get_array_inner_most_type unless you are sure Type is an array. Self: {:?}", self);
         }
 
-
-        if matches!(self, Type::FixedArray(_, _)) {
-            let mut current = self;
-
-            while let Type::FixedArray(inner, _) = current {
-                current = inner;
+        let mut current = self;
+        loop {
+            match current {
+                Type::Array(inner) => current = inner,
+                Type::FixedArray(inner, _) => current = inner,
+                _ => return current,
             }
-
-            return current;
         }
-
-
-        panic!("(Compiler bug) Do not call get_inner_most_type unless you are sure Type is an array. Self: {:?}", self);
     }
 }
 
@@ -157,10 +145,34 @@ impl IntLiteralValue {
             IntLiteralValue::Uint128(_) => Type::Uint128,
             
             IntLiteralValue::Usize(_) => Type::Usize,
+        }
+    }
+
+    /// Get the bit_width of an integer literal value
+    /// e.g. an  i32 bit-width is 32, etc.
+    pub fn bit_width(self) -> u32 {
+        match self {
+            IntLiteralValue::Int8(_) => i8::BITS,
+            IntLiteralValue::Int16(_) => i16::BITS,
+            IntLiteralValue::Int32(_) => i32::BITS,
+            IntLiteralValue::Int64(_) => i64::BITS,
+            IntLiteralValue::Int128(_) => i128::BITS,
+
+            IntLiteralValue::Byte(_) => u8::BITS,
+
+            IntLiteralValue::Uint16(_) => u16::BITS,
+            IntLiteralValue::Uint32(_) => u32::BITS,
+            IntLiteralValue::Uint64(_) => u64::BITS,
+            IntLiteralValue::Uint128(_) => u128::BITS,
+            
+            IntLiteralValue::Usize(_) => usize::BITS,
 
         }
     }
 
+
+    /// Return true if the integer literal value is of signed type
+    /// i.e. int8, int16, etc.
     pub fn is_signed(self) -> bool {
         match self {
             IntLiteralValue::Int8(_) |
@@ -172,8 +184,6 @@ impl IntLiteralValue {
             _ => false
         }
     }
-
-
 
     pub fn as_i128(self) -> i128 {
         match self {
@@ -206,39 +216,6 @@ impl IntLiteralValue {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum FloatLiteralValue {
-    Float32(f32),
-    Float64(f64),
-}
-
-impl FloatLiteralValue {
-    pub fn get_type(self) -> Type {
-        match self {
-            FloatLiteralValue::Float32(_) => Type::Float32,
-            FloatLiteralValue::Float64(_) => Type::Float64,
-        }
-    }
-}
-
-/* 
- * Basically, this is needed because without it, NaN == NaN, -0.0 == 0.0, inf, and more would
- * produce the wrong boolean comparison result since FloatLiteralValue has
- * PartialEq derived
- *
-*/
-impl PartialEq for FloatLiteralValue {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (FloatLiteralValue::Float32(a), FloatLiteralValue::Float32(b)) => a.to_bits() == b.to_bits(),
-            (FloatLiteralValue::Float64(a), FloatLiteralValue::Float64(b)) => a.to_bits() == b.to_bits(),
-            _ => false,
-        }
-    }
-}
-
-impl Eq for FloatLiteralValue {}
-
 
 
 /// AST expressions nodes
@@ -249,9 +226,10 @@ pub enum Expr {
         value: IntLiteralValue,
         span: Span,
     },
-    /// Float literal (value) and type marker (the FloatLiteralValue Enum wrapper)
-    FloatLiteral {
-        value: FloatLiteralValue,
+    /// Float64 literal value
+    /// HolyLang only supports float64.
+    Float64Literal {
+        value: f64,
         span: Span,
     },
     BoolLiteral {
@@ -505,13 +483,6 @@ pub fn parse(source: &str) -> Result<AST, HolyError> {
             i = new_i;
             continue;
         }
-
-        // unknown top-level line
-        return Err(HolyError::Parse(format!(
-            "Unexpected statement outside function at line {}: `{}`",
-            i + 1,
-            raw
-        )));
     }
 
     Ok(ast)
@@ -1343,7 +1314,6 @@ fn parse_base_type(token: &str, span: &Span) -> Result<Type, HolyError> {
         "uint64"  => Ok(Type::Uint64),
         "uint128" => Ok(Type::Uint128),
         "usize"   => Ok(Type::Usize),
-        "float32" => Ok(Type::Float32),
         "float64" => Ok(Type::Float64),
         "bool"    => Ok(Type::Bool),
         "string"  => Ok(Type::String),
