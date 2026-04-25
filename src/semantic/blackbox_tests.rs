@@ -1,6 +1,6 @@
 use super::*;
 use crate::parser::{
-    FixedArraySize, IntLiteralValue, FloatLiteralValue, 
+    FixedArraySize, IntLiteralValue,
     UnaryOpKind,
     Param, Variable, VariableAssignment, MultiAssignment, 
     IfStmt, WhileStmt, ForStmt, InfiniteStmt, BreakStmt, ContinueStmt
@@ -14,7 +14,6 @@ use crate::tests_consts::{
     ALL_TYPES_NO_ARR_NO_BOOL_NO_STRING, ALL_TYPES_NO_ARR_NO_BOOL_NO_STRING_SCATTERED,
 
     ALL_INT_TYPES_NO_ARR,
-    ALL_FLOATS_TYPES,
 
     ALL_UNSIGNED_TYPES_NO_ARR, ALL_SIGNED_TYPES_NO_ARR,
     ALL_BIN_OP_KIND_ARTH, ALL_BIN_OP_KIND_COMP, ALL_BIN_OP_KIND_COMP_EQ,
@@ -32,7 +31,7 @@ use crate::tests_consts::{
 
 
 
-fn get_all_literals_no_arr_bool() -> [Expr; 14] {
+fn get_all_literals_no_arr_bool() -> [Expr; 13] {
     let literals = [
         int8_lit(1),
         int16_lit(1),
@@ -48,7 +47,6 @@ fn get_all_literals_no_arr_bool() -> [Expr; 14] {
 
         usize_lit(1),
 
-        float32_lit(1.0),
         float64_lit(1.0),
 
         str_lit("Hi")
@@ -57,20 +55,10 @@ fn get_all_literals_no_arr_bool() -> [Expr; 14] {
     return literals;
 }
 
-fn get_all_float_literals_no_arr() -> [Expr; 2] {
-    let literals = [
-        float32_lit(1.0),
-        float64_lit(1.0),
-    ];
 
-    return literals;
-}
-
-
-fn get_all_literals_no_arr_no_ints() -> [Expr; 4] {
+fn get_all_literals_no_arr_no_ints() -> [Expr; 3] {
     let literals = [
 
-        float32_lit(1.0),
         float64_lit(1.0),
 
         bool_lit(false),
@@ -82,12 +70,11 @@ fn get_all_literals_no_arr_no_ints() -> [Expr; 4] {
 
 
 
-fn get_all_literals_no_arr_few_ints() -> [Expr; 6] {
+fn get_all_literals_no_arr_few_ints() -> [Expr; 5] {
     let literals = [
         uint128_lit(1),
         int128_lit(1),
 
-        float32_lit(1.0),
         float64_lit(1.0),
 
         bool_lit(false),
@@ -98,13 +85,12 @@ fn get_all_literals_no_arr_few_ints() -> [Expr; 6] {
 }
 
 
-fn get_all_literals_no_arr_few_ints_scattered() -> [Expr; 6] {
+fn get_all_literals_no_arr_few_ints_scattered() -> [Expr; 5] {
     let literals = [
         str_lit("Hi"),
-        float32_lit(1.0),
 
-        int128_lit(1),
         bool_lit(false),
+        int128_lit(1),
         float64_lit(1.0),
         uint128_lit(1),
     ];
@@ -114,7 +100,7 @@ fn get_all_literals_no_arr_few_ints_scattered() -> [Expr; 6] {
 
 
 
-fn get_all_signed_literals_no_arr() -> [Expr; 7] {
+fn get_all_signed_literals_no_arr() -> [Expr; 6] {
     let literals = [
         int8_lit(1),
         int16_lit(1),
@@ -122,7 +108,6 @@ fn get_all_signed_literals_no_arr() -> [Expr; 7] {
         int64_lit(1),
         int128_lit(1),
 
-        float32_lit(1.0),
         float64_lit(1.0),
     ];
 
@@ -160,7 +145,7 @@ fn get_all_unsigned_literals_no_arr() -> [Expr; 6] {
 }
 
 
-fn get_all_literals_no_arr_str_bool() -> [Expr; 13] {
+fn get_all_literals_no_arr_str_bool() -> [Expr; 12] {
     let literals = [
         int8_lit(1),
         int16_lit(1),
@@ -176,7 +161,6 @@ fn get_all_literals_no_arr_str_bool() -> [Expr; 13] {
 
         usize_lit(1),
 
-        float32_lit(1.0),
         float64_lit(1.0),
     ];
 
@@ -185,13 +169,12 @@ fn get_all_literals_no_arr_str_bool() -> [Expr; 13] {
 
 
 
-fn get_all_literals_no_arr_str_bool_scattered() -> [Expr; 13] {
+fn get_all_literals_no_arr_str_bool_scattered() -> [Expr; 12] {
     let literals = [
         uint32_lit(1),
         int8_lit(1),
         int64_lit(1),
         uint128_lit(1),
-        float32_lit(1.0),
 
         uint16_lit(1),
         usize_lit(1),
@@ -236,7 +219,7 @@ fn get_all_literals_no_arr_str_bool_float() -> [Expr; 11] {
 
 
 
-fn get_all_literals_no_arr() -> [Expr; 15] {
+fn get_all_literals_no_arr() -> [Expr; 14] {
     let literals = [
         int8_lit(1),
         int16_lit(1),
@@ -252,7 +235,6 @@ fn get_all_literals_no_arr() -> [Expr; 15] {
 
         usize_lit(1),
 
-        float32_lit(1.0),
         float64_lit(1.0),
 
         bool_lit(false),
@@ -262,14 +244,13 @@ fn get_all_literals_no_arr() -> [Expr; 15] {
     return literals;
 }
 
-fn get_all_literals_no_arr_scattered_order() -> [Expr; 15] {
+fn get_all_literals_no_arr_scattered_order() -> [Expr; 14] {
     let literals = [
         int128_lit(1),
         int8_lit(1),
         uint64_lit(1),
-        float32_lit(1.0),
-        int64_lit(1),
         uint16_lit(1),
+        int64_lit(1),
         str_lit("Hi"),
         uint128_lit(1),
         float64_lit(1.0),
@@ -286,7 +267,7 @@ fn get_all_literals_no_arr_scattered_order() -> [Expr; 15] {
 
 
 
-fn get_all_literals_no_arr_no_usize() -> [Expr; 14] {
+fn get_all_literals_no_arr_no_usize() -> [Expr; 13] {
     let literals = [
         int8_lit(1),
         int16_lit(1),
@@ -300,7 +281,6 @@ fn get_all_literals_no_arr_no_usize() -> [Expr; 14] {
         uint64_lit(1),
         uint128_lit(1),
 
-        float32_lit(1.0),
         float64_lit(1.0),
 
         bool_lit(false),
@@ -318,7 +298,7 @@ fn span() -> Span {
 
 /// Build an AST that contains exactly one function.
 fn ast_one(func: Function) -> AST {
-    AST { functions: vec![func] }
+    AST { functions: vec![func], globals: vec![] }
 }
 
 /// Build a void function (no return type) with the given body.
@@ -418,13 +398,9 @@ fn usize_lit(n: usize) -> Expr {
 }
 
 
-fn float32_lit(f: f32) -> Expr {
-    Expr::FloatLiteral { value: FloatLiteralValue::Float32(f), span: span() }
-}
-
 
 fn float64_lit(f: f64) -> Expr {
-    Expr::FloatLiteral { value: FloatLiteralValue::Float64(f), span: span() }
+    Expr::Float64Literal { value: f, span: span() }
 }
 
 
@@ -468,7 +444,8 @@ mod blackbox_tests {
                     ],
                     span: span(),
                 }
-            ]
+            ],
+            globals: vec![]
         };
         let result = check_semantics(&mut ast);
         assert!(result.is_err());
@@ -481,7 +458,7 @@ mod blackbox_tests {
     fn test_duplicate_function_name_errors() {
         let f1 = void_func("foo", vec![], vec![]);
         let f2 = void_func("foo", vec![], vec![]);
-        let mut ast = AST { functions: vec![f1, f2] };
+        let mut ast = AST { functions: vec![f1, f2], globals: vec![] };
         let result = check_semantics(&mut ast);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("Duplicate function"));
@@ -552,7 +529,7 @@ mod blackbox_tests {
                 var_decl("x", t.clone(), Some(call_expr("bar", vec![])))
             ];
             let caller = void_func("main", vec![], body);
-            let mut ast = AST { functions: vec![callee, caller] };
+            let mut ast = AST { functions: vec![callee, caller], globals: vec![] };
 
             let result = check_semantics(&mut ast);
             assert!(result.is_err());
@@ -594,11 +571,11 @@ mod blackbox_tests {
 
             let foo = void_func("foo", vec![], vec![]);
 
-            let mut ast = AST { functions: vec![main, foo] };
+            let mut ast = AST { functions: vec![main, foo], globals: vec![] };
             let result = check_semantics(&mut ast);
 
             assert!(result.is_err());        
-            assert!(result.unwrap_err().to_string().contains("Name `foo` is already taken by a function, pick a different name for your variable."));
+            assert!(result.unwrap_err().to_string().contains("`foo` is already taken by a function, pick a different name for your variable."));
         }
     }
 
@@ -611,7 +588,7 @@ mod blackbox_tests {
 
             let result = check_semantics(&mut ast);
             assert!(result.is_err());
-            assert!(result.unwrap_err().to_string().contains("Use of undeclared variable `y`"));
+            assert!(result.unwrap_err().to_string().contains("Use of undeclared binding `y`"));
         }
     }
 
@@ -1046,7 +1023,7 @@ mod blackbox_tests {
 
             let result = check_semantics(&mut ast);
             assert!(result.is_err());
-            assert!(result.unwrap_err().to_string().contains("Use of undeclared variable `y`"));
+            assert!(result.unwrap_err().to_string().contains("Use of undeclared binding `y`"));
         }
     }
 
@@ -1384,7 +1361,7 @@ mod blackbox_tests {
         check_semantics(&mut ast).unwrap();
         if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
             assert!(matches!(v.value, Some(Expr::BoolLiteral { value: false, .. })));
-        }
+        } else { panic!("Expected VarDecl statement") }
     }
 
 
@@ -1397,22 +1374,11 @@ mod blackbox_tests {
         check_semantics(&mut ast).unwrap();
         if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
             assert!(matches!(&v.value, Some(Expr::StringLiteral { value, .. }) if value == ""));
-        }
+        } else { panic!("Expected VarDecl statement") }
     }
 
 
 
-    #[test]
-    fn test_default_float32_zero() {
-        // `own x float64` value should default to a Float literal with value of 0.0
-        let body = vec![var_decl("f", Type::Float32, None)];
-        let func = void_func("foo", vec![], body);
-        let mut ast = ast_one(func);
-        check_semantics(&mut ast).unwrap();
-        if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
-            assert!(matches!(v.value, Some(Expr::FloatLiteral { value: FloatLiteralValue::Float32(0.0), .. })));
-        }
-    }
 
     #[test]
     fn test_default_float64_zero() {
@@ -1422,8 +1388,8 @@ mod blackbox_tests {
         let mut ast = ast_one(func);
         check_semantics(&mut ast).unwrap();
         if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
-            assert!(matches!(v.value, Some(Expr::FloatLiteral { value: FloatLiteralValue::Float64(0.0), .. })));
-        }
+            assert!(matches!(v.value, Some(Expr::Float64Literal { value: 0.0f64, .. })));
+        } else { panic!("Expected VarDecl statement") }
     }
 
     #[test]
@@ -1440,7 +1406,7 @@ mod blackbox_tests {
                 } else {
                     panic!("expected empty ArrayLiteral");
                 }
-            }
+            } else { panic!("Expected VarDecl statement") }
         }
     }
 
@@ -1572,7 +1538,7 @@ mod blackbox_tests {
                 var_decl("b", t.clone(), Some(var_expr("a"))),
             ];
             let caller = void_func("main", vec![], body);
-            let mut ast = AST { functions: vec![bar, caller] };
+            let mut ast = AST { functions: vec![bar, caller], globals: vec![]};
             let result = check_semantics(&mut ast);
             assert!(result.is_err());
             assert!(result.unwrap_err().to_string().contains("moved"));
@@ -4407,7 +4373,7 @@ mod blackbox_tests {
             let callee = void_func("bar", vec![param("a", t.clone())], vec![]);
             let body = vec![Stmt::Expr(call_expr("bar", vec![]))]; // 0 args instead of 1
             let caller = void_func("main", vec![], body);
-            let mut ast = AST { functions: vec![callee, caller] };
+            let mut ast = AST { functions: vec![callee, caller], globals: vec![]};
             let result = check_semantics(&mut ast);
             assert!(result.is_err());
             assert!(result.unwrap_err().to_string().contains("expects 1 arguments, got 0"));
@@ -4431,7 +4397,7 @@ mod blackbox_tests {
                 Stmt::Expr(call_expr("bar", vec![var_expr("x")]))
             ];
             let caller = void_func("main", vec![], body);
-            let mut ast = AST { functions: vec![callee, caller] };
+            let mut ast = AST { functions: vec![callee, caller], globals: vec![]};
             let result = check_semantics(&mut ast);
 
             assert!(result.is_err());
@@ -4454,7 +4420,7 @@ mod blackbox_tests {
                 )
             ];
             let caller = void_func("main", vec![], body);
-            let mut ast = AST { functions: vec![callee, caller] };
+            let mut ast = AST { functions: vec![callee, caller], globals: vec![] };
 
             let result = check_semantics(&mut ast);
 
@@ -4475,7 +4441,7 @@ mod blackbox_tests {
                 )
             ];
             let caller = void_func("main", vec![], body);
-            let mut ast = AST { functions: vec![callee, caller] };
+            let mut ast = AST { functions: vec![callee, caller], globals: vec![]  };
 
             let result = check_semantics(&mut ast);
 
@@ -4493,7 +4459,7 @@ mod blackbox_tests {
             let callee = void_func("bar", vec![param("a", t.clone())], vec![]);
             let body = vec![Stmt::Expr(call_expr("bar", vec![l.clone()]))];
             let caller = void_func("main", vec![], body);
-            let mut ast = AST { functions: vec![callee, caller] };
+            let mut ast = AST { functions: vec![callee, caller] , globals: vec![] };
             check_semantics(&mut ast).unwrap();
         }
     }
@@ -4509,7 +4475,7 @@ mod blackbox_tests {
             let callee = void_func("bar", vec![param("a", t.clone())], vec![]);
             let body = vec![Stmt::Expr(call_expr("bar", vec![sl.clone()]))];
             let caller = void_func("main", vec![], body);
-            let mut ast = AST { functions: vec![callee, caller] };
+            let mut ast = AST { functions: vec![callee, caller] , globals: vec![] };
             check_semantics(&mut ast).unwrap();
         }
     }
@@ -4550,7 +4516,7 @@ mod blackbox_tests {
             ];
             let main = void_func("main", vec![], body);
 
-            let mut ast = AST { functions: vec![pair, main] };
+            let mut ast = AST { functions: vec![pair, main] , globals: vec![] };
             check_semantics(&mut ast).unwrap();
 
             if let Stmt::VarDecl(v) = &ast.functions[1].body[0] {
@@ -4605,7 +4571,7 @@ mod blackbox_tests {
             ];
             let main = void_func("main", vec![], body);
 
-            let mut ast = AST { functions: vec![pair, main] };
+            let mut ast = AST { functions: vec![pair, main] , globals: vec![] };
             let result = check_semantics(&mut ast);
 
             assert!(result.is_err());
@@ -4634,7 +4600,7 @@ mod blackbox_tests {
             ];
             let main = void_func("main", vec![], body);
 
-            let mut ast = AST { functions: vec![pair, main] };
+            let mut ast = AST { functions: vec![pair, main], globals: vec![]  };
             let result = check_semantics(&mut ast);
 
             assert!(result.is_err());
@@ -4665,7 +4631,7 @@ mod blackbox_tests {
             ];
             let main = void_func("main", vec![], body);
 
-            let mut ast = AST { functions: vec![pair, main] };
+            let mut ast = AST { functions: vec![pair, main], globals: vec![]  };
             let result = check_semantics(&mut ast);
 
             assert!(result.is_err());
@@ -4695,7 +4661,7 @@ mod blackbox_tests {
             ];
             let main = void_func("main", vec![], body);
 
-            let mut ast = AST { functions: vec![pair, main] };
+            let mut ast = AST { functions: vec![pair, main] , globals: vec![] };
             let result = check_semantics(&mut ast);
 
             assert!(result.is_err());
@@ -4730,7 +4696,7 @@ mod blackbox_tests {
             ];
             let main = void_func("main", vec![], body);
 
-            let mut ast = AST { functions: vec![pair, main] };
+            let mut ast = AST { functions: vec![pair, main] , globals: vec![] };
             let result = check_semantics(&mut ast);
 
             assert!(result.is_err());
@@ -4758,7 +4724,7 @@ mod blackbox_tests {
             ];
             let main = void_func("main", vec![], body);
 
-            let mut ast = AST { functions: vec![pair, main] };
+            let mut ast = AST { functions: vec![pair, main] , globals: vec![] };
             let result = check_semantics(&mut ast);
 
             assert!(result.is_err());
@@ -4784,7 +4750,7 @@ mod blackbox_tests {
             ];
             let main = void_func("main", vec![], body);
 
-            let mut ast = AST { functions: vec![pair, main] };
+            let mut ast = AST { functions: vec![pair, main] , globals: vec![] };
             let result = check_semantics(&mut ast);
 
             assert!(result.is_err());
@@ -4822,7 +4788,7 @@ mod blackbox_tests {
             ];
             let main = void_func("main", vec![], body);
 
-            let mut ast = AST { functions: vec![pair, main] };
+            let mut ast = AST { functions: vec![pair, main] , globals: vec![] };
             let result = check_semantics(&mut ast);
 
             assert!(result.is_err());
@@ -4853,7 +4819,7 @@ mod blackbox_tests {
             ];
             let main = void_func("main", vec![], body);
 
-            let mut ast = AST { functions: vec![pair, main] };
+            let mut ast = AST { functions: vec![pair, main] , globals: vec![] };
             let result = check_semantics(&mut ast);
 
             assert!(result.is_err());
@@ -4885,7 +4851,7 @@ mod blackbox_tests {
             ];
             let main = void_func("main", vec![], body);
 
-            let mut ast = AST { functions: vec![pair, main] };
+            let mut ast = AST { functions: vec![pair, main] , globals: vec![] };
             let result = check_semantics(&mut ast);
 
             assert!(result.is_err());
@@ -4923,7 +4889,7 @@ mod blackbox_tests {
             ];
             let main = void_func("main", vec![], body);
 
-            let mut ast = AST { functions: vec![pair, main] };
+            let mut ast = AST { functions: vec![pair, main] , globals: vec![] };
             let result = check_semantics(&mut ast);
 
             assert!(result.is_err());
@@ -4954,7 +4920,7 @@ mod blackbox_tests {
             ];
             let main = void_func("main", vec![], body);
 
-            let mut ast = AST { functions: vec![pair, main] };
+            let mut ast = AST { functions: vec![pair, main], globals: vec![] };
             let result = check_semantics(&mut ast);
 
             assert!(result.is_err());
@@ -4983,7 +4949,7 @@ mod blackbox_tests {
             ];
             let main = void_func("main", vec![], body);
 
-            let mut ast = AST { functions: vec![pair, main] };
+            let mut ast = AST { functions: vec![pair, main], globals: vec![] };
             let result = check_semantics(&mut ast);
 
             assert!(result.is_err());
@@ -5021,7 +4987,7 @@ mod blackbox_tests {
             ];
             let main = void_func("main", vec![], body);
 
-            let mut ast = AST { functions: vec![pair, main] };
+            let mut ast = AST { functions: vec![pair, main], globals: vec![] };
             let result = check_semantics(&mut ast);
 
             assert!(result.is_err());
@@ -5057,7 +5023,7 @@ mod blackbox_tests {
             ];
             let main = void_func("main", vec![], body);
 
-            let mut ast = AST { functions: vec![pair, main] };
+            let mut ast = AST { functions: vec![pair, main], globals: vec![] };
             let result = check_semantics(&mut ast);
 
             assert!(result.is_err());
@@ -5089,7 +5055,7 @@ mod blackbox_tests {
             ];
             let main = void_func("main", vec![], body);
 
-            let mut ast = AST { functions: vec![pair, main] };
+            let mut ast = AST { functions: vec![pair, main], globals: vec![] };
             let result = check_semantics(&mut ast);
 
             assert!(result.is_err());
@@ -5133,7 +5099,7 @@ mod blackbox_tests {
             let body = vec![Stmt::VarDeclMulti(vars, call_expr("pair", vec![]))];
             let main = void_func("main", vec![], body);
 
-            let mut ast = AST { functions: vec![pair, main] };
+            let mut ast = AST { functions: vec![pair, main], globals: vec![] };
             check_semantics(&mut ast).unwrap();
 
             if let Stmt::VarDeclMulti(vs, ce) = &ast.functions[1].body[0] {
@@ -5183,7 +5149,7 @@ mod blackbox_tests {
             ];
             let main = void_func("main", vec![], body);
 
-            let mut ast = AST { functions: vec![pair, main] };
+            let mut ast = AST { functions: vec![pair, main], globals: vec![] };
             let result = check_semantics(&mut ast);
 
             assert!(result.is_err());
@@ -5214,7 +5180,7 @@ mod blackbox_tests {
             ];
             let main = void_func("main", vec![], body);
 
-            let mut ast = AST { functions: vec![pair, main] };
+            let mut ast = AST { functions: vec![pair, main], globals: vec![] };
             let result = check_semantics(&mut ast);
 
             assert!(result.is_err());
@@ -5250,7 +5216,7 @@ mod blackbox_tests {
             ];
             let main = void_func("main", vec![], body);
 
-            let mut ast = AST { functions: vec![pair, main] };
+            let mut ast = AST { functions: vec![pair, main], globals: vec![] };
             let result = check_semantics(&mut ast);
 
             assert!(result.is_err());
@@ -5286,7 +5252,7 @@ mod blackbox_tests {
             ];
             let main = void_func("main", vec![param("a", t1.clone())], body);
 
-            let mut ast = AST { functions: vec![pair, main] };
+            let mut ast = AST { functions: vec![pair, main], globals: vec![] };
             let result = check_semantics(&mut ast);
 
             assert!(result.is_err());
@@ -5312,7 +5278,7 @@ mod blackbox_tests {
             ];
             let main = void_func("main", vec![param("b", t2.clone())], body);
 
-            let mut ast = AST { functions: vec![pair, main] };
+            let mut ast = AST { functions: vec![pair, main], globals: vec![] };
             let result = check_semantics(&mut ast);
 
             assert!(result.is_err());
@@ -5344,7 +5310,7 @@ mod blackbox_tests {
             ];
             let main = void_func("main", vec![param("a", t1.clone()), param("b", t2.clone())], body);
 
-            let mut ast = AST { functions: vec![pair, main] };
+            let mut ast = AST { functions: vec![pair, main], globals: vec![] };
             let result = check_semantics(&mut ast);
 
             assert!(result.is_err());
@@ -5378,7 +5344,7 @@ mod blackbox_tests {
             ];
             let main = void_func("main", vec![], body);
 
-            let mut ast = AST { functions: vec![pair, main] };
+            let mut ast = AST { functions: vec![pair, main], globals: vec![] };
             let result = check_semantics(&mut ast);
 
             assert!(result.is_err());
@@ -5414,7 +5380,7 @@ mod blackbox_tests {
             let body = vec![Stmt::VarDeclMulti(vars, call_expr("pair", vec![]))];
             let main = void_func("main", vec![], body);
 
-            let mut ast = AST { functions: vec![pair, main] };
+            let mut ast = AST { functions: vec![pair, main], globals: vec![] };
             let result = check_semantics(&mut ast);
 
             assert!(result.is_err());
@@ -5437,7 +5403,7 @@ mod blackbox_tests {
             let body = vec![Stmt::VarDeclMulti(vars, call_expr("pair", vec![]))];
             let main = void_func("main", vec![], body);
 
-            let mut ast = AST { functions: vec![pair, main] };
+            let mut ast = AST { functions: vec![pair, main], globals: vec![] };
             let result = check_semantics(&mut ast);
 
             assert!(result.is_err());
@@ -5460,7 +5426,7 @@ mod blackbox_tests {
             let body = vec![Stmt::VarDeclMulti(vars, call_expr("pair", vec![]))];
             let main = void_func("main", vec![], body);
 
-            let mut ast = AST { functions: vec![pair, main] };
+            let mut ast = AST { functions: vec![pair, main], globals: vec![] };
             let result = check_semantics(&mut ast);
 
             assert!(result.is_err());
@@ -5499,7 +5465,7 @@ mod blackbox_tests {
             let body = vec![Stmt::VarDeclMulti(vars, call_expr("pair", vec![]))];
             let main = void_func("main", vec![], body);
 
-            let mut ast = AST { functions: vec![pair, main] };
+            let mut ast = AST { functions: vec![pair, main], globals: vec![] };
             let result = check_semantics(&mut ast);
             assert!(result.is_err());
             assert!(result.unwrap_err().to_string().contains("Return length mismatch"));
@@ -7148,9 +7114,14 @@ mod blackbox_tests {
 
     #[test]
     fn test_floating_binop_real_arth_passes() {
-        let literals_floats = get_all_float_literals_no_arr();
+        let float64_lits = [
+            float64_lit(1.0),
+            float64_lit(1e12)
+        ];
 
-        for (l, t) in literals_floats.iter().zip(ALL_FLOATS_TYPES.iter()) {
+        let t = Type::Float64;
+
+        for l in float64_lits {
             for b in ALL_BIN_OP_KIND_REAL_ARTH {
                 let bin = Expr::BinOp {
                     left: Box::new(l.clone()),
@@ -7194,39 +7165,34 @@ mod blackbox_tests {
 
 
 
-    // float literal inference
+    // float literal internal inference
 
 
-    // All floating 32 literals can be safely converted to floating 64 .
+    // Floating 64 literal cannot be ceorcied into an integer.
     #[test]
-    fn test_floating_literal_is_32_but_type_is_64() {
-        // if variable is declared with an int8 and the value is an int32, but it can fit in int8,
-        // it shouldn't error
-        let lit = float32_lit(1.0); 
-        let body = vec![var_decl("x", Type::Float64, Some(lit))];
-        let func = void_func("foo", vec![], body);
-        let mut ast = ast_one(func);
-        check_semantics(&mut ast).unwrap();
-        if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
-            assert!(matches!(v.value, Some(Expr::FloatLiteral { value: FloatLiteralValue::Float64(1.0), .. })));
-        } else { panic!("Expected VarDecl") }
-    }
+    fn test_floating_literal_is_64_but_type_is_integer_errors() {
+        let float64_lits = [
+            float64_lit(1.0),
+            float64_lit(1e12)
+        ];
 
-    #[test]
-    fn test_float32_cannot_accept_float64_errors() {
-        let lit = Expr::FloatLiteral { value: FloatLiteralValue::Float64(3.14), span: span() };
-        let body = vec![var_decl("f", Type::Float32, Some(lit))];
-        let func = void_func("foo", vec![], body);
-        let mut ast = ast_one(func);
-        let result = check_semantics(&mut ast);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("is of type `float64`, but we expected type `float32`"));
+        for l in float64_lits {
+            for t in ALL_INT_TYPES_NO_ARR {
+                let body = vec![var_decl("x", t.clone(), Some(l.clone()))];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("Type mismatch"));
+            }
+        }
     }
 
 
 
 
-    // (signed) integer literal inference
+
+    // (signed) integer literal internal inference
     #[test]
     fn test_integer_literal_inferred_to_int8() {
         // if variable is declared with an int8 and the value is a different signed int literal, but it can fit in int8,
@@ -7693,8 +7659,7 @@ mod blackbox_tests {
                         assert!(result.is_err());
                         let assert_condition = result.unwrap_err().to_string();
                         let assert_condition = assert_condition.contains("Type mismatch in binary") 
-                                               || assert_condition.contains("You cannot perform arithmetic")
-                                               || assert_condition.contains("is of type `float64`, but we expected type `float32`");
+                                               || assert_condition.contains("You cannot perform arithmetic");
 
                         assert!(assert_condition);
                     }
@@ -7720,8 +7685,7 @@ mod blackbox_tests {
                         assert!(result.is_err());
                         let assert_condition = result.unwrap_err().to_string();
                         let assert_condition = assert_condition.contains("Type mismatch in binary") 
-                                               || assert_condition.contains("You cannot perform arithmetic")
-                                               || assert_condition.contains("is of type `float64`, but we expected type `float32`");
+                                               || assert_condition.contains("You cannot perform arithmetic");
 
                         assert!(assert_condition);
                     }
@@ -7731,7 +7695,7 @@ mod blackbox_tests {
     }
 
 
-    // Mixing int32, int16, float32, float64, etc should always return an error.
+    // Mixing int32, int16, float64, etc should always return an error.
     //
     #[test]
     fn test_binop_arth_mixed_types_errors() {
@@ -7939,7 +7903,7 @@ mod blackbox_tests {
         let mut ast = ast_one(func);
         let result = check_semantics(&mut ast);
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("undeclared variable"));
+        assert!(result.unwrap_err().to_string().contains("undeclared binding"));
     }
 
 
@@ -7952,7 +7916,7 @@ mod blackbox_tests {
             let mut ast = ast_one(func);
             let result = check_semantics(&mut ast);
             assert!(result.is_err());
-            assert!(result.unwrap_err().to_string().contains("undeclared variable"));
+            assert!(result.unwrap_err().to_string().contains("undeclared binding"));
         }
     }
 
@@ -7966,7 +7930,7 @@ mod blackbox_tests {
             let mut ast = ast_one(func);
             let result = check_semantics(&mut ast);
             assert!(result.is_err());
-            assert!(result.unwrap_err().to_string().contains("undeclared variable"));
+            assert!(result.unwrap_err().to_string().contains("undeclared binding"));
         }
     }
 
@@ -7995,7 +7959,7 @@ mod blackbox_tests {
             let mut ast = ast_one(func);
             let result = check_semantics(&mut ast);
             assert!(result.is_err());
-            assert!(result.unwrap_err().to_string().contains("undeclared variable"));
+            assert!(result.unwrap_err().to_string().contains("undeclared binding"));
         }
     }
 
@@ -8169,7 +8133,7 @@ mod blackbox_tests {
                 ];
                 let main = void_func("main", vec![], main_body);
 
-                let mut ast = AST { functions: vec![add, main] };
+                let mut ast = AST { functions: vec![add, main], globals: vec![] };
                 
                 assert!(check_semantics(&mut ast).is_ok());
             }

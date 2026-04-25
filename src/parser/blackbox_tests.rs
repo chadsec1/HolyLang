@@ -35,7 +35,7 @@ fn assert_parse_err(src: &str) {
 
 
 // all literals and variable names.
-fn get_all_literals_edge_cases() -> [String; 40] {
+fn get_all_literals_edge_cases() -> [String; 38] {
     return [
         i8::MIN.to_string(), i8::MAX.to_string(),
         i16::MIN.to_string(), i16::MAX.to_string(),
@@ -50,7 +50,6 @@ fn get_all_literals_edge_cases() -> [String; 40] {
         u128::MIN.to_string(), u128::MAX.to_string(),
         usize::MIN.to_string(), usize::MAX.to_string(),
         
-        format!("{}.0", f32::MIN.to_string()), format!("{}.0", f32::MAX.to_string()), 
         format!("{}.0", f64::MIN.to_string()), format!("{}.0", f64::MAX.to_string()), 
 
         "false".to_string(), "true".to_string(),
@@ -100,10 +99,16 @@ mod tests {
         assert!(ast.functions.is_empty());
     }
 
+    // Should be fine
+    // it's up to the semantics phase to detect this illegal statement
+    //
     #[test]
-    fn parse_statement_outside_function_errors() {
+    fn parse_statement_outside_function_passes() {
+        let literals_edge_cases = get_all_literals_edge_cases(); 
         for t in ALL_TYPES_NO_ARR {
-            assert_parse_err(&format!("own x {} = 1", t));
+            for l in &literals_edge_cases {
+                assert!(parse(&format!("own x {} = {}", t, l)).is_ok());
+            }
         }
     }
 
@@ -186,11 +191,11 @@ mod tests {
 
     #[test]
     fn parse_function_with_params() {
-        let ast = parse("func hello(a int32, b uint32, c usize) float32 {\n}\n").unwrap();
+        let ast = parse("func hello(a int32, b uint32, c usize) float64 {\n}\n").unwrap();
         let f = &ast.functions[0];
         assert_eq!(f.name, "hello");
         
-        assert_eq!(f.return_type, Some(vec![Type::Float32]));
+        assert_eq!(f.return_type, Some(vec![Type::Float64]));
 
         assert_eq!(f.params.len(), 3);
         assert_eq!(f.params[0].name, "a");
@@ -364,9 +369,9 @@ mod tests {
                     assert_eq!(value, &true);
                 } else { panic!("Expected BoolLiteral"); }
 
-                if let Expr::FloatLiteral { value, .. } = &elements[3] {
-                    assert!(matches!(value, FloatLiteralValue::Float32(6.9)));
-                } else { panic!("Expected FloatLiteral"); }
+                if let Expr::Float64Literal { value, .. } = &elements[3] {
+                    assert_eq!(*value, 6.9);
+                } else { panic!("Expected Float64Literal"); }
 
                 if let Expr::ArrayLiteral { elements, .. } = &elements[4] {
                     assert_eq!(elements.len(), 0);
@@ -1318,27 +1323,17 @@ mod tests {
     // Even though we do test all these types declarations, we never tested them in whole with their
     // respective literals. So it's worth double checking here again.
     #[test]
-    fn var_decl_float_types() {
-        let stmts = parse_body("own x float32 = 1.0\nown y float64 = 1.0");
-        assert_eq!(stmts.len(), 2);
+    fn var_decl_float64_type() {
+        let stmts = parse_body("own y float64 = 1.0");
+        assert_eq!(stmts.len(), 1);
+
         if let Stmt::VarDecl(v) = &stmts[0] {
-            assert_eq!(v.name, "x");
-            assert_eq!(v.type_name, Type::Float32);
-
-            if let Some(Expr::FloatLiteral { value, .. }) = &v.value {
-                assert!(matches!(value, FloatLiteralValue::Float32(1.0)));
-            } else { panic!("Expected FloatLiteral"); }
-        } else { panic!("Expected VarDecl"); }
-
-
-        if let Stmt::VarDecl(v) = &stmts[1] {
             assert_eq!(v.name, "y");
             assert_eq!(v.type_name, Type::Float64);
 
-            if let Some(Expr::FloatLiteral { value, .. }) = &v.value {
-                // not bug,... its up to semantic phase to correct the literals to correct types.
-                assert!(matches!(value, FloatLiteralValue::Float32(1.0)));
-            } else { panic!("Expected FloatLiteral"); }
+            if let Some(Expr::Float64Literal { value, .. }) = &v.value {
+                assert_eq!(*value, 1.0);
+            } else { panic!("Expected Float64Literal"); }
         } else { panic!("Expected VarDecl"); }    
 
     }
@@ -1925,9 +1920,9 @@ mod tests {
                 assert_eq!(v.name, "x");
                 assert_eq!(v.type_name, t.clone());
 
-                if let Some(Expr::FloatLiteral { value, .. }) = &v.value {
-                    assert!(matches!(value, FloatLiteralValue::Float32(_)));
-                } else { panic!("Expected FloatLiteral"); }
+                if let Some(Expr::Float64Literal { value, .. }) = &v.value {
+                    assert_eq!(*value, 1.0);
+                } else { panic!("Expected Float64Literal"); }
             } else { panic!("Expected VarDecl"); }
         }
     }
@@ -1942,9 +1937,9 @@ mod tests {
                 assert_eq!(v.name, "x");
                 assert_eq!(v.type_name, t.clone());
 
-                if let Some(Expr::FloatLiteral { value, .. }) = &v.value {
-                    assert!(matches!(value, FloatLiteralValue::Float64(_)));
-                } else { panic!("Expected FloatLiteral"); }
+                if let Some(Expr::Float64Literal { value, .. }) = &v.value {
+                    assert_eq!(*value, 1.123456789);
+                } else { panic!("Expected Float64Literal"); }
             } else { panic!("Expected VarDecl"); }
         }
     }
@@ -3132,14 +3127,6 @@ mod tests {
 
 
 
-    // Testing FloatLiteralValue helpers
-    // 
-    #[test]
-    fn float_literal_get_type() {
-        assert_eq!(FloatLiteralValue::Float32(1.0).get_type(), Type::Float32);
-        assert_eq!(FloatLiteralValue::Float64(1.0).get_type(), Type::Float64);
-    }
-
     #[test]
     fn type_display() {
         assert_eq!(Type::Int8.to_string(), "int8");
@@ -3156,7 +3143,6 @@ mod tests {
         
         assert_eq!(Type::Usize.to_string(), "usize");
 
-        assert_eq!(Type::Float32.to_string(), "float32");
         assert_eq!(Type::Float64.to_string(), "float64");
         assert_eq!(Type::Bool.to_string(), "bool");
         assert_eq!(Type::String.to_string(), "string");
@@ -3198,9 +3184,6 @@ mod tests {
         assert_eq!(Type::Array(Box::new(Type::Usize)).to_string(), "[]usize");
         assert_eq!(Type::Array(Box::new(Type::Array(Box::new(Type::Usize)))).to_string(), "[][]usize");
 
-
-        assert_eq!(Type::Array(Box::new(Type::Float32)).to_string(), "[]float32");
-        assert_eq!(Type::Array(Box::new(Type::Array(Box::new(Type::Float32)))).to_string(), "[][]float32");
 
         assert_eq!(Type::Array(Box::new(Type::Float64)).to_string(), "[]float64");
         assert_eq!(Type::Array(Box::new(Type::Array(Box::new(Type::Float64)))).to_string(), "[][]float64");

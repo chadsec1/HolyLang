@@ -2,19 +2,20 @@ use super::*;
 
 
 use crate::parser::{
-    IntLiteralValue, FloatLiteralValue
+    IntLiteralValue
 };
 
 use crate::tests_consts::{
     ALL_TYPES_NO_ARR,
-    ALL_TYPES_NO_ARR_NO_FLOAT
+    ALL_TYPES_NO_ARR_NO_FLOAT,
+    ALL_TYPES_NO_INTS_NO_ARR,
+    ALL_INT_TYPES_NO_ARR
+
 };
 
 use crate::semantic::helpers::{
     assign_default_value_for_type,
     get_bigger_type_of_two_integers,
-    get_bigger_type_of_two_floatings,
-    type_compatible
 };
 
 
@@ -59,7 +60,6 @@ mod type_tests {
     #[test]
     fn integer_type_rejects_non_integers() {
         // Every non-integer type must return false, no leaks
-        assert!(!Type::Float32.is_integer_type());
         assert!(!Type::Float64.is_integer_type());
         assert!(!Type::Bool.is_integer_type());
         assert!(!Type::String.is_integer_type());
@@ -72,8 +72,7 @@ mod type_tests {
 
     // Type::is_floating_type
     #[test]
-    fn floating_type_all_variants() {
-        assert!(Type::Float32.is_floating_type());
+    fn floating64_type_pass() {
         assert!(Type::Float64.is_floating_type());
     }
 
@@ -266,19 +265,6 @@ mod type_tests {
         IntLiteralValue::Int128(-1).as_u128();
     }
 
-    // FloatLiteralValue::get_type
-
-    #[test]
-    fn float_literal_get_type_all_variants() {
-
-        for i in 0..=100000 {
-            assert_eq!(FloatLiteralValue::Float32(i as f32).get_type(), Type::Float32);
-        }
-
-        for i in 0..=100000 {
-            assert_eq!(FloatLiteralValue::Float64(i as f64).get_type(), Type::Float64);
-        }    
-    }
 }
 
 
@@ -338,24 +324,12 @@ mod helpers_tests {
     }
 
     #[test]
-    fn default_value_float32_is_zero() {
-        let mut expr: Option<Expr> = None;
-        assign_default_value_for_type(&mut expr, &Type::Float32, dummy_span()).unwrap();
-        match expr.unwrap() {
-            Expr::FloatLiteral { value: FloatLiteralValue::Float32(v), .. } => {
-                assert_eq!(v, 0.0f32);
-            }
-            other => panic!("Expected Float32 literal, got {:?}", other),
-        }
-    }
-
-    #[test]
     fn default_value_float64_is_zero() {
         let mut expr: Option<Expr> = None;
         assign_default_value_for_type(&mut expr, &Type::Float64, dummy_span()).unwrap();
         match expr.unwrap() {
-            Expr::FloatLiteral { value: FloatLiteralValue::Float64(v), .. } => {
-                assert_eq!(v, 0.0f64);
+            Expr::Float64Literal { value, .. } => {
+                assert_eq!(value, 0.0f64);
             }
             other => panic!("Expected Float64 literal, got {:?}", other),
         }
@@ -427,94 +401,6 @@ mod helpers_tests {
     }
 
 
-    // type_compatible
-
-    #[test]
-    fn type_compatible_same_primitives() {
-        assert!(type_compatible(&Type::Int32, &Type::Int32));
-        assert!(type_compatible(&Type::Float64, &Type::Float64));
-        assert!(type_compatible(&Type::Bool, &Type::Bool));
-        assert!(type_compatible(&Type::String, &Type::String));
-        assert!(type_compatible(&Type::Usize, &Type::Usize));
-    }
-
-    #[test]
-    fn type_compatible_same_array_inner_type() {
-        let a = Type::Array(Box::new(Type::Int32));
-        let b = Type::Array(Box::new(Type::Int32));
-        assert!(type_compatible(&a, &b));
-    }
-
-    #[test]
-    fn type_compatible_different_array_inner_types_are_incompatible() {
-        let a = Type::Array(Box::new(Type::Int32));
-        let b = Type::Array(Box::new(Type::Int64));
-        assert!(!type_compatible(&a, &b));
-    }
-
-    #[test]
-    fn type_compatible_rejects_all_cross_primitive_combos() {
-        // None of these pairs should be compatible with each other
-        let primitives = vec![
-            Type::Int8, Type::Int16, Type::Int32, Type::Int64, Type::Int128,
-            Type::Byte, Type::Uint16, Type::Uint32, Type::Uint64, Type::Uint128,
-            Type::Usize, Type::Float32, Type::Float64, Type::Bool, Type::String,
-        ];
-        for (i, a) in primitives.iter().enumerate() {
-            for (j, b) in primitives.iter().enumerate() {
-                if i == j {
-                    assert!(type_compatible(a, b), "{:?} should be compatible with itself", a);
-                } else {
-                    assert!(!type_compatible(a, b),
-                        "{:?} should NOT be compatible with {:?}", a, b);
-                }
-            }
-        }
-    }
-
-    // Signed int is NOT compatible with its unsigned counterpart
-    #[test]
-    fn type_compatible_signed_vs_unsigned_same_width() {
-        assert!(!type_compatible(&Type::Int8,   &Type::Byte));
-        assert!(!type_compatible(&Type::Int16,  &Type::Uint16));
-        assert!(!type_compatible(&Type::Int32,  &Type::Uint32));
-        assert!(!type_compatible(&Type::Int64,  &Type::Uint64));
-        assert!(!type_compatible(&Type::Int128, &Type::Uint128));
-    }
-
-    // get_bigger_type_of_two_floatings
-
-    #[test]
-    fn bigger_float_float64_beats_float32() {
-        assert_eq!(get_bigger_type_of_two_floatings(Type::Float64, Type::Float32), Type::Float64);
-        assert_eq!(get_bigger_type_of_two_floatings(Type::Float32, Type::Float64), Type::Float64);
-    }
-
-    // When same type, result must still be that type (no garbage returned)
-    #[test]
-    fn bigger_float_same_type_returns_that_type() {
-        assert_eq!(get_bigger_type_of_two_floatings(Type::Float32, Type::Float32), Type::Float32);
-        assert_eq!(get_bigger_type_of_two_floatings(Type::Float64, Type::Float64), Type::Float64);
-    }
-
-    #[test]
-    #[should_panic(expected = "Compiler bug")]
-    fn bigger_float_panics_on_non_float_left() {
-        get_bigger_type_of_two_floatings(Type::Int32, Type::Float32);
-    }
-
-    #[test]
-    #[should_panic(expected = "Compiler bug")]
-    fn bigger_float_panics_on_non_float_right() {
-        get_bigger_type_of_two_floatings(Type::Float32, Type::Int32);
-    }
-
-    #[test]
-    #[should_panic(expected = "Compiler bug")]
-    fn bigger_float_panics_on_both_non_float() {
-        get_bigger_type_of_two_floatings(Type::Int32, Type::Int64);
-    }
-
     // get_bigger_type_of_two_integers
 
     #[test]
@@ -568,20 +454,39 @@ mod helpers_tests {
     }
 
     #[test]
-    #[should_panic(expected = "Compiler bug")]
     fn bigger_int_panics_on_non_integer_left() {
-        get_bigger_type_of_two_integers(Type::Float32, Type::Int32);
+        for t1 in ALL_TYPES_NO_INTS_NO_ARR {
+            for t2 in ALL_INT_TYPES_NO_ARR {
+                let result = std::panic::catch_unwind(|| { 
+                    get_bigger_type_of_two_integers(t1.clone(), t2.clone());
+                });
+
+                assert!(result.is_err(), "Expected panic for: {:?} {:?}", t1, t2);
+            }
+        }
     }
 
     #[test]
-    #[should_panic(expected = "Compiler bug")]
     fn bigger_int_panics_on_non_integer_right() {
-        get_bigger_type_of_two_integers(Type::Int32, Type::Float32);
+        for t1 in ALL_TYPES_NO_INTS_NO_ARR {
+            for t2 in ALL_INT_TYPES_NO_ARR {
+                let result = std::panic::catch_unwind(|| { 
+                    get_bigger_type_of_two_integers(t2.clone(), t1.clone());
+                });
+
+                assert!(result.is_err(), "Expected panic for: {:?} {:?}", t1, t2);
+            }
+        }
     }
 
     #[test]
-    #[should_panic(expected = "Compiler bug")]
     fn bigger_int_panics_on_both_non_integer() {
-        get_bigger_type_of_two_integers(Type::Bool, Type::String);
+        for t in ALL_TYPES_NO_INTS_NO_ARR {
+            let result = std::panic::catch_unwind(|| { 
+                get_bigger_type_of_two_integers(t.clone(), t.clone());
+            });
+
+            assert!(result.is_err(), "Expected panic for: {:?}", t);
+        }
     }
 }

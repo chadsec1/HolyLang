@@ -9,7 +9,7 @@ mod parse_expr_tests {
     use super::*;
 
 
-    fn get_all_literals_as_str_no_arr() -> [&'static str; 15] {
+    fn get_all_literals_as_str_no_arr() -> [&'static str; 14] {
         let literals = [
             "1",
             "1",
@@ -25,7 +25,6 @@ mod parse_expr_tests {
 
             "1",
 
-            "1.0",
             "1.0",
             "false",
             "\"Hi\""
@@ -59,21 +58,11 @@ mod parse_expr_tests {
         }
     }
 
-    fn assert_float32(s: &str, expected: f32) {
-        match parse(s).expect(&format!("expected Ok for {:?}", s)) {
-            Expr::FloatLiteral { value: FloatLiteralValue::Float32(v), .. } => {
-                assert!((v - expected).abs() < f32::EPSILON * 10.0,
-                    "f32 mismatch for {:?}: got {}, expected {}", s, v, expected);
-            }
-            other => panic!("expected Float32 for {:?}, got {:?}", s, other),
-        }
-    }
-
     fn assert_float64(s: &str, expected: f64) {
         match parse(s).expect(&format!("expected Ok for {:?}", s)) {
-            Expr::FloatLiteral { value: FloatLiteralValue::Float64(v), .. } => {
-                assert!((v - expected).abs() < f64::EPSILON * 10.0,
-                    "f64 mismatch for {:?}: got {}, expected {}", s, v, expected);
+            Expr::Float64Literal { value, .. } => {
+                assert!((value - expected).abs() < f64::EPSILON * 10.0,
+                    "f64 mismatch for {:?}: got {}, expected {}", s, value, expected);
             }
             other => panic!("expected Float64 for {:?}, got {:?}", s, other),
         }
@@ -234,10 +223,10 @@ mod parse_expr_tests {
         // float literals negated shouldn't produce unary negate, but instead just the literal
         // its self.
         match parse("-3.14").unwrap() {
-            Expr::FloatLiteral { value, .. } => {
-                assert!(matches!(value, FloatLiteralValue::Float32(-3.14)));
+            Expr::Float64Literal { value, .. } => {
+                assert_eq!(value, -3.14);
             }
-            other => panic!("expected FloatLiteral, got {:?}", other),
+            other => panic!("expected Float64Literal, got {:?}", other),
         }
     }
 
@@ -265,24 +254,22 @@ mod parse_expr_tests {
 
     #[test]
     fn test_float_basic() {
-        assert_float32("1.0", 1.0f32);
+        assert_float64("1.0", 1.0);
     }
 
     #[test]
     fn test_float_zero() {
-        assert_float32("0.0", 0.0f32);
+        assert_float64("0.0", 0.0);
     }
 
     #[test]
-    fn test_float_pi_f32_precision() {
-        // 3.14159 fits in 7 significant digits, so it would be f32
-        assert_float32("3.14159", 3.14159f32);
+    fn test_float_pi_precision() {
+        assert_float64("3.14159", 3.14159);
     }
 
     #[test]
-    fn test_float_promotes_to_f64_when_precision_requires() {
-        // 8+ significant digits, so that's a  f64
-        assert_float64("1.123456789", 1.123456789f64);
+    fn test_float_precision() {
+        assert_float64("1.123456789", 1.123456789);
     }
 
     #[test]
@@ -292,7 +279,14 @@ mod parse_expr_tests {
 
     #[test]
     fn test_float_invalid_chars_errors() {
-        assert_parse_err("1.2e5"); // exponent notation not supported
+        let letters: Vec<char> = ('a'..='z')
+            .chain('A'..='Z')
+            .filter(|&c| c != 'e' && c != 'E')
+            .collect();
+        
+        for l in letters {
+            assert_parse_err(&format!("1.2{}5", l)); 
+        }
     }
 
     #[test]

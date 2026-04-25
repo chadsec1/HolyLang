@@ -151,7 +151,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
     if let Ok(f64_val) = s.parse::<f64>() {
         if f64_val.is_nan() {
             return Err(HolyError::Parse(format!(
-                "Floating point literal `{}` is Nan (line {} column {})",
+                "Floating point literal `{}` is NaN (line {} column {})",
                 s, span.line, span.column
             )));
         }
@@ -163,52 +163,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
             )));
         }
 
-        if s.chars().enumerate().any(|(i, c)| !c.is_ascii_digit() && c != '.' && !(c == '-' && i == 0)) {
-            return Err(HolyError::Parse(format!(
-                "Floating point literal `{}` is invalid (line {} column {})",
-                s, span.line, span.column
-            )));
-
-        }
-
-        let sig_trimmed = s.trim_start_matches('0');
-        let sig_count = sig_trimmed.len();
-
-        
-        // f32 has about 7 decimal digits of precision (log10(2^24) = 7.22).
-        // Use 1 for the dot, that makes 8 a conservative threshold.
-        // It's reasonable for us to check inprecision and just use float64 if sig_count is higher
-        // than 8.
-        //
-        if sig_count <= 8 {
-            let f32_val = f64_val as f32;
-
-            if (!f32_val.is_infinite()) && (!f32_val.is_nan()) {
-                let roundtrip = f32_val as f64;
-                let diff = (f64_val - roundtrip).abs();
-
-                // compute next representable f32 (neighbor) by bit-twiddling
-                let bits = f32_val.to_bits();
-                // increment/decrement to get the neighbor toward +
-                let next_bits = if f32_val >= 0.0 { bits.wrapping_add(1) } else { bits.wrapping_sub(1) };
-                let next_up = f32::from_bits(next_bits);
-                let ulp = (next_up as f64 - roundtrip).abs();
-
-                // fallback: if ulp is zero (shouldn't happen for normals/subnormals), use EPSILON heuristic
-                let ok = if ulp > 0.0 {
-                    diff <= (ulp / 2.0)
-                } else {
-                    diff <= (f32::EPSILON as f64) * roundtrip.abs().max(1.0)
-                };
-
-
-                if ok {
-                    return Ok(Expr::FloatLiteral { value: FloatLiteralValue::Float32(f32_val), span: span });
-                }
-            }
-        }
-
-        return Ok(Expr::FloatLiteral { value: FloatLiteralValue::Float64(f64_val), span: span });
+        return Ok(Expr::Float64Literal { value: f64_val, span: span });
 
 
     } else {
@@ -577,54 +532,3 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
 }
 
 
-
-/*
-fn parse_typed_array_literal(s: &str, span: Span) -> Result<Expr, HolyError> {
-    let s = s.trim();
-    // find the constructor '[' that starts the element list
-    let ctor_pos = helpers::find_constructor_bracket(s).ok_or_else(|| {
-        HolyError::Parse(format!("Malformed typed array literal `{}` (line {} column {})", s, span.line, span.column))
-    })?;
-
-    if !s.ends_with(']') {
-        return Err(HolyError::Parse(format!("Typed array literal missing trailing ']' (line {} column {})", span.line, span.column)));
-    }
-
-    let type_str = s[..ctor_pos].trim();
-    let elems_str = &s[ctor_pos + 1..s.len() - 1]; // between constructor '[' and final ']'
-
-    // parse the base/inner type (may be nested literal like "int32[]") we let  parse_type handle it
-    match parse_type(type_str, &span) {
-        Ok(inner_ty) => {
-            let mut elems: Vec<Expr> = Vec::new();
-            if !elems_str.trim().is_empty() {
-                let split_parts = helpers::split_char_top_level(',', elems_str)
-                                    .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
-
-                for part in split_parts {
-                    let part = part.trim();
-                    // If the part itself looks like a typed-array-literal (i.e. has a constructor bracket),
-                    // parse it recursively; otherwise use parse_expr for general expressions.
-                    if helpers::find_constructor_bracket(part).is_some() {
-                        let nested = parse_typed_array_literal(part, span)?;
-                        elems.push(nested);
-                    } else {
-                        let expr = parse_expr::parse_expr(part, span)?;
-                        elems.push(expr);
-                    }
-                }
-            }
-
-            Ok(Expr::ArrayLiteral { elements: elems, array_ty: inner_ty, span })
-                
-        }
-
-        // If its not a type constructor, we gonna assume it's an expression (like an array access)
-        Err(_) => {     
-            let expr = parse_expr::parse_expr(s, span)?;
-
-            Ok(expr)
-        }
-    }
-}
-*/

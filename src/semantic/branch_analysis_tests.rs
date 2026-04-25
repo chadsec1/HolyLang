@@ -1,7 +1,7 @@
 use super::*;
 
 use crate::parser::{
-    IntLiteralValue, FloatLiteralValue,
+    IntLiteralValue, 
     ForStmt, IfStmt, WhileStmt, InfiniteStmt, BreakStmt
 };
 
@@ -65,13 +65,9 @@ fn usize_lit(n: usize) -> Expr {
 }
 
 
-fn float32_lit(f: f32) -> Expr {
-    Expr::FloatLiteral { value: FloatLiteralValue::Float32(f), span: span() }
-}
-
 
 fn float64_lit(f: f64) -> Expr {
-    Expr::FloatLiteral { value: FloatLiteralValue::Float64(f), span: span() }
+    Expr::Float64Literal { value: f, span: span() }
 }
 
 
@@ -108,7 +104,7 @@ fn var_expr(name: &str) -> Expr {
     Expr::Var { name: name.to_string(), span: span() }
 }
 
-fn get_all_literals_no_arr() -> [Expr; 15] {
+fn get_all_literals_no_arr() -> [Expr; 14] {
     let literals = [
         int8_lit(1),
         int16_lit(1),
@@ -124,7 +120,6 @@ fn get_all_literals_no_arr() -> [Expr; 15] {
 
         usize_lit(1),
 
-        float32_lit(1.0),
         float64_lit(1.0),
 
         bool_lit(false),
@@ -135,7 +130,7 @@ fn get_all_literals_no_arr() -> [Expr; 15] {
 }
 
 
-fn get_all_literals_with_var_no_arr() -> [Expr; 16] {
+fn get_all_literals_with_var_no_arr() -> [Expr; 15] {
     let literals = [
         int8_lit(1),
         int16_lit(1),
@@ -151,7 +146,6 @@ fn get_all_literals_with_var_no_arr() -> [Expr; 16] {
 
         usize_lit(1),
 
-        float32_lit(1.0),
         float64_lit(1.0),
 
         bool_lit(false),

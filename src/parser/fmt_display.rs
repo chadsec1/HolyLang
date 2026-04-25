@@ -17,7 +17,6 @@ impl fmt::Display for Type {
             
             Type::Usize => "usize",
 
-            Type::Float32 => "float32",
             Type::Float64 => "float64",
             Type::Bool => "bool",
             Type::String => "string",
@@ -65,7 +64,7 @@ impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let name = match self {
             Expr::IntLiteral { .. } => "Int Literal",
-            Expr::FloatLiteral { .. } => "Float Literal",
+            Expr::Float64Literal { .. } => "Float64 Literal",
             Expr::BoolLiteral { .. } => "Bool Literal",
             Expr::ArrayLiteral { .. } => "Array Literal",
             Expr::StringLiteral { .. } => "String Literal",

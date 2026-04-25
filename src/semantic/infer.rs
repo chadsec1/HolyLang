@@ -1,5 +1,5 @@
 use crate::parser::{
-    IntLiteralValue, FloatLiteralValue, UnaryOpKind, BinOpKind, FixedArraySize
+    IntLiteralValue, UnaryOpKind, BinOpKind, FixedArraySize
 };
 
 use super::*;
@@ -11,7 +11,7 @@ use super::*;
 pub fn advanced_infer_2_types(
     left: &mut Expr, 
     right: &mut Expr,
-    locals: &mut HashMap<String, VarInfo>,
+    locals: &mut HashMap<String, BindingInfo>,
     fun_sigs: &HashMap<String, (Vec<Type>, Option<Vec<Type>>)>,
     infer_hint: Option<Type>
 ) -> Result<(Type, Type), HolyError> {
@@ -28,27 +28,11 @@ pub fn advanced_infer_2_types(
     } else if matches!(*right, Expr::IntLiteral {..}) && !matches!(*left, Expr::IntLiteral {..}) {
         rty = infer_expr_type(right, locals, fun_sigs, Some(lty.clone()))?;
     
-    // Float literal inferrence
-    } else if matches!(*left, Expr::FloatLiteral {..}) && !matches!(*right, Expr::FloatLiteral {..}) {
-        lty = infer_expr_type(left, locals, fun_sigs, Some(rty.clone()))?;
-
-    } else if matches!(*right, Expr::FloatLiteral {..}) && !matches!(*left, Expr::FloatLiteral {..}) {
-        rty = infer_expr_type(right, locals, fun_sigs, Some(lty.clone()))?;
-    
-
 
     } else if lty.is_integer_type() && rty.is_integer_type() {
         // If lty and rty are both integer types, we get the bigger type of them, and try force it
         // upon both lty and rty.
         let bigger_type = helpers::get_bigger_type_of_two_integers(lty.clone(), rty.clone());
-
-        rty = infer_expr_type(right, locals, fun_sigs, Some(bigger_type.clone()))?;
-        lty = infer_expr_type(left, locals, fun_sigs, Some(bigger_type.clone()))?;
-
-
-    } else if lty.is_floating_type() && rty.is_floating_type() {
-        // Same thing as above, except its for floating points.
-        let bigger_type = helpers::get_bigger_type_of_two_floatings(lty.clone(), rty.clone());
 
         rty = infer_expr_type(right, locals, fun_sigs, Some(bigger_type.clone()))?;
         lty = infer_expr_type(left, locals, fun_sigs, Some(bigger_type.clone()))?;
@@ -66,13 +50,6 @@ pub fn advanced_infer_2_types(
 
 
 
-
-
-
-
-
-
-
 /// Infer the type of an expression, and update literal nodes (and nested nodes) where possible.
 /// Returns the deduced Type for the expression.
 ///
@@ -83,7 +60,7 @@ pub fn advanced_infer_2_types(
 ///
 pub fn infer_expr_type(
     expr: &mut Expr,
-    locals: &mut HashMap<String, VarInfo>,
+    locals: &mut HashMap<String, BindingInfo>,
     fun_sigs: &HashMap<String, (Vec<Type>, Option<Vec<Type>>)>,
     infer_hint: Option<Type> // For type coercion
 ) -> Result<Type, HolyError> {
@@ -113,40 +90,16 @@ pub fn infer_expr_type(
 
                 // If the hint is an integer, we try to coerce and error if we can't. if hint is not integer, we simply return type of value
                 if infer_hint.is_integer_type() {
-                    *value = infer_integer_literal_helper(infer_hint, *value, *span)?;
+                    *value = helpers::coerce_integer_literal_to_type_helper(infer_hint, *value, *span)?;
                 }
             }
             Ok(value.get_type())
         }
-        Expr::FloatLiteral { value, span } => {
+        Expr::Float64Literal { .. } => Ok(Type::Float64),
 
-            // Float type coercion
-            if let Some(infer_hint) = infer_hint {
-                match infer_hint {
-                    Type::Float32 => {
-                        if let FloatLiteralValue::Float64(f) = value {
-                            return Err(HolyError::Semantic(format!("Float literal `{}` is of type `float64`, but we expected type `float32` (line {} column {})", f, span.line, span.column)));
-                        }
-                    }
-                    Type::Float64 => {
-                        if let FloatLiteralValue::Float32(f) = value {
-                            *value = FloatLiteralValue::Float64(f.clone() as f64);
-                        }
-                    }
-                    _ => {}
-                }
-            }
+        Expr::BoolLiteral { .. } => Ok(Type::Bool),
 
-            Ok(value.get_type())
-        }
-
-        Expr::BoolLiteral { value: _, span: _ } => {
-            Ok(Type::Bool)
-        }
-
-        Expr::StringLiteral { value: _, span: _ } => {
-            Ok(Type::String)
-        }
+        Expr::StringLiteral { .. } => Ok(Type::String),
         
         Expr::ArrayLiteral { elements, span } => {
             // Array literals e.g. [1,2,3]
@@ -159,8 +112,6 @@ pub fn infer_expr_type(
             //          panic. So be careful how you call this.
             //
             //
-
-
 
             if !elements.is_empty() {
                 let elem_ih = match infer_hint.clone() {
@@ -247,33 +198,43 @@ pub fn infer_expr_type(
         Expr::ArraySingleAccess { array, index,  span } => {
             if let Expr::Var { name, span: inner_span } = &**array {
                 if let Some(info) = locals.get(name).cloned() {
-                    if info.moved {
-                        return Err(HolyError::Semantic(format!(
-                                    "Array access on moved variable `{}` (line {} column {})", 
-                                    name, inner_span.line, inner_span.column
-                                )));
-                    }
-
-                
-                    // Ensure that the type of the index expression is usize.
-                    let ety = infer_expr_type(index, locals, fun_sigs, Some(Type::Usize))?;
-                    if ety != Type::Usize {
-                        return Err(HolyError::Semantic(format!("Expected array index to be of type `usize`, instead we got `{}` (line {} column {})", ety, span.line, span.column)));
-                    }
-
-
                     if !info.ty.is_array_type() {
-                        return Err(HolyError::Semantic(format!("Array access on non-array variable `{}` of type `{}` (line {} column {})", name, info.ty, span.line, span.column)));
+                        return Err(HolyError::Semantic(format!(
+                                    "Array access on non-array variable `{}` of type `{}` (line {} column {})",
+                                    name, info.ty, span.line, span.column)));
                     }
 
-                    // We only do the basic out-of-bounds checks if possible
-                    // This is fine, because Rust is the one handling the actual safety down hood
-                    //
-                    // TODO: Though it'd still be nice if we improve upon this 
-                    //
-                    if info.len.is_some() {
-                        check_usize_literal_to_src(&**index, info.len.unwrap(), span.clone(), locals.clone())?;
+                    match info.kind {
+                        BindingKind::Var { moved, len, .. } => {
+                            if moved {
+                                return Err(HolyError::Semantic(format!(
+                                            "Array access on moved variable `{}` (line {} column {})", 
+                                            name, inner_span.line, inner_span.column
+                                        )));
+                            }
+
+                        
+                            // Ensure that the type of the index expression is usize.
+                            let ety = infer_expr_type(index, locals, fun_sigs, Some(Type::Usize))?;
+                            if ety != Type::Usize {
+                                return Err(HolyError::Semantic(format!(
+                                            "Expected array index to be of type `usize`, instead we got `{}` (line {} column {})", 
+                                            ety, span.line, span.column)));
+                            }
+
+                            
+                            // We only do the basic out-of-bounds checks if possible
+                            // This is fine, because Rust is the one handling the actual safety down hood
+                            //
+                            // TODO: Though it'd still be nice if we improve upon this 
+                            //
+                            if len.is_some() {
+                                check_usize_literal_to_src(&**index, len.unwrap(), span.clone(), locals.clone())?;
+                            }
+                        },
+                        BindingKind::Const { .. } => panic!("Array single access on const still not implemented")
                     }
+
 
                     // Because we are accessing (or shall I say copying) a single element of an array
                     // we only care about the inner type, not the outer array type.
@@ -302,77 +263,81 @@ pub fn infer_expr_type(
 
         Expr::ArrayMultipleAccess { array, start, end,  span } => {
             if let Expr::Var { name, span: inner_span } = &**array {
+                if start.is_none() && end.is_none() {
+                    panic!("(Compiler bug) We expected the parser to not allow such invalid syntax of no start and no end indexes in array multiple access");
+                }
+
                 if let Some(info) = locals.get(name).cloned() {
-                    if info.moved {
-                        return Err(HolyError::Semantic(format!(
-                                    "Array access on moved variable `{}` (line {} column {})", 
-                                    name, inner_span.line, inner_span.column
-                                )));
-                    }
-
-
-                    if start.is_none() && end.is_none() {
-                        panic!("(Compiler bug) We expected the parser to not allow such invalid syntax of no start and no end indexes in array multiple access");
-                    }
-
                     if !info.ty.is_array_type() {
                         return Err(HolyError::Semantic(format!("Array access on non-array variable `{}` (line {} column {})", name, span.line, span.column)));
                     }
-
-
-                    // We only do the basic out-of-bounds checks if possible
-                    // This is fine, because Rust is the one handling the actual safety down hood
-                    //
-                    // TODO: Though it'd still be nice if we improve upon this 
-                    //
-                    if info.len.is_some() {
-                        if let Some(s) = &mut *start {
-                            // Ensure that the type of the start index expression is usize, and try to
-                            // convert it if possible.
-                            let start_ety = infer_expr_type(s, locals, fun_sigs, Some(Type::Usize))?;
-                            if !helpers::type_compatible(&start_ety, &Type::Usize) {
+                    match info.kind {
+                        BindingKind::Var { moved, len, .. } => {
+                            if moved {
                                 return Err(HolyError::Semantic(format!(
-                                            "Expected start index to be of type `usize` for array `{}`, instead we got `{}` (line {} column {})", 
-                                            start_ety, name, span.line, span.column
-                                        )));
-                            }
-
-                            check_usize_literal_to_src(&s, info.len.unwrap(), span.clone(), locals.clone())?;
-                        }
-     
-                        if let Some(e) = &mut *end {
-                            // Same as above, for end index.
-                            let end_ety = infer_expr_type(e, locals, fun_sigs, Some(Type::Usize))?;
-                            if !helpers::type_compatible(&end_ety, &Type::Usize) {
-                                return Err(HolyError::Semantic(format!(
-                                            "Expected end index to be of type `usize` for array `{}`, instead we got `{}` (line {} column {})", 
-                                            end_ety, name, span.line, span.column
+                                            "Array access on moved variable `{}` (line {} column {})", 
+                                            name, inner_span.line, inner_span.column
                                         )));
                             }
 
 
-                            check_usize_literal_to_src(&e, info.len.unwrap(), span.clone(), locals.clone())?;
-                        }
-                    }
+                            
+                            // We only do the basic out-of-bounds checks if possible
+                            // This is fine, because Rust is the one handling the actual safety down hood
+                            //
+                            // TODO: Though it'd still be nice if we improve upon this 
+                            //
+                            if len.is_some() {
+                                if let Some(s) = &mut *start {
+                                    // Ensure that the type of the start index expression is usize, and try to
+                                    // convert it if possible.
+                                    let start_ety = infer_expr_type(s, locals, fun_sigs, Some(Type::Usize))?;
+                                    if start_ety != Type::Usize { 
+                                        return Err(HolyError::Semantic(format!(
+                                                    "Expected start index to be of type `usize` for array `{}`, instead we got `{}` (line {} column {})", 
+                                                    start_ety, name, span.line, span.column
+                                                )));
+                                    }
+
+                                    check_usize_literal_to_src(&s, len.unwrap(), span.clone(), locals.clone())?;
+                                }
+             
+                                if let Some(e) = &mut *end {
+                                    // Same as above, for end index.
+                                    let end_ety = infer_expr_type(e, locals, fun_sigs, Some(Type::Usize))?;
+                                    if end_ety != Type::Usize { 
+                                        return Err(HolyError::Semantic(format!(
+                                                    "Expected end index to be of type `usize` for array `{}`, instead we got `{}` (line {} column {})", 
+                                                    end_ety, name, span.line, span.column
+                                                )));
+                                    }
 
 
-                    // If both start and end are present, ensure that start is not larger than end,
-                    // and end not smaller than start.
-                    // This is **basic** out-of-bounds safety check against int literals.
-                    // The real out-of-bounds safety guarantees is inserted in the binary machine code that'd panic if index is
-                    // larger than array, thanks to rust.
-                    if start.is_some() && end.is_some() {
-                        if let Expr::IntLiteral { value: IntLiteralValue::Usize(start_num), .. } = start.as_deref().unwrap() {
-
-                            if let Expr::IntLiteral { value: IntLiteralValue::Usize(end_num), .. } = end.as_deref().unwrap() {
-                                if start_num > end_num {
-                                    return Err(HolyError::Semantic(format!(
-                                        "Start index `{}` cannot be larger than end index `{}` (line {} column {})", 
-                                        start_num, end_num, span.line, span.column
-                                    )));
+                                    check_usize_literal_to_src(&e, len.unwrap(), span.clone(), locals.clone())?;
                                 }
                             }
-                        }
+
+
+                            // If both start and end are present, ensure that start is not larger than end,
+                            // and end not smaller than start.
+                            // This is **basic** out-of-bounds safety check against int literals.
+                            // The real out-of-bounds safety guarantees is inserted in the binary machine code that'd panic if index is
+                            // larger than array, thanks to rust.
+                            if start.is_some() && end.is_some() {
+                                if let Expr::IntLiteral { value: IntLiteralValue::Usize(start_num), .. } = start.as_deref().unwrap() {
+
+                                    if let Expr::IntLiteral { value: IntLiteralValue::Usize(end_num), .. } = end.as_deref().unwrap() {
+                                        if start_num > end_num {
+                                            return Err(HolyError::Semantic(format!(
+                                                "Start index `{}` cannot be larger than end index `{}` (line {} column {})", 
+                                                start_num, end_num, span.line, span.column
+                                            )));
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        BindingKind::Const { .. } => panic!("Array multiple access on const still not implemented")
                     }
 
 
@@ -401,20 +366,27 @@ pub fn infer_expr_type(
         }
         Expr::Var{name, span} => {
             if let Some(info) = locals.get(name) {
-                if info.moved {
-                    return Err(HolyError::Semantic(format!(
-                                "Use of moved variable `{}` (line {} column {})", 
-                                name, span.line, span.column
-                            )));
+                match info.kind {
+                    BindingKind::Var { moved, .. } => {
+                        if moved {
+                            return Err(HolyError::Semantic(format!(
+                                        "Use of moved variable `{}` (line {} column {})", 
+                                        name, span.line, span.column
+                                    )));
+                        }
+                    },
+                    // Ownership rules don't apply to constants.
+                    BindingKind::Const { .. } => {}
                 }
 
                 // TODO: Maybe also recursively check value type ?
                 // not sure.
                 //
+
                 
                 Ok(info.ty.clone())
             } else {
-                Err(HolyError::Semantic(format!("Use of undeclared variable `{}` (line {} column {})", name, span.line, span.column)))
+                Err(HolyError::Semantic(format!("Use of undeclared binding `{}` (line {} column {})", name, span.line, span.column)))
             }
         }
 
@@ -424,7 +396,7 @@ pub fn infer_expr_type(
             
             // Ensure that negate unary operations is only allowed on floating points, and signed integers.
             if *op == UnaryOpKind::Negate {
-                if !matches!(expr_ty, Type::Int8 | Type::Int16 | Type::Int32 | Type::Int64 | Type::Int128 | Type::Float32 | Type::Float64) {
+                if !matches!(expr_ty, Type::Int8 | Type::Int16 | Type::Int32 | Type::Int64 | Type::Int128 | Type::Float64) {
                     return Err(HolyError::Semantic(format!("type `{}` cannot have negate unary operation. (line {} column {})", expr_ty, span.line, span.column)))
                 }
             }
@@ -547,7 +519,7 @@ pub fn infer_expr_type(
                     return Err(HolyError::Semantic(format!("Double copying is not needed. Remove the extra copy call. (line {} column {})", inner_span.line, inner_span.column)))
                 }
                 Expr::IntLiteral{span: inner_span, ..} | 
-                Expr::FloatLiteral{span: inner_span, ..} | 
+                Expr::Float64Literal{span: inner_span, ..} | 
                 Expr::BoolLiteral{span: inner_span, ..} | 
                 Expr::StringLiteral{span: inner_span, ..} | 
                 Expr::ArrayLiteral{span: inner_span, ..} => {
@@ -585,7 +557,7 @@ pub fn infer_expr_type(
                     Expr::CopyCall {span: inner_span, ..} => {
                         return Err(HolyError::Semantic(format!("Format calls copy by default, Remove the extra copy call. (line {} column {})", inner_span.line, inner_span.column)))
                     }
-                    Expr::IntLiteral{span: inner_span, ..} | Expr::FloatLiteral{span: inner_span, ..} | Expr::BoolLiteral{span: inner_span, ..} | Expr::StringLiteral{span: inner_span, ..} | Expr::ArrayLiteral{span: inner_span, ..}   => {
+                    Expr::IntLiteral{span: inner_span, ..} | Expr::Float64Literal{span: inner_span, ..} | Expr::BoolLiteral{span: inner_span, ..} | Expr::StringLiteral{span: inner_span, ..} | Expr::ArrayLiteral{span: inner_span, ..}   => {
                         return Err(HolyError::Semantic(format!(
                                     "Plain literals are not allowed in formating! Remove the format placeholders and use the literal directly! (line {} column {})", 
                                     inner_span.line, inner_span.column
@@ -644,7 +616,7 @@ pub fn infer_expr_type(
 
 
 // helper: check an expression that's allowed to be an IntLiteral::Usize
-pub fn check_usize_literal_to_src(expr: &Expr, len: usize, span: Span, locals: HashMap<String, VarInfo>) -> Result<(), HolyError> {
+pub fn check_usize_literal_to_src(expr: &Expr, len: usize, span: Span, locals: HashMap<String, BindingInfo>) -> Result<(), HolyError> {
     match expr {
         Expr::IntLiteral { value, .. } => match value {
             IntLiteralValue::Usize(n) => {
@@ -674,14 +646,19 @@ pub fn check_usize_literal_to_src(expr: &Expr, len: usize, span: Span, locals: H
                                       
         Expr::Var {name, ..} => {
             if let Some(inner_info) = locals.get(name).cloned() {
-                if inner_info.value.is_none() {
-                    // This could happen if the most upstream source is a function call. We just
-                    // return Ok.
-                    return Ok(());
-                }
-                check_usize_literal_to_src(&inner_info.value.unwrap(), len, span, locals)?;
+                match inner_info.kind {
+                    BindingKind::Var { value, .. } => {
+                        if value.is_none() {
+                            // This could happen if the most upstream source is a function call. We just
+                            // return Ok.
+                            return Ok(());
+                        }
+                        check_usize_literal_to_src(&value.unwrap(), len, span, locals)?;
 
-                Ok(())
+                        Ok(())
+                    },
+                    BindingKind::Const { .. } => panic!("Still unimplemented for consts")
+                }
             } else {
                 panic!("(Compiler bug) We could not find variable `{}` in in `locals`. This should've been caught by other semantic checks, but that didnt happen..", name);
             }
@@ -702,44 +679,471 @@ pub fn check_usize_literal_to_src(expr: &Expr, len: usize, span: Span, locals: H
 }
 
 
-pub fn infer_integer_literal_helper(expected_ty: Type, value: IntLiteralValue, span: Span) -> Result<IntLiteralValue, HolyError> {
-    if !value.get_type().is_integer_type() {
-        panic!("(Compiler bug) Value `{}` of type `{}` is not an integer type", value, value.get_type());
+
+
+/// Evaluate a constant expression and fold it into a literal
+///
+pub fn eval_const_expr_and_fold_it(
+    expr: &Expr, 
+    storage: &HashMap<String, BindingInfo>
+) -> Result<Expr, HolyError> {
+    let expr_span = helpers::expr_span(expr);
+
+    match expr {
+        Expr::IntLiteral{..} |
+        Expr::Float64Literal{..} |
+        Expr::BoolLiteral{..} => Ok(expr.clone()),
+        
+        Expr::BinOp{ left, right, op, ..} => {
+            let left_lit_expr = eval_const_expr_and_fold_it(left, storage)?;
+            let right_lit_expr = eval_const_expr_and_fold_it(right, storage)?;
+
+            match left_lit_expr {
+                Expr::BoolLiteral { value: left_value, span, ..} => {
+                    let right_value: bool = match right_lit_expr {
+                        Expr::BoolLiteral { value: right_value, .. } => right_value,
+                        _ => panic!(
+                            "(Compiler bug) eval_const_expr_and_fold, infer_expr_type should've been called and verified both left and right binary operations are same type, but apparently not.\nLeft: {:?}\nRight: {:?}",
+                            left, right)
+                    };
+
+
+                    match op {
+                        BinOpKind::And => {
+                            let result: bool = left_value && right_value;
+
+                            return Ok(Expr::BoolLiteral { value: result, span });
+                        },
+
+                        BinOpKind::Or => {
+                            let result: bool = left_value || right_value;
+
+                            return Ok(Expr::BoolLiteral { value: result, span });
+                        },
+                        BinOpKind::Equal => {
+                            let result: bool = left_value == right_value;
+
+                            return Ok(Expr::BoolLiteral { value: result, span });
+                        },
+
+                        BinOpKind::NotEqual => {
+                            let result: bool = left_value != right_value;
+
+                            return Ok(Expr::BoolLiteral { value: result, span });
+                        },
+
+                        _ => todo!()
+                    }
+
+                },
+
+                Expr::Float64Literal { value: left_value, span, ..} => {
+                    let right_value = match right_lit_expr {
+                        Expr::Float64Literal { value: right_value, .. } => right_value,
+                        _ => panic!(
+                            "(Compiler bug) eval_const_expr_and_fold, infer_expr_type should've been called and verified both left and right binary operations are same type, but apparently not.\nLeft: {:?}\nRight: {:?}",
+                            left, right)
+                    };
+
+                    let result: f64;
+
+                    match op {
+                        BinOpKind::Add => {
+                            result = left_value + right_value; 
+                        },
+
+                        BinOpKind::Subtract => {
+                            result = left_value - right_value; 
+                        },
+
+                        BinOpKind::Multiply => {
+                            result = left_value * right_value; 
+                        },
+
+                        BinOpKind::Divide => {
+                            result = left_value / right_value; 
+                        },
+
+
+                        BinOpKind::Equal => {
+                            let result: bool = left_value == right_value;
+
+                            return Ok(Expr::BoolLiteral { value: result, span });
+                        },
+
+                        BinOpKind::NotEqual => {
+                            let result: bool = left_value != right_value;
+
+                            return Ok(Expr::BoolLiteral { value: result, span });
+                        },
+
+                        BinOpKind::Greater => {
+                            let result: bool = left_value > right_value;
+
+                            return Ok(Expr::BoolLiteral { value: result, span });
+                        },
+
+                        BinOpKind::GreaterEqual => {
+                            let result: bool = left_value >= right_value;
+
+                            return Ok(Expr::BoolLiteral { value: result, span });
+                        },
+
+
+                        BinOpKind::Less => {
+                            let result: bool = left_value < right_value;
+
+                            return Ok(Expr::BoolLiteral { value: result, span });
+                        },
+
+                        BinOpKind::LessEqual => {
+                            let result: bool = left_value <= right_value;
+
+                            return Ok(Expr::BoolLiteral { value: result, span });
+                        },
+
+
+                        other => panic!(
+                            "(Compiler bug) infer_expr_type should've caught illegal BinOpKind on float.\nLeft: {:?}\nRight: {:?}\nBinOpKind: {:?}", 
+                                    left, right, other)
+                    }
+
+                    if !result.is_finite() {
+                        return Err(HolyError::Semantic(format!(
+                            "Constant floating arithemtic result would cause floating point to produce non-finite result like `infinite` or `NaN`. Left: `{}`, Right: `{}`. (line {} column {})",
+                            left_value, right_value, span.line, span.column
+                        )));
+                    }
+
+
+                    return Ok(Expr::Float64Literal { value: result, span})
+                },
+
+                Expr::IntLiteral { value: left_value, span, ..} => {
+                    let right_value: IntLiteralValue = match right_lit_expr {
+                        Expr::IntLiteral { value: right_value, .. } => {
+                            if left_value.get_type() != right_value.get_type() {
+                                panic!(
+                                    "(Compiler bug) eval_const_expr_and_fold, infer_expr_type should've been called and verified both left and right binary operations are same type exact integer literal type, but apparently not.\nLeft: {:?}\nRight: {:?}",
+                                    left, right)
+
+                            }
+                            right_value
+                        },
+                        _ => panic!(
+                            "(Compiler bug) eval_const_expr_and_fold, infer_expr_type should've been called and verified both left and right binary operations are same type, but apparently not.\nLeft: {:?}\nRight: {:?}",
+                            left, right)
+                    };
+
+                    if left_value.is_signed() {
+                        let left_val = left_value.as_i128();
+                        let right_val = right_value.as_i128();
+
+                        let result: i128;
+                        match op {
+                            BinOpKind::Add => {
+                                result = left_val.checked_add(right_val).ok_or_else(|| {
+                                    HolyError::Semantic(format!(
+                                        "Constant arithemtic addition result would cause an integer overflow. Left: `{}`, Right: `{}`. (line {} column {})",
+                                        left_val, right_val, span.line, span.column
+                                    ))
+                                })?;
+                            },
+
+                            BinOpKind::Subtract => {
+                                result = left_val.checked_sub(right_val).ok_or_else(|| {
+                                    HolyError::Semantic(format!(
+                                        "Constant arithemtic subtraction result would cause an integer overflow. Left: `{}`, Right: `{}`. (line {} column {})",
+                                        left_val, right_val, span.line, span.column
+                                    ))
+                                })?;
+                            },
+
+                            BinOpKind::Multiply => {
+                                result = left_val.checked_mul(right_val).ok_or_else(|| {
+                                    HolyError::Semantic(format!(
+                                        "Constant arithemtic multiplication result would cause an integer overflow. Left: `{}`, Right: `{}`. (line {} column {})",
+                                        left_val, right_val, span.line, span.column
+                                    ))
+                                })?;
+                            },
+
+                            BinOpKind::Divide => {
+                                result = left_val.checked_div(right_val).ok_or_else(|| {
+                                    HolyError::Semantic(format!(
+                                        "Constant arithemtic division result would cause an integer overflow. Left: `{}`, Right: `{}`. (line {} column {})",
+                                        left_val, right_val, span.line, span.column
+                                    ))
+                                })?;
+                            },
+
+                            BinOpKind::BitwiseShiftLeft => {
+                                let bit_width: u32 = left_value.bit_width();
+
+                                if right_val < 0 {
+                                    return Err(HolyError::Semantic(format!(
+                                        "Constant bitwise shift to the left's right-side value cannot be negative. Left: `{}`, Right: `{}`. (line {} column {})",
+                                        left_val, right_val, span.line, span.column
+                                    )));
+                                }
+
+                                if right_val >= (bit_width as i128) {
+                                    return Err(HolyError::Semantic(format!(
+                                        "Constant bitwise shift to the left's right-side value cannot exceed `{}`. Left: `{}`, Right: `{}`. (line {} column {})",
+                                        bit_width - 1, left_val, right_val, span.line, span.column
+                                    )));
+                                }
+
+                                // This is not raw bitwise shift left, it is actually checked, because we validated right_val 
+                                result = left_val << right_val;
+
+
+                                // We do conversion here instead of letting it fall down to the
+                                // "try into" block, because bit loss in bitwise shifting is
+                                // expected.
+                                return Ok(truncate_to_int_type(result, left_value.get_type(), span))
+                            },
+                            BinOpKind::BitwiseShiftRight => {
+                                let bit_width: u32 = left_value.bit_width();
+
+                                if right_val < 0 {
+                                    return Err(HolyError::Semantic(format!(
+                                        "Constant bitwise shift to the right's right-side value cannot be negative. Left: `{}`, Right: `{}`. (line {} column {})",
+                                        left_val, right_val, span.line, span.column
+                                    )));
+                                }
+
+                                if right_val >= (bit_width as i128) {
+                                    return Err(HolyError::Semantic(format!(
+                                        "Constant bitwise shift to the right's right-side value cannot exceed `{}`. Left: `{}`, Right: `{}`. (line {} column {})",
+                                        bit_width - 1, left_val, right_val, span.line, span.column
+                                    )));
+                                }
+
+                                // This is not raw bitwise shift right, it is actually checked, because we validated right_val 
+                                result = left_val >> right_val;
+
+                                // We do conversion here instead of letting it fall down to the
+                                // "try into" block, because bit loss in bitwise shifting is
+                                // expected.
+                                return Ok(truncate_to_int_type(result, left_value.get_type(), span))
+                            },
+                            BinOpKind::BitwiseAnd => {
+                                result = left_val & right_val
+                            },
+
+                            BinOpKind::BitwiseOr => {
+                                result = left_val | right_val
+                            },
+
+                            BinOpKind::Equal => {
+                                let result: bool = left_val == right_val;
+
+                                return Ok(Expr::BoolLiteral { value: result, span });
+                            },
+
+                            BinOpKind::NotEqual => {
+                                let result: bool = left_val != right_val;
+
+                                return Ok(Expr::BoolLiteral { value: result, span });
+                            },
+
+                            BinOpKind::Greater => {
+                                let result: bool = left_val > right_val;
+
+                                return Ok(Expr::BoolLiteral { value: result, span });
+                            },
+
+                            BinOpKind::GreaterEqual => {
+                                let result: bool = left_val >= right_val;
+
+                                return Ok(Expr::BoolLiteral { value: result, span });
+                            },
+
+
+                            BinOpKind::Less => {
+                                let result: bool = left_val < right_val;
+
+                                return Ok(Expr::BoolLiteral { value: result, span });
+                            },
+
+                            BinOpKind::LessEqual => {
+                                let result: bool = left_val <= right_val;
+
+                                return Ok(Expr::BoolLiteral { value: result, span });
+                            },
+
+
+                            other => panic!(
+                                "(Compiler bug) infer_expr_type should've caught illegal BinOpKind on integer.\nLeft: {:?}\nRight: {:?}\nBinOpKind: {:?}", 
+                                        left, right, other)
+                        }
+
+                       
+                        // Here we operate on left_value type, but it doesn't matter because
+                        // left_value type == right_value type, as proven by earlier panic guard
+                        // statements.
+                        //
+                        let folded_result = helpers::coerce_integer_literal_to_type_helper(left_value.get_type(), IntLiteralValue::Int128(result), span)?;
+                        return Ok(Expr::IntLiteral { value: folded_result, span });
+                    } else {
+                        let left_val = left_value.as_u128();
+                        let right_val = right_value.as_u128();
+
+                        let result: u128;
+                        match op {
+                            BinOpKind::Add => {
+                                result = left_val.checked_add(right_val).ok_or_else(|| {
+                                    HolyError::Semantic(format!(
+                                        "Constant arithemtic addition result would cause an integer overflow. Left: `{}`, Right: `{}`. (line {} column {})",
+                                        left_val, right_val, span.line, span.column
+                                    ))
+                                })?;
+                            },
+
+                            BinOpKind::Subtract => {
+                                result = left_val.checked_sub(right_val).ok_or_else(|| {
+                                    HolyError::Semantic(format!(
+                                        "Constant arithemtic subtraction result would cause an integer overflow. Left: `{}`, Right: `{}`. (line {} column {})",
+                                        left_val, right_val, span.line, span.column
+                                    ))
+                                })?;
+                            },
+
+                            BinOpKind::Multiply => {
+                                result = left_val.checked_mul(right_val).ok_or_else(|| {
+                                    HolyError::Semantic(format!(
+                                        "Constant arithemtic multiplication result would cause an integer overflow. Left: `{}`, Right: `{}`. (line {} column {})",
+                                        left_val, right_val, span.line, span.column
+                                    ))
+                                })?;
+                            },
+
+                            BinOpKind::Divide => {
+                                result = left_val.checked_div(right_val).ok_or_else(|| {
+                                    HolyError::Semantic(format!(
+                                        "Constant arithemtic division result would cause an integer overflow. Left: `{}`, Right: `{}`. (line {} column {})",
+                                        left_val, right_val, span.line, span.column
+                                    ))
+                                })?;
+                            },
+
+                            BinOpKind::BitwiseShiftLeft => {
+                                let bit_width: u32 = left_value.bit_width();
+
+                                if right_val >= (bit_width as u128) {
+                                    return Err(HolyError::Semantic(format!(
+                                        "Constant bitwise shift to the left's right-side value cannot exceed `{}`. Left: `{}`, Right: `{}`. (line {} column {})",
+                                        bit_width - 1, left_val, right_val, span.line, span.column
+                                    )));
+                                }
+
+                                // This is not raw bitwise shift left, it is actually checked, because we validated right_val 
+                                result = left_val << right_val;
+
+
+                                // We do conversion here instead of letting it fall down to the
+                                // "try into" block, because bit loss in bitwise shifting is
+                                // expected.
+                                return Ok(truncate_to_uint_type(result, left_value.get_type(), span))
+                            },
+                            BinOpKind::BitwiseShiftRight => {
+                                let bit_width: u32 = left_value.bit_width();
+
+                                if right_val >= (bit_width as u128) {
+                                    return Err(HolyError::Semantic(format!(
+                                        "Constant bitwise shift to the right's right-side value cannot exceed `{}`. Left: `{}`, Right: `{}`. (line {} column {})",
+                                        bit_width - 1, left_val, right_val, span.line, span.column
+                                    )));
+                                }
+
+                                // This is not raw bitwise shift right, it is actually checked, because we validated right_val 
+                                result = left_val >> right_val;
+
+                                // We do conversion here instead of letting it fall down to the
+                                // "try into" block, because bit loss in bitwise shifting is
+                                // expected.
+                                return Ok(truncate_to_uint_type(result, left_value.get_type(), span))
+                            },
+                            BinOpKind::BitwiseAnd => {
+                                result = left_val & right_val
+                            },
+                            BinOpKind::BitwiseOr => {
+                                result = left_val | right_val
+                            },
+
+                            _ => todo!()
+                        }
+
+
+                        // Here we operate on left_value type, but it doesn't matter because
+                        // left_value type == right_value type, as proven by earlier panic guard
+                        // statements.
+                        // 
+                        let folded_result = helpers::coerce_integer_literal_to_type_helper(left_value.get_type(), IntLiteralValue::Uint128(result), span)?;
+                        return Ok(Expr::IntLiteral { value: folded_result, span });
+                    }
+                }
+                
+                _ => todo!()
+            }
+        },
+
+
+        /*
+        Expr::Var { name, .. } => {
+            if let Some(info) = scope.get(name).cloned() {
+                match info.kind {
+                    BindingKind::Var { .. } => Err(HolyError::Semantic(format!(
+                                        "You cannot use variable `{}` in a constant value expression. You can only use literals and or other constants (line {} column {})", 
+                                        name, expr_span.line, expr_span.column
+                                    ))),
+                    BindingKind::Const { value, .. } => eval_const_expr_and_fold_it(value, storage)?;
+                }            
+            } else {
+                panic!("(Compiler bug) Binding doesnt exist in scope, which is impossible because infer_expr_type shouldve been called and validated its existence.\nBinding name: {:?}\nscope: {:#?}", name, scope);
+            }
+        }
+        */
+
+        _ => Err(HolyError::Semantic(format!(
+                        "{} expression cannot be evaluated at compile-time, therefore it cannot be assigned to a constant. (line {} column {})",
+                        expr, expr_span.line, expr_span.column
+                    )))
     }
 
-    let range_err = || HolyError::Semantic(format!(
-        "Integer literal `{}` out of range for type `{}` (line {} column {})",
-        value, expected_ty, span.line, span.column
-    ));
+}
 
-    // Normalize up front. One or both may be None if the value can't be represented that way.
-    let (as_signed, as_unsigned) = if value.is_signed() {
-        let s = value.as_i128();
-        let u = if s >= 0 { Some(s as u128) } else { None };
-        (Some(s), u)
-    } else {
-        let u = value.as_u128();
-        let s = if u <= i128::MAX as u128 { Some(u as i128) } else { None };
-        (s, Some(u))
-    };
 
-    let fits_signed   = |min: i128, max: i128| as_signed.filter(|&v| v >= min && v <= max).ok_or_else(range_err);
-    let fits_unsigned = |max: u128|            as_unsigned.filter(|&v| v <= max).ok_or_else(range_err);
+/// Takes a `target` which is an uint128, and a type to try to coerce it to.
+/// The reason this function exists is purely only for bitwise shift operations
+fn truncate_to_uint_type(target: u128, ty: Type, span: Span) -> Expr {
+    match ty {
+        Type::Byte => Expr::IntLiteral { value: IntLiteralValue::Byte(target as u8), span},
+        Type::Uint16 => Expr::IntLiteral { value: IntLiteralValue::Uint16(target as u16), span},
+        Type::Uint32 => Expr::IntLiteral { value: IntLiteralValue::Uint32(target as u32), span},
+        Type::Uint64 => Expr::IntLiteral { value: IntLiteralValue::Uint64(target as u64), span},
+        Type::Uint128 => Expr::IntLiteral { value: IntLiteralValue::Uint128(target as u128), span },
+        Type::Usize => Expr::IntLiteral { value: IntLiteralValue::Usize(target as usize), span },
 
-    match expected_ty {
-        Type::Int8   => Ok(IntLiteralValue::Int8  (fits_signed(i8::MIN   as i128, i8::MAX   as i128)? as i8)),
-        Type::Int16  => Ok(IntLiteralValue::Int16 (fits_signed(i16::MIN  as i128, i16::MAX  as i128)? as i16)),
-        Type::Int32  => Ok(IntLiteralValue::Int32 (fits_signed(i32::MIN  as i128, i32::MAX  as i128)? as i32)),
-        Type::Int64  => Ok(IntLiteralValue::Int64 (fits_signed(i64::MIN  as i128, i64::MAX  as i128)? as i64)),
-        Type::Int128 => Ok(IntLiteralValue::Int128(fits_signed(i128::MIN,         i128::MAX)?)),
-
-        Type::Byte   => Ok(IntLiteralValue::Byte  (fits_unsigned(u8::MAX   as u128)? as u8)),
-        Type::Uint16 => Ok(IntLiteralValue::Uint16(fits_unsigned(u16::MAX  as u128)? as u16)),
-        Type::Uint32 => Ok(IntLiteralValue::Uint32(fits_unsigned(u32::MAX  as u128)? as u32)),
-        Type::Uint64 => Ok(IntLiteralValue::Uint64(fits_unsigned(u64::MAX  as u128)? as u64)),
-        Type::Uint128 => Ok(IntLiteralValue::Uint128(fits_unsigned(u128::MAX)?)),
-        Type::Usize  => Ok(IntLiteralValue::Usize (fits_unsigned(usize::MAX as u128)? as usize)),
-
-        other => panic!("(Compiler bug) Unexpected type in infer_integer_literal_helper: {:?}", other),
+        other => panic!("(Compiler bug) Expected target to be of an unsigned integer type, instead got `{:?}`. Target: {:?}", other, target)
     }
 }
+
+
+/// Takes a `target` which is an int128, and a type to try to coerce it to.
+/// The reason this function exists is purely only for bitwise shift operations
+fn truncate_to_int_type(target: i128, ty: Type, span: Span) -> Expr {
+    match ty {
+        Type::Int8 => Expr::IntLiteral { value: IntLiteralValue::Int8(target as i8), span},
+        Type::Int16 => Expr::IntLiteral { value: IntLiteralValue::Int16(target as i16), span},
+        Type::Int32 => Expr::IntLiteral { value: IntLiteralValue::Int32(target as i32), span},
+        Type::Int64 => Expr::IntLiteral { value: IntLiteralValue::Int64(target as i64), span},
+        Type::Int128 => Expr::IntLiteral { value: IntLiteralValue::Int128(target as i128), span },
+
+        other => panic!("(Compiler bug) Expected target to be of an signed integer type, instead got `{:?}`. Target: {:?}", other, target)
+    }
+}
+
+
+
