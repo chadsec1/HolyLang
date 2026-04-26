@@ -22,6 +22,15 @@ pub fn eval_const_expr_and_fold_it(
     }
 
 
+    if expr_ty.is_array_type() && (!expr_ty.is_fully_fixed_array_type()) {
+        return Err(HolyError::Semantic(format!(
+            "Dynamic arrays cannot be evaluated at compile time, therefore you cannot assign them to constant `{}` of type `{}` (line {} column {})",
+            &cons.name, expr_ty, cons.span.line, cons.span.column
+        )));
+
+
+    }
+
     // Validate the constant value expression to ensure it is known at compile-time, and
     // evaluate it, and then fold it.
     cons.value = eval_const_expr_and_fold_it_hazmat(&cons.value.clone(), &storage.clone())?;
