@@ -133,7 +133,7 @@ pub fn infer_expr_type(
                         if fixed_inner != arr_inner {
                                return Err(HolyError::Semantic(format!(
                                     "Array literal is of `{}` type, but we expected `{}` type (line {} column {})",
-                                    arr_inner, fixed_inner, span.line, span.column
+                                    array_ty, t, span.line, span.column
                                 )))
                         }
 

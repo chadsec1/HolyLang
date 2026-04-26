@@ -76,7 +76,24 @@ impl Type {
     }
 
 
-    // TODO: Add tests to cover this
+    // TODO: Add tests to cover these functions below and above this comment.
+    //
+    pub fn is_fully_fixed_array_type(&self) -> bool {
+        if !matches!(self, Type::Array(_) | Type::FixedArray(_, _)) {
+            panic!("(Compiler bug) Do not call is_fully_fixed_array_type unless you are sure Type is an array. Self: {:?}", self);
+        }
+
+        let mut current = self;
+        loop {
+            match current {
+                Type::Array(_) => return false,
+                Type::FixedArray(inner, _) => current = inner,
+                _ => return true,
+            }
+        }
+    }
+
+
     pub fn get_array_inner_most_type(&self) -> &Type {
         if !matches!(self, Type::Array(_) | Type::FixedArray(_, _)) {
             panic!("(Compiler bug) Do not call get_array_inner_most_type unless you are sure Type is an array. Self: {:?}", self);
