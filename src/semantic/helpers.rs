@@ -1,8 +1,9 @@
-use crate::parser::{
+use super::*;
+
+use crate::ast::{
     IntLiteralValue
 };
 
-use super::*;
 
 // When variable is declared like
 // own x int32

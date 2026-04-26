@@ -1,5 +1,5 @@
-use super::*;
-
+use super::{HolyError, helpers, IntErrorKind};
+use crate::ast::*;
 
 /// Expression parser:
 /// - handles binary operations (left-associative),
@@ -16,9 +16,9 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
 
     if s.is_empty() {
         return Err(HolyError::Parse(format!(
-                    "Empty expression at line {}, column {}",
-                    span.line, span.column
-            )));
+                "Empty expression at line {}, column {}",
+                span.line, span.column
+        )));
     }
 
     
@@ -135,12 +135,11 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
     } else if let Err(e) = s.parse::<u128>() {
         if matches!(e.kind(), IntErrorKind::PosOverflow) {
             // Return error only if we sure expression is not meant as a float
-            if !s.contains('.') {
+            if let Err(_) = s.parse::<f64>() {
                 return Err(HolyError::Parse(format!(
                     "Literal is an integer but is too big to fit even as an uint128, consider using a float literal (line {} column {})",
                     span.line, span.column
                 )));
-                
             }
         }
     }
