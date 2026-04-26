@@ -2,6 +2,7 @@ pub mod parser;
 pub mod semantic;
 pub mod error;
 pub mod consts;
+pub mod ast;
 #[cfg(test)]
 mod tests_consts;
 

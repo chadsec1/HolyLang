@@ -1,4 +1,5 @@
 use super::*;
+use std::fmt;
 
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

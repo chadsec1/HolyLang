@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::error::HolyError;
-use crate::parser::{
+use crate::ast::{
     AST, Expr, Function, Stmt, Type, Span
 };
 
@@ -16,6 +16,7 @@ mod blackbox_tests;
 mod branch_analysis_tests;
 
 mod branch_analysis;
+mod constants;
 mod infer;
 mod helpers;
  
@@ -178,19 +179,11 @@ fn check_global_stmt(
             }
 
 
-            // Validate, and get the type of the value expression.
-            let expr_ty = infer::infer_expr_type(&mut cons.value, storage, fun_sigs, Some(cons.type_name.clone()))?;
-            if expr_ty != cons.type_name {
-                return Err(HolyError::Semantic(format!(
-                    "Type mismatch assigning to `{}`: got `{}`, expected `{}` (line {} column {})",
-                    &cons.name, expr_ty, cons.type_name, cons.span.line, cons.span.column
-                )));
-            }
-
-
-            // Validate the constant value expression to ensure it is known at compile-time, and
-            // evaluate it, and then fold it.
-            cons.value = infer::eval_const_expr_and_fold_it(&cons.value, &storage)?;
+            // Validate the constant type against the expression, AND internally coerce literals if
+            // possible (i.e. int8 -> int32, etc), AND validate the constant value expression 
+            // to ensure it is known at compile-time, AND evaluate it, and then fold it.
+            //
+            constants::eval_const_expr_and_fold_it(cons, storage, fun_sigs)?;
 
             // register the constant in storage (could be locals, or globals. we don't care.) 
             storage.insert(
