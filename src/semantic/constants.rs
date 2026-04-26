@@ -22,6 +22,7 @@ pub fn eval_const_expr_and_fold_it(
     }
 
 
+    // Dynamic arrays cannot be evaluated at compile-time.
     if expr_ty.is_array_type() && (!expr_ty.is_fully_fixed_array_type()) {
         return Err(HolyError::Semantic(format!(
             "Dynamic arrays cannot be evaluated at compile time, therefore you cannot assign them to constant `{}` of type `{}` (line {} column {})",
@@ -56,6 +57,40 @@ fn eval_const_expr_and_fold_it_hazmat(
         Expr::ArrayLiteral{..} |
         Expr::BoolLiteral{..} => Ok(expr.clone()),
         
+        Expr::ArraySingleAccess { array, index,  span } => {
+            let array_evaled = eval_const_expr_and_fold_it_hazmat(array, storage)?;
+            let index_evaled = eval_const_expr_and_fold_it_hazmat(index, storage)?;
+
+            let index_usize: usize = match index_evaled {
+                Expr::IntLiteral { value, .. } => {
+                    match value {
+                        IntLiteralValue::Usize(v) => v,
+                        other => panic!("(Compiler bug) Expected IntLiteralValue::Usize, but found `{:?}` instead. Infer_expr_type shouldve caught this. Expr: {:#?}", other, expr)
+                    }
+                },
+                other => panic!("(Compiler bug) Expected IntLiteral, but found `{:?}` instead. Infer_expr_type shouldve caught this. Expr: {:#?}", other, expr)
+            };
+
+        
+            // Out of bounds check.
+            match array_evaled {
+                Expr::ArrayLiteral { elements, .. } => {
+                    if index_usize >= elements.len() {
+                        return Err(HolyError::Semantic(format!(
+                                        "Constant out-of-bounds access on array of `{}` size, found `{}`  (line {} column {})",
+                                        elements.len(), index_usize, span.line, span.column
+                                    )));
+
+
+                    }
+            
+                    Ok(elements[index_usize].clone())
+                },
+                other => panic!("(Compiler bug) Expected ArrayLiteral, but found `{:?}` instead. Infer_expr_type shouldve caught this. Expr: {:#?}", other, expr)
+            }
+
+        },
+
         Expr::UnaryOp{ op, expr, ..} => {
             let expr_evaled = eval_const_expr_and_fold_it_hazmat(expr, storage)?;
 

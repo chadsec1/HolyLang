@@ -204,6 +204,15 @@ pub fn infer_expr_type(
                                     name, info.ty, span.line, span.column)));
                     }
 
+                    // Ensure that the type of the index expression is usize.
+                    let ety = infer_expr_type(index, locals, fun_sigs, Some(Type::Usize))?;
+                    if ety != Type::Usize {
+                        return Err(HolyError::Semantic(format!(
+                                    "Expected array index to be of type `usize`, instead we got `{}` (line {} column {})", 
+                                    ety, span.line, span.column)));
+                    }
+
+
                     match info.kind {
                         BindingKind::Var { moved, len, .. } => {
                             if moved {
@@ -213,16 +222,7 @@ pub fn infer_expr_type(
                                         )));
                             }
 
-                        
-                            // Ensure that the type of the index expression is usize.
-                            let ety = infer_expr_type(index, locals, fun_sigs, Some(Type::Usize))?;
-                            if ety != Type::Usize {
-                                return Err(HolyError::Semantic(format!(
-                                            "Expected array index to be of type `usize`, instead we got `{}` (line {} column {})", 
-                                            ety, span.line, span.column)));
-                            }
-
-                            
+                                                        
                             // We only do the basic out-of-bounds checks if possible
                             // This is fine, because Rust is the one handling the actual safety down hood
                             //
@@ -232,7 +232,9 @@ pub fn infer_expr_type(
                                 check_usize_literal_to_src(&**index, len.unwrap(), span.clone(), locals.clone())?;
                             }
                         },
-                        BindingKind::Const { .. } => panic!("Array single access on const still not implemented")
+                        // Ownership rules dont apply to constants, so its fine to skip.
+                        // Also, in evaluation, it will catch out of bounds access.
+                        BindingKind::Const { .. } => {}
                     }
 
 
