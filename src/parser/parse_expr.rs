@@ -1,4 +1,5 @@
-use super::{HolyError, helpers, IntErrorKind};
+use super::{HolyError, helpers};
+// use std::num::IntErrorKind;
 use crate::ast::*;
 
 /// Expression parser:
@@ -88,61 +89,63 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
 
     // integer literal (int8) ?
     if let Ok(i) = s.parse::<i8>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Int8(i), span: span });
+        return Ok(Expr::IntLiteral { value: IntLiteralValue::Int8(i), span });
     }
 
     // integer literal (int16) ?
     if let Ok(i) = s.parse::<i16>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Int16(i), span: span });
+        return Ok(Expr::IntLiteral { value: IntLiteralValue::Int16(i), span });
     }
 
     // integer literal (int32) ?
     if let Ok(i) = s.parse::<i32>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Int32(i), span: span });
+        return Ok(Expr::IntLiteral { value: IntLiteralValue::Int32(i), span });
     }
 
     // integer literal (int64) ?
     if let Ok(i) = s.parse::<i64>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Int64(i), span: span });
+        return Ok(Expr::IntLiteral { value: IntLiteralValue::Int64(i), span });
     }
 
     // integer literal (int128) ?
     if let Ok(i) = s.parse::<i128>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Int128(i), span: span });
+        return Ok(Expr::IntLiteral { value: IntLiteralValue::Int128(i), span });
     }
 
 
     // integer literal (byte, aka uint8) ?
     if let Ok(i) = s.parse::<u8>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Byte(i), span: span });
+        return Ok(Expr::IntLiteral { value: IntLiteralValue::Byte(i),  span });
     }
 
     if let Ok(i) = s.parse::<u16>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Uint16(i), span: span });
+        return Ok(Expr::IntLiteral { value: IntLiteralValue::Uint16(i), span });
     }
 
     if let Ok(i) = s.parse::<u32>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Uint32(i), span: span });
+        return Ok(Expr::IntLiteral { value: IntLiteralValue::Uint32(i), span });
     }
 
     if let Ok(i) = s.parse::<u64>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Uint64(i), span: span });
+        return Ok(Expr::IntLiteral { value: IntLiteralValue::Uint64(i), span });
     }
 
     if let Ok(i) = s.parse::<u128>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Uint128(i), span: span });
+        return Ok(Expr::IntLiteral { value: IntLiteralValue::Uint128(i), span });
 
-    } else if let Err(e) = s.parse::<u128>() {
+    } 
+
+    /*else if let Err(e) = s.parse::<u128>() {
         if matches!(e.kind(), IntErrorKind::PosOverflow) {
             // Return error only if we sure expression is not meant as a float
-            if let Err(_) = s.parse::<f64>() {
+            if let Ok(_) = s.parse::<f64>() {
                 return Err(HolyError::Parse(format!(
                     "Literal is an integer but is too big to fit even as an uint128, consider using a float literal (line {} column {})",
                     span.line, span.column
                 )));
             }
         }
-    }
+    }*/
 
     
 
