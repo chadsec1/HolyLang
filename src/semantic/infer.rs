@@ -233,7 +233,7 @@ pub fn infer_expr_type(
                             }
                         },
                         // Ownership rules dont apply to constants, so its fine to skip.
-                        // Also, in evaluation, it will catch out of bounds access.
+                        // Also, in constant evaluation, it will catch out of bounds access.
                         BindingKind::Const { .. } => {}
                     }
 
@@ -269,10 +269,31 @@ pub fn infer_expr_type(
                     panic!("(Compiler bug) We expected the parser to not allow such invalid syntax of no start and no end indexes in array multiple access");
                 }
 
+                // If both start and end are present, ensure that start is not larger than end,
+                // and end not smaller than start.
+                // This is **basic** out-of-bounds safety check against int literals.
+                // The real out-of-bounds safety guarantees is inserted in the binary machine code that'd panic if index is
+                // larger than array, thanks to rust.
+                if start.is_some() && end.is_some() {
+                    if let Expr::IntLiteral { value: IntLiteralValue::Usize(start_num), .. } = start.as_deref().unwrap() {
+
+                        if let Expr::IntLiteral { value: IntLiteralValue::Usize(end_num), .. } = end.as_deref().unwrap() {
+                            if start_num > end_num {
+                                return Err(HolyError::Semantic(format!(
+                                    "Start index `{}` cannot be larger than end index `{}` (line {} column {})", 
+                                    start_num, end_num, span.line, span.column
+                                )));
+                            }
+                        }
+                    }
+                }
+
+
                 if let Some(info) = locals.get(name).cloned() {
                     if !info.ty.is_array_type() {
                         return Err(HolyError::Semantic(format!("Array access on non-array variable `{}` (line {} column {})", name, span.line, span.column)));
                     }
+
                     match info.kind {
                         BindingKind::Var { moved, len, .. } => {
                             if moved {
@@ -282,8 +303,6 @@ pub fn infer_expr_type(
                                         )));
                             }
 
-
-                            
                             // We only do the basic out-of-bounds checks if possible
                             // This is fine, because Rust is the one handling the actual safety down hood
                             //
@@ -318,33 +337,14 @@ pub fn infer_expr_type(
                                     check_usize_literal_to_src(&e, len.unwrap(), span.clone(), locals.clone())?;
                                 }
                             }
-
-
-                            // If both start and end are present, ensure that start is not larger than end,
-                            // and end not smaller than start.
-                            // This is **basic** out-of-bounds safety check against int literals.
-                            // The real out-of-bounds safety guarantees is inserted in the binary machine code that'd panic if index is
-                            // larger than array, thanks to rust.
-                            if start.is_some() && end.is_some() {
-                                if let Expr::IntLiteral { value: IntLiteralValue::Usize(start_num), .. } = start.as_deref().unwrap() {
-
-                                    if let Expr::IntLiteral { value: IntLiteralValue::Usize(end_num), .. } = end.as_deref().unwrap() {
-                                        if start_num > end_num {
-                                            return Err(HolyError::Semantic(format!(
-                                                "Start index `{}` cannot be larger than end index `{}` (line {} column {})", 
-                                                start_num, end_num, span.line, span.column
-                                            )));
-                                        }
-                                    }
-                                }
-                            }
                         },
-                        BindingKind::Const { .. } => panic!("Array multiple access on const still not implemented")
+
+                        // Ownership rules dont apply to constants, so its fine to skip.
+                        BindingKind::Const { .. } => {}
                     }
 
-
                     if let Type::Array(_) = info.ty.clone() {
-                        // We are fine returning Type wrapping in Aray, because thats what the
+                        // We are fine returning Type wrapping in Array, because thats what the
                         // caller should expect anyway. x[s:e] always returns an array.
                         Ok(info.ty.clone())
 
@@ -358,7 +358,9 @@ pub fn infer_expr_type(
                     }  else {
                         panic!("(Compiler bug) Expected array type, instead we got: {:?}", info.ty);
                     }
-                } else {
+
+
+                 } else {
                     Err(HolyError::Semantic(format!("Array access on undeclared variable `{}` (line {} column {})", name, span.line, span.column)))
                 }
             } else {
