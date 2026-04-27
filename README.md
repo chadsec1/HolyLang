@@ -20,7 +20,19 @@ It still lacks: structs, enums, unsafe blocks, and actual binary generation phas
 ```
 # This is a comment
 
+
+# And this is a global constant
+const hi int32 = 123
+
+# A constant can have expressions in it, as long as it consists of literals and or other constants
+const hey int32 = hi + 1 # That would be 124
+
+
 func main() {
+    # You can also declare constants within a scope
+    # Like, this constant scope makes it only available within `main` function
+    const idk int32 = hi * hey
+
     # `own` is the variable declaration keyword
     # Declaration syntax is:
     # own VAR_NAME VAR_TYPE = EXPRESSION
@@ -119,10 +131,18 @@ func main() {
         one = 2
     }
 
+    if (one >= two) and (two <= one) {
+        two = 6
+    } elif (two > one) or (one < two) {
+        one = 6
+    } else {
+        one = two * 2
+    }
+
 
     # While loops
-    while two > one {
-        if one == 3 {
+    while true {
+        if one >= 100 {
             break
         } else {
             one = one + 1
@@ -152,8 +172,7 @@ func main() {
     # Infinite loops
     own num int32
     infinite {
-
-        # When you use variables in expressions, they are copied automatically, you dont need copy().
+        # When you use variables in binary expressions, they are copied automatically, you dont need copy().
         num = add(num + 1, num + 2)
 
 
