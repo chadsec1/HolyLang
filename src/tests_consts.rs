@@ -1,4 +1,4 @@
-use crate::parser::{
+use crate::ast::{
     BinOpKind, Type
 };
 
