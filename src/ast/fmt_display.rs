@@ -1,4 +1,4 @@
-use super::*;
+use super::{ Type, Expr, FixedArraySize, IntLiteralValue };
 use std::fmt;
 
 impl fmt::Display for Type {
