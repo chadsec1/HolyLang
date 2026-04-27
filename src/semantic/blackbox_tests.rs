@@ -1,5 +1,5 @@
 use super::*;
-use crate::parser::{
+use crate::ast::{
     FixedArraySize, IntLiteralValue,
     UnaryOpKind,
     Param, Variable, VariableAssignment, MultiAssignment, 
@@ -27,8 +27,6 @@ use crate::tests_consts::{
 
 
 // helper functions
-
-
 
 
 fn get_all_literals_no_arr_bool() -> [Expr; 13] {
@@ -6414,7 +6412,7 @@ mod blackbox_tests {
                     };
                     let body = vec![
                         var_decl("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), Some(arr_lit.clone())),
-                        var_decl("x", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), Some(access)),
+                        var_decl("x", Type::Array(Box::new(t.clone())), Some(access)),
                     ];
                     let func = void_func("foo", vec![], body);
                     let mut ast = ast_one(func);
@@ -6450,7 +6448,7 @@ mod blackbox_tests {
                         var_decl("e", Type::Usize, Some(usize_lit(1))),
                         var_decl("h", Type::Usize, Some(usize_lit(i2+1))),
                         var_decl("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), Some(arr_lit.clone())),
-                        var_decl("x", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), Some(access)),
+                        var_decl("x", Type::Array(Box::new(t.clone())), Some(access)),
                     ];
                     let func = void_func("foo", vec![], body);
                     let mut ast = ast_one(func);

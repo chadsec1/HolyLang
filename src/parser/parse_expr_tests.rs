@@ -195,8 +195,8 @@ mod parse_expr_tests {
     }
 
     #[test]
-    fn test_int_overflow_u128_errors() {
-        assert_parse_err("340282366920938463463374607431768211456");
+    fn test_float64_overflow_errors() {
+        assert_parse_err("1.7976931348623157e+309");
     }
 
     #[test]

@@ -1898,17 +1898,18 @@ mod tests {
         }
     }
 
+    
+
+    // Float literals
+
     #[test]
-    fn integer_overflow_u128_errors() {
-        // A number larger than u128::MAX should produce a parse error
-        let huge = "340282366920938463463374607431768211456"; // u128::MAX + 1
-                                                              //
+    fn infinite_float64_overflow_errors() {
+        // A number larger than f64::MAX should produce a parse error
+        let huge = "1.7976931348623157e+309"; // this is higher than f64::MAX 
         for t in ALL_TYPES_NO_ARR {
             assert_parse_err(&wrap(&format!("own x {} = {}", t, huge)));
         }
     }
-
-    // Float literals
 
     #[test]
     fn float_literal_f32() {
