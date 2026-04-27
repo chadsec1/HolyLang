@@ -198,7 +198,7 @@ pub fn return_branch_analysis(
     is_loop: bool,
     forbid_break: bool
 ) -> Result<(), HolyError> {
-    let ret_ty = func.return_type.as_ref().expect("(Compiler bug) Dont call return_branch_analysis on functions that dont have declared return type(s)!");
+    let ret_ty = func.return_type.as_ref().unwrap_or_else(|| panic!("(Compiler bug) Dont call return_branch_analysis on functions that dont have declared return type(s)!"));
 
     if func.body.len() == 0 {
         panic!("(Compiler bug) do not call return_branch_analysis on functions with empty bodies! Always check body size");
