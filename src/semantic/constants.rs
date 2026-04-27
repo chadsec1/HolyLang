@@ -93,7 +93,6 @@ fn eval_const_expr_and_fold_it_hazmat(
             }
 
         },
-
         Expr::UnaryOp{ op, expr, ..} => {
             let expr_evaled = eval_const_expr_and_fold_it_hazmat(expr, storage)?;
 
