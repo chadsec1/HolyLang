@@ -292,7 +292,7 @@ fn check_stmts(
 
                 // Check if source value is a variable and if its locked or moved, and moves it
                 if let Some(Expr::Var { name: src_name, span }) = &var.value {
-                    let src = locals.get_mut(src_name).expect(&format!(
+                    let src = locals.get_mut(src_name).unwrap_or_else(|| panic!(
                             "(Compiler bug) infer_expr_type should've already errored if source variable didnt exist, but it didnt. var: {:?}", 
                             var
                         ));
@@ -462,9 +462,10 @@ fn check_stmts(
                 let mut value_len: Option<usize> = None;
               
                 if let Expr::Var { name: src_name, span } = &assign.value {
-                    let src = locals.get_mut(src_name).expect(
-                        &format!("(Compiler bug) infer_expr_type should've already errored if source variable didnt exist, but it didnt. assign: {:?}", assign)
-                        );
+                    let src = locals.get_mut(src_name).unwrap_or_else(|| panic!(
+                                "(Compiler bug) infer_expr_type should've already errored if source variable didnt exist, but it didnt. assign: {:?}", 
+                                assign
+                            ));
 
                     match &mut src.kind {
                         BindingKind::Var { moved: src_moved, len: src_len, .. } => {
@@ -1004,6 +1005,7 @@ fn update_local_assignments_from_clone(upstream: &mut HashMap<String, BindingInf
     // We loop over the downstream locals, to update our 
     // corresponding upstream locals
     // like variable assignments, length change, ownership change, etc
+    //
     for (n, vi) in downstream {
         if let Some(info) = upstream.get_mut(&n) {
             match info.kind {
@@ -1015,7 +1017,7 @@ fn update_local_assignments_from_clone(upstream: &mut HashMap<String, BindingInf
                     }
                     *info = vi.clone();
                 },
-                BindingKind::Const { .. } => panic!("(Compiler bug) Impossible condition, downstream assigned to constants and check_stmts, didnt catch it ??")
+                BindingKind::Const { .. } => continue
             }
         }
 
@@ -1066,9 +1068,10 @@ fn check_call(
 
         // If this arg is a variable, mark it moved (same semantics as before)
         if let Expr::Var { name: vname, span: _ } = arg_expr {
-            let v = locals.get_mut(vname).expect(
-                &format!("(Compiler bug) infer_expr_type should've already errored if source argument variable didnt exist, but it didnt. arg_expr: {:?}", arg_expr)
-            );
+            let v = locals.get_mut(vname).unwrap_or_else(|| panic!(
+                    "(Compiler bug) infer_expr_type should've already errored if source argument variable didnt exist, but it didnt. arg_expr: {:?}", 
+                    arg_expr
+                ));
 
             match &mut v.kind {
                 BindingKind::Var { moved, ..} => {
