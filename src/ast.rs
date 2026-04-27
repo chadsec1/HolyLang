@@ -93,6 +93,34 @@ impl Type {
         }
     }
 
+    /// Converts a fixed_array into dynamic array, and walks recursively into fixed_array type and
+    /// does the same.
+    /// 
+    pub fn fixed_array_to_dynamic_array_type_full(&self) -> Type {
+        if !matches!(self, Type::Array(_) | Type::FixedArray(_, _)) {
+            panic!("(Compiler bug) Do not call fixed_array_to_dynamic_array_type_full unless you are sure Type is an array. Self: {:?}", self);
+        }
+
+        fn fixed_array_to_dynamic_array_type_full_hazmat(t: &Type) -> Type {
+            match t {
+                Type::FixedArray(inner, _) => {
+                    let new_inner = Box::new(fixed_array_to_dynamic_array_type_full_hazmat(inner));
+                    return Type::Array(new_inner)
+                },
+                Type::Array(inner) => {
+                    let new_inner = Box::new(fixed_array_to_dynamic_array_type_full_hazmat(inner));
+                    return Type::Array(new_inner)
+                }
+                _ => t.clone(),
+            }
+        }
+
+        return fixed_array_to_dynamic_array_type_full_hazmat(self);
+    }
+
+
+    
+
 
     pub fn get_array_inner_most_type(&self) -> &Type {
         if !matches!(self, Type::Array(_) | Type::FixedArray(_, _)) {
