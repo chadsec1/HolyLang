@@ -65,7 +65,10 @@ fn eval_const_expr_and_fold_it_hazmat(
                 Expr::IntLiteral { value, .. } => {
                     match value {
                         IntLiteralValue::Usize(v) => v,
-                        other => panic!("(Compiler bug) Expected IntLiteralValue::Usize, but found `{:?}` instead. Infer_expr_type shouldve caught this. Expr: {:#?}", other, expr)
+                        other => panic!(
+                                "(Compiler bug) Expected IntLiteralValue::Usize, but found `{:?}` instead. Infer_expr_type shouldve caught this. Expr: {:#?}", 
+                                other, expr
+                            )
                     }
                 },
                 other => panic!("(Compiler bug) Expected IntLiteral, but found `{:?}` instead. Infer_expr_type shouldve caught this. Expr: {:#?}", other, expr)
@@ -77,7 +80,7 @@ fn eval_const_expr_and_fold_it_hazmat(
                 Expr::ArrayLiteral { elements, .. } => {
                     if index_usize >= elements.len() {
                         return Err(HolyError::Semantic(format!(
-                                        "Constant out-of-bounds access on array of `{}` size, found `{}`  (line {} column {})",
+                                        "Constant out-of-bounds access on array of `{}` size, found `{}`. (line {} column {})",
                                         elements.len(), index_usize, span.line, span.column
                                     )));
 

@@ -348,10 +348,12 @@ pub fn infer_expr_type(
                         // caller should expect anyway. x[s:e] always returns an array.
                         Ok(info.ty.clone())
 
-                    // NOTE: Perhaps I should return a dynamic area when you slice a fixed array...
-                    // idk 
                     } else if let Type::FixedArray(_, _) = &info.ty {
-                        Ok(info.ty.clone())
+                        // Recursively converts fixed array and its inner type to dynamic arrays 
+                        // if they're fixed arrays. 
+                        //
+                        let new_ty = info.ty.fixed_array_to_dynamic_array_type_full();
+                        Ok(new_ty)
 
                     }  else {
                         panic!("(Compiler bug) Expected array type, instead we got: {:?}", info.ty);
