@@ -21,7 +21,10 @@ It still lacks: structs, enums, unsafe blocks, and actual binary generation phas
 # This is a comment
 
 
-# And this is a global constant
+# `const` is the constant declaration keyword
+# Constant declaration syntax is:
+# const CONST_NAME CONST_TYPE = EXPRESSION
+#
 const hi int32 = 123
 
 # A constant can have expressions in it, as long as it consists of literals and or other constants
