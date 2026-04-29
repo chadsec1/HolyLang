@@ -112,41 +112,12 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
     }
 
 
-    // integer literal (byte, aka uint8) ?
-    if let Ok(i) = s.parse::<u8>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Byte(i),  span });
-    }
-
-    if let Ok(i) = s.parse::<u16>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Uint16(i), span });
-    }
-
-    if let Ok(i) = s.parse::<u32>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Uint32(i), span });
-    }
-
-    if let Ok(i) = s.parse::<u64>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Uint64(i), span });
-    }
-
+    // We only check for u128 here, because anything less should've been caught 
+    // by the earlier checks
+    //
     if let Ok(i) = s.parse::<u128>() {
         return Ok(Expr::IntLiteral { value: IntLiteralValue::Uint128(i), span });
-
     } 
-
-    /*else if let Err(e) = s.parse::<u128>() {
-        if matches!(e.kind(), IntErrorKind::PosOverflow) {
-            // Return error only if we sure expression is not meant as a float
-            if let Ok(_) = s.parse::<f64>() {
-                return Err(HolyError::Parse(format!(
-                    "Literal is an integer but is too big to fit even as an uint128, consider using a float literal (line {} column {})",
-                    span.line, span.column
-                )));
-            }
-        }
-    }*/
-
-    
 
     // float literal?
     if let Ok(f64_val) = s.parse::<f64>() {
@@ -379,7 +350,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
                 if indx_parts.len() == 1 {
                     let index = parse_expr(indx_parts[0], span)?;
                     
-                    let value = Expr::ArraySingleAccess { array: Box::new(arr_expr), index: Box::new(index), span };
+                    let value = Expr::ArrayAccess { array: Box::new(arr_expr), index: Box::new(index), span };
 
                     return Ok(value);
 
@@ -420,7 +391,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
 
                     
                     return Ok(
-                        Expr::ArrayMultipleAccess { 
+                        Expr::ArraySlicing { 
                             array: Box::new(arr_expr), 
                             start: start_expr,
                             end: end_expr,
@@ -430,9 +401,6 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
             }
         }
     }
-
-
-
 
 
     // Function call: name(arg1, arg2)
@@ -519,10 +487,6 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
             }
         }
     }
-
-
-
-
 
     // otherwise a variable name
 

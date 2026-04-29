@@ -57,7 +57,7 @@ fn eval_const_expr_and_fold_it_hazmat(
         Expr::ArrayLiteral{..} |
         Expr::BoolLiteral{..} => Ok(expr.clone()),
         
-        Expr::ArraySingleAccess { array, index,  span } => {
+        Expr::ArrayAccess { array, index,  span } => {
             let array_evaled = eval_const_expr_and_fold_it_hazmat(array, storage)?;
             let index_evaled = eval_const_expr_and_fold_it_hazmat(index, storage)?;
 
