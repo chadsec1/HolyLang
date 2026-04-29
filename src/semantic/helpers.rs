@@ -189,8 +189,8 @@ pub fn expr_span(e: &Expr) -> Span {
         Expr::ArrayLiteral { span, .. } => *span,
         Expr::StringLiteral { span, .. } => *span,
 
-        Expr::ArraySingleAccess { span, .. } => *span,
-        Expr::ArrayMultipleAccess { span, .. } => *span,
+        Expr::ArrayAccess { span, .. } => *span,
+        Expr::ArraySlicing { span, .. } => *span,
         Expr::Var { span, .. } => *span,
         Expr::BinOp { span, .. } => *span,
         Expr::UnaryOp { span, .. } => *span,

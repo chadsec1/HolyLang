@@ -45,12 +45,12 @@ pub enum Expr {
         args: Vec<Expr>,
         span: Span,
     },
-    ArraySingleAccess {
+    ArrayAccess {
         array: Box<Expr>,
         index: Box<Expr>,
         span: Span,
     },
-    ArrayMultipleAccess {
+    ArraySlicing {
         array: Box<Expr>,
         start: Option<Box<Expr>>,
         end: Option<Box<Expr>>,

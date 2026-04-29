@@ -195,7 +195,7 @@ pub fn infer_expr_type(
 
         }
 
-        Expr::ArraySingleAccess { array, index,  span } => {
+        Expr::ArrayAccess { array, index,  span } => {
             if let Expr::Var { name, span: inner_span } = &**array {
                 if let Some(info) = locals.get(name).cloned() {
                     if !info.ty.is_array_type() {
@@ -263,7 +263,7 @@ pub fn infer_expr_type(
 
         }
 
-        Expr::ArrayMultipleAccess { array, start, end,  span } => {
+        Expr::ArraySlicing { array, start, end,  span } => {
             if let Expr::Var { name, span: inner_span } = &**array {
                 if start.is_none() && end.is_none() {
                     panic!("(Compiler bug) We expected the parser to not allow such invalid syntax of no start and no end indexes in array multiple access");
@@ -531,7 +531,7 @@ pub fn infer_expr_type(
                 Expr::ArrayLiteral{span: inner_span, ..} => {
                     return Err(HolyError::Semantic(format!("Copying a literal is not needed. Remove the copy call and use the literal directly. (line {} column {})", inner_span.line, inner_span.column)))
                 }
-                Expr::ArraySingleAccess{span: inner_span, ..} | Expr::ArrayMultipleAccess{span: inner_span, ..} => {
+                Expr::ArrayAccess{span: inner_span, ..} | Expr::ArraySlicing{span: inner_span, ..} => {
                     return Err(HolyError::Semantic(format!(
                         "Copying is not needed for array access, when you access or slice an array or a string, a new copy is made. Remove the copy call and use operation directly. (line {} column {})", 
                         inner_span.line, inner_span.column)))

@@ -10,6 +10,9 @@ pub use stmts::*;
 pub use exprs::*;
 pub use int_literal_value::*;
 
+#[cfg(test)]
+mod fmt_display_tests;
+
 
 /// The main parent Abstract Syntax Tree node.
 /// 

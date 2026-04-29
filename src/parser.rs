@@ -808,7 +808,7 @@ fn parse_type(s: &str, span: &Span) -> Result<Type, HolyError> {
         // Collect all suffixes left-to-right: e.g. "[1][]" becomes [Fixed(1), Dynamic]
         let suffixes = parse_array_suffixes(suffix_str, span)?;
 
-        // Apply them in REVERSE so the rightmost suffix wraps the base first (innermost),
+        // Apply them in reverse so the rightmost suffix wraps the base first (innermost),
         // and the leftmost suffix becomes the outermost type.
         //
         // int32[1][]  suffixes=[Fixed(1), Dynamic]
