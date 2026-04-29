@@ -5496,7 +5496,7 @@ mod blackbox_tests {
                 };
 
                 for i2 in 0..i+1 {
-                    let access = Expr::ArraySingleAccess {
+                    let access = Expr::ArrayAccess {
                         array: Box::new(var_expr("x")),
                         index: Box::new(usize_lit(i2)),
                         span: span(),
@@ -5538,7 +5538,7 @@ mod blackbox_tests {
                 };
 
                 for i2 in 0..i+1 {
-                    let access = Expr::ArraySingleAccess {
+                    let access = Expr::ArrayAccess {
                         array: Box::new(var_expr("x")),
                         index: Box::new(usize_lit(i2)),
                         span: span(),
@@ -5588,7 +5588,7 @@ mod blackbox_tests {
                 };
 
                 for i2 in 0..i+1 {
-                    let access = Expr::ArraySingleAccess {
+                    let access = Expr::ArrayAccess {
                         array: Box::new(var_expr("x")),
                         index: Box::new(usize_lit(i2)),
                         span: span(),
@@ -5631,7 +5631,7 @@ mod blackbox_tests {
                 };
 
                 for i2 in 0..i+1 {
-                    let access = Expr::ArraySingleAccess {
+                    let access = Expr::ArrayAccess {
                         array: Box::new(var_expr("x")),
                         index: Box::new(usize_lit(i2)),
                         span: span(),
@@ -5681,7 +5681,7 @@ mod blackbox_tests {
                     elements: vec![l.clone(), l.clone(), l.clone()],
                     span: span(),
                 };
-                let access = Expr::ArraySingleAccess {
+                let access = Expr::ArrayAccess {
                     array: Box::new(var_expr("arr")),
                     index: Box::new(usize_lit(i)),
                     span: span(),
@@ -5716,7 +5716,7 @@ mod blackbox_tests {
                     elements: vec![l.clone(), l.clone(), l.clone()],
                     span: span(),
                 };
-                let access = Expr::ArraySingleAccess {
+                let access = Expr::ArrayAccess {
                     array: Box::new(var_expr("arr")),
                     index: Box::new(usize_lit(i)),
                     span: span(),
@@ -5747,7 +5747,7 @@ mod blackbox_tests {
                 elements: vec![l.clone(), l.clone(), l.clone()],
                 span: span(),
             };
-            let access = Expr::ArraySingleAccess {
+            let access = Expr::ArrayAccess {
                 array: Box::new(var_expr("arr")),
                 index: Box::new(var_expr("e")),
                 span: span(),
@@ -5774,7 +5774,7 @@ mod blackbox_tests {
                 elements: vec![l.clone(), l.clone(), l.clone()],
                 span: span(),
             };
-            let access = Expr::ArraySingleAccess {
+            let access = Expr::ArrayAccess {
                 array: Box::new(var_expr("arr")),
                 index: Box::new(var_expr("e")),
                 span: span(),
@@ -5812,7 +5812,7 @@ mod blackbox_tests {
                     span: span(),
                 };
 
-                let access = Expr::ArrayMultipleAccess {
+                let access = Expr::ArraySlicing {
                     array: Box::new(var_expr("arr")),
                     start: Some(Box::new(usize_lit(0))),
                     end: Some(Box::new(usize_lit(i))),
@@ -5847,7 +5847,7 @@ mod blackbox_tests {
                     span: span(),
                 };
 
-                let access = Expr::ArrayMultipleAccess {
+                let access = Expr::ArraySlicing {
                     array: Box::new(var_expr("arr")),
                     start: Some(Box::new(usize_lit(0))),
                     end: Some(Box::new(usize_lit(i))),
@@ -5882,7 +5882,7 @@ mod blackbox_tests {
                 };
 
                 for i2 in 0..i+1 {
-                    let access = Expr::ArraySingleAccess {
+                    let access = Expr::ArrayAccess {
                         array: Box::new(var_expr("arr")),
                         index: Box::new(usize_lit(i2)),
                         span: span(),
@@ -5914,7 +5914,7 @@ mod blackbox_tests {
                 };
 
                 for i2 in 0..i+1 {
-                    let access = Expr::ArraySingleAccess {
+                    let access = Expr::ArrayAccess {
                         array: Box::new(var_expr("arr")),
                         index: Box::new(usize_lit(i2)),
                         span: span(),
@@ -5954,7 +5954,7 @@ mod blackbox_tests {
                 for i2 in 0..i+1 {
                 
                     let copy_var = Expr::CopyCall { expr: Box::new(var_expr("e")), span: span() };
-                    let access = Expr::ArraySingleAccess {
+                    let access = Expr::ArrayAccess {
                         array: Box::new(var_expr("arr")),
                         index: Box::new(copy_var),
                         span: span(),
@@ -5995,7 +5995,7 @@ mod blackbox_tests {
                 for i2 in 0..i+1 {
                 
                     let copy_var = Expr::CopyCall { expr: Box::new(var_expr("e")), span: span() };
-                    let access = Expr::ArraySingleAccess {
+                    let access = Expr::ArrayAccess {
                         array: Box::new(var_expr("arr")),
                         index: Box::new(copy_var),
                         span: span(),
@@ -6028,7 +6028,7 @@ mod blackbox_tests {
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             for i in 0..=1000 {
-                let access = Expr::ArraySingleAccess {
+                let access = Expr::ArrayAccess {
                     array: Box::new(l.clone()),
                     index: Box::new(usize_lit(i)),
                     span: span(),
@@ -6054,7 +6054,7 @@ mod blackbox_tests {
     fn test_array_access_on_undeclared_var_errors() {
         for t in ALL_TYPES_NO_ARR {
             for i in 0..=1000 {
-                let access = Expr::ArraySingleAccess {
+                let access = Expr::ArrayAccess {
                     array: Box::new(var_expr("e")),
                     index: Box::new(usize_lit(i)),
                     span: span(),
@@ -6078,7 +6078,7 @@ mod blackbox_tests {
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             for i in 0..=1000 {
-                let access = Expr::ArraySingleAccess {
+                let access = Expr::ArrayAccess {
                     array: Box::new(var_expr("e")),
                     index: Box::new(usize_lit(i)),
                     span: span(),
@@ -6111,7 +6111,7 @@ mod blackbox_tests {
                 };
 
                 for i2 in 0..i+1 {
-                    let access = Expr::ArraySingleAccess {
+                    let access = Expr::ArrayAccess {
                         array: Box::new(var_expr("a")),
                         index: Box::new(usize_lit(i2)),
                         span: span(),
@@ -6146,7 +6146,7 @@ mod blackbox_tests {
                 };
 
                 for i2 in 0..i+1 {
-                    let access = Expr::ArraySingleAccess {
+                    let access = Expr::ArrayAccess {
                         array: Box::new(var_expr("a")),
                         index: Box::new(usize_lit(i2)),
                         span: span(),
@@ -6186,7 +6186,7 @@ mod blackbox_tests {
                     span: span(),
                 };
 
-                let access = Expr::ArrayMultipleAccess {
+                let access = Expr::ArraySlicing {
                     array: Box::new(var_expr("arr")),
                     start: None,
                     end: None,
@@ -6221,7 +6221,7 @@ mod blackbox_tests {
                     span: span(),
                 };
 
-                let access = Expr::ArrayMultipleAccess {
+                let access = Expr::ArraySlicing {
                     array: Box::new(var_expr("arr")),
                     start: None,
                     end: None,
@@ -6260,7 +6260,7 @@ mod blackbox_tests {
                 };
 
                 for i2 in 0..i-1 {
-                    let access = Expr::ArrayMultipleAccess {
+                    let access = Expr::ArraySlicing {
                         array: Box::new(var_expr("arr")),
                         start: Some(Box::new(usize_lit(1))),
                         end: Some(Box::new(usize_lit(i2+1))),
@@ -6294,7 +6294,7 @@ mod blackbox_tests {
                 };
 
                 for i2 in 0..i-1 {
-                    let access = Expr::ArrayMultipleAccess {
+                    let access = Expr::ArraySlicing {
                         array: Box::new(var_expr("arr")),
                         start: Some(Box::new(var_expr("e"))),
                         end: Some(Box::new(var_expr("h"))),
@@ -6331,7 +6331,7 @@ mod blackbox_tests {
                 };
 
                 for i2 in 0..i-1 {
-                    let access = Expr::ArrayMultipleAccess {
+                    let access = Expr::ArraySlicing {
                         array: Box::new(var_expr("arr")),
                         start: Some(Box::new(var_expr("e"))),
                         end: Some(Box::new(var_expr("h"))),
@@ -6364,7 +6364,7 @@ mod blackbox_tests {
                     span: span(),
                 };
 
-                let access = Expr::ArrayMultipleAccess {
+                let access = Expr::ArraySlicing {
                     array: Box::new(var_expr("arr")),
                     start: Some(Box::new(var_expr("e"))),
                     end: Some(Box::new(var_expr("h"))),
@@ -6404,7 +6404,7 @@ mod blackbox_tests {
                 };
 
                 for i2 in 0..i-1 {
-                    let access = Expr::ArrayMultipleAccess {
+                    let access = Expr::ArraySlicing {
                         array: Box::new(var_expr("arr")),
                         start: Some(Box::new(usize_lit(1))),
                         end: Some(Box::new(usize_lit(i2+1))),
@@ -6438,7 +6438,7 @@ mod blackbox_tests {
                 };
 
                 for i2 in 0..i-1 {
-                    let access = Expr::ArrayMultipleAccess {
+                    let access = Expr::ArraySlicing {
                         array: Box::new(var_expr("arr")),
                         start: Some(Box::new(var_expr("e"))),
                         end: Some(Box::new(var_expr("h"))),
@@ -6475,7 +6475,7 @@ mod blackbox_tests {
                 };
 
                 for i2 in 0..i-1 {
-                    let access = Expr::ArrayMultipleAccess {
+                    let access = Expr::ArraySlicing {
                         array: Box::new(var_expr("arr")),
                         start: Some(Box::new(var_expr("e"))),
                         end: Some(Box::new(var_expr("h"))),
@@ -6508,7 +6508,7 @@ mod blackbox_tests {
                     span: span(),
                 };
 
-                let access = Expr::ArrayMultipleAccess {
+                let access = Expr::ArraySlicing {
                     array: Box::new(var_expr("arr")),
                     start: Some(Box::new(var_expr("e"))),
                     end: Some(Box::new(var_expr("h"))),
@@ -6555,7 +6555,7 @@ mod blackbox_tests {
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             for i in 0..100 {
-                let access = Expr::ArrayMultipleAccess {
+                let access = Expr::ArraySlicing {
                     array: Box::new(l.clone()),
                     start: Some(Box::new(usize_lit(1))),
                     end: Some(Box::new(usize_lit(i+1))),
@@ -6583,7 +6583,7 @@ mod blackbox_tests {
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             for i in 0..1000 {
-                let access = Expr::ArrayMultipleAccess {
+                let access = Expr::ArraySlicing {
                     array: Box::new(var_expr("e")),
                     start: Some(Box::new(usize_lit(1))),
                     end: Some(Box::new(usize_lit(i+1))),
@@ -6618,7 +6618,7 @@ mod blackbox_tests {
                 };
 
                 for i2 in 0..i-1 {
-                    let access = Expr::ArrayMultipleAccess {
+                    let access = Expr::ArraySlicing {
                         array: Box::new(var_expr("arr")),
                         start: Some(Box::new(usize_lit(1))),
                         end: Some(Box::new(usize_lit(i2+1))),
@@ -6651,7 +6651,7 @@ mod blackbox_tests {
         
         for t in ALL_TYPES_NO_ARR {
             for i in 1..100 {
-                let access = Expr::ArrayMultipleAccess {
+                let access = Expr::ArraySlicing {
                     array: Box::new(var_expr("e")),
                     start: Some(Box::new(usize_lit(1))),
                     end: Some(Box::new(usize_lit(i))),
@@ -6686,7 +6686,7 @@ mod blackbox_tests {
                 elements: vec![l.clone(), l.clone(), l.clone()],
                 span: span(),
             };
-            let access = Expr::ArrayMultipleAccess {
+            let access = Expr::ArraySlicing {
                 array: Box::new(var_expr("arr")),
                 start: Some(Box::new(usize_lit(1))),
                 end: None,
@@ -6712,7 +6712,7 @@ mod blackbox_tests {
                 elements: vec![l.clone(), l.clone(), l.clone()],
                 span: span(),
             };
-            let access = Expr::ArrayMultipleAccess {
+            let access = Expr::ArraySlicing {
                 array: Box::new(var_expr("arr")),
                 start: None,
                 end: Some(Box::new(usize_lit(1))),
@@ -6739,7 +6739,7 @@ mod blackbox_tests {
                 elements: vec![l.clone(), l.clone(), l.clone(), l.clone()],
                 span: span(),
             };
-            let slice = Expr::ArrayMultipleAccess {
+            let slice = Expr::ArraySlicing {
                 array: Box::new(var_expr("arr")),
                 start: Some(Box::new(usize_lit(3))),
                 end: Some(Box::new(usize_lit(1))),
@@ -7823,7 +7823,7 @@ mod blackbox_tests {
     fn test_copy_of_array_access_errors() {
         for i in 0..1000 {
             for t in ALL_TYPES_NO_ARR {
-                let array_expr = Expr::ArraySingleAccess {
+                let array_expr = Expr::ArrayAccess {
                     array: Box::new(var_expr("e")),
                     index: Box::new(usize_lit(i)),
                     span: span(),
@@ -7846,7 +7846,7 @@ mod blackbox_tests {
     fn test_copy_of_array_multiple_access_errors() {
         for i in 0..=1000 {
             for t in ALL_TYPES_NO_ARR {
-                let array_expr = Expr::ArrayMultipleAccess {
+                let array_expr = Expr::ArraySlicing {
                         array: Box::new(var_expr("arr")),
                         start: Some(Box::new(usize_lit(0))),
                         end: Some(Box::new(usize_lit(i))),
