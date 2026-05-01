@@ -48,7 +48,7 @@ mod var_decl_tests {
 
 
     // Even though we do test all these types declarations, we never tested them in whole with their
-    // respective literals. So it's worth double checking here again.
+    // respective literals and checked the literal matches. So it's worth double checking here again.
     #[test]
     fn var_decl_float64_type() {
         let stmts = parse_body("own y float64 = 1.0");
@@ -72,6 +72,11 @@ mod var_decl_tests {
         if let Stmt::VarDecl(v) = &stmts[0] {
             assert_eq!(v.name, "x");
             assert_eq!(v.type_name, Type::Bool);
+
+            if let Some(Expr::BoolLiteral { value, .. }) = &v.value {
+                assert_eq!(*value, true);
+            } else { panic!("Expected BoolLiteral"); }
+    
         } else { panic!("Expected VarDecl"); }    
     }
 
@@ -83,26 +88,36 @@ mod var_decl_tests {
         if let Stmt::VarDecl(v) = &stmts[0] {
             assert_eq!(v.name, "x");
             assert_eq!(v.type_name, Type::String);
+            
+            if let Some(Expr::StringLiteral { value, .. }) = &v.value {
+                assert_eq!(*value, "hello");
+            } else { panic!("Expected StringLiteral"); }
+    
+
         } else { panic!("Expected VarDecl"); }    
     }
 
     #[test]
     fn var_decl_array() {
+        let literals_edge_cases = get_all_literals_edge_cases(); 
+         
         for t in ALL_TYPES_NO_ARR {
-            let stmts = parse_body(&format!("own x []{} = [1, 2, 3]", t));
-            assert_eq!(stmts.len(), 1);
+            for l in &literals_edge_cases {
+                let stmts = parse_body(&format!("own x []{} = [{}, {}, {}]", t, l, l, l));
+                assert_eq!(stmts.len(), 1);
 
-            if let Stmt::VarDecl(v) = &stmts[0] {
-                assert_eq!(v.name, "x");
-                assert_eq!(v.type_name, Type::Array(Box::new(t.clone())));
+                if let Stmt::VarDecl(v) = &stmts[0] {
+                    assert_eq!(v.name, "x");
+                    assert_eq!(v.type_name, Type::Array(Box::new(t.clone())));
 
-                if let Some(Expr::ArrayLiteral { elements, .. }) = &v.value {
-                    assert_eq!(elements.len(), 3);
-                } else {
-                    panic!("Expected ArrayLiteral");
-                }
+                    if let Some(Expr::ArrayLiteral { elements, .. }) = &v.value {
+                        assert_eq!(elements.len(), 3);
+                    } else {
+                        panic!("Expected ArrayLiteral");
+                    }
 
-            } else { panic!("Expected VarDecl");}
+                } else { panic!("Expected VarDecl");}
+            }
         }
     }
 
@@ -229,8 +244,20 @@ mod var_decl_tests {
 
         assert_parse_err(&wrap("own x badtype = 1"));
         assert_parse_err(&wrap("own x badtype"));
-        assert_parse_err(&wrap("own x x = 1"));
-        assert_parse_err(&wrap("own x x"));
+
+        let letters: Vec<char> = ('a'..='z')
+            .chain('A'..='Z')
+            .collect();
+        
+        for l1 in &letters {
+            for l2 in &letters {
+                assert_parse_err(&wrap(&format!("own {} {}", l1, l2)));
+            }
+
+            for lit in &literals_edge_cases {
+                assert_parse_err(&wrap(&format!("own x {} = {}", l1, lit)));
+            }
+        }
 
         for l in &literals_edge_cases {
             assert_parse_err(&wrap(&format!("own x {}", l)));
@@ -244,6 +271,22 @@ mod var_decl_tests {
 
 
     #[test]
+    fn var_decl_invalid_syntax_errors() {
+        let letters: Vec<char> = ('a'..='z')
+            .chain('A'..='Z')
+            .collect();
+        
+        for l in letters {
+            assert_parse_err(&wrap(&format!("own{} x", l)));
+            assert_parse_err(&wrap(&format!("ow{}n x", l)));
+            assert_parse_err(&wrap(&format!("o{}wn x", l)));
+            assert_parse_err(&wrap(&format!("{}own x", l)));
+            assert_parse_err(&wrap(&format!("{}own{} x", l, l)));
+        }
+    }
+
+
+    #[test]
     fn var_decl_keyword_name_errors() {
         let literals_edge_cases = get_all_literals_edge_cases(); 
 
@@ -251,29 +294,73 @@ mod var_decl_tests {
             for t in ALL_TYPES_NO_ARR {
                 for l in &literals_edge_cases {
                     assert_parse_err(&wrap(&format!("own {} {}", kw, t)));
+                    assert_parse_err(&wrap(&format!("own {} {}", kw.to_uppercase(), t)));
                     assert_parse_err(&wrap(&format!("own {} {} = {}", kw, t, l)));
+                    assert_parse_err(&wrap(&format!("own {} {} = {}", kw.to_uppercase(), t, l)));
                 }
             }
         }
     }
 
-    // Not allowed in semantics phase, but,  this is **syntaxally** correct
+    // Not allowed in semantics phase, but, this is **syntactically** correct
     #[test]
-    fn variable_shadowing_allowed() {
-        for t in ALL_TYPES_NO_ARR {
-            let stmts = parse_body(&format!("own x {} = 1\nown x {} = 2", t, t));
-            assert_eq!(stmts.len(), 2);
+    fn variable_redeclaration_with_value_allowed() {
+        let literals_edge_cases = get_all_literals_edge_cases(); 
+        let letters: Vec<char> = ('a'..='z')
+            .chain('A'..='Z')
+            .collect();
+        
+        for l in letters {
+            for lit in &literals_edge_cases {
+                for t in ALL_TYPES_NO_ARR {
+                    let stmts = parse_body(&format!("own {} {} = {}\nown {} {} = {}", l, t, lit, l, t, lit));
+                    assert_eq!(stmts.len(), 2);
 
-            if let Stmt::VarDecl(v) = &stmts[0] {
-                assert_eq!(v.type_name, t.clone());
-                assert!(matches!(v.value, Some(Expr::IntLiteral { .. })));
-            } else { panic!("Expected VarDecl"); }
+                    if let Stmt::VarDecl(v) = &stmts[0] {
+                        assert_eq!(v.name, l.to_string());
+                        assert_eq!(v.type_name, t.clone());
+                        assert!(v.value.is_some());
+                    } else { panic!("Expected VarDecl"); }
 
 
-            if let Stmt::VarDecl(v) = &stmts[1] {
-                assert_eq!(v.type_name, t.clone());
-                assert!(matches!(v.value, Some(Expr::IntLiteral { .. })));
-            } else { panic!("Expected VarDecl"); }
+                    if let Stmt::VarDecl(v) = &stmts[1] {
+                        assert_eq!(v.name, l.to_string());
+                        assert_eq!(v.type_name, t.clone());
+                        assert!(v.value.is_some());
+                    } else { panic!("Expected VarDecl"); }
+                }
+            }
+        }
+    }
+
+    // Same as above.
+    #[test]
+    fn variable_redeclaration_without_value_allowed() {
+        let literals_edge_cases = get_all_literals_edge_cases(); 
+        let letters: Vec<char> = ('a'..='z')
+            .chain('A'..='Z')
+            .collect();
+        
+        for l in letters {
+            for lit in &literals_edge_cases {
+                for t in ALL_TYPES_NO_ARR {
+                    let stmts = parse_body(&format!("own {} {}\nown {} {} = {}", l, t, l, t, lit));
+                    assert_eq!(stmts.len(), 2);
+
+                    if let Stmt::VarDecl(v) = &stmts[0] {
+                        assert_eq!(v.name, l.to_string());
+                        assert_eq!(v.type_name, t.clone());
+                        assert!(v.value.is_none());
+                    } else { panic!("Expected VarDecl"); }
+
+
+                    if let Stmt::VarDecl(v) = &stmts[1] {
+                        assert_eq!(v.name, l.to_string());
+                        assert_eq!(v.type_name, t.clone());
+                        assert!(v.value.is_some());
+                    } else { panic!("Expected VarDecl"); }
+                }
+            }
         }
     }
 }

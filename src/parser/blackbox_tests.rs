@@ -44,7 +44,7 @@ mod comment_tests;
 
 // Tests helper functions
 
-/// Wrap a statement in a minimal `func main() { ... }` so `parse()` can accept it.
+/// Wraps a statement in a minimal `func main() { ... }` 
 fn wrap(body: &str) -> String {
     format!("func main() {{\n{}\n}}", body)
 }
@@ -53,7 +53,15 @@ fn wrap(body: &str) -> String {
 fn parse_body(body: &str) -> Vec<Stmt> {
     let src = wrap(body);
     let ast = parse(&src).expect("parse failed");
+
+    // Basic global asserts.
+    // NOTE: Make sure to update these asserts if you update the wrap function.
     assert_eq!(ast.functions.len(), 1);
+    assert_eq!(ast.functions[0].params.len(), 0);
+    assert_eq!(ast.functions[0].name, "main");
+    assert!(ast.functions[0].return_type.is_none());
+    assert!(ast.functions[0].body.len() >= 1);
+
     ast.functions[0].body.clone()
 }
 
