@@ -316,7 +316,7 @@ pub fn infer_expr_type(
                                     if start_ety != Type::Usize { 
                                         return Err(HolyError::Semantic(format!(
                                                     "Expected start index to be of type `usize` for array `{}`, instead we got `{}` (line {} column {})", 
-                                                    start_ety, name, span.line, span.column
+                                                    name, start_ety, span.line, span.column
                                                 )));
                                     }
 
@@ -329,7 +329,7 @@ pub fn infer_expr_type(
                                     if end_ety != Type::Usize { 
                                         return Err(HolyError::Semantic(format!(
                                                     "Expected end index to be of type `usize` for array `{}`, instead we got `{}` (line {} column {})", 
-                                                    end_ety, name, span.line, span.column
+                                                    name, end_ety, span.line, span.column
                                                 )));
                                     }
 
