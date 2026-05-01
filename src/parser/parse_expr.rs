@@ -346,7 +346,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
                 let indx_parts = helpers::split_char_top_level(':', inner_str)
                                             .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
                 
-                // Treat as access to a single element. 
+                // If only one part, treat as access to a single element. 
                 if indx_parts.len() == 1 {
                     let index = parse_expr(indx_parts[0], span)?;
                     
@@ -354,12 +354,20 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
 
                     return Ok(value);
 
-
                 // Otherwise this is a slicing operation
-                // We do >= here because indx_parts could themselves contain
-                // expressions of array access. 
-                // We only care about first, and last indx_parts.
+                // We do >= here to print helpful error messages
+                //
+                // NOTE TODO: Ensure this doesnt mess with nested expressions within array
+                // access/slicing. 
                 } else if indx_parts.len() >= 2 {
+                    if indx_parts.len() != 2 {
+                        return Err(HolyError::Parse(format!(
+                                    "Invalid array slicing syntax `{}` ! (line {} column {})",
+                                    s, span.line, span.column
+                                )));
+
+                    }
+
                     let start = indx_parts[0].trim();
                     let end = indx_parts[indx_parts.len() - 1].trim();
 
