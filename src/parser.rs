@@ -756,9 +756,19 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
         }
     }
 
-    if let Some(eq_pos) = line.find('=') {
+    // Enforces variable assignment to be clean
+    // i.e.
+    // own x = 1
+    // 
+    // instead of
+    // own x=1
+    // etc.
+    // TODO: Could use a better help message... but i can't figure a clean non complicated way to
+    // do it. :(
+    //
+    if let Some(eq_pos) = line.find(" = ") {
         let name = line[..eq_pos].trim();
-        let right = line[eq_pos + 1..].trim();
+        let right = line[eq_pos + 3..].trim();
 
         // validate left is a valid identifier
         helpers::validate_identifier_name(name)
