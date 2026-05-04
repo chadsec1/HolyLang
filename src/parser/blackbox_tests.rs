@@ -3,6 +3,7 @@ use super::*;
 use crate::consts;
 use crate::tests_consts::{
     ALL_TYPES_NO_ARR,
+    ALL_BIN_OP_KIND,
     ALL_BIN_OP_KIND_COMP, ALL_BIN_OP_KIND_ARTH,
     BIN_OP_KIND_ARTH_SYMBOLS, BIN_OP_KIND_COMP_SYMBOLS,
     BIN_OP_KIND_SYMBOLS,
@@ -73,7 +74,6 @@ fn assert_parse_err(src: &str) {
         src
     );
 }
-
 
 // all literals and variable names, and array access and slicing.
 fn get_all_literals_edge_cases() -> [String; 38] {

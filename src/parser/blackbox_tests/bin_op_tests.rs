@@ -1,8 +1,117 @@
 use super::*;
 
 #[cfg(test)]
-mod bin_op_tests {
+mod bin_op_tests_in_functions {
     use super::*;
+
+
+    #[test]
+    fn binop_arth_all_literals() {
+        let literals = get_all_literals_edge_cases();
+
+        for l1 in &literals {
+            for l2 in &literals {
+                for (b, s) in ALL_BIN_OP_KIND.iter().zip(BIN_OP_KIND_SYMBOLS.iter()) {
+                    let stmts = parse_body(&format!("{} {} {}", l1, s, l2));
+                    if let Stmt::Expr(e) = &stmts[0] {
+                        if let Expr::BinOp { op, .. } = &e {
+                            assert_eq!(op, b);
+                        } else {
+                            panic!("Expected {:?}, instead we got {:?}", b, &e);
+                        }
+                    } else { panic!("Expected Expr, instead we got {:?}", &stmts[0]) }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn binop_arth_all_literals_var_decl() {
+        let literals = get_all_literals_edge_cases();
+
+        for l1 in &literals {
+            for l2 in &literals {
+                for (b, s) in ALL_BIN_OP_KIND.iter().zip(BIN_OP_KIND_SYMBOLS.iter()) {
+                    for t in ALL_TYPES_NO_ARR {
+                        let stmts = parse_body(&format!("own x {} = {} {} {}", t, l1, s, l2));
+                        if let Stmt::VarDecl(v) = &stmts[0] {
+                            if let Some(Expr::BinOp { op, .. }) = &v.value {
+                                assert_eq!(op, b);
+                            } else {
+                                panic!("Expected {:?}, instead we got {:?}", b, &v);
+                            }
+                        } else { panic!("Expected VarDecl, instead we got {:?}", &stmts[0]) }
+                    }
+                }
+            }
+        }
+    }
+
+
+
+
+    #[test]
+    fn binop_arth_signed_literals_only_in_var_decl() {
+        let edge_cases_numbers = [
+            i8::MIN as i128, i8::MAX as i128, 
+            i16::MIN as i128, i16::MAX as i128, 
+            i32::MIN as i128, i32::MAX as i128, 
+            i64::MIN as i128, i64::MAX as i128, 
+            i128::MIN, i128::MAX, 
+        ];
+
+
+        let edge_cases_types = [
+            Type::Int8, Type::Int8,
+            Type::Int16, Type::Int16,
+            Type::Int32, Type::Int32,
+            Type::Int64, Type::Int64,
+            Type::Int128, Type::Int128,
+        ];
+
+
+        for (en1, et1) in edge_cases_numbers.iter().zip(edge_cases_types.iter()) {    
+            for (en2, et2) in edge_cases_numbers.iter().zip(edge_cases_types.iter()) {    
+                for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
+                    let stmts = parse_body(&format!("{} {} {}", en1, s, en2));
+                    if let Stmt::Expr(e) = &stmts[0] {
+                        if let Expr::BinOp { left, right, op, .. } = &e {
+                            assert_eq!(op, b);
+
+                            if let Expr::IntLiteral { value, .. } = **left {
+                                assert_eq!(value.get_type(), et1.clone());
+
+                                if !value.is_signed() {
+                                    panic!("We are in a signed testing function, but value is unsigned: {:?}", **left);
+                                }
+
+                                assert_eq!(value.as_i128(), *en1);
+
+                            } else { panic!("Expected IntLiteral, instead got: {:?}", **left) }
+
+
+                            if let Expr::IntLiteral { value, .. } = **right {
+                                assert_eq!(value.get_type(), et2.clone());
+
+                                if !value.is_signed() {
+                                    panic!("We are in a signed testing function, but value is unsigned: {:?}", **right);
+                                }
+
+                                assert_eq!(value.as_i128(), *en2);
+
+                            } else { panic!("Expected IntLiteral, instead got: {:?}", **right) }
+
+
+                        } else {
+                            panic!("Expected {:?}, instead we got {:?}", b, &e);
+                        }
+                    } else { panic!("Expected Expr, instead we got {:?}", &stmts[0]) }
+                }
+            }
+        }
+    }
+
+
 
     #[test]
     fn binop_arth_signed_literals_only() {
