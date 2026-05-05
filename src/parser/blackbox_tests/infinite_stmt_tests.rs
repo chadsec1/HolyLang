@@ -655,13 +655,16 @@ mod infinite_stmt_in_globals_tests {
 
         for _ in 0..100 {
             s = format!("infinite {{\n{}\n}}", s);
-            let stmts = parse_body(&s);
-            assert_eq!(stmts.len(), 1);
-            if let Stmt::Infinite(inf) = &stmts[0] {
+            let ast = parse(&s).unwrap();
+            assert_eq!(ast.functions.len(), 0);
+            assert_eq!(ast.globals.len(), 1);
+
+            if let Stmt::Infinite(inf) = &ast.globals[0] {
                 assert_eq!(inf.branch.len(), 1);
             } else {panic!("Expected infinite statement"); }
         }
     }
+
 }
 
 
