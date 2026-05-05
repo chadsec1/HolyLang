@@ -8,21 +8,30 @@ mod infinite_stmt_in_function_tests {
     #[test]
     fn infinite_statements_invalid_construction_errors() {
         let literals_edge_cases = get_all_literals_edge_cases(); 
-        assert_parse_err(&wrap("infinite x {\n\n}"));    
-        assert_parse_err(&wrap("infinite range(1, 10) {\n\n}"));    
-        assert_parse_err(&wrap("infinite range() {\n\n}"));    
-        assert_parse_err(&wrap("infinite range {\n\n}"));    
-        assert_parse_err(&wrap("infinite infinite {\n\n}"));    
-        assert_parse_err(&wrap("infinite i in x {\n\n}"));    
-        assert_parse_err(&wrap("infinite in x {\n\n}"));    
-        assert_parse_err(&wrap("infinite i in {\n\n}"));
-        assert_parse_err(&wrap("infinite true {\n\n}"));
-        assert_parse_err(&wrap("infinite false {\n\n}"));    
-        assert_parse_err(&wrap("infinite 1 {\n\n}")); 
-        assert_parse_err(&wrap("infinite 1.0 {\n\n}")); 
-        assert_parse_err(&wrap("infinite \"\" {\n\n}"));    
+
+        for l in &literals_edge_cases {
+            assert_parse_err(&wrap(&format!("infinite range({}) {{\n\n}}", l)));    
+            assert_parse_err(&wrap(&format!("infinite range(, {}) {{\n\n}}", l)));    
+            assert_parse_err(&wrap(&format!("infinite range({}, ) {{\n\n}}", l)));    
+            assert_parse_err(&wrap(&format!("infinite range({}, {}) {{\n\n}}", l, l)));    
+            assert_parse_err(&wrap(&format!("infinite range({}, {} {{\n\n}}", l, l)));    
+            assert_parse_err(&wrap(&format!("infinite range{}, {} {{\n\n}}", l, l)));    
+
+            assert_parse_err(&wrap(&format!("infinite {} in {} {{\n\n}}", l, l)));    
+            assert_parse_err(&wrap(&format!("infinite in {} {{\n\n}}", l)));    
+            assert_parse_err(&wrap(&format!("infinite {} in {{\n\n}}", l)));
+
+            assert_parse_err(&wrap(&format!("infinite {} {{\n\n}}", l)));    
+            assert_parse_err(&wrap(&format!("infinite{} {{\n\n}}", l)));    
+            assert_parse_err(&wrap(&format!("{} infinite {{\n\n}}", l)));    
+            assert_parse_err(&wrap(&format!("{}infinite {{\n\n}}", l)));    
+            assert_parse_err(&wrap(&format!("{}infinite{} {{\n\n}}", l, l)));    
+            assert_parse_err(&wrap(&format!("{} infinite {} {{\n\n}}", l, l)));   
+        }
+
         assert_parse_err(&wrap("infinite {\n\n"));    
         assert_parse_err(&wrap("infinite {}"));    
+        assert_parse_err(&wrap("infinite {{\n\n}}"));    
         assert_parse_err(&wrap("infinite \n\n}"));    
 
         for kw in consts::RESERVED_KEYWORDS { 
@@ -32,15 +41,20 @@ mod infinite_stmt_in_function_tests {
             assert_parse_err(&wrap(&format!("{}infinite {{\n\n}}", kw)));    
             assert_parse_err(&wrap(&format!("{}infinite{} {{\n\n}}", kw, kw)));    
             assert_parse_err(&wrap(&format!("{} infinite {} {{\n\n}}", kw, kw)));    
-        }
 
-        for l in &literals_edge_cases {
-            assert_parse_err(&wrap(&format!("infinite {} {{\n\n}}", l)));    
-            assert_parse_err(&wrap(&format!("infinite{} {{\n\n}}", l)));    
-            assert_parse_err(&wrap(&format!("{} infinite {{\n\n}}", l)));    
-            assert_parse_err(&wrap(&format!("{}infinite {{\n\n}}", l)));    
-            assert_parse_err(&wrap(&format!("{}infinite{} {{\n\n}}", l, l)));    
-            assert_parse_err(&wrap(&format!("{} infinite {} {{\n\n}}", l, l)));    
+
+            assert_parse_err(&wrap(&format!("infinite {} {{\n\n}}", kw.to_uppercase())));    
+            assert_parse_err(&wrap(&format!("infinite{} {{\n\n}}", kw.to_uppercase())));    
+            assert_parse_err(&wrap(&format!("{} infinite {{\n\n}}", kw.to_uppercase())));    
+            assert_parse_err(&wrap(&format!("{}infinite {{\n\n}}", kw.to_uppercase())));    
+
+            assert_parse_err(&wrap(&format!("{}infinite{} {{\n\n}}", kw.to_uppercase(), kw.to_uppercase())));    
+            assert_parse_err(&wrap(&format!("{}infinite{} {{\n\n}}", kw, kw.to_uppercase())));    
+            assert_parse_err(&wrap(&format!("{}infinite{} {{\n\n}}", kw.to_uppercase(), kw)));    
+            
+            assert_parse_err(&wrap(&format!("{} infinite {} {{\n\n}}", kw.to_uppercase(), kw.to_uppercase())));    
+            assert_parse_err(&wrap(&format!("{} infinite {} {{\n\n}}", kw, kw.to_uppercase())));    
+            assert_parse_err(&wrap(&format!("{} infinite {} {{\n\n}}", kw.to_uppercase(), kw)));    
         }
 
         for t in ALL_TYPES_NO_ARR {
@@ -49,7 +63,20 @@ mod infinite_stmt_in_function_tests {
             assert_parse_err(&wrap(&format!("{} infinite {{\n\n}}", t)));    
             assert_parse_err(&wrap(&format!("{}infinite {{\n\n}}", t)));    
             assert_parse_err(&wrap(&format!("{}infinite{} {{\n\n}}", t, t)));    
-            assert_parse_err(&wrap(&format!("{} infinite {} {{\n\n}}", t, t)));    
+            assert_parse_err(&wrap(&format!("{} infinite {} {{\n\n}}", t, t)));
+
+            assert_parse_err(&wrap(&format!("infinite {} {{\n\n}}", t.to_string().to_uppercase())));    
+            assert_parse_err(&wrap(&format!("infinite{} {{\n\n}}", t.to_string().to_uppercase())));
+            assert_parse_err(&wrap(&format!("{} infinite {{\n\n}}", t.to_string().to_uppercase())));    
+            assert_parse_err(&wrap(&format!("{}infinite {{\n\n}}", t.to_string().to_uppercase() )));
+
+            assert_parse_err(&wrap(&format!("{}infinite{} {{\n\n}}", t.to_string().to_uppercase(), t.to_string().to_uppercase())));    
+            assert_parse_err(&wrap(&format!("{}infinite{} {{\n\n}}", t, t.to_string().to_uppercase())));
+            assert_parse_err(&wrap(&format!("{}infinite{} {{\n\n}}", t, t.to_string().to_uppercase()))); 
+
+            assert_parse_err(&wrap(&format!("{} infinite {} {{\n\n}}", t.to_string().to_uppercase(), t.to_string().to_uppercase() )));
+            assert_parse_err(&wrap(&format!("{} infinite {} {{\n\n}}", t, t.to_string().to_uppercase())));
+            assert_parse_err(&wrap(&format!("{} infinite {} {{\n\n}}", t.to_string().to_uppercase(), t)));
         }
     }
 
@@ -339,22 +366,31 @@ mod infinite_stmt_in_globals_tests {
     #[test]
     fn infinite_statements_invalid_construction_errors() {
         let literals_edge_cases = get_all_literals_edge_cases(); 
-        assert_parse_err("infinite x {\n\n}");
-        assert_parse_err("infinite range(1, 10) {\n\n}");    
-        assert_parse_err("infinite range() {\n\n}");    
-        assert_parse_err("infinite range {\n\n}");    
-        assert_parse_err("infinite infinite {\n\n}");    
-        assert_parse_err("infinite i in x {\n\n}");    
-        assert_parse_err("infinite in x {\n\n}");    
-        assert_parse_err("infinite i in {\n\n}");
-        assert_parse_err("infinite true {\n\n}");
-        assert_parse_err("infinite false {\n\n}");    
-        assert_parse_err("infinite 1 {\n\n}"); 
-        assert_parse_err("infinite 1.0 {\n\n}"); 
-        assert_parse_err("infinite \"\" {\n\n}");    
+
+        for l in &literals_edge_cases {
+            assert_parse_err(&format!("infinite range({}) {{\n\n}}", l));    
+            assert_parse_err(&format!("infinite range(, {}) {{\n\n}}", l));    
+            assert_parse_err(&format!("infinite range({}, ) {{\n\n}}", l));    
+            assert_parse_err(&format!("infinite range({}, {}) {{\n\n}}", l, l));    
+            assert_parse_err(&format!("infinite range({}, {} {{\n\n}}", l, l));    
+            assert_parse_err(&format!("infinite range{}, {} {{\n\n}}", l, l));    
+
+            assert_parse_err(&format!("infinite {} in {} {{\n\n}}", l, l));    
+            assert_parse_err(&format!("infinite in {} {{\n\n}}", l));    
+            assert_parse_err(&format!("infinite {} in {{\n\n}}", l));
+
+            assert_parse_err(&format!("infinite {} {{\n\n}}", l));    
+            assert_parse_err(&format!("infinite{} {{\n\n}}", l));    
+            assert_parse_err(&format!("{} infinite {{\n\n}}", l));    
+            assert_parse_err(&format!("{}infinite {{\n\n}}", l));    
+            assert_parse_err(&format!("{}infinite{} {{\n\n}}", l, l));    
+            assert_parse_err(&format!("{} infinite {} {{\n\n}}", l, l));   
+        }
+
         assert_parse_err("infinite {\n\n");    
-        assert_parse_err("infinite {}");  
-        assert_parse_err("infinite \n\n}");
+        assert_parse_err("infinite {}");    
+        assert_parse_err("infinite {{\n\n}}");    
+        assert_parse_err("infinite \n\n}");    
 
         for kw in consts::RESERVED_KEYWORDS { 
             assert_parse_err(&format!("infinite {} {{\n\n}}", kw));    
@@ -363,15 +399,20 @@ mod infinite_stmt_in_globals_tests {
             assert_parse_err(&format!("{}infinite {{\n\n}}", kw));    
             assert_parse_err(&format!("{}infinite{} {{\n\n}}", kw, kw));    
             assert_parse_err(&format!("{} infinite {} {{\n\n}}", kw, kw));    
-        }
 
-        for l in &literals_edge_cases {
-            assert_parse_err(&format!("infinite {} {{\n\n}}", l));    
-            assert_parse_err(&format!("infinite{} {{\n\n}}", l));    
-            assert_parse_err(&format!("{} infinite {{\n\n}}", l));    
-            assert_parse_err(&format!("{}infinite {{\n\n}}", l));    
-            assert_parse_err(&format!("{}infinite{} {{\n\n}}", l, l));    
-            assert_parse_err(&format!("{} infinite {} {{\n\n}}", l, l));    
+
+            assert_parse_err(&format!("infinite {} {{\n\n}}", kw.to_uppercase()));    
+            assert_parse_err(&format!("infinite{} {{\n\n}}", kw.to_uppercase()));    
+            assert_parse_err(&format!("{} infinite {{\n\n}}", kw.to_uppercase()));    
+            assert_parse_err(&format!("{}infinite {{\n\n}}", kw.to_uppercase()));    
+
+            assert_parse_err(&format!("{}infinite{} {{\n\n}}", kw.to_uppercase(), kw.to_uppercase()));    
+            assert_parse_err(&format!("{}infinite{} {{\n\n}}", kw, kw.to_uppercase()));
+            assert_parse_err(&format!("{}infinite{} {{\n\n}}", kw.to_uppercase(), kw));    
+            
+            assert_parse_err(&format!("{} infinite {} {{\n\n}}", kw.to_uppercase(), kw.to_uppercase()));    
+            assert_parse_err(&format!("{} infinite {} {{\n\n}}", kw, kw.to_uppercase()));    
+            assert_parse_err(&format!("{} infinite {} {{\n\n}}", kw.to_uppercase(), kw));    
         }
 
         for t in ALL_TYPES_NO_ARR {
@@ -380,7 +421,20 @@ mod infinite_stmt_in_globals_tests {
             assert_parse_err(&format!("{} infinite {{\n\n}}", t));    
             assert_parse_err(&format!("{}infinite {{\n\n}}", t));    
             assert_parse_err(&format!("{}infinite{} {{\n\n}}", t, t));    
-            assert_parse_err(&format!("{} infinite {} {{\n\n}}", t, t));    
+            assert_parse_err(&format!("{} infinite {} {{\n\n}}", t, t));
+
+            assert_parse_err(&format!("infinite {} {{\n\n}}", t.to_string().to_uppercase()));    
+            assert_parse_err(&format!("infinite{} {{\n\n}}", t.to_string().to_uppercase()));
+            assert_parse_err(&format!("{} infinite {{\n\n}}", t.to_string().to_uppercase()));    
+            assert_parse_err(&format!("{}infinite {{\n\n}}", t.to_string().to_uppercase()));
+
+            assert_parse_err(&format!("{}infinite{} {{\n\n}}", t.to_string().to_uppercase(), t.to_string().to_uppercase()));    
+            assert_parse_err(&format!("{}infinite{} {{\n\n}}", t, t.to_string().to_uppercase()));
+            assert_parse_err(&format!("{}infinite{} {{\n\n}}", t, t.to_string().to_uppercase())); 
+
+            assert_parse_err(&format!("{} infinite {} {{\n\n}}", t.to_string().to_uppercase(), t.to_string().to_uppercase()));
+            assert_parse_err(&format!("{} infinite {} {{\n\n}}", t, t.to_string().to_uppercase()));
+            assert_parse_err(&format!("{} infinite {} {{\n\n}}", t.to_string().to_uppercase(), t));
         }
     }
 
