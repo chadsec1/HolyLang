@@ -687,8 +687,6 @@ mod bin_op_tests_in_functions {
         }
     }
 
-
-
     #[test]
     fn binop_nested_via_parens_in_var_decl() {
         // e.g. 
