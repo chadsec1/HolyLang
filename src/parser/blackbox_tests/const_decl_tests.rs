@@ -97,6 +97,49 @@ mod const_decl_in_function_tests {
         }
     }
 
+    #[test]
+    fn const_decl_in_while_loop() {
+        let literals_edge_cases = get_all_literals_edge_cases(); 
+
+        for l in &literals_edge_cases {
+            for t in ALL_TYPES_NO_ARR {
+                let stmts = parse_body(&format!("while {} {{\nconst x {} = {}\n}}", l, t, l));
+                assert_eq!(stmts.len(), 1);
+
+                if let Stmt::While(w) = &stmts[0] {
+                    assert_eq!(w.branch.len(), 1);
+
+                    if let Stmt::Const(c) = &w.branch[0] {
+                        assert_eq!(c.name, "x");
+                        assert_eq!(c.type_name, t.clone());
+                    } else { panic!("Expected VarDecl"); }
+                } else { panic!("Expected while statement"); }
+            }
+        }
+    }
+
+
+    #[test]
+    fn const_decl_in_if_main_branch() {
+        let literals_edge_cases = get_all_literals_edge_cases(); 
+
+        for l in &literals_edge_cases {
+            for t in ALL_TYPES_NO_ARR {
+                let stmts = parse_body(&format!("if {} {{\nconst x {} = {}\n}}", l, t, l));
+                assert_eq!(stmts.len(), 1);
+
+                if let Stmt::If(i) = &stmts[0] {
+                    assert_eq!(i.if_branch.len(), 1);
+
+                    if let Stmt::Const(c) = &i.if_branch[0] {
+                        assert_eq!(c.name, "x");
+                        assert_eq!(c.type_name, t.clone());
+                    } else { panic!("Expected VarDecl"); }
+                } else { panic!("Expected while statement"); }
+            }
+        }
+    }
+
 
 
 
