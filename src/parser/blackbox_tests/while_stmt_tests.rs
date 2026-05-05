@@ -5,6 +5,62 @@ mod while_stmt_in_function_tests {
     use super::*;
 
     #[test]
+    fn while_statements_invalid_construction_errors() {
+        let literals_edge_cases = get_all_literals_edge_cases(); 
+        for l in &literals_edge_cases {
+            assert_parse_err(&wrap(&format!("while range({}) {{\n\n}}", l)));    
+            assert_parse_err(&wrap(&format!("while range(, {}) {{\n\n}}", l)));    
+            assert_parse_err(&wrap(&format!("while range({}, ) {{\n\n}}", l)));    
+            assert_parse_err(&wrap(&format!("while range({}, {}) {{\n\n}}", l, l)));    
+            assert_parse_err(&wrap(&format!("while range({}, {} {{\n\n}}", l, l)));    
+            assert_parse_err(&wrap(&format!("while range{}, {} {{\n\n}}", l, l)));    
+
+
+            assert_parse_err(&wrap(&format!("while {} in {} {{\n\n}}", l, l)));    
+            assert_parse_err(&wrap(&format!("while in {} {{\n\n}}", l)));    
+            assert_parse_err(&wrap(&format!("while {} in {{\n\n}}", l)));
+
+            assert_parse_err(&wrap(&format!("while{} {{\n\n}}", l)));    
+            assert_parse_err(&wrap(&format!("{} while {{\n\n}}", l)));    
+            assert_parse_err(&wrap(&format!("{}while {{\n\n}}", l)));    
+            assert_parse_err(&wrap(&format!("{}while{} {{\n\n}}", l, l)));    
+            assert_parse_err(&wrap(&format!("{} while {} {{\n\n}}", l, l)));    
+        }
+
+        assert_parse_err(&wrap("while {\n\n"));    
+        assert_parse_err(&wrap("while {}"));    
+        assert_parse_err(&wrap("while \n\n}"));    
+        assert_parse_err(&wrap("while {{\n\n}}"));    
+
+        
+        for kw in consts::RESERVED_KEYWORDS { 
+            if kw == &"true" || kw == &"false" {
+                continue 
+            }
+            assert_parse_err(&wrap(&format!("while {} {{\n\n}}", kw)));    
+        }
+
+        for kw in consts::RESERVED_KEYWORDS { 
+            assert_parse_err(&wrap(&format!("while{} {{\n\n}}", kw)));    
+            assert_parse_err(&wrap(&format!("{} while {{\n\n}}", kw)));    
+            assert_parse_err(&wrap(&format!("{}while {{\n\n}}", kw)));    
+            assert_parse_err(&wrap(&format!("{}while{} {{\n\n}}", kw, kw)));    
+            assert_parse_err(&wrap(&format!("{} while {} {{\n\n}}", kw, kw)));    
+        }
+
+        for t in ALL_TYPES_NO_ARR {
+            assert_parse_err(&wrap(&format!("while {} {{\n\n}}", t)));    
+            assert_parse_err(&wrap(&format!("while{} {{\n\n}}", t)));    
+            assert_parse_err(&wrap(&format!("{} whihle {{\n\n}}", t)));    
+            assert_parse_err(&wrap(&format!("{}while {{\n\n}}", t)));    
+            assert_parse_err(&wrap(&format!("{}while{} {{\n\n}}", t, t)));    
+            assert_parse_err(&wrap(&format!("{} while {} {{\n\n}}", t, t)));    
+        }
+    }
+
+
+
+    #[test]
     fn while_statements_all_literals() {
         let literals_edge_cases = get_all_literals_edge_cases();
 
