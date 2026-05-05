@@ -437,6 +437,11 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
             // and argument type are part of the language syntax its self.
             //
             match name.as_ref() {
+                "range" => return Err(HolyError::Parse(format!(
+                            "range() can only be used in for loop statements! (line {} column {})",
+                            span.line, span.column
+                        ))),
+
                 "copy" => {
                     if args.len() != 1 {
                         return Err(HolyError::Parse(format!(
