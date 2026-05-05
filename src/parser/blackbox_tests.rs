@@ -125,19 +125,22 @@ fn get_all_ints_literals_edge_cases() -> [String; 22] {
 mod tests {
     use super::*;
 
-    // General invalid syntax errors 
-
     #[test]
     fn parse_empty_source() {
         let ast = parse("").unwrap();
         assert!(ast.functions.is_empty());
+        assert!(ast.globals.is_empty());
     }
 
     #[test]
     fn parse_comments_and_blanks_only() {
-        let src = "# comment\n\n# another\n";
-        let ast = parse(src).unwrap();
-        assert!(ast.functions.is_empty());
+        let ascii_printable: Vec<char> = (32u8..=126).map(|b| b as char).collect();
+         
+        for l in ascii_printable {
+            let ast = parse(&format!("# {}comment {}\n#{} Another comment {}", l, l, l, l)).unwrap();
+            assert!(ast.functions.is_empty());
+            assert!(ast.globals.is_empty());
+        }
     }
 
     // Should be fine
@@ -146,56 +149,89 @@ mod tests {
     #[test]
     fn parse_statement_outside_function_passes() {
         let literals_edge_cases = get_all_literals_edge_cases(); 
-        for t in ALL_TYPES_NO_ARR {
-            for l in &literals_edge_cases {
-                assert!(parse(&format!("own x {} = {}", t, l)).is_ok());
+        let letters: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
+        
+        for lit in &literals_edge_cases {
+            for l in &letters {
+                let ast = parse(&format!("{}", l)).unwrap();
+                
+                assert!(ast.functions.is_empty());
+                assert_eq!(ast.globals.len(), 1);
+                
+                for t in ALL_TYPES_NO_ARR {
+                    let ast = parse(&format!("own {} {} = {}", l, t, lit)).unwrap();
+
+                    assert!(ast.functions.is_empty());
+                    assert_eq!(ast.globals.len(), 1);
+                
+                    if let Stmt::VarDecl(v) = &ast.globals[0] {
+                        assert_eq!(v.name, l.to_string());
+                        assert_eq!(v.type_name, t.clone());
+                        assert!(v.value.is_some());
+
+                    } else { panic!("Expected VarDecl, instead got: {:?}", ast.globals[0]); }
+
+                }
             }
         }
     }
 
-    
-    
-
-
     // Span tracking
 
     #[test]
-    fn span_line_number_is_correct() {
+    fn span_is_correct() {
         let literals_edge_cases = get_all_literals_edge_cases();
 
         for t in ALL_TYPES_NO_ARR {
             for l in &literals_edge_cases {
                 let src = format!("func main() {{\n\n\nown x {} = {}\n}}", t, l);
                 let ast = parse(&src).unwrap();
-                if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
-                    // Line 4 in the source (1-indexed)
-                    assert_eq!(v.span.line, 4);
+                assert_eq!(ast.functions.len(), 1);
+                assert_eq!(ast.globals.len(), 0);
+                
+                assert_eq!(ast.functions[0].body.len(), 1);
 
+                if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
                     assert_eq!(v.name, "x");
                     assert_eq!(v.type_name, t.clone());
 
-                }
+                    // Line 4 in the source (1-indexed)
+                    assert_eq!(v.span.line, 4);
+
+                    // Column 0 (span column tracking still not implemented yet for error messages)
+                    assert_eq!(v.span.column, 0);
+                } else { panic!("Expected VarDecl, instead we got {:?}", &ast) }
             }    
         }
     }
 
 
 
-    // Empty expression / edge-case errors
-
-    
+    // Empty expression / Invalid syntax / edge-case errors
 
     #[test]
     fn empty_expression_in_call_arg_errors() {
         let literals_edge_cases = get_all_literals_edge_cases(); 
-        for t in ALL_TYPES_NO_ARR {
-            for l in &literals_edge_cases {
-                // Ensure we don't silently accept malformed call
-                assert_parse_err(&wrap(&format!("own x {} = foo(,)", t)));
-                assert_parse_err(&wrap(&format!("own x {} = foo({},)", t, l)));
-                assert_parse_err(&wrap(&format!("own x {} = foo(,{})", t, l)));
-                assert_parse_err(&wrap(&format!("own x {} = foo(,{},)", t, l)));
-                assert_parse_err(&wrap(&format!("own x {} = foo({},{},)", t, l, l)));
+        let letters: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
+        
+        for lit in &literals_edge_cases {
+            // Ensure we don't silently accept malformed call
+            assert_parse_err(&wrap(&format!("foo(,)")));
+            assert_parse_err(&wrap(&format!("foo({},)", lit)));
+            assert_parse_err(&wrap(&format!("foo(,{})", lit)));
+            assert_parse_err(&wrap(&format!("foo(,{},)", lit)));
+            assert_parse_err(&wrap(&format!("foo({},{},)", lit, lit)));
+
+
+            for t in ALL_TYPES_NO_ARR {
+                for l in &letters {
+                    // Ensure we don't silently accept malformed call
+                    assert_parse_err(&wrap(&format!("own {} {} = foo(,)", l, t)));
+                    assert_parse_err(&wrap(&format!("own {} {} = foo({},)", l, t, lit)));
+                    assert_parse_err(&wrap(&format!("own {} {} = foo(,{})", l, t, lit)));
+                    assert_parse_err(&wrap(&format!("own {} {} = foo(,{},)", l, t, lit)));
+                    assert_parse_err(&wrap(&format!("own {} {} = foo({},{},)", l, t, lit, lit)));
+                }
             }
         }
     }
