@@ -1,12 +1,37 @@
 use super::*;
 
 #[cfg(test)]
-mod while_stmt_tests {
+mod while_stmt_in_function_tests {
     use super::*;
+
+    #[test]
+    fn while_statements_all_literals() {
+        let literals_edge_cases = get_all_literals_edge_cases();
+
+        for l in literals_edge_cases {
+            for (b, s) in ALL_BIN_OP_KIND.iter().zip(BIN_OP_KIND_SYMBOLS.iter()) {
+                let stmts = parse_body(&format!("while {} {} {} {{\n\n}}", l, s, l));
+                assert_eq!(stmts.len(), 1);
+                if let Stmt::While(w) = &stmts[0] {
+
+                    if let Expr::BinOp { left, right, op, .. } = &w.condition {
+                        assert_eq!(op, b);
+                        assert_eq!(left, right);
+                    } else { panic!("Expected BinOp"); }
+                    
+                    assert_eq!(w.branch.len(), 0);
+                } else {
+                    panic!("expected while statement");
+                }
+            }
+        }
+    }
+
+
     
     #[test]
-    fn while_statements_literals() {
-        for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
+    fn while_statements_int_literals() {
+        for (b, s) in ALL_BIN_OP_KIND.iter().zip(BIN_OP_KIND_SYMBOLS.iter()) {
             let stmts = parse_body(&format!("while 1 {} 2 {{\n\n}}", s));
             assert_eq!(stmts.len(), 1);
             if let Stmt::While(w) = &stmts[0] {
