@@ -37,7 +37,8 @@ mod while_stmt_in_function_tests {
             if kw == &"true" || kw == &"false" {
                 continue 
             }
-            assert_parse_err(&wrap(&format!("while {} {{\n\n}}", kw)));    
+            assert_parse_err(&wrap(&format!("while {} {{\n\n}}", kw)));
+            assert_parse_err(&wrap(&format!("while {} {{\n\n}}", kw.to_uppercase())));
         }
 
         for kw in consts::RESERVED_KEYWORDS { 
@@ -46,15 +47,43 @@ mod while_stmt_in_function_tests {
             assert_parse_err(&wrap(&format!("{}while {{\n\n}}", kw)));    
             assert_parse_err(&wrap(&format!("{}while{} {{\n\n}}", kw, kw)));    
             assert_parse_err(&wrap(&format!("{} while {} {{\n\n}}", kw, kw)));    
+
+            assert_parse_err(&wrap(&format!("while{} {{\n\n}}", kw.to_uppercase())));    
+            assert_parse_err(&wrap(&format!("{} while {{\n\n}}", kw.to_uppercase())));    
+            assert_parse_err(&wrap(&format!("{}while {{\n\n}}", kw.to_uppercase())));    
+
+            assert_parse_err(&wrap(&format!("{}while{} {{\n\n}}", kw.to_uppercase(), kw.to_uppercase())));    
+            assert_parse_err(&wrap(&format!("{}while{} {{\n\n}}", kw, kw.to_uppercase())));    
+            assert_parse_err(&wrap(&format!("{}while{} {{\n\n}}", kw.to_uppercase(), kw)));    
+            
+            assert_parse_err(&wrap(&format!("{} while {} {{\n\n}}", kw.to_uppercase(), kw.to_uppercase())));    
+            assert_parse_err(&wrap(&format!("{} while {} {{\n\n}}", kw, kw.to_uppercase())));    
+            assert_parse_err(&wrap(&format!("{} while {} {{\n\n}}", kw.to_uppercase(), kw)));    
+
         }
 
         for t in ALL_TYPES_NO_ARR {
             assert_parse_err(&wrap(&format!("while {} {{\n\n}}", t)));    
             assert_parse_err(&wrap(&format!("while{} {{\n\n}}", t)));    
-            assert_parse_err(&wrap(&format!("{} whihle {{\n\n}}", t)));    
+            assert_parse_err(&wrap(&format!("{} while {{\n\n}}", t)));    
             assert_parse_err(&wrap(&format!("{}while {{\n\n}}", t)));    
             assert_parse_err(&wrap(&format!("{}while{} {{\n\n}}", t, t)));    
             assert_parse_err(&wrap(&format!("{} while {} {{\n\n}}", t, t)));    
+
+
+            assert_parse_err(&wrap(&format!("while {} {{\n\n}}", t.to_string().to_uppercase())));    
+            assert_parse_err(&wrap(&format!("while{} {{\n\n}}", t.to_string().to_uppercase())));
+            assert_parse_err(&wrap(&format!("{} while {{\n\n}}", t.to_string().to_uppercase())));    
+            assert_parse_err(&wrap(&format!("{}while {{\n\n}}", t.to_string().to_uppercase() )));
+
+            assert_parse_err(&wrap(&format!("{}while{} {{\n\n}}", t.to_string().to_uppercase(), t.to_string().to_uppercase())));    
+            assert_parse_err(&wrap(&format!("{}while{} {{\n\n}}", t, t.to_string().to_uppercase())));
+            assert_parse_err(&wrap(&format!("{}while{} {{\n\n}}", t, t.to_string().to_uppercase()))); 
+
+            assert_parse_err(&wrap(&format!("{} while {} {{\n\n}}", t.to_string().to_uppercase(), t.to_string().to_uppercase() )));
+            assert_parse_err(&wrap(&format!("{} while {} {{\n\n}}", t, t.to_string().to_uppercase())));
+            assert_parse_err(&wrap(&format!("{} while {} {{\n\n}}", t.to_string().to_uppercase(), t)));
+
         }
     }
 
@@ -69,7 +98,6 @@ mod while_stmt_in_function_tests {
                 let stmts = parse_body(&format!("while {} {} {} {{\n\n}}", l, s, l));
                 assert_eq!(stmts.len(), 1);
                 if let Stmt::While(w) = &stmts[0] {
-
                     if let Expr::BinOp { left, right, op, .. } = &w.condition {
                         assert_eq!(op, b);
                         assert_eq!(left, right);
@@ -82,6 +110,133 @@ mod while_stmt_in_function_tests {
             }
         }
     }
+
+    #[test]
+    fn while_statements_below_var_decl_with_value() {
+        let literals_edge_cases = get_all_literals_edge_cases();
+
+        for l in literals_edge_cases {
+            for (b, s) in ALL_BIN_OP_KIND.iter().zip(BIN_OP_KIND_SYMBOLS.iter()) {
+                for t in ALL_TYPES_NO_ARR {
+                    let stmts = parse_body(&format!("own x {} = {}\nwhile {} {} {} {{\n\n}}", t, l, l, s, l));
+                    assert_eq!(stmts.len(), 2);
+
+                    if let Stmt::VarDecl(v) = &stmts[0] {
+                        assert_eq!(v.name, "x");
+                        assert_eq!(v.type_name, t.clone());
+                        assert!(v.value.is_some());
+                    } else { panic!("Expected VarDecl"); }
+
+                    if let Stmt::While(w) = &stmts[1] {
+                        if let Expr::BinOp { left, right, op, .. } = &w.condition {
+                            assert_eq!(op, b);
+                            assert_eq!(left, right);
+                        } else { panic!("Expected BinOp"); }
+                        
+                        assert_eq!(w.branch.len(), 0);
+                    } else {
+                        panic!("expected while statement");
+                    }
+                }
+            }
+        }
+    }
+
+
+    #[test]
+    fn while_statements_below_var_decl_without_value() {
+        let literals_edge_cases = get_all_literals_edge_cases();
+
+        for l in literals_edge_cases {
+            for (b, s) in ALL_BIN_OP_KIND.iter().zip(BIN_OP_KIND_SYMBOLS.iter()) {
+                for t in ALL_TYPES_NO_ARR {
+                    let stmts = parse_body(&format!("own x {}\nwhile {} {} {} {{\n\n}}", t, l, s, l));
+                    assert_eq!(stmts.len(), 2);
+
+                    if let Stmt::VarDecl(v) = &stmts[0] {
+                        assert_eq!(v.name, "x");
+                        assert_eq!(v.type_name, t.clone());
+                        assert!(v.value.is_none());
+                    } else { panic!("Expected VarDecl"); }
+
+                    if let Stmt::While(w) = &stmts[1] {
+                        if let Expr::BinOp { left, right, op, .. } = &w.condition {
+                            assert_eq!(op, b);
+                            assert_eq!(left, right);
+                        } else { panic!("Expected BinOp"); }
+                        
+                        assert_eq!(w.branch.len(), 0);
+                    } else {
+                        panic!("expected while statement");
+                    }
+                }
+            }
+        }
+    }
+
+
+    #[test]
+    fn while_statements_after_var_decl_with_value() {
+        let literals_edge_cases = get_all_literals_edge_cases();
+
+        for l in literals_edge_cases {
+            for (b, s) in ALL_BIN_OP_KIND.iter().zip(BIN_OP_KIND_SYMBOLS.iter()) {
+                for t in ALL_TYPES_NO_ARR {
+                    let stmts = parse_body(&format!("while {} {} {} {{\n\n}}\nown x {} = {}", l, s, l, t, l));
+                    assert_eq!(stmts.len(), 2);
+                    if let Stmt::While(w) = &stmts[0] {
+                        if let Expr::BinOp { left, right, op, .. } = &w.condition {
+                            assert_eq!(op, b);
+                            assert_eq!(left, right);
+                        } else { panic!("Expected BinOp"); }
+                        
+                        assert_eq!(w.branch.len(), 0);
+                    } else { panic!("expected while statement");}
+
+                    if let Stmt::VarDecl(v) = &stmts[1] {
+                        assert_eq!(v.name, "x");
+                        assert_eq!(v.type_name, t.clone());
+                        assert!(v.value.is_some());
+                    } else { panic!("Expected VarDecl"); }
+
+
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn while_statements_after_var_decl_without_value() {
+        let literals_edge_cases = get_all_literals_edge_cases();
+
+        for l in literals_edge_cases {
+            for (b, s) in ALL_BIN_OP_KIND.iter().zip(BIN_OP_KIND_SYMBOLS.iter()) {
+                for t in ALL_TYPES_NO_ARR {
+                    let stmts = parse_body(&format!("while {} {} {} {{\n\n}}\nown x {}", l, s, l, t));
+                    assert_eq!(stmts.len(), 2);
+                    if let Stmt::While(w) = &stmts[0] {
+                        if let Expr::BinOp { left, right, op, .. } = &w.condition {
+                            assert_eq!(op, b);
+                            assert_eq!(left, right);
+                        } else { panic!("Expected BinOp"); }
+                        
+                        assert_eq!(w.branch.len(), 0);
+                    } else { panic!("expected while statement");}
+
+                    if let Stmt::VarDecl(v) = &stmts[1] {
+                        assert_eq!(v.name, "x");
+                        assert_eq!(v.type_name, t.clone());
+                        assert!(v.value.is_none());
+                    } else { panic!("Expected VarDecl"); }
+
+
+                }
+            }
+        }
+    }
+
+
+
 
 
     
@@ -114,12 +269,12 @@ mod while_stmt_in_function_tests {
 
     // Same test as above, but before the expression, there is an `i` of spaces.
     #[test]
-    fn while_statements_literals_spaces_before_expr() {
+    fn while_statements_int_literals_spaces_before_expr() {
         const MAX_SPACES: usize = 1000;
 
         let mut spaces = String::with_capacity(MAX_SPACES);
         for _ in 0..MAX_SPACES {
-            for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
+            for (b, s) in ALL_BIN_OP_KIND.iter().zip(BIN_OP_KIND_SYMBOLS.iter()) {
                 let stmts = parse_body(&format!("while{} 1 {} 2 {{\n\n}}", spaces, s));
                 assert_eq!(stmts.len(), 1);
                 if let Stmt::While(w) = &stmts[0] {
@@ -150,12 +305,12 @@ mod while_stmt_in_function_tests {
 
     // Same test as above, but after the expression, there is an `i` of spaces.
     #[test]
-    fn while_statements_literals_spaces_after_expr() {
+    fn while_statements_int_literals_spaces_after_expr() {
         const MAX_SPACES: usize = 1000;
 
         let mut spaces = String::with_capacity(MAX_SPACES);
         for _ in 0..MAX_SPACES {
-            for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
+            for (b, s) in ALL_BIN_OP_KIND.iter().zip(BIN_OP_KIND_SYMBOLS.iter()) {
                 let stmts = parse_body(&format!("while 1 {} 2 {}{{\n\n}}", s, spaces));
                 assert_eq!(stmts.len(), 1);
                 if let Stmt::While(w) = &stmts[0] {
@@ -186,7 +341,7 @@ mod while_stmt_in_function_tests {
 
     #[test]
     fn while_statements_vars() {
-        for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
+        for (b, s) in ALL_BIN_OP_KIND.iter().zip(BIN_OP_KIND_SYMBOLS.iter()) {
             let stmts = parse_body(&format!("while x {} y {{\n\n}}", s));
             assert_eq!(stmts.len(), 1);
             if let Stmt::While(w) = &stmts[0] {
@@ -219,7 +374,7 @@ mod while_stmt_in_function_tests {
 
         let mut spaces = String::with_capacity(MAX_SPACES);
         for _ in 0..MAX_SPACES {
-            for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
+            for (b, s) in ALL_BIN_OP_KIND.iter().zip(BIN_OP_KIND_SYMBOLS.iter()) {
                 let stmts = parse_body(&format!("while{} x {} y {{\n\n}}", spaces, s));
                 assert_eq!(stmts.len(), 1);
                 if let Stmt::While(w) = &stmts[0] {
@@ -254,7 +409,7 @@ mod while_stmt_in_function_tests {
 
         let mut spaces = String::with_capacity(MAX_SPACES);
         for _ in 0..MAX_SPACES {
-            for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
+            for (b, s) in ALL_BIN_OP_KIND.iter().zip(BIN_OP_KIND_SYMBOLS.iter()) {
                 let stmts = parse_body(&format!("while x {} y {}{{\n\n}}", s, spaces));
                 assert_eq!(stmts.len(), 1);
                 if let Stmt::While(w) = &stmts[0] {
@@ -283,7 +438,7 @@ mod while_stmt_in_function_tests {
 
     #[test]
     fn while_statements_vars_and_literals() {
-        for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
+        for (b, s) in ALL_BIN_OP_KIND.iter().zip(BIN_OP_KIND_SYMBOLS.iter()) {
             let stmts = parse_body(&format!("while 69 {} y {{\n\n}}", s));
             assert_eq!(stmts.len(), 1);
             if let Stmt::While(w) = &stmts[0] {
@@ -308,7 +463,7 @@ mod while_stmt_in_function_tests {
         }
 
 
-        for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
+        for (b, s) in ALL_BIN_OP_KIND.iter().zip(BIN_OP_KIND_SYMBOLS.iter()) {
             let stmts = parse_body(&format!("while x {} 67 {{\n\n}}", s));
             assert_eq!(stmts.len(), 1);
             if let Stmt::While(w) = &stmts[0] {
@@ -339,7 +494,7 @@ mod while_stmt_in_function_tests {
 
         let mut spaces = String::with_capacity(MAX_SPACES);
         for _ in 0..MAX_SPACES {
-            for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
+            for (b, s) in ALL_BIN_OP_KIND.iter().zip(BIN_OP_KIND_SYMBOLS.iter()) {
                 let stmts = parse_body(&format!("while{} 69 {} y {{\n\n}}", spaces, s));
                 assert_eq!(stmts.len(), 1);
                 if let Stmt::While(w) = &stmts[0] {
@@ -364,7 +519,7 @@ mod while_stmt_in_function_tests {
             }
 
 
-            for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
+            for (b, s) in ALL_BIN_OP_KIND.iter().zip(BIN_OP_KIND_SYMBOLS.iter()) {
                 let stmts = parse_body(&format!("while{} x {} 67 {{\n\n}}", spaces, s));
                 assert_eq!(stmts.len(), 1);
                 if let Stmt::While(w) = &stmts[0] {
@@ -399,8 +554,8 @@ mod while_stmt_in_function_tests {
 
         let mut spaces = String::with_capacity(MAX_SPACES);
         for _ in 0..MAX_SPACES {
-            for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
-                let stmts = parse_body(&format!("while 69 {} y {}{{\n\n}}", s, spaces));
+            for (b, s) in ALL_BIN_OP_KIND.iter().zip(BIN_OP_KIND_SYMBOLS.iter()) {
+                let stmts = parse_body(&format!("while -69 {} y {}{{\n\n}}", s, spaces));
                 assert_eq!(stmts.len(), 1);
                 if let Stmt::While(w) = &stmts[0] {
 
@@ -408,7 +563,7 @@ mod while_stmt_in_function_tests {
                         assert_eq!(op, b);
 
                         if let Expr::IntLiteral { value, .. } = **left {
-                            assert!(matches!(value, IntLiteralValue::Int8(69)));
+                            assert!(matches!(value, IntLiteralValue::Int8(-69)));
                         } else { panic!(); }
 
                         if let Expr::Var { name, .. } = &**right {
@@ -424,7 +579,7 @@ mod while_stmt_in_function_tests {
             }
 
 
-            for (b, s) in ALL_BIN_OP_KIND_COMP.iter().zip(BIN_OP_KIND_COMP_SYMBOLS.iter()) {
+            for (b, s) in ALL_BIN_OP_KIND.iter().zip(BIN_OP_KIND_SYMBOLS.iter()) {
                 let stmts = parse_body(&format!("while x {} 67 {}{{\n\n}}", s, spaces));
                 assert_eq!(stmts.len(), 1);
                 if let Stmt::While(w) = &stmts[0] {
