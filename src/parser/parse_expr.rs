@@ -21,7 +21,6 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
         )));
     }
 
-    
     // String Literal ?
     if s.starts_with('"') {
         // Find the matching closing quote
@@ -429,7 +428,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
                 }
             }
 
-
+            
             // Check for language-defined functions, otherwise, treat this 
             // expression as a normal programmer-defined function call.
             //
@@ -496,10 +495,17 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
 
                 }
 
-                _ => return Ok(Expr::Call { name, args, span })   
+                _ => {
+                    helpers::validate_identifier_name(&name)
+                        .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+
+
+                    return Ok(Expr::Call { name, args, span })   
+                }
             }
         }
     }
+    
 
     // otherwise a variable name
 
