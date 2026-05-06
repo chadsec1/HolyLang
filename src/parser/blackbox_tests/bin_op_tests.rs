@@ -1,9 +1,8 @@
 use super::*;
 
 #[cfg(test)]
-mod bin_op_tests_in_functions {
+mod bin_op_in_function_tests {
     use super::*;
-
 
     #[test]
     fn binop_arth_all_literals() {
