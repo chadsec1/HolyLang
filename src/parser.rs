@@ -559,6 +559,7 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
     }
 
 
+
     if line == "break" {
         return Ok(Stmt::Break(BreakStmt{ span: span }));
     }
@@ -735,27 +736,6 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
         }
     }
 
-    // multi-assignment outside 'own': "x, y = expr"
-    if line.contains(',') && line.contains('=') {
-        if let Some(eq_pos) = line.find('=') {
-            let left = line[..eq_pos].trim();
-            let right = line[eq_pos + 1..].trim();
-
-            if left.contains(',') {
-                let mut names = vec![];
-                for part in left.split(',') {
-                    let n = part.trim();
-                    helpers::validate_identifier_name(n)
-                        .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
-
-                    names.push(n.to_string());
-                }
-                let value = parse_expr::parse_expr(right, span)?;
-                return Ok(Stmt::VarAssignMulti(MultiAssignment { names, value, span }));
-            }
-        }
-    }
-
     // Enforces variable assignment to be clean
     // i.e.
     // own x = 1
@@ -766,9 +746,28 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
     // TODO: Could use a better help message... but i can't figure a clean non complicated way to
     // do it. :(
     //
+    // assignment and multi-assignment e.g.:
+    // `own x TYPE = EXPRESSION`
+    // 'own x TYPE, y TYPE = EXPRESSION`
+    //
     if let Some(eq_pos) = line.find(" = ") {
         let name = line[..eq_pos].trim();
         let right = line[eq_pos + 3..].trim();
+
+        if name.contains(',') {
+            let mut var_names = vec![];
+            for n in name.split(',') {
+                let n = n.trim();
+                helpers::validate_identifier_name(n)
+                    .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+
+                var_names.push(n.to_string());
+            }
+
+            let value = parse_expr::parse_expr(right, span)?;
+            return Ok(Stmt::VarAssignMulti(MultiAssignment { names: var_names, value, span }));
+        }
+
 
         // validate left is a valid identifier
         helpers::validate_identifier_name(name)
@@ -781,6 +780,7 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
             span,
         }));
     }
+
 
     // Expression statement (function call, assignment not supported here yet)
     let expr = parse_expr::parse_expr(line, span)?;
