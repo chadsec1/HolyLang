@@ -75,8 +75,8 @@ fn assert_parse_err(src: &str) {
     );
 }
 
-// all literals and variable names, and array access and slicing.
-fn get_all_literals_edge_cases() -> [String; 38] {
+// all literals (ints, floats, array, strings literals of ints, floats, strings, other arrays, and variable names, and array access and slicing.
+fn get_all_literals_edge_cases() -> [String; 42] {
     return [
         i8::MIN.to_string(), i8::MAX.to_string(),
         i16::MIN.to_string(), i16::MAX.to_string(),
@@ -96,7 +96,9 @@ fn get_all_literals_edge_cases() -> [String; 38] {
         "false".to_string(), "true".to_string(),
         "\"\"".to_string(), "\"h\"".to_string(), "\"hi\"".to_string(),
         "i".to_string(), "arr".to_string(), "x".to_string(), "y".to_string(), "xyz".to_string(),
-        "arr[i]".to_string(), "arr[:i]".to_string(), "arr[i:]".to_string(), "arr[e:h]".to_string()
+        "arr[i]".to_string(), "arr[:i]".to_string(), "arr[i:]".to_string(), "arr[e:h]".to_string(),
+
+        "idk()".to_string(), "idk(1)".to_string(), "idk(false, \"hi\")".to_string(), "idk(lol())".to_string()
     ]
 }
 

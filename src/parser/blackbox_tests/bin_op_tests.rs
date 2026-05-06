@@ -13,6 +13,7 @@ mod bin_op_tests_in_functions {
             for l2 in &literals {
                 for (b, s) in ALL_BIN_OP_KIND.iter().zip(BIN_OP_KIND_SYMBOLS.iter()) {
                     let stmts = parse_body(&format!("{} {} {}", l1, s, l2));
+
                     if let Stmt::Expr(e) = &stmts[0] {
                         if let Expr::BinOp { op, .. } = &e {
                             assert_eq!(op, b);
