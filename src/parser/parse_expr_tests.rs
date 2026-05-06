@@ -30,8 +30,11 @@ mod format_call_tests;
 // Test helper functions
 //
 
-// all literals and variable names, and array access and slicing.
-fn get_all_literals_edge_cases() -> [String; 38] {
+
+// all literals (ints, floats, array, strings literals of ints, floats, strings, other arrays, and variable names, and array access and slicing.
+// Some of these literals are illegal semantically, but syntaxally, should be valid.
+//
+fn get_all_literals_edge_cases() -> [String; 125] {
     return [
         i8::MIN.to_string(), i8::MAX.to_string(),
         i16::MIN.to_string(), i16::MAX.to_string(),
@@ -40,18 +43,75 @@ fn get_all_literals_edge_cases() -> [String; 38] {
         i128::MIN.to_string(), i128::MAX.to_string(),
         
         u8::MIN.to_string(), u8::MAX.to_string(),
-        u16::MIN.to_string(), u16::MAX.to_string(),
-        u32::MIN.to_string(), u32::MAX.to_string(),
-        u64::MIN.to_string(), u64::MAX.to_string(),
-        u128::MIN.to_string(), u128::MAX.to_string(),
-        usize::MIN.to_string(), usize::MAX.to_string(),
+        u16::MAX.to_string(),
+        u32::MAX.to_string(),
+        u64::MAX.to_string(),
+        u128::MAX.to_string(),
+        usize::MAX.to_string(),
         
-        format!("{}.0", f64::MIN.to_string()), format!("{}.0", f64::MAX.to_string()), 
+        "0.0".to_string(), format!("{}.0", f64::MIN.to_string()), format!("{}.0", f64::MAX.to_string()), 
 
         "false".to_string(), "true".to_string(),
         "\"\"".to_string(), "\"h\"".to_string(), "\"hi\"".to_string(),
         "i".to_string(), "arr".to_string(), "x".to_string(), "y".to_string(), "xyz".to_string(),
-        "arr[i]".to_string(), "arr[:i]".to_string(), "arr[i:]".to_string(), "arr[e:h]".to_string()
+        
+        format!("arr[{}]", i8::MIN.to_string()), format!("arr[{}]", i8::MAX.to_string()), 
+        format!("arr[:{}]", i8::MIN.to_string()), format!("arr[:{}]", i8::MAX.to_string()), 
+        format!("arr[{}:]", i8::MIN.to_string()), format!("arr[{}:]", i8::MAX.to_string()), 
+        format!("arr[{0}:{0}]", i8::MIN.to_string()), format!("arr[{0}:{0}]", i8::MAX.to_string()), 
+
+        format!("arr[{}]", usize::MIN.to_string()), format!("arr[{}]", usize::MAX.to_string()), 
+        format!("arr[:{}]", usize::MIN.to_string()), format!("arr[:{}]", usize::MAX.to_string()), 
+        format!("arr[{}:]", usize::MIN.to_string()), format!("arr[{}:]", usize::MAX.to_string()), 
+        format!("arr[{0}:{0}]", usize::MIN.to_string()), format!("arr[{0}:{0}]", usize::MAX.to_string()), 
+
+        "arr[i]".to_string(), "arr[:i]".to_string(), "arr[i:]".to_string(), "arr[e:h]".to_string(),
+        
+        "idk()".to_string(), 
+        format!("idk({})", i8::MIN.to_string()), format!("idk({})", i8::MAX.to_string()), 
+        format!("idk({})", i16::MIN.to_string()), format!("idk({})", i16::MAX.to_string()), 
+        format!("idk({})", i32::MIN.to_string()), format!("idk({})", i32::MAX.to_string()), 
+        format!("idk({})", i64::MIN.to_string()), format!("idk({})", i64::MAX.to_string()), 
+        format!("idk({})", i128::MIN.to_string()), format!("idk({})", i128::MAX.to_string()), 
+
+        format!("idk({})", u8::MIN.to_string()), format!("idk({})", u8::MAX.to_string()), 
+        format!("idk({})", u16::MAX.to_string()),
+        format!("idk({})", u32::MAX.to_string()), 
+        format!("idk({})", u64::MAX.to_string()), 
+        format!("idk({})", u128::MAX.to_string()), 
+        format!("idk({})", usize::MAX.to_string()), 
+
+
+        format!("idk({0}, {0}, {0})", i8::MIN.to_string()), format!("idk({0}, {0}, {0})", i8::MAX.to_string()), 
+        format!("idk({0}, {0}, {0})", i16::MIN.to_string()), format!("idk({0}, {0}, {0})", i16::MAX.to_string()), 
+        format!("idk({0}, {0}, {0})", i32::MIN.to_string()), format!("idk({0}, {0}, {0})", i32::MAX.to_string()), 
+        format!("idk({0}, {0}, {0})", i64::MIN.to_string()), format!("idk({0}, {0}, {0})", i64::MAX.to_string()), 
+        format!("idk({0}, {0}, {0})", i128::MIN.to_string()), format!("idk({0}, {0}, {0})", i128::MAX.to_string()), 
+
+        "idk(false)".to_string(), "idk(true)".to_string(),
+        format!("idk({})", f64::MIN.to_string()), format!("idk({})", u64::MAX.to_string()), 
+
+        "idk(\"hi\")".to_string(), 
+        "idk(\"\")".to_string(), "idk(\"h\")".to_string(),
+        "idk(i)".to_string(), "idk(arr)".to_string(), "idk(x)".to_string(), "idk(y)".to_string(), "idk(xyz)".to_string(),
+        "idk(arr[i])".to_string(), "idk(arr[:i])".to_string(), "idk(arr[i:])".to_string(), "idk(arr[e:h])".to_string(),
+        
+        "idk(false, \"hi\")".to_string(), "idk(lol())".to_string(), "idk(idk())".to_string(),
+
+        "idk([1, 2, 3])".to_string(), "idk([-1, -2, -3])".to_string(), "idk([-1, 2, -3])".to_string(), "idk([1, -2, 3])".to_string(),
+        "idk([1.0, 2.0, 3.0])".to_string(), "idk([-1.0, -2.0, -3.0])".to_string(), "idk([-1.0, 2.0, -3.0])".to_string(), "idk([1.0, -2.0, 3.0])".to_string(),
+        "idk([1, 2.0, 3])".to_string(), "idk([-1, -2.0, -3])".to_string(), "idk([-1, 2.0, -3])".to_string(), "idk([1, -2.0, 3])".to_string(),
+
+        "idk([1, 2.0, \"hi\", false, -0, heh()])".to_string(),
+        "idk([1, 2.0, \"hi\", false, -0, heh([1, 2.0, \"hi\", false, -0, heh()])])".to_string(),
+
+
+        "[1, 2, 3]".to_string(), "[-1, -2, -3]".to_string(), "[-1, 2, -3]".to_string(), "[1, -2, 3]".to_string(),
+        "[1.0, 2.0, 3.0]".to_string(), "[-1.0, -2.0, -3.0]".to_string(), "[-1.0, 2.0, -3.0]".to_string(), "[1.0, -2.0, 3.0]".to_string(),
+        "[1, 2.0, 3]".to_string(), "[-1, -2.0, -3]".to_string(), "[-1, 2.0, -3]".to_string(), "[1, -2.0, 3]".to_string(),
+
+        "[1, 2.0, \"hi\", false, -0, heh()]".to_string(),
+        "[1, 2.0, \"hi\", false, -0, heh([1, 2.0, \"hi\", false, -0, heh()])]".to_string(),
     ]
 }
 
