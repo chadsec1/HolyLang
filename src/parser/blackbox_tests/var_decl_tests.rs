@@ -401,7 +401,7 @@ mod var_decl_in_globals_tests {
         let literals_edge_cases = get_all_literals_edge_cases(); 
 
         for l in &literals_edge_cases {
-            assert_parse_err(&wrap(&format!("own x = {}", l)));
+            assert_parse_err(&format!("own x = {}", l));
         }
     }
 
@@ -411,11 +411,11 @@ mod var_decl_in_globals_tests {
 
         for l in &ints_literals_edge_cases {
             for t in ALL_TYPES_NO_ARR {
-                assert_parse_err(&wrap(&format!("own {} {} = {}", l, t, l)));
-                assert_parse_err(&wrap(&format!("own {} {} = {}", t, l, l)));
+                assert_parse_err(&format!("own {} {} = {}", l, t, l));
+                assert_parse_err(&format!("own {} {} = {}", t, l, l));
 
-                assert_parse_err(&wrap(&format!("own {} {}", l, t)));
-                assert_parse_err(&wrap(&format!("own {} {}", t, l)));
+                assert_parse_err(&format!("own {} {}", l, t));
+                assert_parse_err(&format!("own {} {}", t, l));
 
             }
         }
@@ -427,8 +427,11 @@ mod var_decl_in_globals_tests {
 
         for l in &literals_edge_cases {
             for t in ALL_TYPES_NO_ARR {
-                let stmts = parse_body(&format!("own x {} = {}", t, l));
-                if let Stmt::VarDecl(v) = &stmts[0] {
+                let ast = parse(&format!("own x {} = {}", t, l)).unwrap();
+                assert_eq!(ast.functions.len(), 0);
+                assert_eq!(ast.globals.len(), 1);
+
+                if let Stmt::VarDecl(v) = &ast.globals[0] {
                     assert_eq!(v.name, "x");
                     assert_eq!(v.type_name, t.clone());
                     assert!(v.value.is_some());
@@ -442,8 +445,11 @@ mod var_decl_in_globals_tests {
     #[test]
     fn var_decl_no_value() {
         for t in ALL_TYPES_NO_ARR {
-            let stmts = parse_body(&format!("own x {}", t));
-            if let Stmt::VarDecl(v) = &stmts[0] {
+            let ast = parse(&format!("own x {}", t)).unwrap();
+            assert_eq!(ast.functions.len(), 0);
+            assert_eq!(ast.globals.len(), 1);
+
+            if let Stmt::VarDecl(v) = &ast.globals[0] {
                 assert_eq!(v.name, "x");
                 assert_eq!(v.type_name, t.clone());
                 assert!(v.value.is_none());
@@ -458,10 +464,11 @@ mod var_decl_in_globals_tests {
     // respective literals and checked the literal matches. So it's worth double checking here again.
     #[test]
     fn var_decl_float64_type() {
-        let stmts = parse_body("own y float64 = 1.0");
-        assert_eq!(stmts.len(), 1);
+        let ast = parse("own y float64 = 1.0").unwrap();
+        assert_eq!(ast.functions.len(), 0);
+        assert_eq!(ast.globals.len(), 1);
 
-        if let Stmt::VarDecl(v) = &stmts[0] {
+        if let Stmt::VarDecl(v) = &ast.globals[0] {
             assert_eq!(v.name, "y");
             assert_eq!(v.type_name, Type::Float64);
 
@@ -474,9 +481,11 @@ mod var_decl_in_globals_tests {
 
     #[test]
     fn var_decl_bool_type() {
-        let stmts = parse_body("own x bool = true");
-        assert_eq!(stmts.len(), 1);
-        if let Stmt::VarDecl(v) = &stmts[0] {
+        let ast = parse("own x bool = true").unwrap();
+        assert_eq!(ast.functions.len(), 0);
+        assert_eq!(ast.globals.len(), 1);
+
+        if let Stmt::VarDecl(v) = &ast.globals[0] {
             assert_eq!(v.name, "x");
             assert_eq!(v.type_name, Type::Bool);
 
@@ -489,10 +498,11 @@ mod var_decl_in_globals_tests {
 
     #[test]
     fn var_decl_string_type() {
-        let stmts = parse_body(r#"own x string = "hello""#);
-        assert_eq!(stmts.len(), 1);
+        let ast = parse(r#"own x string = "hello""#).unwrap();
+        assert_eq!(ast.functions.len(), 0);
+        assert_eq!(ast.globals.len(), 1);
 
-        if let Stmt::VarDecl(v) = &stmts[0] {
+        if let Stmt::VarDecl(v) = &ast.globals[0] {
             assert_eq!(v.name, "x");
             assert_eq!(v.type_name, Type::String);
             
@@ -510,10 +520,11 @@ mod var_decl_in_globals_tests {
          
         for t in ALL_TYPES_NO_ARR {
             for l in &literals_edge_cases {
-                let stmts = parse_body(&format!("own x []{} = [{}, {}, {}]", t, l, l, l));
-                assert_eq!(stmts.len(), 1);
+                let ast = parse(&format!("own x []{} = [{}, {}, {}]", t, l, l, l)).unwrap();
+                assert_eq!(ast.functions.len(), 0);
+                assert_eq!(ast.globals.len(), 1);
 
-                if let Stmt::VarDecl(v) = &stmts[0] {
+                if let Stmt::VarDecl(v) = &ast.globals[0] {
                     assert_eq!(v.name, "x");
                     assert_eq!(v.type_name, Type::Array(Box::new(t.clone())));
 
@@ -533,17 +544,18 @@ mod var_decl_in_globals_tests {
         let literals_edge_cases = get_all_literals_edge_cases(); 
 
         for l in &literals_edge_cases {
-            assert_parse_err(&wrap(&format!("own x = [{}, {}, {}]", l, l, l)));
+            assert_parse_err(&format!("own x = [{}, {}, {}]", l, l, l));
         }
     }
 
     #[test]
     fn var_decl_empty_array() {
         for t in ALL_TYPES_NO_ARR {
-            let stmts = parse_body(&format!("own x {} = []", t));
-            assert_eq!(stmts.len(), 1);
-            
-            if let Stmt::VarDecl(v) = &stmts[0] {
+            let ast = parse(&format!("own x {} = []", t)).unwrap();
+            assert_eq!(ast.functions.len(), 0);
+            assert_eq!(ast.globals.len(), 1);
+
+            if let Stmt::VarDecl(v) = &ast.globals[0] {
                 assert_eq!(v.name, "x");
                 assert_eq!(v.type_name, t.clone());
 
@@ -562,10 +574,11 @@ mod var_decl_in_globals_tests {
         
         for t in ALL_TYPES_NO_ARR {
             for l in &literals_edge_cases {
-                let stmts = parse_body(&format!("own x []{} = [[{},{},{}], [{},{},{},{}]]", t, l, l, l, l, l, l, l));
-                assert_eq!(stmts.len(), 1);
+                let ast = parse(&format!("own x []{} = [[{},{},{}], [{},{},{},{}]]", t, l, l, l, l, l, l, l)).unwrap();
+                assert_eq!(ast.functions.len(), 0);
+                assert_eq!(ast.globals.len(), 1);
 
-                if let Stmt::VarDecl(v) = &stmts[0] {
+                if let Stmt::VarDecl(v) = &ast.globals[0] {
                     assert_eq!(v.name, "x");
                     assert_eq!(v.type_name, Type::Array(Box::new(t.clone())));
 
@@ -584,10 +597,11 @@ mod var_decl_in_globals_tests {
     #[test]
     fn var_decl_nested_array_empty() {
         for t in ALL_TYPES_NO_ARR {
-            let stmts = parse_body(&format!("own x {} = []", t));
-            assert_eq!(stmts.len(), 1);
+            let ast = parse(&format!("own x {} = []", t)).unwrap();
+            assert_eq!(ast.functions.len(), 0);
+            assert_eq!(ast.globals.len(), 1);
 
-            if let Stmt::VarDecl(v) = &stmts[0] {
+            if let Stmt::VarDecl(v) = &ast.globals[0] {
                 assert_eq!(v.name, "x");
                 assert_eq!(v.type_name, t.clone());
 
@@ -610,8 +624,11 @@ mod var_decl_in_globals_tests {
             for _ in 1..100 {
                 s1.push_str("[");
                 s2.push_str("]");
-                let stmts = parse_body(&format!("own x {} = [{}{}]", t, s1, s2 ));
-                if let Stmt::VarDecl(v) = &stmts[0] {
+                let ast = parse(&format!("own x {} = [{}{}]", t, s1, s2 )).unwrap();
+                assert_eq!(ast.functions.len(), 0);
+                assert_eq!(ast.globals.len(), 1);
+
+                if let Stmt::VarDecl(v) = &ast.globals[0] {
                     if let Some(Expr::ArrayLiteral { elements, .. }) = &v.value {
                         assert_eq!(elements.len(), 1);
 
@@ -629,9 +646,12 @@ mod var_decl_in_globals_tests {
         for t1 in ALL_TYPES_NO_ARR {
             for t2 in ALL_TYPES_NO_ARR {
                 for t3 in ALL_TYPES_NO_ARR {
-                    let stmts = parse_body(&format!("own x {}, y {}, z {} = give_3_numbers()", t1, t2, t3));
-                    assert!(matches!(stmts[0], Stmt::VarDeclMulti(_, _)));
-                    if let Stmt::VarDeclMulti(vars, _) = &stmts[0] {
+                    let ast = parse(&format!("own x {}, y {}, z {} = give_3_numbers()", t1, t2, t3)).unwrap();
+                    assert_eq!(ast.functions.len(), 0);
+                    assert_eq!(ast.globals.len(), 1);
+
+                    assert!(matches!(ast.globals[0], Stmt::VarDeclMulti(_, _)));
+                    if let Stmt::VarDeclMulti(vars, _) = &ast.globals[0] {
                         assert_eq!(vars.len(), 3);
                         assert_eq!(vars[0].name, "x");
                         assert_eq!(vars[0].type_name, t1.clone());
@@ -649,8 +669,8 @@ mod var_decl_in_globals_tests {
     fn var_decl_unknown_type_errors() {
         let literals_edge_cases = get_all_literals_edge_cases(); 
 
-        assert_parse_err(&wrap("own x badtype = 1"));
-        assert_parse_err(&wrap("own x badtype"));
+        assert_parse_err("own x badtype = 1");
+        assert_parse_err("own x badtype");
 
         let letters: Vec<char> = ('a'..='z')
             .chain('A'..='Z')
@@ -658,22 +678,22 @@ mod var_decl_in_globals_tests {
         
         for l1 in &letters {
             for l2 in &letters {
-                assert_parse_err(&wrap(&format!("own {} {}", l1, l2)));
+                assert_parse_err(&format!("own {} {}", l1, l2));
             }
 
             for lit in &literals_edge_cases {
-                assert_parse_err(&wrap(&format!("own x {} = {}", l1, lit)));
+                assert_parse_err(&format!("own x {} = {}", l1, lit));
             }
         }
 
         for l in &literals_edge_cases {
-            assert_parse_err(&wrap(&format!("own x {}", l)));
+            assert_parse_err(&format!("own x {}", l));
         }
     }
 
     #[test]
     fn var_decl_no_type_no_value_errors() {
-        assert_parse_err(&wrap("own x"));
+        assert_parse_err("own x");
     }
 
 
@@ -684,11 +704,11 @@ mod var_decl_in_globals_tests {
             .collect();
         
         for l in letters {
-            assert_parse_err(&wrap(&format!("own{} x", l)));
-            assert_parse_err(&wrap(&format!("ow{}n x", l)));
-            assert_parse_err(&wrap(&format!("o{}wn x", l)));
-            assert_parse_err(&wrap(&format!("{}own x", l)));
-            assert_parse_err(&wrap(&format!("{}own{} x", l, l)));
+            assert_parse_err(&format!("own{} x", l));
+            assert_parse_err(&format!("ow{}n x", l));
+            assert_parse_err(&format!("o{}wn x", l));
+            assert_parse_err(&format!("{}own x", l));
+            assert_parse_err(&format!("{}own{} x", l, l));
         }
     }
 
@@ -700,10 +720,10 @@ mod var_decl_in_globals_tests {
         for kw in consts::RESERVED_KEYWORDS { 
             for t in ALL_TYPES_NO_ARR {
                 for l in &literals_edge_cases {
-                    assert_parse_err(&wrap(&format!("own {} {}", kw, t)));
-                    assert_parse_err(&wrap(&format!("own {} {}", kw.to_uppercase(), t)));
-                    assert_parse_err(&wrap(&format!("own {} {} = {}", kw, t, l)));
-                    assert_parse_err(&wrap(&format!("own {} {} = {}", kw.to_uppercase(), t, l)));
+                    assert_parse_err(&format!("own {} {}", kw, t));
+                    assert_parse_err(&format!("own {} {}", kw.to_uppercase(), t));
+                    assert_parse_err(&format!("own {} {} = {}", kw, t, l));
+                    assert_parse_err(&format!("own {} {} = {}", kw.to_uppercase(), t, l));
                 }
             }
         }
@@ -720,17 +740,18 @@ mod var_decl_in_globals_tests {
         for l in letters {
             for lit in &literals_edge_cases {
                 for t in ALL_TYPES_NO_ARR {
-                    let stmts = parse_body(&format!("own {} {} = {}\nown {} {} = {}", l, t, lit, l, t, lit));
-                    assert_eq!(stmts.len(), 2);
+                    let ast = parse(&format!("own {} {} = {}\nown {} {} = {}", l, t, lit, l, t, lit)).unwrap();
+                    assert_eq!(ast.functions.len(), 0);
+                    assert_eq!(ast.globals.len(), 2);
 
-                    if let Stmt::VarDecl(v) = &stmts[0] {
+                    if let Stmt::VarDecl(v) = &ast.globals[0] {
                         assert_eq!(v.name, l.to_string());
                         assert_eq!(v.type_name, t.clone());
                         assert!(v.value.is_some());
                     } else { panic!("Expected VarDecl"); }
 
 
-                    if let Stmt::VarDecl(v) = &stmts[1] {
+                    if let Stmt::VarDecl(v) = &ast.globals[1] {
                         assert_eq!(v.name, l.to_string());
                         assert_eq!(v.type_name, t.clone());
                         assert!(v.value.is_some());
@@ -751,17 +772,18 @@ mod var_decl_in_globals_tests {
         for l in letters {
             for lit in &literals_edge_cases {
                 for t in ALL_TYPES_NO_ARR {
-                    let stmts = parse_body(&format!("own {} {}\nown {} {} = {}", l, t, l, t, lit));
-                    assert_eq!(stmts.len(), 2);
+                    let ast = parse(&format!("own {} {}\nown {} {} = {}", l, t, l, t, lit)).unwrap();
+                    assert_eq!(ast.functions.len(), 0);
+                    assert_eq!(ast.globals.len(), 2);
 
-                    if let Stmt::VarDecl(v) = &stmts[0] {
+                    if let Stmt::VarDecl(v) = &ast.globals[0] {
                         assert_eq!(v.name, l.to_string());
                         assert_eq!(v.type_name, t.clone());
                         assert!(v.value.is_none());
                     } else { panic!("Expected VarDecl"); }
 
 
-                    if let Stmt::VarDecl(v) = &stmts[1] {
+                    if let Stmt::VarDecl(v) = &ast.globals[1] {
                         assert_eq!(v.name, l.to_string());
                         assert_eq!(v.type_name, t.clone());
                         assert!(v.value.is_some());
