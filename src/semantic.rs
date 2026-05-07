@@ -452,7 +452,7 @@ fn check_stmts(
                     },
                     BindingKind::Const { .. } => {
                         return Err(HolyError::Semantic(format!(
-                            "Expected variable name, instead got a constant name `{}` (line {} column {})",
+                            "You cannot assign to constant `{}` (line {} column {})",
                             &assign.name, assign.span.line, assign.span.column
                         )))
                     }
@@ -569,7 +569,7 @@ fn check_stmts(
                             },
                             BindingKind::Const { .. } => {
                                 return Err(HolyError::Semantic(format!(
-                                    "Expected variable name, instead got a constant name `{}` (line {} column {})",
+                                    "You cannot assign to constant `{}` (line {} column {})",
                                     var_name, stmt_span.line, stmt_span.column
                                 )))
                             }
