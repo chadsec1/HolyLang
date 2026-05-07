@@ -3,7 +3,7 @@ use crate::ast::{
     FixedArraySize, IntLiteralValue,
     UnaryOpKind,
     Param, Variable, VariableAssignment, MultiAssignment, 
-    IfStmt, WhileStmt, ForStmt, InfiniteStmt, BreakStmt, ContinueStmt
+    IfStmt, WhileStmt, ForStmt, InfiniteStmt, BreakStmt, ContinueStmt, Constant
 };
 
 use crate::tests_consts::{
@@ -23,6 +23,7 @@ use crate::tests_consts::{
     ALL_BIN_OP_KIND_COMP_ARTH
 };
 
+mod const_tests;
 mod var_decl_tests;
 mod var_assign_tests;
 mod ownership_tests;
@@ -253,6 +254,7 @@ fn get_all_literals_no_arr_str_bool_float() -> [Expr; 11] {
 }
 
 
+
 fn get_all_literals_no_arr() -> [Expr; 14] {
     let literals = [
         int8_lit(1),
@@ -364,6 +366,16 @@ fn returning_func(name: &str, params: Vec<Param>, ret: Vec<Type>, body: Vec<Stmt
 
 fn param(name: &str, ty: Type) -> Param {
     Param { name: name.to_string(), type_name: ty, span: span() }
+}
+
+
+fn const_define(name: &str, ty: Type, value: Expr) -> Stmt {
+    Stmt::Const(Constant {
+        name: name.to_string(),
+        type_name: ty,
+        value,
+        span: span(),
+    })
 }
 
 fn var_decl(name: &str, ty: Type, value: Option<Expr>) -> Stmt {

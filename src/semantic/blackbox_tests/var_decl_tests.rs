@@ -5,6 +5,7 @@ mod var_decl_tests {
     use super::*;
 
     // TODO: Add new test that hyper focuses on integers coericon, instead of this weak tests
+    // I mean I already added such tests in int_internal_inference but idk.. maybe need more..
     #[test]
     fn test_vardecl_literals() {
         let literals = get_all_literals_no_arr();
