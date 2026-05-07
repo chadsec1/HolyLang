@@ -55,6 +55,7 @@ fn eval_const_expr_and_fold_it_hazmat(
         Expr::IntLiteral{..} |
         Expr::Float64Literal{..} |
         Expr::ArrayLiteral{..} |
+        Expr::StringLiteral{..} |
         Expr::BoolLiteral{..} => Ok(expr.clone()),
         
         Expr::ArrayAccess { array, index,  span } => {
