@@ -113,6 +113,7 @@ pub fn infer_expr_type(
             //
             //
 
+            // TODO: Add semantics blackbox tests to cover nested arrays.
             if !elements.is_empty() {
                 let elem_ih = match infer_hint.clone() {
                     Some(Type::FixedArray(t, _)) => {

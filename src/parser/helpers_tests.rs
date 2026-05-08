@@ -4,6 +4,90 @@ use crate::tests_consts::{
     ALL_TYPES_NO_ARR
 };
 
+// all literals (ints, floats, array, strings literals of ints, floats, strings, other arrays, and variable names, and array access and slicing.
+// Some of these literals are illegal semantically, but syntaxally, should be valid.
+//
+fn get_all_literals_edge_cases() -> [String; 125] {
+    return [
+        i8::MIN.to_string(), i8::MAX.to_string(),
+        i16::MIN.to_string(), i16::MAX.to_string(),
+        i32::MIN.to_string(), i32::MAX.to_string(),
+        i64::MIN.to_string(), i64::MAX.to_string(),
+        i128::MIN.to_string(), i128::MAX.to_string(),
+        
+        u8::MIN.to_string(), u8::MAX.to_string(),
+        u16::MAX.to_string(),
+        u32::MAX.to_string(),
+        u64::MAX.to_string(),
+        u128::MAX.to_string(),
+        usize::MAX.to_string(),
+        
+        "0.0".to_string(), format!("{}.0", f64::MIN.to_string()), format!("{}.0", f64::MAX.to_string()), 
+
+        "false".to_string(), "true".to_string(),
+        "\"\"".to_string(), "\"h\"".to_string(), "\"hi\"".to_string(),
+        "i".to_string(), "arr".to_string(), "x".to_string(), "y".to_string(), "xyz".to_string(),
+        
+        format!("arr[{}]", i8::MIN.to_string()), format!("arr[{}]", i8::MAX.to_string()), 
+        format!("arr[:{}]", i8::MIN.to_string()), format!("arr[:{}]", i8::MAX.to_string()), 
+        format!("arr[{}:]", i8::MIN.to_string()), format!("arr[{}:]", i8::MAX.to_string()), 
+        format!("arr[{0}:{0}]", i8::MIN.to_string()), format!("arr[{0}:{0}]", i8::MAX.to_string()), 
+
+        format!("arr[{}]", usize::MIN.to_string()), format!("arr[{}]", usize::MAX.to_string()), 
+        format!("arr[:{}]", usize::MIN.to_string()), format!("arr[:{}]", usize::MAX.to_string()), 
+        format!("arr[{}:]", usize::MIN.to_string()), format!("arr[{}:]", usize::MAX.to_string()), 
+        format!("arr[{0}:{0}]", usize::MIN.to_string()), format!("arr[{0}:{0}]", usize::MAX.to_string()), 
+
+        "arr[i]".to_string(), "arr[:i]".to_string(), "arr[i:]".to_string(), "arr[e:h]".to_string(),
+        
+        "idk()".to_string(), 
+        format!("idk({})", i8::MIN.to_string()), format!("idk({})", i8::MAX.to_string()), 
+        format!("idk({})", i16::MIN.to_string()), format!("idk({})", i16::MAX.to_string()), 
+        format!("idk({})", i32::MIN.to_string()), format!("idk({})", i32::MAX.to_string()), 
+        format!("idk({})", i64::MIN.to_string()), format!("idk({})", i64::MAX.to_string()), 
+        format!("idk({})", i128::MIN.to_string()), format!("idk({})", i128::MAX.to_string()), 
+
+        format!("idk({})", u8::MIN.to_string()), format!("idk({})", u8::MAX.to_string()), 
+        format!("idk({})", u16::MAX.to_string()),
+        format!("idk({})", u32::MAX.to_string()), 
+        format!("idk({})", u64::MAX.to_string()), 
+        format!("idk({})", u128::MAX.to_string()), 
+        format!("idk({})", usize::MAX.to_string()), 
+
+
+        format!("idk({0}, {0}, {0})", i8::MIN.to_string()), format!("idk({0}, {0}, {0})", i8::MAX.to_string()), 
+        format!("idk({0}, {0}, {0})", i16::MIN.to_string()), format!("idk({0}, {0}, {0})", i16::MAX.to_string()), 
+        format!("idk({0}, {0}, {0})", i32::MIN.to_string()), format!("idk({0}, {0}, {0})", i32::MAX.to_string()), 
+        format!("idk({0}, {0}, {0})", i64::MIN.to_string()), format!("idk({0}, {0}, {0})", i64::MAX.to_string()), 
+        format!("idk({0}, {0}, {0})", i128::MIN.to_string()), format!("idk({0}, {0}, {0})", i128::MAX.to_string()), 
+
+        "idk(false)".to_string(), "idk(true)".to_string(),
+        format!("idk({})", f64::MIN.to_string()), format!("idk({})", u64::MAX.to_string()), 
+
+        "idk(\"hi\")".to_string(), 
+        "idk(\"\")".to_string(), "idk(\"h\")".to_string(),
+        "idk(i)".to_string(), "idk(arr)".to_string(), "idk(x)".to_string(), "idk(y)".to_string(), "idk(xyz)".to_string(),
+        "idk(arr[i])".to_string(), "idk(arr[:i])".to_string(), "idk(arr[i:])".to_string(), "idk(arr[e:h])".to_string(),
+        
+        "idk(false, \"hi\")".to_string(), "idk(lol())".to_string(), "idk(idk())".to_string(),
+
+        "idk([1, 2, 3])".to_string(), "idk([-1, -2, -3])".to_string(), "idk([-1, 2, -3])".to_string(), "idk([1, -2, 3])".to_string(),
+        "idk([1.0, 2.0, 3.0])".to_string(), "idk([-1.0, -2.0, -3.0])".to_string(), "idk([-1.0, 2.0, -3.0])".to_string(), "idk([1.0, -2.0, 3.0])".to_string(),
+        "idk([1, 2.0, 3])".to_string(), "idk([-1, -2.0, -3])".to_string(), "idk([-1, 2.0, -3])".to_string(), "idk([1, -2.0, 3])".to_string(),
+
+        "idk([1, 2.0, \"hi\", false, -0, heh()])".to_string(),
+        "idk([1, 2.0, \"hi\", false, -0, heh([1, 2.0, \"hi\", false, -0, heh()])])".to_string(),
+
+
+        "[1, 2, 3]".to_string(), "[-1, -2, -3]".to_string(), "[-1, 2, -3]".to_string(), "[1, -2, 3]".to_string(),
+        "[1.0, 2.0, 3.0]".to_string(), "[-1.0, -2.0, -3.0]".to_string(), "[-1.0, 2.0, -3.0]".to_string(), "[1.0, -2.0, 3.0]".to_string(),
+        "[1, 2.0, 3]".to_string(), "[-1, -2.0, -3]".to_string(), "[-1, 2.0, -3]".to_string(), "[1, -2.0, 3]".to_string(),
+
+        "[1, 2.0, \"hi\", false, -0, heh()]".to_string(),
+        "[1, 2.0, \"hi\", false, -0, heh([1, 2.0, \"hi\", false, -0, heh()])]".to_string(),
+    ]
+}
+
 
 
 #[cfg(test)]
@@ -235,6 +319,18 @@ mod tests {
         }
 
         #[test]
+        fn all_literals_in_array() {
+            let literals = get_all_literals_edge_cases(); 
+
+            for l in literals { 
+                let s = format!("{}, {}", l, l);
+                let result = helpers::split_char_top_level(',', &s).unwrap();
+                assert_eq!(result, vec![l.clone(), l]);
+            }
+        }
+
+
+        #[test]
         fn string_with_escaped_backslash() {
             // "\\" is a single backslash — the quote after it should close the string
             let s = r#""back\\slash", next"#;
@@ -313,113 +409,159 @@ mod tests {
         fn unclosed_string_errors() {
             assert!(helpers::split_char_top_level(',', r#""unclosed, x"#).is_err());
         }
+
+        #[test]
+        fn potentinal_misuse_panic_guard_panics() {
+            let visible_ascii: Vec<char> = (0x21u8..=0x7E)
+                .map(|b| b as char)
+                .filter(|&c| c != ',' && c != ':')
+                .collect();
+
+            for c in visible_ascii {
+                let result = std::panic::catch_unwind(|| { 
+                    let _ = helpers::split_char_top_level(c, r#"whatever"#);
+                });
+
+                assert!(result.is_err(), "Expected panic for: {:?}", c);
+
+            }
+        }
     }
 
-    // strip_outer_quotes_and_unescape
-    mod strip_outer_quotes_and_unescape {
+    // string_strip_outer_quotes_and_unescape
+    mod string_strip_outer_quotes_and_unescape {
         use super::*;
 
         #[test]
         fn empty_string_returns_empty() {
-            assert_eq!(helpers::strip_outer_quotes_and_unescape("").unwrap(), "");
-        }
-
-        #[test]
-        fn plain_string_no_quotes_passthrough() {
-            assert_eq!(helpers::strip_outer_quotes_and_unescape("hello").unwrap(), "hello");
+            assert_eq!(helpers::string_strip_outer_quotes_and_unescape(r#""""#).unwrap(), r#""#);
         }
 
         #[test]
         fn double_quoted_string_stripped() {
-            assert_eq!(helpers::strip_outer_quotes_and_unescape(r#""hello""#).unwrap(), "hello");
+            assert_eq!(helpers::string_strip_outer_quotes_and_unescape(r#""hello""#).unwrap(), "hello");
+        }
+
+
+        #[test]
+        #[should_panic(expected = "Compiler bug")]
+        fn plain_string_no_quotes_panics() {
+            let _ = helpers::string_strip_outer_quotes_and_unescape("hello");
         }
 
         #[test]
-        fn double_quote_at_start_only_errors() {
-            assert!(helpers::strip_outer_quotes_and_unescape(r#""hello"#).is_err());
+        #[should_panic(expected = "Compiler bug")]
+        fn double_quote_at_start_only_panics() {
+            let _ = helpers::string_strip_outer_quotes_and_unescape(r#""hello"#);
         }
 
         #[test]
-        fn single_quote_at_end_only_errors() {
-            assert!(helpers::strip_outer_quotes_and_unescape(r#"hello""#).is_err());
+        #[should_panic(expected = "Compiler bug")]
+        fn single_quote_at_end_only_panics() {
+            let _ = helpers::string_strip_outer_quotes_and_unescape(r#"hello""#);
         }
 
         #[test]
         fn escape_newline() {
-            assert_eq!(helpers::strip_outer_quotes_and_unescape(r#""a\nb""#).unwrap(), "a\nb");
+            assert_eq!(helpers::string_strip_outer_quotes_and_unescape(r#""a\nb""#).unwrap(), "a\nb");
         }
 
         #[test]
         fn escape_carriage_return() {
-            assert_eq!(helpers::strip_outer_quotes_and_unescape(r#""a\rb""#).unwrap(), "a\rb");
+            assert_eq!(helpers::string_strip_outer_quotes_and_unescape(r#""a\rb""#).unwrap(), "a\rb");
         }
 
         #[test]
         fn escape_tab() {
-            assert_eq!(helpers::strip_outer_quotes_and_unescape(r#""a\tb""#).unwrap(), "a\tb");
+            assert_eq!(helpers::string_strip_outer_quotes_and_unescape(r#""a\tb""#).unwrap(), "a\tb");
         }
 
         #[test]
         fn escape_backslash() {
-            assert_eq!(helpers::strip_outer_quotes_and_unescape(r#""a\\b""#).unwrap(), r#"a\b"#);
+            assert_eq!(helpers::string_strip_outer_quotes_and_unescape(r#""a\\b""#).unwrap(), r#"a\b"#);
         }
 
         #[test]
         fn escape_double_quote_inside() {
             // \" inside should produce a literal "
-            assert_eq!(helpers::strip_outer_quotes_and_unescape(r#""a\"b""#).unwrap(), r#"a"b"#);
+            assert_eq!(helpers::string_strip_outer_quotes_and_unescape(r#""a\"b""#).unwrap(), r#"a"b"#);
         }
 
         #[test]
         fn escape_single_quote_inside() {
-            assert_eq!(helpers::strip_outer_quotes_and_unescape(r#""a\'b""#).unwrap(), "a'b");
+            assert_eq!(helpers::string_strip_outer_quotes_and_unescape(r#""a\'b""#).unwrap(), "a'b");
         }
 
         #[test]
         fn escape_null_byte() {
-            assert_eq!(helpers::strip_outer_quotes_and_unescape(r#""a\0b""#).unwrap(), "a\0b");
+            assert_eq!(helpers::string_strip_outer_quotes_and_unescape(r#""a\0b""#).unwrap(), "a\0b");
         }
 
         #[test]
-        fn unknown_escape_passes_through() {
-            // \q → just 'q'
-            assert_eq!(helpers::strip_outer_quotes_and_unescape(r#""a\qb""#).unwrap(), "aqb");
+        fn valid_escapes() {
+            let valid_escapes = ['n', 'r', 't', '\\', '"', '\'', '0'];
+
+            for v in valid_escapes {
+                assert!(helpers::string_strip_outer_quotes_and_unescape(&format!("\"a\\{}b\"", v)).is_ok());
+            }
         }
 
         #[test]
-        fn trailing_backslash_in_unquoted_emits_backslash() {
-            // Input doesn't have surrounding quotes; trailing \ emits \
-            assert_eq!(helpers::strip_outer_quotes_and_unescape(r#"abc\"#).unwrap(), r#"abc\"#);
+        fn invalid_escapes() {
+            let escape = "";
+                
+            for _ in 1..=10000 {
+                let escape = format!("{}\\", escape);
+                assert!(helpers::string_strip_outer_quotes_and_unescape(&format!("\"hi{}\"", escape)).is_err());
+            }
+        }
+
+
+        #[test]
+        fn unknown_escape_errors() {
+            let valid_escapes = ['n', 'r', 't', '\\', '"', '\'', '0'];
+
+            let invalid_escapes: Vec<char> = (0x20u8..=0x7E)
+                .map(|b| b as char)
+                .filter(|c| !valid_escapes.contains(c))
+                .collect();
+
+            for i in invalid_escapes {
+                assert!(helpers::string_strip_outer_quotes_and_unescape(&format!("\"\\{}b\"", i)).is_err());
+                assert!(helpers::string_strip_outer_quotes_and_unescape(&format!("\"a\\{}b\"", i)).is_err());
+                assert!(helpers::string_strip_outer_quotes_and_unescape(&format!("\"'a\\{}\"", i)).is_err());
+                assert!(helpers::string_strip_outer_quotes_and_unescape(&format!("\"\\{}\"", i)).is_err());
+            }
         }
 
         #[test]
         fn unescaped_inner_double_quote_is_error() {
             // A bare " in the middle of a quoted string is unterminated
-            let result = helpers::strip_outer_quotes_and_unescape(r#""a"b""#);
+            let result = helpers::string_strip_outer_quotes_and_unescape(r#""a"b""#);
             assert!(result.is_err(), "bare inner quote should be an error");
         }
 
         #[test]
         fn only_two_double_quotes_empty_content() {
-            assert_eq!(helpers::strip_outer_quotes_and_unescape(r#""""#).unwrap(), "");
+            assert_eq!(helpers::string_strip_outer_quotes_and_unescape(r#""""#).unwrap(), "");
         }
 
         #[test]
         fn multiple_escape_sequences_in_a_row() {
             assert_eq!(
-                helpers::strip_outer_quotes_and_unescape(r#""\n\t\r\\""#).unwrap(),
+                helpers::string_strip_outer_quotes_and_unescape(r#""\n\t\r\\""#).unwrap(),
                 "\n\t\r\\"
             );
         }
 
         #[test]
         fn string_of_only_backslash_escape() {
-            assert_eq!(helpers::strip_outer_quotes_and_unescape(r#""\\""#).unwrap(), "\\");
+            assert_eq!(helpers::string_strip_outer_quotes_and_unescape(r#""\\""#).unwrap(), "\\");
         }
 
         #[test]
         fn unicode_content_preserved() {
-            assert_eq!(helpers::strip_outer_quotes_and_unescape(r#""héllo""#).unwrap(), "héllo");
+            assert_eq!(helpers::string_strip_outer_quotes_and_unescape(r#""héllo""#).unwrap(), "héllo");
         }
     }
 
@@ -1113,7 +1255,7 @@ mod tests {
             let stripped = helpers::strip_inline_comment(raw);
             // The # is inside the string, so nothing should be stripped
             assert_eq!(stripped, raw);
-            let unescaped = helpers::strip_outer_quotes_and_unescape(&stripped).unwrap();
+            let unescaped = helpers::string_strip_outer_quotes_and_unescape(&stripped).unwrap();
             assert_eq!(unescaped, "hello # world");
         }
     }

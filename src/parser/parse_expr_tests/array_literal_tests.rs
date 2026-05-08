@@ -7,13 +7,45 @@ mod array_literal_tests {
 
     #[test]
     fn test_empty_array_literal() {
-        match parse("[]").unwrap() {
-            Expr::ArrayLiteral { elements, .. } => {
-                assert_eq!(elements.len(), 0);
+        const MAX_SPACES: usize = 1000;
+        
+        let mut spaces = String::with_capacity(MAX_SPACES);
+        for _ in 0..=1000 {  
+            match parse(&format!("[{}]", spaces)).unwrap() {
+                Expr::ArrayLiteral { elements, .. } => {
+                    assert_eq!(elements.len(), 0);
+                }
+                other => panic!("expected ArrayLiteral, got {:?}", other),
             }
-            other => panic!("expected ArrayLiteral, got {:?}", other),
+
+
+            spaces.push(' ');
         }
     }
+
+    #[test]
+    fn test_array_literals_non_separated_errors() {
+        let literals = get_all_literals_edge_cases();
+
+        let mut last_l: String = literals[1].clone();
+
+        for l in literals {
+            if l.starts_with("-") {
+                assert_parse_err(&format!("[{} {} {}]", l, last_l, last_l));
+                continue
+            }
+            assert_parse_err(&format!("[{} {} {}]", l, l, l));
+            last_l = l;
+        }
+    }
+
+    #[test]
+    fn test_array_unclosed_strings_errors() {
+        assert_parse_err("[\"hi]");
+        assert_parse_err("[\"hi, \"lol\"]");
+    }
+
+
 
     #[test]
     fn test_array_literals() {
