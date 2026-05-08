@@ -9,8 +9,8 @@ pub enum HolyError {
     /// Semantic errors (type mismatch, ownership violation, missing docs)
     Semantic(String),
 
-    /// Transpiler errors (Rust code generation issues)
-    Transpile(String),
+    // Transpiler errors (Rust code generation issues)
+    // Transpile(String),
 }
 
 impl fmt::Display for HolyError {
@@ -18,7 +18,7 @@ impl fmt::Display for HolyError {
         match self {
             HolyError::Parse(msg) => write!(f, "Parse error: {}", msg),
             HolyError::Semantic(msg) => write!(f, "Semantic error: {}", msg),
-            HolyError::Transpile(msg) => write!(f, "Transpile error: {}", msg),
+            // HolyError::Transpile(msg) => write!(f, "Transpile error: {}", msg),
         }
     }
 }
