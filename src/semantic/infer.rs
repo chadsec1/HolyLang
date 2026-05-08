@@ -117,6 +117,7 @@ pub fn infer_expr_type(
                 let elem_ih = match infer_hint.clone() {
                     Some(Type::FixedArray(t, _)) => {
                         let fixed_inner = if t.is_array_type() {
+                            // NOTE:: I think this is a bug... 
                             t.get_array_inner_most_type()
                         } else {
                             &*t
