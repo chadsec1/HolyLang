@@ -40,11 +40,19 @@ mod format_call_tests {
 
     #[test]
     fn test_format_call_expression_in_placeholder() {
-        match parse(r#"format("{a + b}")"#).unwrap() {
-            Expr::FormatCall { expressions, .. } => {
-                assert!(matches!(&expressions[0], Expr::BinOp { op: BinOpKind::Add, .. }));
+        for (b, s) in ALL_BIN_OP_KIND.iter().zip(BIN_OP_KIND_SYMBOLS.iter()) {    
+            match parse(&format!("format(\"{{a {} b}}\")", s)).unwrap() {
+                Expr::FormatCall { expressions, .. } => {
+                    assert_eq!(expressions.len(), 1);
+                    match &expressions[0] {
+                        Expr::BinOp { op, .. } => {
+                            assert_eq!(op, b);
+                        },
+                        other => panic!("expected BinOp, got {:?}", other),
+                    }
+                }
+                other => panic!("expected FormatCall, got {:?}", other),
             }
-            other => panic!("expected FormatCall, got {:?}", other),
         }
     }
 
@@ -70,9 +78,34 @@ mod format_call_tests {
 
     #[test]
     fn test_format_call_empty_placeholder_errors() {
-        // {} is not allowed — must have an expression inside
+        // {} is not allowed, must have an expression inside
         assert_parse_err(r#"format("{}")"#);
     }
+
+    #[test]
+    fn test_format_call_all_literals_errors() {
+        let literals = get_all_literals_edge_cases();
+        
+        for l in literals {
+            assert_parse_err(&format!("format(\"{}\")", l));
+        }
+    }
+    
+
+    #[test]
+    fn test_format_call_invalid_exprs_errors() {
+        let literals = get_all_literals_edge_cases();
+        
+        for l in literals {
+            if l.contains('"') || l.starts_with('-') {
+                continue
+            }
+            assert_parse_err(&format!("format(\"{{ {} {} }}\")", l, l));
+        }
+    }
+    
+
+
 
     #[test]
     fn test_format_call_unclosed_brace_errors() {
