@@ -308,30 +308,29 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
         };
 
         // Only take the array path if the matching ']' is the very last character.
-        // If it isn't (e.g. `arr_a[e] + arr_b[b]`), then we just let it fall through to other expression detections.
+        // If it isn't (e.g. `[1, 2, 3] == [1, 2, 3]`, etc), then we just let it fall through to other expression detections.
         //
-        if let Some(close_pos) = matching_close {
-            if close_pos == s.len() - 1 {
-                let elems_str = &s[1..s.len() - 1];
 
-                let mut elems: Vec<Expr> = Vec::new();
-                if !elems_str.trim().is_empty() {
-                    let split_parts = helpers::split_char_top_level(',', elems_str)
-                                        .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+        if let Some(close_pos) = matching_close && close_pos == s.len() - 1 {
+            let elems_str = &s[1..s.len() - 1];
 
-                    for part in split_parts {
-                        let part = part.trim();
-                        let expr = parse_expr(part.trim(), span)?;
-                        elems.push(expr);
-                    }
+            let mut elems: Vec<Expr> = Vec::new();
+            if !elems_str.trim().is_empty() {
+                let split_parts = helpers::split_char_top_level(',', elems_str)
+                                    .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+
+                for part in split_parts {
+                    let part = part.trim();
+                    let expr = parse_expr(part.trim(), span)?;
+                    elems.push(expr);
                 }
-
-                return Ok(
-                    Expr::ArrayLiteral { 
-                        elements: elems, 
-                        span,
-                    });
             }
+
+            return Ok(
+                Expr::ArrayLiteral { 
+                    elements: elems, 
+                    span,
+                });
         }
     }
 
@@ -359,76 +358,73 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
             found
         };
 
-        if let Some(close_pos) = matching_close {
-            if close_pos == s.len() - 1 {
-                let arr_expr = parse_expr(&s[..first_bracket], span)?;
+        if let Some(close_pos) = matching_close && close_pos == s.len() - 1 {
+            let arr_expr = parse_expr(&s[..first_bracket], span)?;
 
-                // like whats inside the a[...]
-                let inner_str = &s[first_bracket + 1 .. s.len() - 1];
+            // like whats inside the a[...]
+            let inner_str = &s[first_bracket + 1 .. s.len() - 1];
 
-                let indx_parts = helpers::split_char_top_level(':', inner_str)
-                                            .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+            let indx_parts = helpers::split_char_top_level(':', inner_str)
+                                        .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+            
+            // If only one part, treat as access to a single element. 
+            if indx_parts.len() == 1 {
+                let index = parse_expr(indx_parts[0], span)?;
                 
-                // If only one part, treat as access to a single element. 
-                if indx_parts.len() == 1 {
-                    let index = parse_expr(indx_parts[0], span)?;
-                    
-                    let value = Expr::ArrayAccess { array: Box::new(arr_expr), index: Box::new(index), span };
+                let value = Expr::ArrayAccess { array: Box::new(arr_expr), index: Box::new(index), span };
 
-                    return Ok(value);
+                return Ok(value);
 
-                // Otherwise this is a slicing operation
-                // We do >= here to print helpful error messages
-                //
-                // NOTE TODO: Ensure this doesnt mess with nested expressions within array
-                // access/slicing. 
-                } else if indx_parts.len() >= 2 {
-                    if indx_parts.len() != 2 {
-                        return Err(HolyError::Parse(format!(
-                                    "Invalid array slicing syntax `{}` ! (line {} column {})",
-                                    s, span.line, span.column
-                                )));
-
-                    }
-
-                    let start = indx_parts[0].trim();
-                    let end = indx_parts[indx_parts.len() - 1].trim();
-
-                    let mut start_expr: Option<Box<Expr>> = None;
-                    let mut end_expr: Option<Box<Expr>> = None;
-
-                    if start.is_empty() && end.is_empty() {
-                        return Err(HolyError::Parse(format!(
-                                    "Start and or end index are empty! (line {} column {})",
-                                    span.line, span.column
-                                )));
-                    }
-
-                    // i.e. x[:EXPRESSION]
-                    if start.is_empty() {
-                        end_expr = Some(Box::new(parse_expr(end, span)?));
-                    }
-
-                    // i.e. x[EXPRESSION:]
-                    if end.is_empty() {
-                        start_expr = Some(Box::new(parse_expr(start, span)?));
-                    }
-
-                    // i.e. x[EXPRESSION:EXPRESSION]
-                    if !start.is_empty() && !end.is_empty() {
-                        start_expr = Some(Box::new(parse_expr(start, span)?));
-                        end_expr = Some(Box::new(parse_expr(end, span)?));
-                    }
-
-                    
-                    return Ok(
-                        Expr::ArraySlicing { 
-                            array: Box::new(arr_expr), 
-                            start: start_expr,
-                            end: end_expr,
-                            span 
-                        });
+            // Otherwise this is a slicing operation
+            // We do >= here to print helpful error messages
+            //
+            // NOTE TODO: Ensure this doesnt mess with nested expressions within array
+            // access/slicing. 
+            } else {
+                if indx_parts.len() != 2 {
+                    return Err(HolyError::Parse(format!(
+                                "Invalid array slicing syntax `{}` ! (line {} column {})",
+                                s, span.line, span.column
+                            )));
                 }
+
+                let start = indx_parts[0].trim();
+                let end = indx_parts[indx_parts.len() - 1].trim();
+
+                let mut start_expr: Option<Box<Expr>> = None;
+                let mut end_expr: Option<Box<Expr>> = None;
+
+                if start.is_empty() && end.is_empty() {
+                    return Err(HolyError::Parse(format!(
+                                "Start and or end index are empty! (line {} column {})",
+                                span.line, span.column
+                            )));
+                }
+
+                // i.e. x[:EXPRESSION]
+                if start.is_empty() {
+                    end_expr = Some(Box::new(parse_expr(end, span)?));
+                }
+
+                // i.e. x[EXPRESSION:]
+                if end.is_empty() {
+                    start_expr = Some(Box::new(parse_expr(start, span)?));
+                }
+
+                // i.e. x[EXPRESSION:EXPRESSION]
+                if !start.is_empty() && !end.is_empty() {
+                    start_expr = Some(Box::new(parse_expr(start, span)?));
+                    end_expr = Some(Box::new(parse_expr(end, span)?));
+                }
+
+                
+                return Ok(
+                    Expr::ArraySlicing { 
+                        array: Box::new(arr_expr), 
+                        start: start_expr,
+                        end: end_expr,
+                        span 
+                    });
             }
         }
     }
