@@ -24,6 +24,12 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
     // String Literal ?
     if s.starts_with('"') {
         // Find the matching closing quote
+        //
+        // The reason we do this here, instead of just letting up to
+        // string_strip_outer_quotes_and_unescape due to fact it errors on invalid strings thinking
+        // its a string, but it could also be an expression concerning strings. so we have to still
+        // manually basic match here.
+        //
         let mut chars = s.char_indices().skip(1);
         let closing = loop {
             match chars.next() {
@@ -42,9 +48,12 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
                 )));
             }
             Some(i) if i == s.len() - 1 => {
-                let str_unescaped = helpers::strip_outer_quotes_and_unescape(s)
+                // Escapes the string content (like \n, etc), and removes the outer double quotes
+                //
+                let str_unescaped = helpers::string_strip_outer_quotes_and_unescape(s)
                     .map_err(|e| HolyError::Parse(format!("{} (line {} column {})",
                         e, span.line, span.column)))?;
+
                 return Ok(Expr::StringLiteral { value: str_unescaped, span });
             }
             // Fall through
@@ -63,11 +72,12 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
             match c {
                 '(' => depth += 1,
                 ')' => {
-                    if depth > 0 {
-                        depth -= 1;
-                        if depth == 0 && i == s.len() - 1 {
-                            matched_at_end = true;
-                        }
+                    // NOTE: We dont check depth > 0 here because, we already checkk starts_with
+                    // and ends_with, so ) is guaranteed to be > 0
+                    //
+                    depth -= 1;
+                    if depth == 0 && i == s.len() - 1 {
+                        matched_at_end = true;
                     }
                 }
                 _ => {}
@@ -155,8 +165,6 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
     }
 
 
-    
-
     // Binary operations handling: split on the first operator
     if let Some((pos, op)) = helpers::find_top_level_op_any(s) {
         let left = s[..pos].trim();
@@ -191,12 +199,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
             "|" => BinOpKind::BitwiseOr,
             "and" => BinOpKind::And,
             "or" => BinOpKind::Or,
-            o => {
-                return Err(HolyError::Parse(format!(
-                    "Unknown binary operand `{}` (line {} column {})",
-                    o, span.line, span.column
-                )));
-            },
+            o => panic!("(Compiler bug) Unknown operand {:?} indicating a bug is in `find_top_level_op_any` func.", o)
         };
 
         let left_expr = parse_expr(left, span)?;
@@ -231,8 +234,29 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
         });
     }
 
+    // Unary logical NOT support
+    if s.starts_with('!') {
+        let rest = s[1..].trim();
 
-    // Unary bitwise not support.
+        if rest.is_empty() {
+            return Err(HolyError::Parse(format!(
+                "Expected expression before '!' at line {} column {}",
+                span.line, span.column
+            )));
+        }
+
+        // Parse inner expression
+        let inner = parse_expr(rest, span)?;
+
+        // Return the expression wrapped in Unary of operation NOT.
+        return Ok(Expr::UnaryOp {
+            op: UnaryOpKind::Not, 
+            expr: Box::new(inner), 
+            span: span
+        });
+    }
+
+    // Unary bitwise NOT support.
     if s.starts_with('~') {
         let rest = s[1..].trim();
 
