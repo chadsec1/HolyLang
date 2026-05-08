@@ -10,11 +10,12 @@ pub fn find_top_level_op_any(s: &str) -> Option<(usize, &str)> {
             "or" => 1,
             "and" => 2,
             "==" | "!=" => 3,
+            "&" | "|" => 3,
             ">" | "<" | ">=" | "<=" => 3,
             "<<" | ">>" => 3,
             "+" | "-" => 4,
             "*" | "/" => 5,
-            _ => u8::MAX,
+            _ => panic!("(Compiler bug) If this ever fires, theres a bug in find_top_level_op_any")
         }
     }
     
@@ -76,14 +77,14 @@ pub fn find_top_level_op_any(s: &str) -> Option<(usize, &str)> {
                 };
 
                 if let Some(op) = op_str {
-                    // Skip unary  (negate, bitwise not)
-                    if op == "-" || op == "~" {
+                    // Skip unary  (negate, logical not,m bitwise not)
+                    if op == "-" || op == "!" || op == "~" {
                         let prev_non_ws = (0..i).rev()
                             .map(|j| chars[j].1)
                             .find(|ch| !ch.is_whitespace());
                         match prev_non_ws {
                             None => { i += 1; continue; }
-                            Some(prev) if "+-*/&|!=<>(".contains(prev) => { i += 1; continue; }
+                            Some(prev) if "+-*/&|!~=<>(".contains(prev) => { i += 1; continue; }
                             _ => {}
                         }
                     }
@@ -195,55 +196,42 @@ pub fn split_char_top_level(split_char: char, s: &str) -> Result<Vec<&str>, Holy
         return Err(HolyError::Parse("Unclosed string literal".into()));
     }
 
-    if escape {
-        return Err(HolyError::Parse("Invalid trailing escape in string".into()));
-    }
-
     // push last part
     parts.push(s[start..].trim());
     Ok(parts)
 }
 
 
-pub fn strip_outer_quotes_and_unescape(s: &str) -> Result<String, HolyError> {
-    // This removes surrounding double quotes if both ends are quotes
-    let inner = if s.len() >= 2 && s.starts_with('"') && s.ends_with('"') {
-        &s[1..s.len()-1]
-    } else {
-        s
-    };
+pub fn string_strip_outer_quotes_and_unescape(s: &str) -> Result<String, HolyError> {
+    if !(s.len() >= 2 && s.starts_with('"') && s.ends_with('"')) {
+        panic!("(Compiler bug) Malformed string is not double-quoted: {:?}", s);
+    }
 
-    // This unescape of common sequences
+    let inner = &s[1..s.len() - 1];
     let mut out = String::with_capacity(inner.len());
     let mut chars = inner.chars().peekable();
 
-    let mut double_quotes_encountered = false;
-
     while let Some(c) = chars.next() {
-        if c == '\\' {
-            match chars.next() {
-                Some('n') => out.push('\n'),
-                Some('r') => out.push('\r'),
-                Some('t') => out.push('\t'),
+        match c {
+            '\\' => match chars.next() {
+                Some('n')  => out.push('\n'),
+                Some('r')  => out.push('\r'),
+                Some('t')  => out.push('\t'),
                 Some('\\') => out.push('\\'),
-                Some('"') => {
-                    double_quotes_encountered = true;
-                    out.push('"')
-                },
+                Some('"')  => out.push('"'),
                 Some('\'') => out.push('\''),
-                Some('0') => out.push('\0'),
-                // unknown escape: just emit the escaped char as-is
-                Some(other) => out.push(other),
-                None => out.push('\\'), // trailing backslash
-            }
-            
-
-        } else if c == '"' {
-            if double_quotes_encountered == false {
-                return Err(HolyError::Parse(format!("Unterminated string: `{}`", out).into()));
-            }
-        } else {
-            out.push(c);
+                Some('0')  => out.push('\0'),
+                Some(other) => return Err(HolyError::Parse(format!(
+                    "Unknown escape sequence `\\{}`", other
+                ))),
+                None => return Err(HolyError::Parse(
+                    "Trailing backslash in string".into()
+                )),
+            },
+            '"' => return Err(HolyError::Parse(format!(
+                "Unexpected unescaped quote inside string: `{}`", s
+            ))),
+            _ => out.push(c),
         }
     }
 
