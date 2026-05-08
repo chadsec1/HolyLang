@@ -6,7 +6,7 @@ mod function_tests {
 
 
     #[test]
-    fn parse_function_with_missing_opening_parenthesis_errors() {
+    fn function_with_missing_opening_parenthesis_errors() {
         let result = parse("func main) {\n}\n");
 
         assert!(result.is_err());
@@ -14,7 +14,7 @@ mod function_tests {
     }
 
     #[test]
-    fn parse_function_with_missing_closing_parenthesis_errors() {
+    fn function_with_missing_closing_parenthesis_errors() {
         let result = parse("func main( {\n}\n");
 
         assert!(result.is_err());
@@ -23,7 +23,7 @@ mod function_tests {
 
 
     #[test]
-    fn parse_function_with_returns_missing_opening_parenthesis_errors() {
+    fn function_missing_opening_parenthesis_with_return_errors() {
         for t in ALL_TYPES_NO_ARR {
             let result = parse(&format!("func main) {} {{\n}}\n", t));
 
@@ -33,7 +33,7 @@ mod function_tests {
     }
 
     #[test]
-    fn parse_function_with_returns_missing_closing_parenthesis_errors() {
+    fn function_missing_closing_parenthesi_with_returns_errors() {
         for t in ALL_TYPES_NO_ARR {
             let result = parse(&format!("func main( {} {{\n}}\n", t));
 
@@ -43,7 +43,7 @@ mod function_tests {
     }
 
     #[test]
-    fn parse_function_missing_opening_parenthesis_with_multiple_returns_errors() {
+    fn function_missing_opening_parenthesis_with_multiple_returns_errors() {
         for t1 in ALL_TYPES_NO_ARR {
             for t2 in ALL_TYPES_NO_ARR {
                 let result = parse(&format!("func main) ({}, {}) {{\n}}\n", t1, t2));
@@ -56,7 +56,7 @@ mod function_tests {
 
 
     #[test]
-    fn parse_function_missing_closing_parenthesis_with_multiple_returns_errors() {
+    fn function_missing_closing_parenthesis_with_multiple_returns_errors() {
         for t1 in ALL_TYPES_NO_ARR {
             for t2 in ALL_TYPES_NO_ARR {
                 let result = parse(&format!("func main( ({}, {}) {{\n}}\n", t1, t2));
@@ -67,10 +67,30 @@ mod function_tests {
         }
     }
 
+    #[test]
+    fn function_missing_multiple_return_opening_parenthesis_errors() {
+        for t in ALL_TYPES_NO_ARR {
+            let result = parse(&format!("func main() {}) {{\n}}\n", t));
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Missing opening parentheses for return type"));
+        }
+    }
 
 
     #[test]
-    fn parse_empty_function() {
+    fn function_missing_multiple_return_closing_parenthesis_errors() {
+        for t in ALL_TYPES_NO_ARR {
+            let result = parse(&format!("func main() ({} {{\n}}\n", t));
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Missing closing parentheses for return type"));
+        }
+    }
+
+
+    #[test]
+    fn empty_function() {
         let ast = parse("func main() {\n}\n").unwrap();
         assert_eq!(ast.functions.len(), 1);
         let f = &ast.functions[0];
@@ -81,24 +101,37 @@ mod function_tests {
     }
 
     #[test]
-    fn parse_function_with_params() {
-        let ast = parse("func hello(a int32, b uint32, c usize) float64 {\n}\n").unwrap();
-        let f = &ast.functions[0];
-        assert_eq!(f.name, "hello");
-        
-        assert_eq!(f.return_type, Some(vec![Type::Float64]));
+    fn function_with_params() {
+        for t in ALL_TYPES_NO_ARR {
+            let ast = parse(&format!("func hello(a int32, b uint32, c usize) {} {{\n}}", t)).unwrap();
+            let f = &ast.functions[0];
+            assert_eq!(f.name, "hello");
+            
+            assert_eq!(f.return_type, Some(vec![t.clone()]));
 
-        assert_eq!(f.params.len(), 3);
-        assert_eq!(f.params[0].name, "a");
-        assert_eq!(f.params[0].type_name, Type::Int32);
-        assert_eq!(f.params[1].name, "b");
-        assert_eq!(f.params[1].type_name, Type::Uint32);
-        assert_eq!(f.params[2].name, "c");
-        assert_eq!(f.params[2].type_name, Type::Usize);
+            assert_eq!(f.params.len(), 3);
+            assert_eq!(f.params[0].name, "a");
+            assert_eq!(f.params[0].type_name, Type::Int32);
+            assert_eq!(f.params[1].name, "b");
+            assert_eq!(f.params[1].type_name, Type::Uint32);
+            assert_eq!(f.params[2].name, "c");
+            assert_eq!(f.params[2].type_name, Type::Usize);
+        }
     }
 
     #[test]
-    fn parse_function_single_return_type() {
+    fn function_with_invalid_param_name_errors() {
+        for t in ALL_TYPES_NO_ARR {
+            let result = parse(&format!("func hello({} {}) {{\n}}", t, t));
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Binding identifier name"));
+        }
+    }
+
+
+    #[test]
+    fn function_single_return_type() {
         for t in ALL_TYPES_NO_ARR {
             let ast = parse(&format!("func foo() {} {{\n}}\n", t)).unwrap();
             let f = &ast.functions[0];
@@ -110,7 +143,7 @@ mod function_tests {
     }
 
     #[test]
-    fn parse_function_multi_return_type() {
+    fn function_multi_return_type() {
         let ast = parse("func foo() (int32, bool) {\n}\n").unwrap();
         let f = &ast.functions[0];
 
@@ -120,7 +153,7 @@ mod function_tests {
     }
 
     #[test]
-    fn parse_function_no_return_type() {
+    fn function_no_return_type() {
         let ast = parse("func noop() {\n}\n").unwrap();
         let f = &ast.functions[0];
 
@@ -130,38 +163,38 @@ mod function_tests {
     }
 
     #[test]
-    fn parse_function_missing_open_paren_errors() {
+    fn function_missing_open_paren_errors() {
         assert_parse_err("func bad {\n}\n");
     }
 
     #[test]
-    fn parse_function_missing_brace_errors() {
+    fn function_missing_brace_errors() {
         assert_parse_err("func bad()\n");
     }
 
     #[test]
-    fn parse_function_unterminated_errors() {
+    fn function_unterminated_errors() {
         for t in ALL_TYPES_NO_ARR {
             assert_parse_err(&format!("func bad() {{\n own x {} = 1\n", t));
         }
     }
 
     #[test]
-    fn parse_function_keyword_name_errors() {
+    fn function_keyword_name_errors() {
         for kw in consts::RESERVED_KEYWORDS { 
             assert_parse_err(&format!("func {}() {{\n}}\n", kw));
         }
     }
 
     #[test]
-    fn parse_function_space_in_name_errors() {
+    fn function_space_in_name_errors() {
         for t in ALL_TYPES_NO_ARR {
             assert_parse_err(&format!("func bad name() {{own x {} = 1\n}}\n", t));
         }
     }
 
     #[test]
-    fn parse_function_inline_statements_in_braces_errors() {
+    fn function_inline_statements_in_braces_errors() {
         for t in ALL_TYPES_NO_ARR {
             assert_parse_err(&format!("func bad() {{own x {} = 1\n}}\n", t));
             
@@ -170,7 +203,7 @@ mod function_tests {
     }
 
     #[test]
-    fn parse_multiple_functions() {
+    fn multiple_functions() {
         let src = "func a() {\n}\nfunc b() {\n}\n";
         let ast = parse(src).unwrap();
         assert_eq!(ast.functions.len(), 2);
@@ -184,7 +217,7 @@ mod function_tests {
     }
 
     #[test]
-    fn parse_function_array_return_type() {
+    fn function_array_return_type() {
         for t in ALL_TYPES_NO_ARR {
             let ast = parse(&format!("func foo() []{} {{\n}}\n", t)).unwrap();
             let f = &ast.functions[0];
@@ -193,7 +226,7 @@ mod function_tests {
     }
 
     #[test]
-    fn parse_function_nested_array_return_type() {
+    fn function_nested_array_return_type() {
         for t in ALL_TYPES_NO_ARR {
             let mut s1 = String::with_capacity(200);
 
