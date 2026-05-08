@@ -99,18 +99,37 @@ mod types_tests {
         }
     }
 
+    // Tests against dynamic arrays, and nested dynmaic arrays
+    // and fixed arrays and nested fixed arrays
+    // and mixed arrays of both dynamic and fixed, and nested mixed arrays
     #[test]
     fn is_fully_fixed_array_type_pass() {
         for t in ALL_TYPES_NO_ARR {
             let mut dyn_arr_t = Type::Array(Box::new(t.clone()));
             let mut fixed_arr_t = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(1));
+            
+            let mut mixed_arr_1_t = Type::FixedArray(Box::new(dyn_arr_t.clone()), FixedArraySize::Literal(1));
+            let mut mixed_arr_2_t = Type::Array(Box::new(fixed_arr_t.clone()));
 
-            for i in 2usize..=200 {
+            let mut switch = false;
+
+            for i in 2usize..=600 {
                 assert!(!dyn_arr_t.is_fully_fixed_array_type());
+                assert!(!mixed_arr_1_t.is_fully_fixed_array_type());
+                assert!(!mixed_arr_2_t.is_fully_fixed_array_type());
                 assert!(fixed_arr_t.is_fully_fixed_array_type());
 
                 dyn_arr_t = Type::Array(Box::new(dyn_arr_t));
                 fixed_arr_t = Type::FixedArray(Box::new(fixed_arr_t), FixedArraySize::Literal(i));
+                if switch {
+                    mixed_arr_1_t = Type::Array(Box::new(mixed_arr_1_t));
+                    mixed_arr_2_t = Type::FixedArray(Box::new(mixed_arr_2_t), FixedArraySize::Literal(i));
+                } else {
+                    mixed_arr_1_t = Type::FixedArray(Box::new(mixed_arr_1_t), FixedArraySize::Literal(i));
+                    mixed_arr_2_t = Type::Array(Box::new(mixed_arr_2_t));
+                }
+
+                switch = !switch;
             }
         }
     }
@@ -127,6 +146,47 @@ mod types_tests {
             assert!(result.is_err(), "Expected panic for: {:?}", t);
         }
     }
+
+
+    #[test]
+    fn fixed_array_to_dynamic_array_type_full_pass() {
+        for t in ALL_TYPES_NO_ARR {
+            let mut dyn_arr_t = Type::Array(Box::new(t.clone()));
+            let mut fixed_arr_t = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(1));
+            
+            let mut mixed_arr_1_t = Type::FixedArray(Box::new(dyn_arr_t.clone()), FixedArraySize::Literal(1));
+            let mut mixed_arr_2_t = Type::Array(Box::new(fixed_arr_t.clone()));
+
+            let mut switch = false;
+
+            for i in 2usize..=600 {
+                // Cuz `dyn_arr_t` array is already fully dynamic
+                assert_eq!(dyn_arr_t.fixed_array_to_dynamic_array_type_full(), dyn_arr_t);
+
+                // Should be exactly equal to `dyn_arr_t` once it is converted to dynamic array.
+                assert_eq!(fixed_arr_t.fixed_array_to_dynamic_array_type_full(), dyn_arr_t);
+                
+
+                dyn_arr_t = Type::Array(Box::new(dyn_arr_t));
+                fixed_arr_t = Type::FixedArray(Box::new(fixed_arr_t), FixedArraySize::Literal(i));
+
+                assert_eq!(mixed_arr_1_t.fixed_array_to_dynamic_array_type_full(), dyn_arr_t);
+                assert_eq!(mixed_arr_2_t.fixed_array_to_dynamic_array_type_full(), dyn_arr_t);
+
+                if switch {
+                    mixed_arr_1_t = Type::Array(Box::new(mixed_arr_1_t));
+                    mixed_arr_2_t = Type::FixedArray(Box::new(mixed_arr_2_t), FixedArraySize::Literal(i));
+                } else {
+                    mixed_arr_1_t = Type::FixedArray(Box::new(mixed_arr_1_t), FixedArraySize::Literal(i));
+                    mixed_arr_2_t = Type::Array(Box::new(mixed_arr_2_t));
+                }
+
+                switch = !switch;
+            }
+        }
+    }
+
+
 
     // Check if type is numeric, and test is_numeric_type on it.
     // if type is not numeric, test !is_numeric_type on it.
