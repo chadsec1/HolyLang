@@ -21,6 +21,17 @@ mod array_slicing_tests {
     }
 
     #[test]
+    fn test_array_slice_more_than_2_bounds() {
+        let literals = get_all_literals_edge_cases();
+        
+        for l in literals { 
+            assert_parse_err(&format!("arr[{}:{}:{}]", l, l, l));
+        }
+    }
+
+
+
+    #[test]
     fn test_array_slice_start_only() {
         let literals = get_all_literals_edge_cases();
         

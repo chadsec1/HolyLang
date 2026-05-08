@@ -17,6 +17,20 @@ mod unary_op_tests {
     }
 
     #[test]
+    fn test_logical_not_all_literals_invalid_expr_errors() {
+        let literals = get_all_literals_edge_cases(); 
+
+        for l in literals {
+            if l.starts_with('-') {
+                continue
+            }
+            assert_parse_err(&format!("!{} {}", l, l));
+        }
+    }
+
+
+
+    #[test]
     fn test_logical_not_all_literals() {
         let literals = get_all_literals_edge_cases(); 
 
@@ -27,6 +41,22 @@ mod unary_op_tests {
             }
         }
     }
+
+
+    #[test]
+    fn test_bitwise_not_all_literals_invalid_expr_errors() {
+        let literals = get_all_literals_edge_cases(); 
+
+        for l in literals {
+            if l.starts_with('-') {
+                continue
+            }
+            assert_parse_err(&format!("~{} {}", l, l));
+        }
+    }
+
+
+
 
     #[test]
     fn test_bitwise_not_all_literals() {

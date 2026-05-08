@@ -45,6 +45,40 @@ mod array_literal_tests {
         assert_parse_err("[\"hi, \"lol\"]");
     }
 
+    #[test]
+    fn test_array_binop_all_literals_binop() {
+        let literals = get_all_literals_edge_cases();
+        
+        for l in literals {
+            for (b, s) in ALL_BIN_OP_KIND.iter().zip(BIN_OP_KIND_SYMBOLS.iter()) {
+                match parse(&format!("x[{}] {} y[{}]", l, s, l)).unwrap() {
+                    Expr::BinOp { left, right, op, .. } => {
+                        assert_eq!(op, b.clone());
+
+                        match *left {
+                            Expr::ArrayAccess{ array, .. } => {
+                                assert!(matches!(*array, Expr::Var { name, .. } if name == "x"));
+
+                            }
+                            other => panic!("expected ArrayAccess, got {:?}", other),
+                        }
+
+
+                        match *right {
+                            Expr::ArrayAccess{ array, .. } => {
+                                assert!(matches!(*array, Expr::Var { name, .. } if name == "y"));
+
+                            }
+                            other => panic!("expected ArrayAccess, got {:?}", other),
+                        }
+                    }
+                    other => panic!("expected {:?}, got {:?}", b, other),
+                }
+            }
+        }
+    }
+
+
 
 
     #[test]

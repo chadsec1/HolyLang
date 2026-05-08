@@ -5,122 +5,107 @@ mod bin_op_tests {
     use super::*;
 
     #[test]
-    fn test_binop_add() {
-        match parse("1 + 2").unwrap() {
-            Expr::BinOp { op: BinOpKind::Add, .. } => {}
-            other => panic!("expected Add, got {:?}", other),
-        }
-    }
+    fn test_binop_all_literals() {
+        let literals = get_all_literals_edge_cases();
 
-    #[test]
-    fn test_binop_subtract() {
-        match parse("5 - 3").unwrap() {
-            Expr::BinOp { op: BinOpKind::Subtract, .. } => {}
-            other => panic!("expected Subtract, got {:?}", other),
-        }
-    }
-
-    #[test]
-    fn test_binop_multiply() {
-        match parse("4 * 2").unwrap() {
-            Expr::BinOp { op: BinOpKind::Multiply, .. } => {}
-            other => panic!("expected Multiply, got {:?}", other),
-        }
-    }
-
-    #[test]
-    fn test_binop_divide() {
-        match parse("10 / 2").unwrap() {
-            Expr::BinOp { op: BinOpKind::Divide, .. } => {}
-            other => panic!("expected Divide, got {:?}", other),
-        }
-    }
-
-    #[test]
-    fn test_binop_equal() {
-        match parse("x == y").unwrap() {
-            Expr::BinOp { op: BinOpKind::Equal, .. } => {}
-            other => panic!("expected Equal, got {:?}", other),
-        }
-    }
-
-    #[test]
-    fn test_binop_not_equal() {
-        match parse("x != y").unwrap() {
-            Expr::BinOp { op: BinOpKind::NotEqual, .. } => {}
-            other => panic!("expected NotEqual, got {:?}", other),
-        }
-    }
-
-    #[test]
-    fn test_binop_greater() {
-        match parse("x > y").unwrap() {
-            Expr::BinOp { op: BinOpKind::Greater, .. } => {}
-            other => panic!("expected Greater, got {:?}", other),
-        }
-    }
-
-    #[test]
-    fn test_binop_greater_equal() {
-        match parse("x >= y").unwrap() {
-            Expr::BinOp { op: BinOpKind::GreaterEqual, .. } => {}
-            other => panic!("expected GreaterEqual, got {:?}", other),
-        }
-    }
-
-    #[test]
-    fn test_binop_less() {
-        match parse("x < y").unwrap() {
-            Expr::BinOp { op: BinOpKind::Less, .. } => {}
-            other => panic!("expected Less, got {:?}", other),
-        }
-    }
-
-    #[test]
-    fn test_binop_less_equal() {
-        match parse("x <= y").unwrap() {
-            Expr::BinOp { op: BinOpKind::LessEqual, .. } => {}
-            other => panic!("expected LessEqual, got {:?}", other),
+        for l in literals {
+            for (b, s) in ALL_BIN_OP_KIND.iter().zip(BIN_OP_KIND_SYMBOLS.iter()) {
+                match parse(&format!("{} {} {}", l, s, l)).unwrap() {
+                    Expr::BinOp { op, .. } => {
+                        assert_eq!(op, b.clone());
+                    }
+                    other => panic!("expected {:?}, got {:?}", b, other),
+                }
+            }
         }
     }
 
     #[test]
     fn test_binop_missing_left_errors() {
-        assert_parse_err("+ 2");
-        assert_parse_err("* y");
+        let literals = get_all_literals_edge_cases();
+
+        for l in literals {
+            for s in BIN_OP_KIND_SYMBOLS {
+                // Cuz negate wouldn't error.
+                if s == "-" {
+                    continue
+                }
+                assert_parse_err(&format!("{} {}", s, l));
+            }
+        }
+    }
+
+
+    #[test]
+    fn test_binop_invalid_left_expr_errors() {
+        let literals = get_all_literals_edge_cases();
+
+        for l in literals {
+            for s in BIN_OP_KIND_SYMBOLS {
+                if l.starts_with("-") {
+                    continue
+                }
+                assert_parse_err(&format!("{} {} {} {}", l, l, s, l));
+            }
+        }
     }
 
     #[test]
     fn test_binop_missing_right_errors() {
-        assert_parse_err("1 +");
-        assert_parse_err("x *");
+        let literals = get_all_literals_edge_cases();
+
+        for l in literals {
+            for s in BIN_OP_KIND_SYMBOLS {
+                assert_parse_err(&format!("{} {}", l, s));
+            }
+        }
     }
 
-    #[test]
-    fn test_single_equals_not_binop_errors() {
-        assert_parse_err("x = y");
-    }
 
     #[test]
-    fn test_single_bang_not_binop_errors() {
-        assert_parse_err("x ! y");
+    fn test_binop_invalid_right_expr_errors() {
+        let literals = get_all_literals_edge_cases();
+
+        for l in literals {
+            for s in BIN_OP_KIND_SYMBOLS {
+                if l.starts_with("-") {
+                    continue
+                }
+                assert_parse_err(&format!("{} {} {} {}", l, s, l, l));
+            }
+        }
+    }
+
+
+    #[test]
+    fn test_single_not_binop_errors() {
+        let literals = get_all_literals_edge_cases();
+
+        for l in literals {
+            assert_parse_err(&format!("{} = {}", l, l));
+            assert_parse_err(&format!("{} ! {}", l, l));
+            assert_parse_err(&format!("{} ~ {}", l, l));
+        }
     }
 
     #[test]
     fn test_binop_left_associative_add_subtract() {
-        // "1 + 2 + 3" — top-level op split gives left = "1 + 2", right = "3"
-        // or depending on find_top_level_op_any semantics, at least it parses
+        // "1 + 2 + 3", top-level op split gives left = "1 + 2", right = "3"
+        // TODO: Improve this test.
         assert!(parse("1 + 2 + 3").is_ok());
     }
 
     #[test]
     fn test_binop_vars() {
-        match parse("a + b").unwrap() {
-            Expr::BinOp { op: BinOpKind::Add, left, right, .. } => {
-                assert!(matches!(*left, Expr::Var { name, .. } if name == "a"));
-                assert!(matches!(*right, Expr::Var { name, .. } if name == "b"));
+        for (b, s) in ALL_BIN_OP_KIND.iter().zip(BIN_OP_KIND_SYMBOLS.iter()) { 
+            match parse(&format!("a {} b", s)).unwrap() {
+                Expr::BinOp { op, left, right, .. } => {
+                    assert_eq!(op, b.clone());
+                    assert!(matches!(*left, Expr::Var { name, .. } if name == "a"));
+                    assert!(matches!(*right, Expr::Var { name, .. } if name == "b"));
+                }
+                other => panic!("expected BinOp, got {:?}", other),
             }
-            other => panic!("expected BinOp, got {:?}", other),
         }
     }
 
@@ -132,13 +117,31 @@ mod bin_op_tests {
 
     #[test]
     fn test_binop_with_parens_changes_grouping() {
-        // (a + b) * c — top-level op is *
-        match parse("(a + b) * c").unwrap() {
-            Expr::BinOp { op: BinOpKind::Multiply, left, right, .. } => {
-                assert!(matches!(*left, Expr::BinOp { op: BinOpKind::Add, .. }));
-                assert!(matches!(*right, Expr::Var { name, .. } if name == "c"));
+        // (a + b) * c,  top-level op is *
+        //
+        let literals = get_all_literals_edge_cases();
+
+        for l in literals {
+            for (b1, s1) in ALL_BIN_OP_KIND.iter().zip(BIN_OP_KIND_SYMBOLS.iter()) { 
+                for (b2, s2) in ALL_BIN_OP_KIND.iter().zip(BIN_OP_KIND_SYMBOLS.iter()) { 
+                    match parse(&format!("({} {} {}) {} c", l, s1, l, s2)).unwrap() {
+                        Expr::BinOp { op, left, right, .. } => {
+                            assert_eq!(op, b2.clone());
+
+                            match *left {
+                                Expr::BinOp { op, .. } => {
+                                    assert_eq!(op, b1.clone())
+                                }
+
+                                other => panic!("expected BinOp got {:?}", other),
+                            }
+                            assert!(matches!(*right, Expr::Var { name, .. } if name == "c"));
+                        }
+                        other => panic!("expected BinOp got {:?}", other),
+                    }
+                }
+
             }
-            other => panic!("expected top-level Multiply, got {:?}", other),
         }
     }
 

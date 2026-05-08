@@ -16,6 +16,11 @@ mod fmt_display_tests;
 #[cfg(test)]
 mod types_tests;
 
+#[cfg(test)]
+mod int_literal_value_tests;
+
+
+
 
 /// The main parent Abstract Syntax Tree node.
 /// 

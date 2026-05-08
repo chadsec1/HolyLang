@@ -16,6 +16,11 @@ mod array_access_tests {
         }
     }
 
+    #[test]
+    fn test_array_single_access_invalid_string_expr_errors() {
+        assert_parse_err("arr[\"hi]");
+    }
+
 
     #[test]
     fn test_array_single_access_all_literals() {
