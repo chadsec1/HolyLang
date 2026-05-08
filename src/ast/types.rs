@@ -75,8 +75,6 @@ impl Type {
     }
 
 
-    // TODO: Add tests to cover these functions below and above this comment.
-    //
     pub fn is_fully_fixed_array_type(&self) -> bool {
         if !matches!(self, Type::Array(_) | Type::FixedArray(_, _)) {
             panic!("(Compiler bug) Do not call is_fully_fixed_array_type unless you are sure Type is an array. Self: {:?}", self);

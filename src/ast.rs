@@ -13,6 +13,9 @@ pub use int_literal_value::*;
 #[cfg(test)]
 mod fmt_display_tests;
 
+#[cfg(test)]
+mod types_tests;
+
 
 /// The main parent Abstract Syntax Tree node.
 /// 
