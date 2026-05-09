@@ -13,7 +13,11 @@ mod helpers_tests;
 mod helpers;
 mod parse_expr;
 
-
+/// Internal to `parse_block` and `parse_if_stmt`.
+enum BlockEnd {
+    Done, 
+    Continuation
+}
 
 /// Public parse entry
 pub fn parse(source: &str) -> Result<AST, HolyError> {
@@ -182,9 +186,8 @@ fn parse_function(lines: &Vec<&str>, start_i: usize) -> Result<(Function, usize)
 
 
 
-fn parse_block(lines: &Vec<&str>, mut idx: usize) -> Result<(Vec<Stmt>, usize), HolyError> {
+fn parse_block(lines: &Vec<&str>, mut idx: usize) -> Result<(Vec<Stmt>, usize, BlockEnd), HolyError> {
     let mut body = Vec::new();
-    let mut brace_balance = 1usize;
 
     while idx < lines.len() {
         let raw = lines[idx];
@@ -212,16 +215,11 @@ fn parse_block(lines: &Vec<&str>, mut idx: usize) -> Result<(Vec<Stmt>, usize), 
                 )));
             }
 
-            brace_balance -= 1;
-            if brace_balance == 0 {
-                return if after_close.is_empty() {
-                    Ok((body, idx + 1)) // past the lone `}`
-                } else {
-                    Ok((body, idx))     // AT the `} else {` / `} elif {` line
-                };
-            }
-            idx += 1;
-            continue;
+            return if after_close.is_empty() {
+                Ok((body, idx + 1, BlockEnd::Done)) // past the lone `}`
+            } else {
+                Ok((body, idx, BlockEnd::Continuation))     // AT the `} else {` / `} elif {` line
+            };
         }
 
         // Let block-opening statements through before the brace guard.
@@ -242,12 +240,6 @@ fn parse_block(lines: &Vec<&str>, mut idx: usize) -> Result<(Vec<Stmt>, usize), 
                     idx + 1,
                     raw
                 )));
-            }
-
-            if t == "{" {
-                brace_balance += 1;
-                idx += 1;
-                continue;
             }
         }
 
@@ -282,7 +274,7 @@ fn parse_if_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), Hol
     }
 
     let condition = parse_expr::parse_expr(cond_str, span)?;
-    let (if_branch, mut next_i) = parse_block(lines, start_i + 1)?;
+    let (if_branch, mut next_i, mut end) = parse_block(lines, start_i + 1)?;
 
     let mut elif_branches: Vec<(Expr, Vec<Stmt>)> = Vec::new();
     let mut else_branch = None;
@@ -290,11 +282,12 @@ fn parse_if_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), Hol
     // Consume any number of elif chains, then an optional else.
     // Accepts both:
     //   `} elif cond {`  (same line as closing brace)
-    //   `elif cond {`    (own line, for when you keep old style)
-    // and both:
+    // and:
     //   `} else {`
-    //   `else {`
     loop {
+        if matches!(end, BlockEnd::Done) {
+            break;
+        }
         if next_i >= lines.len() {
             break;
         }
@@ -304,7 +297,8 @@ fn parse_if_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), Hol
 
         // This is else branch
         if cur_line == "} else {" {
-            let (body, after) = parse_block(lines, next_i + 1)?;
+            // else is always last, so its fine to ignore the continutation enum here.
+            let (body, after, _) = parse_block(lines, next_i + 1)?;
             else_branch = Some(body);
             next_i = after;
             break; // else is always last
@@ -334,11 +328,12 @@ fn parse_if_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), Hol
             }
             let elif_span = Span { line: next_i + 1, column: 0 };
             let cond = parse_expr::parse_expr(elif_cond_str, elif_span)?;
-            let (body, after) = parse_block(lines, next_i + 1)?;
+            let (body, after, new_end) = parse_block(lines, next_i + 1)?;
             elif_branches.push((cond, body));
             next_i = after;
+            end = new_end;
         } else {
-            break; // not an elif/else continuation — done
+            break; // not an elif/else continuation, so we are done
         }
     }
 
@@ -423,7 +418,7 @@ fn parse_for_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), Ho
         expr = parse_expr::parse_expr(parts[1], span)?;
     }
 
-    let (branch, next_i) = parse_block(lines, start_i + 1)?;
+    let (branch, next_i, _) = parse_block(lines, start_i + 1)?;
 
     Ok((
         Stmt::For(ForStmt {
@@ -449,7 +444,7 @@ fn parse_infinite_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize
         )));
     }
 
-    let (branch, next_i) = parse_block(lines, start_i + 1)?;
+    let (branch, next_i, _) = parse_block(lines, start_i + 1)?;
 
     Ok((
         Stmt::Infinite(InfiniteStmt {
@@ -484,7 +479,7 @@ fn parse_while_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), 
     }
 
     let condition = parse_expr::parse_expr(cond_str, span)?;
-    let (branch, next_i) = parse_block(lines, start_i + 1)?;
+    let (branch, next_i, _) = parse_block(lines, start_i + 1)?;
 
     Ok((
         Stmt::While(WhileStmt {
