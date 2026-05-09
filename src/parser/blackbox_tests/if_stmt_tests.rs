@@ -338,6 +338,112 @@ mod if_stmt_tests {
 
 
     #[test]
+    fn if_statements_nested() {
+        let literals = get_all_literals_edge_cases();
+
+        for l in &literals { 
+            for (b, s) in ALL_BIN_OP_KIND.iter().zip(BIN_OP_KIND_SYMBOLS.iter()) {
+                let stmts = parse_body(&format!("if {} {} {} {{\nif {} {} {} {{\n\n}}\n}}", l, s, l, l, s, l));
+                assert_eq!(stmts.len(), 1);
+                if let Stmt::If(i) = &stmts[0] {
+                    if let Expr::BinOp { left, right, op, .. } = &i.condition {
+                        assert_eq!(op, b);
+                        assert_eq!(left, right);
+                    } else { panic!() }
+                    
+                    assert_eq!(i.if_branch.len(), 1);
+                    if let Stmt::If(i) = &stmts[0] {
+                        if let Expr::BinOp { left, right, op, .. } = &i.condition {
+                            assert_eq!(op, b);
+                            assert_eq!(left, right);
+                        } else { panic!() }
+                    } else { panic!("expected if statement"); }
+
+                    assert_eq!(i.elif_branches.len(), 0);
+                    assert!(i.else_branch.is_none());
+                } else {
+                    panic!("expected if statement");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn if_statements_with_else_branch_nested() {
+        let literals = get_all_literals_edge_cases();
+
+        for l in &literals { 
+            for (b, s) in ALL_BIN_OP_KIND.iter().zip(BIN_OP_KIND_SYMBOLS.iter()) {
+                let stmts = parse_body(&format!("if {} {} {} {{\nif {} {} {} {{\n\n}}\n}} else {{\n\n}}", l, s, l, l, s, l));
+                assert_eq!(stmts.len(), 1);
+                if let Stmt::If(i) = &stmts[0] {
+                    if let Expr::BinOp { left, right, op, .. } = &i.condition {
+                        assert_eq!(op, b);
+                        assert_eq!(left, right);
+                    } else { panic!() }
+                    
+                    assert_eq!(i.if_branch.len(), 1);
+                    if let Stmt::If(i) = &stmts[0] {
+                        if let Expr::BinOp { left, right, op, .. } = &i.condition {
+                            assert_eq!(op, b);
+                            assert_eq!(left, right);
+                        } else { panic!() }
+                    } else { panic!("expected if statement"); }
+
+                    assert_eq!(i.elif_branches.len(), 0);
+                    assert!(i.else_branch.is_some());
+                    assert_eq!(i.else_branch.clone().unwrap().len(), 0);
+                } else {
+                    panic!("expected if statement");
+                }
+            }
+        }
+    }
+
+
+    #[test]
+    fn if_statements_with_elif_branch_nested() {
+        let literals = get_all_literals_edge_cases();
+
+        for l in &literals { 
+            for (b, s) in ALL_BIN_OP_KIND.iter().zip(BIN_OP_KIND_SYMBOLS.iter()) {
+                let stmts = parse_body(&format!("if {} {} {} {{\nif {} {} {} {{\n\n}}\n}} elif {} {} {} {{\n\n}}", l, s, l, l, s, l, l, s, l));
+                assert_eq!(stmts.len(), 1);
+                if let Stmt::If(i) = &stmts[0] {
+                    if let Expr::BinOp { left, right, op, .. } = &i.condition {
+                        assert_eq!(op, b);
+                        assert_eq!(left, right);
+                    } else { panic!() }
+                    
+                    assert_eq!(i.if_branch.len(), 1);
+                    if let Stmt::If(i) = &stmts[0] {
+                        if let Expr::BinOp { left, right, op, .. } = &i.condition {
+                            assert_eq!(op, b);
+                            assert_eq!(left, right);
+                        } else { panic!() }
+                    } else { panic!("expected if statement"); }
+
+                    assert_eq!(i.elif_branches.len(), 1);
+                    assert!(i.else_branch.is_none());
+
+                    let elif_cond = &i.elif_branches[0].0;
+                    if let Expr::BinOp { left, right, op, .. } = elif_cond {
+                        assert_eq!(op, b);
+                        assert_eq!(left, right);
+                    } else { panic!("Expected BinOp") }
+                } else {
+                    panic!("expected if statement");
+                }
+            }
+        }
+    }
+
+
+
+
+
+
+    #[test]
     fn if_statements_int_literal() {
         for (b, s) in ALL_BIN_OP_KIND.iter().zip(BIN_OP_KIND_SYMBOLS.iter()) {
             let stmts = parse_body(&format!("if 1 {} 2 {{\n\n}}", s));
