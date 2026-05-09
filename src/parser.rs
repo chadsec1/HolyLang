@@ -107,20 +107,21 @@ fn parse_function(lines: &Vec<&str>, start_i: usize) -> Result<(Function, usize)
                 return Err(HolyError::Parse(format!("Missing closing parentheses for return type in function `{}` at line {}", name, start_i + 1)));
             }
 
-            let inner = &return_type_str[1..return_type_str.len()-1];
+            let inner = &return_type_str[1..return_type_str.len()-1].trim();
             let mut types = Vec::new();
-            if !inner.trim().is_empty() {
-                let split_parts = helpers::split_char_top_level(',', inner)
-                    .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
-
-
-                for part in split_parts {
-                    let t = parse_type(part.trim(), &span)?;
-                    types.push(t);
-                }
+            if inner.is_empty() {
+                return Err(HolyError::Parse(format!("Missing types in the `()` return types function `{}` headers at line {}", name, start_i + 1)));
             }
-            Some(types)
+            let split_parts = helpers::split_char_top_level(',', inner)
+                .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
 
+
+            for part in split_parts {
+                let t = parse_type(part.trim(), &span)?;
+                types.push(t);
+            }
+
+            Some(types)
         } else if return_type_str.ends_with(')') {
             return Err(HolyError::Parse(format!("Missing opening parentheses for return type in function `{}` at line {}", name, start_i + 1)));
         } else {
@@ -205,9 +206,9 @@ fn parse_block(lines: &Vec<&str>, mut idx: usize) -> Result<(Vec<Stmt>, usize), 
                 && !(after_close.starts_with("elif ") && after_close.ends_with('{'))
             {
                 return Err(HolyError::Parse(format!(
-                    "Unexpected content after '}}' at line {}: {}",
+                    "Unexpected expression `{}` after '}}' (line {})",
+                    after_close,
                     idx + 1,
-                    raw
                 )));
             }
 
