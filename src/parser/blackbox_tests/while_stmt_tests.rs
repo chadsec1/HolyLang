@@ -87,6 +87,135 @@ mod while_stmt_in_function_tests {
         }
     }
 
+    #[test]
+    fn while_statements_trailing_exprs_errors() {
+        let literals = get_all_literals_edge_cases(); 
+
+        for l in &literals {
+            assert_parse_err(&wrap(&format!("while {} {{\n\n}} {} {{\n\n}}", l, l)));
+            assert_parse_err(&wrap(&format!("while {} {{\n\n}}{} {{\n\n}}", l, l)));
+            assert_parse_err(&wrap(&format!("while {} {{\n\n}} {}{{\n\n}}", l, l)));
+            assert_parse_err(&wrap(&format!("while {} {{\n\n}}{}{{\n\n}}", l, l)));
+
+            assert_parse_err(&wrap(&format!("while {}{{\n\n}} {} {{\n\n}}", l, l)));
+            assert_parse_err(&wrap(&format!("while {}{{\n\n}}{} {{\n\n}}", l, l)));
+            assert_parse_err(&wrap(&format!("while {}{{\n\n}} {}{{\n\n}}", l, l)));
+            assert_parse_err(&wrap(&format!("while {}{{\n\n}}{}{{\n\n}}", l, l)));
+
+            assert_parse_err(&wrap(&format!("while {}{{\n\n}} {} {{\n\n", l, l)));
+            assert_parse_err(&wrap(&format!("while {}{{\n\n}}{} {{\n\n", l, l)));
+            assert_parse_err(&wrap(&format!("while {}{{\n\n}} {}{{\n\n", l, l)));
+            assert_parse_err(&wrap(&format!("while {}{{\n\n}}{}{{\n\n", l, l)));
+
+            assert_parse_err(&wrap(&format!("while {}{{\n\n}} {} \n\n}}", l, l)));
+            assert_parse_err(&wrap(&format!("while {}{{\n\n}}{} \n\n}}", l, l)));
+            assert_parse_err(&wrap(&format!("while {}{{\n\n}} {}\n\n}}", l, l)));
+            assert_parse_err(&wrap(&format!("while {}{{\n\n}}{}\n\n}}", l, l)));
+
+            assert_parse_err(&wrap(&format!("while {}{{\n\n}} {} \n\n", l, l)));
+            assert_parse_err(&wrap(&format!("while {}{{\n\n}}{} \n\n", l, l)));
+            assert_parse_err(&wrap(&format!("while {}{{\n\n}} {}\n\n", l, l)));
+            assert_parse_err(&wrap(&format!("while {}{{\n\n}}{}\n\n", l, l)));
+        }
+    }
+
+    #[test]
+    fn while_statements_trailing_kw_errors() {
+        let literals = get_all_literals_edge_cases(); 
+
+        for kw in consts::RESERVED_KEYWORDS { 
+            for l in &literals {
+                assert_parse_err(&wrap(&format!("while {} {{\n\n}} {} {{\n\n}}", l, kw)));
+                assert_parse_err(&wrap(&format!("while {} {{\n\n}}{} {{\n\n}}", l, kw)));
+                assert_parse_err(&wrap(&format!("while {} {{\n\n}} {}{{\n\n}}", l, kw)));
+                assert_parse_err(&wrap(&format!("while {} {{\n\n}}{}{{\n\n}}", l, kw)));
+
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}} {} {{\n\n}}", l, kw)));
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}}{} {{\n\n}}", l, kw)));
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}} {}{{\n\n}}", l, kw)));
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}}{}{{\n\n}}", l, kw)));
+
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}} {} {{\n\n", l, kw)));
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}}{} {{\n\n", l, kw)));
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}} {}{{\n\n", l, kw)));
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}}{}{{\n\n", l, kw)));
+
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}} {} \n\n}}", l, kw)));
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}}{} \n\n}}", l, kw)));
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}} {}\n\n}}", l, kw)));
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}}{}\n\n}}", l, kw)));
+
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}} {} \n\n", l, kw)));
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}}{} \n\n", l, kw)));
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}} {}\n\n", l, kw)));
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}}{}\n\n", l, kw)));
+
+
+
+
+                assert_parse_err(&wrap(&format!("while {} {{\n\n}} {} {} {{\n\n}}", l, kw, l)));
+                assert_parse_err(&wrap(&format!("while {} {{\n\n}}{} {}{{\n\n}}", l, kw, l)));
+                assert_parse_err(&wrap(&format!("while {} {{\n\n}} {}{}{{\n\n}}", l, kw, l)));
+                assert_parse_err(&wrap(&format!("while {} {{\n\n}}{}{}{{\n\n}}", l, kw, l)));
+
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}} {}{} {{\n\n}}", l, kw, l)));
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}}{}{} {{\n\n}}", l, kw, l)));
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}} {}{}{{\n\n}}", l, kw, l)));
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}}{}{}{{\n\n}}", l, kw, l)));
+
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}} {}{} {{\n\n", l, kw, l)));
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}}{}{} {{\n\n", l, kw, l)));
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}} {}{}{{\n\n", l, kw, l)));
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}}{}{}{{\n\n", l, kw, l)));
+
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}} {}{} \n\n}}", l, kw, l)));
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}}{}{} \n\n}}", l, kw, l)));
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}} {}{}\n\n}}", l, kw, l)));
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}}{}{}\n\n}}", l, kw, l)));
+
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}} {}{} \n\n", l, kw, l)));
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}}{}{} \n\n", l, kw, l)));
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}} {}{}\n\n", l, kw, l)));
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}}{}{}\n\n", l, kw, l)));
+            }
+        }
+    }
+
+    #[test]
+    fn while_statements_trailing_types_errors() {
+        let literals = get_all_literals_edge_cases();
+
+        for t in ALL_TYPES_NO_ARR {
+            for l in &literals {
+                assert_parse_err(&wrap(&format!("while {} {{\n\n}} {} {{\n\n}}", l, t)));    
+                assert_parse_err(&wrap(&format!("while {} {{\n\n}}{} {{\n\n}}", l, t)));    
+                assert_parse_err(&wrap(&format!("while {} {{\n\n}} {}{{\n\n}}", l, t)));    
+                assert_parse_err(&wrap(&format!("while {} {{\n\n}}{}{{\n\n}}", l, t)));    
+
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}} {} {{\n\n}}", l, t)));    
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}}{} {{\n\n}}", l, t)));    
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}} {}{{\n\n}}", l, t)));    
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}}{}{{\n\n}}", l, t)));    
+
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}} {} {{\n\n", l, t)));    
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}}{} {{\n\n", l, t)));    
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}} {}{{\n\n", l, t)));    
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}}{}{{\n\n", l, t)));    
+
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}} {} \n\n}}", l, t)));    
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}}{} \n\n}}", l, t)));    
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}} {}\n\n}}", l, t)));    
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}}{}\n\n}}", l, t)));
+
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}} {} \n\n", l, t)));    
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}}{} \n\n", l, t)));    
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}} {}\n\n", l, t)));    
+                assert_parse_err(&wrap(&format!("while {}{{\n\n}}{}\n\n", l, t)));
+            }
+        }
+    }
+
+
 
 
     #[test]

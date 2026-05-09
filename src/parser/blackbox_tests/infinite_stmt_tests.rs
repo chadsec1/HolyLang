@@ -81,6 +81,129 @@ mod infinite_stmt_in_function_tests {
     }
 
     #[test]
+    fn infinite_statements_trailing_exprs_errors() {
+        let literals = get_all_literals_edge_cases(); 
+
+        for l in &literals{
+            assert_parse_err(&wrap(&format!("infinite {{\n\n}} {} {{\n\n}}", l)));
+            assert_parse_err(&wrap(&format!("infinite {{\n\n}}{} {{\n\n}}", l)));
+            assert_parse_err(&wrap(&format!("infinite {{\n\n}} {}{{\n\n}}", l)));
+            assert_parse_err(&wrap(&format!("infinite {{\n\n}}{}{{\n\n}}", l)));
+
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}} {} {{\n\n}}", l)));
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}}{} {{\n\n}}", l)));
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}} {}{{\n\n}}", l)));
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}}{}{{\n\n}}", l)));
+
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}} {} {{\n\n", l)));
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}}{} {{\n\n", l)));
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}} {}{{\n\n", l)));
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}}{}{{\n\n", l)));
+
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}} {} \n\n}}", l)));
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}}{} \n\n}}", l)));
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}} {}\n\n}}", l)));
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}}{}\n\n}}", l)));
+
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}} {} \n\n", l)));
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}}{} \n\n", l)));
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}} {}\n\n", l)));
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}}{}\n\n", l)));
+        }
+    }
+
+    #[test]
+    fn infinite_statements_trailing_kw_errors() {
+        let literals = get_all_literals_edge_cases(); 
+
+        for kw in consts::RESERVED_KEYWORDS { 
+            assert_parse_err(&wrap(&format!("infinite {{\n\n}} {} {{\n\n}}", kw)));
+            assert_parse_err(&wrap(&format!("infinite {{\n\n}}{} {{\n\n}}", kw)));
+            assert_parse_err(&wrap(&format!("infinite {{\n\n}} {}{{\n\n}}", kw)));
+            assert_parse_err(&wrap(&format!("infinite {{\n\n}}{}{{\n\n}}", kw)));
+
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}} {} {{\n\n}}", kw)));
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}}{} {{\n\n}}", kw)));
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}} {}{{\n\n}}", kw)));
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}}{}{{\n\n}}", kw)));
+
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}} {} {{\n\n", kw)));
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}}{} {{\n\n", kw)));
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}} {}{{\n\n", kw)));
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}}{}{{\n\n", kw)));
+
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}} {} \n\n}}", kw)));
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}}{} \n\n}}", kw)));
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}} {}\n\n}}", kw)));
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}}{}\n\n}}", kw)));
+
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}} {} \n\n", kw)));
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}}{} \n\n", kw)));
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}} {}\n\n", kw)));
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}}{}\n\n", kw)));
+
+            for l in &literals{
+                assert_parse_err(&wrap(&format!("infinite {{\n\n}} {} {} {{\n\n}}", kw, l)));
+                assert_parse_err(&wrap(&format!("infinite {{\n\n}}{} {}{{\n\n}}", kw, l)));
+                assert_parse_err(&wrap(&format!("infinite {{\n\n}} {}{}{{\n\n}}", kw, l)));
+                assert_parse_err(&wrap(&format!("infinite {{\n\n}}{}{}{{\n\n}}", kw, l)));
+
+                assert_parse_err(&wrap(&format!("infinite{{\n\n}} {}{} {{\n\n}}", kw, l)));
+                assert_parse_err(&wrap(&format!("infinite{{\n\n}}{}{} {{\n\n}}", kw, l)));
+                assert_parse_err(&wrap(&format!("infinite{{\n\n}} {}{}{{\n\n}}", kw, l)));
+                assert_parse_err(&wrap(&format!("infinite{{\n\n}}{}{}{{\n\n}}", kw, l)));
+
+                assert_parse_err(&wrap(&format!("infinite{{\n\n}} {}{} {{\n\n", kw, l)));
+                assert_parse_err(&wrap(&format!("infinite{{\n\n}}{}{} {{\n\n", kw, l)));
+                assert_parse_err(&wrap(&format!("infinite{{\n\n}} {}{}{{\n\n", kw, l)));
+                assert_parse_err(&wrap(&format!("infinite{{\n\n}}{}{}{{\n\n", kw, l)));
+
+                assert_parse_err(&wrap(&format!("infinite{{\n\n}} {}{} \n\n}}", kw, l)));
+                assert_parse_err(&wrap(&format!("infinite{{\n\n}}{}{} \n\n}}", kw, l)));
+                assert_parse_err(&wrap(&format!("infinite{{\n\n}} {}{}\n\n}}", kw, l)));
+                assert_parse_err(&wrap(&format!("infinite{{\n\n}}{}{}\n\n}}", kw, l)));
+
+                assert_parse_err(&wrap(&format!("infinite{{\n\n}} {}{} \n\n", kw, l)));
+                assert_parse_err(&wrap(&format!("infinite{{\n\n}}{}{} \n\n", kw, l)));
+                assert_parse_err(&wrap(&format!("infinite{{\n\n}} {}{}\n\n", kw, l)));
+                assert_parse_err(&wrap(&format!("infinite{{\n\n}}{}{}\n\n", kw, l)));
+            }
+        }
+    }
+
+    #[test]
+    fn infinite_statements_trailing_types_errors() {
+        for t in ALL_TYPES_NO_ARR {
+            assert_parse_err(&wrap(&format!("infinite {{\n\n}} {} {{\n\n}}", t)));    
+            assert_parse_err(&wrap(&format!("infinite {{\n\n}}{} {{\n\n}}", t)));    
+            assert_parse_err(&wrap(&format!("infinite {{\n\n}} {}{{\n\n}}", t)));    
+            assert_parse_err(&wrap(&format!("infinite {{\n\n}}{}{{\n\n}}", t)));    
+
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}} {} {{\n\n}}", t)));    
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}}{} {{\n\n}}", t)));    
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}} {}{{\n\n}}", t)));    
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}}{}{{\n\n}}", t)));    
+
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}} {} {{\n\n", t)));    
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}}{} {{\n\n", t)));    
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}} {}{{\n\n", t)));    
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}}{}{{\n\n", t)));    
+
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}} {} \n\n}}", t)));    
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}}{} \n\n}}", t)));    
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}} {}\n\n}}", t)));    
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}}{}\n\n}}", t)));
+
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}} {} \n\n", t)));    
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}}{} \n\n", t)));    
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}} {}\n\n", t)));    
+            assert_parse_err(&wrap(&format!("infinite{{\n\n}}{}\n\n", t)));
+        }
+    }
+
+
+
+    #[test]
     fn infinite_statements_spaces_after_passes() {
         const MAX_SPACES: usize = 5000;
         

@@ -116,6 +116,7 @@ pub const BIN_OP_KIND_SYMBOLS: [&str; 16] = [
 ];
 
 
+/*
 pub const BIN_OP_KIND_COMP_SYMBOLS: [&str; 6] = [
     "==",
     "!=",
@@ -124,6 +125,7 @@ pub const BIN_OP_KIND_COMP_SYMBOLS: [&str; 6] = [
     "<",
     "<="
 ];
+*/
 
 pub const BIN_OP_KIND_ARTH_SYMBOLS: [&str; 8] = [
     "+",

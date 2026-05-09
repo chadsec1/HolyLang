@@ -129,6 +129,40 @@ mod function_tests {
         }
     }
 
+    #[test]
+    fn function_single_return_invalid_type_errors() {
+        let literals = get_all_literals_edge_cases();
+
+        for l in &literals {
+            let result = parse(&format!("func foo() {} {{\n}}", l));
+
+            assert!(result.is_err());
+            let assert_cond = result.unwrap_err().to_string();
+            assert!(assert_cond.contains("Unknown type") || assert_cond.contains("Missing opening parentheses for return type"));
+        }
+
+        // Same test, but with reserved language keywords.
+        for kw in consts::RESERVED_KEYWORDS {
+            let mut kw_in_t = false;
+            for t in ALL_TYPES_NO_ARR {
+                if t.to_string() == *kw {
+                    kw_in_t = true;
+                    break;
+                }
+            }
+
+            if kw_in_t {
+                continue;
+            }
+
+            let result = parse(&format!("func foo() {} {{\n}}", kw));
+            assert!(result.is_err());
+            let assert_cond = result.unwrap_err().to_string();
+            assert!(assert_cond.contains("Unknown type") || assert_cond.contains("Missing opening parentheses for return type"));
+        }
+    }
+
+
 
     #[test]
     fn function_single_return_type() {
@@ -142,19 +176,127 @@ mod function_tests {
         }
     }
 
+
+    #[test]
+    fn function_multiple_return_one_type_invalid_type_errors() {
+        let literals = get_all_literals_edge_cases();
+
+        for l in &literals {
+            let result = parse(&format!("func foo() ({}) {{\n}}", l));
+
+            assert!(result.is_err());
+            let assert_cond = result.unwrap_err().to_string();
+            assert!(assert_cond.contains("Unknown type"));
+        }
+
+        // Same test, but with reserved language keywords.
+        for kw in consts::RESERVED_KEYWORDS {
+            let mut kw_in_t = false;
+            for t in ALL_TYPES_NO_ARR {
+                if t.to_string() == *kw {
+                    kw_in_t = true;
+                    break;
+                }
+            }
+
+            if kw_in_t {
+                continue;
+            }
+
+            let result = parse(&format!("func foo() ({}) {{\n}}", kw));
+            assert!(result.is_err());
+            let assert_cond = result.unwrap_err().to_string();
+            assert!(assert_cond.contains("Unknown type"));
+        }
+    }
+
+    #[test]
+    fn function_multiple_return_invalid_type_errors() {
+        let literals = get_all_literals_edge_cases();
+
+        for l in &literals {
+            let result = parse(&format!("func foo() ({}, {}) {{\n}}", l, l));
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Unknown type"));
+        }
+
+        // Same test, but with reserved language keywords.
+        for kw in consts::RESERVED_KEYWORDS {
+            let mut kw_in_t = false;
+            for t in ALL_TYPES_NO_ARR {
+                if t.to_string() == *kw {
+                    kw_in_t = true;
+                    break;
+                }
+            }
+
+            if kw_in_t {
+                continue;
+            }
+
+            let result = parse(&format!("func foo() ({}, {}) {{\n}}", kw, kw));
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Unknown type"));
+        }
+    }
+
+    #[test]
+    fn function_multiple_return_invalid_stringliteral_split_errors() {
+        let result = parse("func foo() (\"hi ) {\n}");
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Unclosed string literal"));
+    }
+
+
+    #[test]
+    fn function_multiple_return_empty_errors() {
+        const MAX_SPACES: usize = 1000;
+        let mut spaces = String::with_capacity(MAX_SPACES);
+
+        for _ in 0..MAX_SPACES {
+            let result = parse(&format!("func foo() ({}) {{\n}}", spaces));
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Missing types in the `()`"));
+            spaces.push(' ');
+        }
+    }
+    
+
+    #[test]
+    fn function_multi_return_type_one_type() {
+        for t in ALL_TYPES_NO_ARR {
+            let ast = parse(&format!("func foo() ({}) {{\n}}", t)).unwrap();
+            let f = &ast.functions[0];
+
+            assert_eq!(f.name, "foo");
+            assert_eq!(f.params.len(), 0);
+            assert_eq!(f.return_type, Some(vec![t.clone()]));
+        }
+    }
+
+
     #[test]
     fn function_multi_return_type() {
-        let ast = parse("func foo() (int32, bool) {\n}\n").unwrap();
-        let f = &ast.functions[0];
+        for t1 in ALL_TYPES_NO_ARR {
+            for t2 in ALL_TYPES_NO_ARR {
+                for t3 in ALL_TYPES_NO_ARR {
+                    let ast = parse(&format!("func foo() ({}, {}, {}) {{\n}}", t1, t2, t3)).unwrap();
+                    let f = &ast.functions[0];
 
-        assert_eq!(f.name, "foo");
-        assert_eq!(f.params.len(), 0);
-        assert_eq!(f.return_type, Some(vec![Type::Int32, Type::Bool]));
+                    assert_eq!(f.name, "foo");
+                    assert_eq!(f.params.len(), 0);
+                    assert_eq!(f.return_type, Some(vec![t1.clone(), t2.clone(), t3.clone()]));
+                }
+            }
+        }
     }
 
     #[test]
     fn function_no_return_type() {
-        let ast = parse("func noop() {\n}\n").unwrap();
+        let ast = parse("func noop() {\n}").unwrap();
         let f = &ast.functions[0];
 
         assert_eq!(f.name, "noop");
@@ -164,12 +306,15 @@ mod function_tests {
 
     #[test]
     fn function_missing_open_paren_errors() {
-        assert_parse_err("func bad {\n}\n");
+        assert_parse_err("func bad {\n}");
+        assert_parse_err("func bad {\n\n}");
+        assert_parse_err("func bad {\n\n}\n");
     }
 
     #[test]
     fn function_missing_brace_errors() {
         assert_parse_err("func bad()\n");
+        assert_parse_err("func bad()\n\n");
     }
 
     #[test]
@@ -188,9 +333,14 @@ mod function_tests {
 
     #[test]
     fn function_space_in_name_errors() {
-        for t in ALL_TYPES_NO_ARR {
-            assert_parse_err(&format!("func bad name() {{own x {} = 1\n}}\n", t));
+        let literals = get_all_literals_edge_cases();
+
+        for l in literals { 
+            for t in ALL_TYPES_NO_ARR {
+                assert_parse_err(&format!("func bad name() {{own x {} = {}\n}}", t, l));
+            }
         }
+        assert_parse_err("func bad name() {{\n}}");
     }
 
     #[test]

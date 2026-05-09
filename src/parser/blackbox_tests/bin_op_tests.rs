@@ -12,6 +12,8 @@ mod bin_op_in_function_tests {
             for l2 in &literals {
                 for (b, s) in ALL_BIN_OP_KIND.iter().zip(BIN_OP_KIND_SYMBOLS.iter()) {
                     let stmts = parse_body(&format!("{} {} {}", l1, s, l2));
+                
+                    assert_eq!(stmts.len(), 1);
 
                     if let Stmt::Expr(e) = &stmts[0] {
                         if let Expr::BinOp { op, .. } = &e {
@@ -34,6 +36,7 @@ mod bin_op_in_function_tests {
                 for (b, s) in ALL_BIN_OP_KIND.iter().zip(BIN_OP_KIND_SYMBOLS.iter()) {
                     for t in ALL_TYPES_NO_ARR {
                         let stmts = parse_body(&format!("own x {} = {} {} {}", t, l1, s, l2));
+                        assert_eq!(stmts.len(), 1);
                         if let Stmt::VarDecl(v) = &stmts[0] {
                             if let Some(Expr::BinOp { op, .. }) = &v.value {
                                 assert_eq!(op, b);
@@ -74,6 +77,7 @@ mod bin_op_in_function_tests {
             for (en2, et2) in edge_cases_numbers.iter().zip(edge_cases_types.iter()) {    
                 for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
                     let stmts = parse_body(&format!("{} {} {}", en1, s, en2));
+                    assert_eq!(stmts.len(), 1);
                     if let Stmt::Expr(e) = &stmts[0] {
                         if let Expr::BinOp { left, right, op, .. } = &e {
                             assert_eq!(op, b);
@@ -137,6 +141,7 @@ mod bin_op_in_function_tests {
             for (en2, et2) in edge_cases_numbers.iter().zip(edge_cases_types.iter()) {    
                 for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
                     let stmts = parse_body(&format!("own x {} = {} {} {}", et2, en1, s, en2));
+                    assert_eq!(stmts.len(), 1);
                     if let Stmt::VarDecl(v) = &stmts[0] {
                         assert_eq!(v.type_name, et2.clone());
                         if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
@@ -212,6 +217,7 @@ mod bin_op_in_function_tests {
             for (en2, et2) in edge_cases_numbers.iter().zip(edge_cases_types.iter()) {    
                 for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
                     let stmts = parse_body(&format!("{} {} {}", en1, s, en2));
+                    assert_eq!(stmts.len(), 1);
                     if let Stmt::Expr(e) = &stmts[0] {
                         if let Expr::BinOp { left, right, op, .. } = &e {
                             assert_eq!(op, b);
@@ -287,6 +293,7 @@ mod bin_op_in_function_tests {
             for (en2, et2) in edge_cases_numbers.iter().zip(edge_cases_types.iter()) {    
                 for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
                     let stmts = parse_body(&format!("own x {} = {} {} {}", et2, en1, s, en2));
+                    assert_eq!(stmts.len(), 1);
                     if let Stmt::VarDecl(v) = &stmts[0] {
                         assert_eq!(v.type_name, et2.clone());
                         if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
@@ -333,6 +340,7 @@ mod bin_op_in_function_tests {
     fn binop_arth_vars_only() {
         for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
             let stmts = parse_body(&format!("a {} b", s));
+            assert_eq!(stmts.len(), 1);
             if let Stmt::Expr(e) = &stmts[0] {
                 if let Expr::BinOp { left, right, op, .. } = &e {
                     assert_eq!(op, b);
@@ -354,6 +362,7 @@ mod bin_op_in_function_tests {
         for t in ALL_TYPES_NO_ARR {
             for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
                 let stmts = parse_body(&format!("own x {} = a {} b", t, s));
+                assert_eq!(stmts.len(), 1);
                 if let Stmt::VarDecl(v) = &stmts[0] {
                     assert_eq!(v.type_name, t.clone());
                     if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
@@ -395,6 +404,7 @@ mod bin_op_in_function_tests {
         for (en, et) in edge_cases_numbers.iter().zip(edge_cases_types.iter()) {    
             for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
                 let stmts = parse_body(&format!("a {} {}", s, en));
+                assert_eq!(stmts.len(), 1);
                 if let Stmt::Expr(e) = &stmts[0] {
                     if let Expr::BinOp { left, right, op, .. } = &e {
                         assert_eq!(op, b);
@@ -420,6 +430,7 @@ mod bin_op_in_function_tests {
 
             for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
                 let stmts = parse_body(&format!("{} {} a", en, s));
+                assert_eq!(stmts.len(), 1);
                 if let Stmt::Expr(e) = &stmts[0] {
                     if let Expr::BinOp { left, right, op, .. } = &e {
                         assert_eq!(op, b);
@@ -468,6 +479,7 @@ mod bin_op_in_function_tests {
         for (en, et) in edge_cases_numbers.iter().zip(edge_cases_types.iter()) {    
             for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
                 let stmts = parse_body(&format!("own x {} = a {} {}", et, s, en));
+                assert_eq!(stmts.len(), 1);
                 if let Stmt::VarDecl(v) = &stmts[0] {
                     assert_eq!(v.type_name, et.clone());
                     if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
@@ -494,6 +506,7 @@ mod bin_op_in_function_tests {
 
             for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
                 let stmts = parse_body(&format!("own x {} = {} {} a", et, en, s));
+                assert_eq!(stmts.len(), 1);
                 if let Stmt::VarDecl(v) = &stmts[0] {
                     assert_eq!(v.type_name, et.clone());
                     if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
@@ -554,6 +567,7 @@ mod bin_op_in_function_tests {
         for (en, et) in edge_cases_numbers.iter().zip(edge_cases_types.iter()) {    
             for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
                 let stmts = parse_body(&format!("own x {} = a {} {}", et, s, en));
+                assert_eq!(stmts.len(), 1);
                 if let Stmt::VarDecl(v) = &stmts[0] {
                     assert_eq!(v.type_name, et.clone());
                     if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
@@ -582,6 +596,7 @@ mod bin_op_in_function_tests {
 
             for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
                 let stmts = parse_body(&format!("own x {} = {} {} a", et, en, s));
+                assert_eq!(stmts.len(), 1);
                 if let Stmt::VarDecl(v) = &stmts[0] {
                     assert_eq!(v.type_name, et.clone());
                     if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
@@ -675,6 +690,7 @@ mod bin_op_in_function_tests {
         for l in &literals_edge_cases {
             for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
                 let stmts = parse_body(&format!("({} {} {}) {} {}", l, s, l, s, l));
+                assert_eq!(stmts.len(), 1);
                 if let Stmt::Expr(e) = &stmts[0] {
                     if let Expr::BinOp { op, left, .. } = &e { 
                         assert_eq!(op, b);
@@ -698,6 +714,7 @@ mod bin_op_in_function_tests {
             for l in &literals_edge_cases {
                 for (b, s) in ALL_BIN_OP_KIND_ARTH.iter().zip(BIN_OP_KIND_ARTH_SYMBOLS.iter()) {
                     let stmts = parse_body(&format!("own x {} = ({} {} {}) {} {}", t, l, s, l, s, l));
+                    assert_eq!(stmts.len(), 1);
                     if let Stmt::VarDecl(v) = &stmts[0] {
                         assert_eq!(v.type_name, t.clone());
                         if let Some(Expr::BinOp { op, left, .. }) = &v.value {
