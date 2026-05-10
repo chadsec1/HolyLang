@@ -249,7 +249,7 @@ pub fn string_strip_outer_quotes_and_unescape(s: &str) -> Result<String, HolyErr
 /// - Must not contain a reserved language keyword (i.e. `own`, etc)
 pub fn validate_identifier_name(name: &str) -> Result<(), HolyError> {
     if name.is_empty() {
-        return Err(HolyError::Parse("Empty binding identifier name (You most likely have invalid syntax)".to_string()));
+        panic!("(Compiler bug) `validate_identifier_name` got fed an empty string, indicating a bug in the caller's code.");
     }
 
     // Check first character is not a number
