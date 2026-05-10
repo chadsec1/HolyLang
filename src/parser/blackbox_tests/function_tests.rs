@@ -295,6 +295,24 @@ mod function_tests {
     }
 
     #[test]
+    fn function_no_return_type_stmt_in_bottom_brace_errors() {
+        let literals = get_all_literals_edge_cases();
+
+        for l in literals {  
+            assert_parse_err(&format!("func foo() {{\n{}}}", l));
+        }
+    }
+
+    #[test]
+    fn function_no_return_type_stmt_in_top_brace_errors() {
+        let literals = get_all_literals_edge_cases();
+
+        for l in literals {   
+            assert_parse_err(&format!("func foo() {{{}\n}}", l));
+        }
+    }
+
+    #[test]
     fn function_no_return_type() {
         let ast = parse("func noop() {\n}").unwrap();
         let f = &ast.functions[0];

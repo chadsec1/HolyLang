@@ -10,6 +10,7 @@ mod infinite_stmt_in_function_tests {
         let literals_edge_cases = get_all_literals_edge_cases(); 
 
         for l in &literals_edge_cases {
+            assert_parse_err(&wrap(&format!("infinite {} {{\n\n{}}}", l, l)));    
             assert_parse_err(&wrap(&format!("infinite range({}) {{\n\n}}", l)));    
             assert_parse_err(&wrap(&format!("infinite range(, {}) {{\n\n}}", l)));    
             assert_parse_err(&wrap(&format!("infinite range({}, ) {{\n\n}}", l)));    
@@ -204,21 +205,13 @@ mod infinite_stmt_in_function_tests {
 
 
     #[test]
-    fn infinite_statements_spaces_after_passes() {
+    fn infinite_statements_spaces_after_errors() {
         const MAX_SPACES: usize = 5000;
         
         let mut spaces = String::with_capacity(MAX_SPACES);
         for _ in 0..=MAX_SPACES {
-            let stmts = parse_body(&format!("infinite {} {{\n\n}}", spaces));
-            assert_eq!(stmts.len(), 1);
-            if let Stmt::Infinite(inf) = &stmts[0] {
-                assert_eq!(inf.branch.len(), 0);
-
-            } else {
-                panic!("Expected infinite statement");
-            }
+            assert_parse_err(&wrap(&format!("infinite {} {{\n\n}}", spaces)));
             spaces.push(' ');
-
         }
     }
 
@@ -230,9 +223,9 @@ mod infinite_stmt_in_function_tests {
         for _ in 0..=MAX_SPACES {
             let stmts = parse_body(&format!("{} infinite {{\n\n}}", spaces));
             assert_eq!(stmts.len(), 1);
+
             if let Stmt::Infinite(inf) = &stmts[0] {
                 assert_eq!(inf.branch.len(), 0);
-
             } else {
                 panic!("Expected infinite statement");
             }
@@ -562,23 +555,13 @@ mod infinite_stmt_in_globals_tests {
     }
 
     #[test]
-    fn infinite_statements_spaces_after_passes() {
+    fn infinite_statements_spaces_after_errors() {
         const MAX_SPACES: usize = 5000;
         
         let mut spaces = String::with_capacity(MAX_SPACES);
         for _ in 0..=MAX_SPACES {
-            let ast = parse(&format!("infinite {} {{\n\n}}", spaces)).unwrap();
-            assert_eq!(ast.functions.len(), 0);
-            assert_eq!(ast.globals.len(), 1);
-
-            if let Stmt::Infinite(inf) = &ast.globals[0] {
-                assert_eq!(inf.branch.len(), 0);
-
-            } else {
-                panic!("Expected infinite statement");
-            }
+            assert_parse_err(&format!("infinite {} {{\n\n}}", spaces));
             spaces.push(' ');
-
         }
     }
 

@@ -8,6 +8,7 @@ mod if_stmt_tests {
     fn if_statements_invalid_construction_errors() {
         let literals_edge_cases = get_all_literals_edge_cases(); 
         for l in &literals_edge_cases {
+            assert_parse_err(&wrap(&format!("if {} {{\n\n{}}}", l, l)));    
             assert_parse_err(&wrap(&format!("if range({}) {{\n\n}}", l)));    
             assert_parse_err(&wrap(&format!("if range(, {}) {{\n\n}}", l)));    
             assert_parse_err(&wrap(&format!("if range({}, ) {{\n\n}}", l)));    

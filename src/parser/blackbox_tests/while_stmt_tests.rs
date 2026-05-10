@@ -8,6 +8,7 @@ mod while_stmt_in_function_tests {
     fn while_statements_invalid_construction_errors() {
         let literals_edge_cases = get_all_literals_edge_cases(); 
         for l in &literals_edge_cases {
+            assert_parse_err(&wrap(&format!("while {} {{\n\n{}}}", l, l)));    
             assert_parse_err(&wrap(&format!("while range({}) {{\n\n}}", l)));    
             assert_parse_err(&wrap(&format!("while range(, {}) {{\n\n}}", l)));    
             assert_parse_err(&wrap(&format!("while range({}, ) {{\n\n}}", l)));    
