@@ -288,38 +288,22 @@ fn parse_if_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), Hol
         if matches!(end, BlockEnd::Done) {
             break;
         }
-        if next_i >= lines.len() {
-            break;
-        }
 
         let cur_raw = lines[next_i];
         let cur_line = helpers::strip_inline_comment(cur_raw).trim().to_string();
 
-        // This is else branch
+        // This is an else branch
         if cur_line == "} else {" {
             // else is always last, so its fine to ignore the continutation enum here.
             let (body, after, _) = parse_block(lines, next_i + 1)?;
             else_branch = Some(body);
             next_i = after;
-            break; // else is always last
-        }
+            break; // else is always last arm in an if statement
+        
 
-        // This is elif (else if) branch
-        let elif_tail: Option<&str> = if cur_line.starts_with("} elif ") {
-            Some(&cur_line["} elif ".len()..])
-        } else {
-            None
-        };
-
-        if let Some(tail) = elif_tail {
-            if !tail.ends_with('{') {
-                return Err(HolyError::Parse(format!(
-                    "elif must end with {{ at line {}: {}",
-                    next_i + 1,
-                    cur_raw
-                )));
-            }
-            let elif_cond_str = tail.trim_end_matches('{').trim();
+        // This is an elif (else if) branch
+        } else if cur_line.starts_with("} elif ") && cur_line.ends_with(" {") {
+            let elif_cond_str = cur_line.trim_start_matches("} elif ").trim_end_matches(" {");
             if elif_cond_str.is_empty() {
                 return Err(HolyError::Parse(format!(
                     "Missing elif condition at line {}",
@@ -333,7 +317,7 @@ fn parse_if_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), Hol
             next_i = after;
             end = new_end;
         } else {
-            break; // not an elif/else continuation, so we are done
+            panic!("(Compiler bug) We encountered a line that does not start with elif nor else, this shouldve been caught by `parse_block` but it didnt. cur_line: {:?}", cur_line);
         }
     }
 
@@ -372,75 +356,74 @@ fn parse_for_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), Ho
         )));
     }
 
-    let parts: Vec<&str> = for_str.split(" in ").collect();
-    if parts.len() != 2 {
+    if let Some(index) = for_str.find(" in ") {
+        let holder_name = for_str[..index].to_string();
+        let expr_str = &for_str[index + " in ".len() .. ];
+        
+        helpers::validate_identifier_name(&holder_name)
+            .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+
+        let expr: Expr;
+        
+        // A hack, to only allow "RangeCall" expression to be used within for loop statements.
+        // I would love to shove this in parse_expr, but, if I do, programmer would be able to assign
+        // `rangecall` to any variable. 
+        // I could allow that and catch it in semantic phase, but, rangecall can only be used within
+        // for loops, so it's part of the syntax structure, not just semantics.
+        //
+        //
+        if expr_str.starts_with("range(") && expr_str.ends_with(")") {
+            let range_str = expr_str["range(".len()..].strip_suffix(")").unwrap();
+
+            let split_args = helpers::split_char_top_level(',', range_str)
+                .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+
+            if split_args.len() != 2 {
+                return Err(HolyError::Parse(format!(
+                    "For loop `range` statement takes exactly 2 integer arguments, instead we got `{}`. (line {} column {})",
+                    split_args.len(), span.line, span.column
+                )));
+
+            }
+
+            let start_expr = parse_expr::parse_expr(split_args[0], span)?;
+            let end_expr = parse_expr::parse_expr(split_args[1], span)?;
+
+            expr = Expr::RangeCall{ start: Box::new(start_expr), end: Box::new(end_expr), span: span };
+        } else {
+            expr = parse_expr::parse_expr(expr_str, span)?;
+        }
+
+        let (branch, next_i, _) = parse_block(lines, start_i + 1)?;
+
+        return Ok((
+            Stmt::For(ForStmt {
+                holder_name,
+                value: expr,
+                branch,
+                span,
+            }),
+            next_i,
+        ))
+    } else {
         return Err(HolyError::Parse(format!(
-            "For loop statement is not constructed properly. (line {} column {})",
+            "For loop statement is not constructed properly. You are missing `in` keyword. (line {} column {})",
             span.line, span.column
         )));
     }
-
-    let holder_name = parts[0].to_string();
-
-    helpers::validate_identifier_name(&holder_name)
-        .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
-
-
-
-    let expr: Expr;
-    
-    // A hack, to only allow "RangeCall" expression to be used within for loop statements.
-    // I would love to shove this in parse_expr, but, if I do, programmer would be able to assign
-    // `rangecall` to any variable. 
-    // I could allow that and catch it in semantic phase, but, rangecall can only be used within
-    // for loops, so it's part of the syntax structure, not just semantics.
-    //
-    //
-    if parts[1].starts_with("range(") && parts[1].ends_with(")") {
-        let range_str = parts[1]["range(".len()..].strip_suffix(")").unwrap();
-
-        let split_args = helpers::split_char_top_level(',', range_str)
-            .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
-
-        if split_args.len() != 2 {
-            return Err(HolyError::Parse(format!(
-                "For loop range statement takes exactly 2 integer arguments. (line {} column {})",
-                span.line, span.column
-            )));
-
-        }
-
-        let start_expr = parse_expr::parse_expr(split_args[0], span)?;
-        let end_expr = parse_expr::parse_expr(split_args[1], span)?;
-
-        expr = Expr::RangeCall{ start: Box::new(start_expr), end: Box::new(end_expr), span: span };
-    } else {
-        expr = parse_expr::parse_expr(parts[1], span)?;
-    }
-
-    let (branch, next_i, _) = parse_block(lines, start_i + 1)?;
-
-    Ok((
-        Stmt::For(ForStmt {
-            holder_name,
-            value: expr,
-            branch,
-            span,
-        }),
-        next_i,
-    ))
 }
 
 fn parse_infinite_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), HolyError> {
     let raw = lines[start_i];
     let line = helpers::strip_inline_comment(raw);
-    let line = line.replace(" ", "");
+    let line = line.trim();
     let span = Span { line: start_i + 1, column: 0 };
 
-    if line != "infinite{" {
+    
+    if line != "infinite {" {
         return Err(HolyError::Parse(format!(
-            "Invalid infinite loop syntax {{ at line {}: {}",
-            span.line, raw
+            "Invalid infinite loop construction syntax `{}` at line {}",
+            line, span.line
         )));
     }
 
@@ -508,6 +491,14 @@ fn parse_stmt_at(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), Hol
 
     } else if line.starts_with("for ") {
         return parse_for_stmt(lines, start_i);
+    }
+
+    if line.ends_with('{') {
+        return Err(HolyError::Parse(format!(
+            "Invalid statement syntax `{}` at line {}",
+            line, start_i + 1
+        )));
+
     }
     
     let stmt = parse_stmt_line(&line, start_i + 1)?;
