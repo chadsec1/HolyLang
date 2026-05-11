@@ -124,7 +124,7 @@ pub fn split_char_top_level(split_char: char, s: &str) -> Result<Vec<&str>, Holy
     let mut parts = Vec::new();
     let mut start = 0usize;
     let mut stack: Vec<char> = Vec::new();
-    let mut in_string: Option<char> = None; // Some('"') or Some('\'')
+    let mut in_string: Option<char> = None; 
     let mut escape = false;
     let mut just_closed_string = false;
 
