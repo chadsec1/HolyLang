@@ -70,11 +70,13 @@ mod var_multi_decl_in_functions_tests {
             }
 
             for t in ALL_TYPES_NO_ARR {
-                assert_parse_err(&wrap(&format!("own {} {} = {}", l, t, l)));
-                assert_parse_err(&wrap(&format!("own {} {} = {}", t, l, l)));
+                assert_parse_err(&wrap(&format!("own {} {}, y {} = {}", l, t, t, l)));
+                assert_parse_err(&wrap(&format!("own x {}, {} {} = {}", t, l, t, l)));
+                assert_parse_err(&wrap(&format!("own {} {}, {} {} = {}", l, t, l, t, l)));
 
-                assert_parse_err(&wrap(&format!("own {} {}", l, t)));
-                assert_parse_err(&wrap(&format!("own {} {}", t, l)));
+                assert_parse_err(&wrap(&format!("own {} {}, y {}", l, t, t)));
+                assert_parse_err(&wrap(&format!("own x {}, {} {}", t, l, t)));
+                assert_parse_err(&wrap(&format!("own {} {}, {} {}", l, t, l, t)));
             }
         }
     }

@@ -125,11 +125,14 @@ mod if_stmt_tests {
         let literals = get_all_literals_edge_cases(); 
 
         for kw in consts::RESERVED_KEYWORDS { 
-            if *kw == "else" || *kw == "elif" {
-                continue
-            }
-
             for l in &literals {
+                // NOTE Why this not letting us cover that specific elif branch??
+                assert_parse_err(&wrap(&format!("if {} {{\n\n}} {}", l, kw)));
+
+                if *kw == "else" || *kw == "elif" {
+                    continue
+                }
+
                 assert_parse_err(&wrap(&format!("if {} {{\n\n}} {} {{\n\n}}", l, kw)));
                 assert_parse_err(&wrap(&format!("if {} {{\n\n}}{} {{\n\n}}", l, kw)));
                 assert_parse_err(&wrap(&format!("if {} {{\n\n}} {}{{\n\n}}", l, kw)));
@@ -154,9 +157,6 @@ mod if_stmt_tests {
                 assert_parse_err(&wrap(&format!("if {}{{\n\n}}{} \n\n", l, kw)));
                 assert_parse_err(&wrap(&format!("if {}{{\n\n}} {}\n\n", l, kw)));
                 assert_parse_err(&wrap(&format!("if {}{{\n\n}}{}\n\n", l, kw)));
-
-
-
 
                 assert_parse_err(&wrap(&format!("if {} {{\n\n}} {} {} {{\n\n}}", l, kw, l)));
                 assert_parse_err(&wrap(&format!("if {} {{\n\n}}{} {}{{\n\n}}", l, kw, l)));
@@ -243,6 +243,21 @@ mod if_stmt_tests {
                 } else {
                     panic!("expected if statement");
                 }
+            }
+        }
+    }
+
+    #[test]
+    fn if_statements_invalid_branch_stmts_errors() {
+        let literals_edge_cases = get_all_literals_edge_cases();
+
+        for l in literals_edge_cases {
+            for t in ALL_TYPES_NO_ARR {
+                assert_parse_err(&wrap(&format!("if {} {{\n{}\n}}", l, t)));
+                assert_parse_err(&wrap(&format!("if {} {{\n\n}} else {{\n{}\n}}", l, t)));
+                assert_parse_err(&wrap(&format!("if {} {{\n\n}} elif {} {{\n{}\n}}", l, l, t)));
+                assert_parse_err(&wrap(&format!("if {} {{\n\n}} elif {} {{\n{}\n}} else {{\n\n}}", l, l, t)));
+                assert_parse_err(&wrap(&format!("if {} {{\n\n}} elif {} {{\n\n}} else {{\n{}\n}}", l, l, t)));
             }
         }
     }

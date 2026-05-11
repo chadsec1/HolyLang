@@ -1,5 +1,7 @@
 use super::*;
 
+// TODO: Add global tests too
+//
 #[cfg(test)]
 mod for_stmt_tests {
     use super::*; 
@@ -10,6 +12,8 @@ mod for_stmt_tests {
 
         assert_parse_err(&wrap("for range(,) {{\n\n}}"));    
         assert_parse_err(&wrap("for range() {{\n\n}}"));    
+        assert_parse_err(&wrap("for range) {{\n\n}}"));    
+        assert_parse_err(&wrap("for range( {{\n\n}}"));    
 
         for l in &literals_edge_cases {
             assert_parse_err(&wrap(&format!("for i in {} {{\n\n{}}}", l, l)));    
@@ -17,6 +21,7 @@ mod for_stmt_tests {
             assert_parse_err(&wrap(&format!("for range(, {}) {{\n\n}}", l)));    
             assert_parse_err(&wrap(&format!("for range({}, ) {{\n\n}}", l)));    
             assert_parse_err(&wrap(&format!("for range({}, {}) {{\n\n}}", l, l)));    
+            assert_parse_err(&wrap(&format!("for range{}, {}) {{\n\n}}", l, l)));    
             assert_parse_err(&wrap(&format!("for range({}, {} {{\n\n}}", l, l)));    
             assert_parse_err(&wrap(&format!("for range{}, {} {{\n\n}}", l, l)));    
 
@@ -249,6 +254,64 @@ mod for_stmt_tests {
             } else { panic!("expected for statement"); }
         }
     }
+
+    #[test]
+    fn for_statements_invalid_branch_stmts_errors() {
+        let literals_edge_cases = get_all_literals_edge_cases();
+
+        for l in literals_edge_cases {
+            for t in ALL_TYPES_NO_ARR {
+                assert_parse_err(&wrap(&format!("for i in {} {{\n{}\n}}", l, t)));
+                assert_parse_err(&wrap(&format!("for i in range({}, {}) {{\n{}\n}}", l, l, t)));
+            }
+        }
+    }
+
+
+
+    #[test]
+    fn for_statements_nested() {
+        let literals = get_all_literals_edge_cases();
+
+        for l in &literals { 
+            let mut s = format!("for i in {} {{\n\n}}", l);
+
+            for _ in 0..100 {
+                s = format!("for i in {} {{\n{}\n}}", l, s);
+                let stmts = parse_body(&s);
+                assert_eq!(stmts.len(), 1);
+                if let Stmt::For(f) = &stmts[0] {
+                    assert_eq!(f.holder_name, "i");
+                    assert_eq!(f.branch.len(), 1);
+                    assert!(!matches!(f.value, Expr::RangeCall{ .. }));
+
+                } else { panic!("expected for statement"); }
+            }
+        }
+    }
+
+    #[test]
+    fn for_statements_range_nested() {
+        let literals = get_all_literals_edge_cases();
+
+        for l in &literals { 
+            let mut s = format!("for i in range({}, {}) {{\n\n}}", l, l);
+
+            for _ in 0..100 {
+                s = format!("for i in range({}, {}) {{\n{}\n}}", l, l, s);
+                let stmts = parse_body(&s);
+                assert_eq!(stmts.len(), 1);
+                if let Stmt::For(f) = &stmts[0] {
+                    assert_eq!(f.holder_name, "i");
+                    assert_eq!(f.branch.len(), 1);
+                    assert!(matches!(f.value, Expr::RangeCall{ .. }));
+
+                } else { panic!("expected for statement"); }
+            }
+        }
+    }
+
+
 
 
     #[test]

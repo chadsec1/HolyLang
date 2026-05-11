@@ -96,6 +96,41 @@ mod array_literal_in_function_tests {
     }
 
     #[test]
+    fn array_literal_in_var_decl_fixed_array_with_const_type() {
+        let literals = get_all_literals_edge_cases();
+
+        for l in literals {
+            for t in ALL_TYPES_NO_ARR {
+                let stmts = parse_body(&format!("own x [y]{} = [{}, {}, {}]",  t, l, l, l));
+                assert_eq!(stmts.len(), 1);
+
+                if let Stmt::VarDecl(v) = &stmts[0] {
+                    assert_eq!(v.name, "x");
+                    assert_eq!(v.type_name, Type::FixedArray(Box::new(t.clone()), FixedArraySize::Const("y".to_string())));
+                    assert!(v.value.is_some());
+
+                    if let Expr::ArrayLiteral { elements, .. } = &v.value.clone().unwrap() {
+                        assert_eq!(elements.len(), 3);
+                    } else {
+                        panic!("Expected ArrayLiteral, instead we got {:?}", &v.value);
+                    }
+                } else { panic!("Expected VarDecl, instead we got {:?}", &stmts[0]) }
+            }
+        }
+    }
+
+    #[test]
+    fn array_literal_in_var_decl_fixed_array_with_invalid_const_name_errors() {
+        let literals = get_all_literals_edge_cases();
+
+        for l in literals {
+            for t in ALL_TYPES_NO_ARR {
+                assert_parse_err(&wrap(&format!("own x [{}]{} = [{}, {}, {}]", t, t, l, l, l)));
+            }
+        }
+    }
+
+    #[test]
     fn array_literal_edge_cases_errors() {
         let literals = get_all_literals_edge_cases();
 

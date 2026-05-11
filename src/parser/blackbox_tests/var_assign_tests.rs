@@ -26,6 +26,26 @@ mod var_assign_tests {
         }
     }
 
+    #[test]
+    fn invalid_var_name_errors() {
+        let literals = get_all_literals_edge_cases(); 
+
+        for l in &literals {
+            if l.chars().all(|c| c.is_ascii_alphabetic()) {
+                continue
+            }
+
+            assert_parse_err(&wrap(&format!("{} = {}", l, l)));
+            for t in ALL_TYPES_NO_ARR {
+                assert_parse_err(&wrap(&format!("{} = {}", t, l)));
+                assert_parse_err(&wrap(&format!("{} = {}", l, t)));
+                assert_parse_err(&wrap(&format!("{} = {}", t, t)));
+            }
+        }
+    }
+
+
+
 
     #[test]
     fn var_assign_with_var_decl() {

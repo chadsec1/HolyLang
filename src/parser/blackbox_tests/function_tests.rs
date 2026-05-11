@@ -101,6 +101,17 @@ mod function_tests {
     }
 
     #[test]
+    fn empty_function_with_comment() {
+        let ast = parse("func main() {\n# Hello there!\n# own x int32 = 1\n}\n").unwrap();
+        assert_eq!(ast.functions.len(), 1);
+        let f = &ast.functions[0];
+        assert_eq!(f.name, "main");
+        assert!(f.params.is_empty());
+        assert!(f.return_type.is_none());
+        assert!(f.body.is_empty());
+    }
+
+    #[test]
     fn function_with_params() {
         for t in ALL_TYPES_NO_ARR {
             let ast = parse(&format!("func hello(a int32, b uint32, c usize) {} {{\n}}", t)).unwrap();
@@ -126,6 +137,20 @@ mod function_tests {
 
             assert!(result.is_err());
             assert!(result.unwrap_err().to_string().contains("Binding identifier name"));
+        }
+    }
+
+
+    #[test]
+    fn function_with_invalid_param_type_errors() {
+        let literals = get_all_literals_edge_cases();
+
+        for l in &literals {
+            let result = parse(&format!("func hello(x {}) {{\n}}", l));
+
+            assert!(result.is_err());
+            let assert_cond = result.unwrap_err().to_string();
+            assert!(assert_cond.contains("Unknown type") || assert_cond.contains("Missing opening parentheses for return type"));
         }
     }
 
@@ -337,8 +362,25 @@ mod function_tests {
 
     #[test]
     fn function_unterminated_errors() {
+        let literals = get_all_literals_edge_cases();
+
         for t in ALL_TYPES_NO_ARR {
-            assert_parse_err(&format!("func bad() {{\n own x {} = 1\n", t));
+            assert_parse_err(&format!("func bad() {{\n own x {}", t));
+        }
+
+        assert_parse_err("func bad() {\n infinite {\n}");
+        for l in literals { 
+            assert_parse_err(&format!("func bad() {{\n if {} {{\n}}", l));
+            assert_parse_err(&format!("func bad() {{\n if {} {{\n}} else {{\n}}", l));
+            assert_parse_err(&format!("func bad() {{\n if {} {{\n}} elif {} {{\n}}", l, l));
+            assert_parse_err(&format!("func bad() {{\n if {} {{\n}} elif {} {{\n}} else {{\n}}", l, l));
+            assert_parse_err(&format!("func bad() {{\n while {} {{\n}}", l));
+            assert_parse_err(&format!("func bad() {{\n for i in {} {{\n}}", l));
+            assert_parse_err(&format!("func bad() {{\n for i in range({}, {}) {{\n}}", l, l));
+
+            for t in ALL_TYPES_NO_ARR {
+                assert_parse_err(&format!("func bad() {{\n own x {} = {}", t, l));
+            }
         }
     }
 

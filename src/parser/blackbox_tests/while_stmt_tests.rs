@@ -242,6 +242,37 @@ mod while_stmt_in_function_tests {
     }
 
     #[test]
+    fn while_statements_invalid_branch_stmts_errors() {
+        let literals_edge_cases = get_all_literals_edge_cases();
+
+        for l in literals_edge_cases {
+            for t in ALL_TYPES_NO_ARR {
+                assert_parse_err(&wrap(&format!("while {} {{\n{}\n}}", l, t)));
+            }
+        }
+    }
+
+    #[test]
+    fn while_statements_nested() {
+        let literals_edge_cases = get_all_literals_edge_cases();
+
+        for l in literals_edge_cases {
+            let mut s = format!("while {} {{\n\n}}", l);
+
+            for _ in 0..100 {
+                s = format!("while {} {{\n{}\n}}", l, s);
+                let stmts = parse_body(&s);
+                assert_eq!(stmts.len(), 1);
+                if let Stmt::While(w) = &stmts[0] {
+                    assert_eq!(w.branch.len(), 1);
+                } else {panic!("Expected while statement"); }
+            }
+        }
+    }
+
+
+
+    #[test]
     fn while_statements_below_var_decl_with_value() {
         let literals_edge_cases = get_all_literals_edge_cases();
 
@@ -914,6 +945,39 @@ mod while_stmt_in_global_tests {
             }
         }
     }
+
+    #[test]
+    fn while_statements_invalid_branch_stmts_errors() {
+        let literals_edge_cases = get_all_literals_edge_cases();
+
+        for l in literals_edge_cases {
+            for t in ALL_TYPES_NO_ARR {
+                assert_parse_err(&format!("while {} {{\n{}\n}}", l, t));
+            }
+        }
+    }
+
+    #[test]
+    fn while_statements_nested() {
+        let literals_edge_cases = get_all_literals_edge_cases();
+
+        for l in literals_edge_cases {
+            let mut s = format!("while {} {{\n\n}}", l);
+
+            for _ in 0..100 {
+                s = format!("while {} {{\n{}\n}}", l, s);
+                let ast = parse(&s).unwrap();
+                assert_eq!(ast.functions.len(), 0);
+                assert_eq!(ast.globals.len(), 1);
+
+                if let Stmt::While(w) = &ast.globals[0] {
+                    assert_eq!(w.branch.len(), 1);
+                } else {panic!("Expected while statement"); }
+            }
+        }
+    }
+
+
 
     #[test]
     fn while_statements_below_var_decl_with_value() {

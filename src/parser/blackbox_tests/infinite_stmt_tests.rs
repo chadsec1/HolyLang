@@ -429,7 +429,6 @@ mod infinite_stmt_in_function_tests {
         }
     }
 
-
     #[test]
     fn infinite_statements_after_expr_stmt() {
         let literals_edge_cases = get_all_literals_edge_cases();
@@ -445,6 +444,12 @@ mod infinite_stmt_in_function_tests {
         }
     }
 
+    #[test]
+    fn infinite_statements_invalid_branch_stmts_errors() {
+        for t in ALL_TYPES_NO_ARR {
+            assert_parse_err(&wrap(&format!("infinite {{\n{}\n}}", t)));
+        }
+    }
 
     #[test]
     fn infinite_statements_nested() {
@@ -808,6 +813,12 @@ mod infinite_stmt_in_globals_tests {
         }
     }
 
+    #[test]
+    fn infinite_statements_invalid_branch_stmts_errors() {
+        for t in ALL_TYPES_NO_ARR {
+            assert_parse_err(&format!("infinite {{\n{}\n}}", t));
+        }
+    }
 
     #[test]
     fn infinite_statements_nested() {
