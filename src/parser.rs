@@ -260,8 +260,8 @@ fn parse_if_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), Hol
 
     if !line.ends_with('{') {
         return Err(HolyError::Parse(format!(
-            "If statement must end with {{ at line {}: {}",
-            span.line, raw
+            "If statement must end with `{{`, instead we got `{}` (line {} column {})",
+            line, span.line, span.column
         )));
     }
 
@@ -342,7 +342,7 @@ fn parse_for_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), Ho
     if !line.ends_with('{') {
         return Err(HolyError::Parse(format!(
             "For loop statement must end with `{{`, instead we got `{}` (line {} column {})",
-            raw, span.line, span.column
+            line, span.line, span.column
         )));
     }
 
@@ -380,7 +380,7 @@ fn parse_for_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), Ho
 
             if split_args.len() != 2 {
                 return Err(HolyError::Parse(format!(
-                    "For loop `range` statement takes exactly 2 integer arguments, instead we got `{}`. (line {} column {})",
+                    "For loop `range` statement takes exactly 2 arguments, instead we got `{}` arguments. (line {} column {})",
                     split_args.len(), span.line, span.column
                 )));
 
@@ -391,6 +391,7 @@ fn parse_for_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), Ho
 
             expr = Expr::RangeCall{ start: Box::new(start_expr), end: Box::new(end_expr), span: span };
         } else {
+            
             expr = parse_expr::parse_expr(expr_str, span)?;
         }
 
@@ -422,8 +423,8 @@ fn parse_infinite_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize
     
     if line != "infinite {" {
         return Err(HolyError::Parse(format!(
-            "Invalid infinite loop construction syntax `{}` at line {}",
-            line, span.line
+            "Invalid infinite loop statement construction `{}` (line {} column {})",
+            line, span.line, span.column
         )));
     }
 
@@ -448,8 +449,8 @@ fn parse_while_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), 
 
     if !line.ends_with('{') {
         return Err(HolyError::Parse(format!(
-            "While statement must end with {{ at line {}: {}",
-            span.line, raw
+            "While loop statement must end with `{{`, instead we got `{}` (line {} column {})",
+            line, span.line, span.column
         )));
     }
 
@@ -512,7 +513,7 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
     // Return statement
     if line == "return" {
         return Err(HolyError::Parse(format!(
-            "Return requires a value (line {} column {})",
+            "Return requires (at least) one expression (line {} column {})",
             span.line, span.column
         )));
     }
@@ -520,10 +521,7 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
     if line.starts_with("return ") {
         let expr_str = line["return ".len()..].trim();
         if expr_str.is_empty() {
-            return Err(HolyError::Parse(format!(
-                "Return requires (at least) one expression (line {} column {})",
-                span.line, span.column
-            )));
+            panic!("(Compiler bug) We expected to `line` to be a trimmed, comments-removed line. Instead we got {:?}", expr_str);
         }
             
         // Check if return is like: return a, b, ...
@@ -542,9 +540,7 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
             let expr = parse_expr::parse_expr(expr_str, span)?;
             return Ok(Stmt::Return(vec![expr]));
         }
-
     }
-
 
 
     if line == "break" {
@@ -555,7 +551,6 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
         return Ok(Stmt::Continue(ContinueStmt{ span: span }));
     }
 
-    
 
     // Variable locking: lock ...
     if line.starts_with("lock ") {
