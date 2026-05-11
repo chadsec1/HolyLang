@@ -46,7 +46,6 @@ mod array_access_tests_in_functions {
                             } else { panic!("Expected Var in ArrayAccess expression 'array' field, instead got {:?}", array); }
 
                         } else { panic!("Expected ArrayAccess expression, instead got {:?}", v.value.clone().unwrap()); }
-                        assert!(matches!(v.value, Some(Expr::ArrayAccess { .. })));
                     } else { panic!("Expected VarDecl"); }
                 }
             }

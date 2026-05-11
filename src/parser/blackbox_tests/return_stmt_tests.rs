@@ -83,6 +83,7 @@ mod return_stmt_tests {
 
         for l in literals { 
             let stmts = parse_body(&format!("return {}", l));
+            assert_eq!(stmts.len(), 1);
             if let Stmt::Return(exprs) = &stmts[0] {
                 assert_eq!(exprs.len(), 1);
             } else {
@@ -94,6 +95,7 @@ mod return_stmt_tests {
     #[test]
     fn return_single_value_str_has_commas() {
         let stmts = parse_body("return \"hi, lol\"");
+        assert_eq!(stmts.len(), 1);
         if let Stmt::Return(exprs) = &stmts[0] {
             assert_eq!(exprs.len(), 1);
             if let Expr::StringLiteral { value, .. } = &exprs[0] {
@@ -138,6 +140,7 @@ mod return_stmt_tests {
 
         for l in literals { 
             let stmts = parse_body(&format!("return \"hi, lol\", {}, \"hey, ha, ha, ha!\"", l));
+            assert_eq!(stmts.len(), 1);
             if let Stmt::Return(exprs) = &stmts[0] {
                 assert_eq!(exprs.len(), 3);
 
