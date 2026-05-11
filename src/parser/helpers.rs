@@ -118,7 +118,7 @@ pub fn find_top_level_op_any(s: &str) -> Option<(usize, &str)> {
 /// - returns slices into `s` (no allocation for substrings beyond the Vec)
 pub fn split_char_top_level(split_char: char, s: &str) -> Result<Vec<&str>, HolyError> {
     if (split_char != ',') && (split_char != ':') {
-        panic!("(Compiler bug guard) You are most likely misusing split_char_top_level, we expected char to be a comma or a :, but instead we got `{}`", split_char);
+        panic!("(Compiler bug guard) You are most likely misusing split_char_top_level, we expected char to be one of ':', ',', ' ', but instead we got `{}`", split_char);
     }
 
     let mut parts = Vec::new();
@@ -248,7 +248,7 @@ pub fn string_strip_outer_quotes_and_unescape(s: &str) -> Result<String, HolyErr
 /// - Must not start with a digit
 /// - Must not contain a reserved language keyword (i.e. `own`, etc)
 pub fn validate_identifier_name(name: &str) -> Result<(), HolyError> {
-    if name.is_empty() {
+    if name.trim().is_empty() {
         panic!("(Compiler bug) `validate_identifier_name` got fed an empty string, indicating a bug in the caller's code.");
     }
 
