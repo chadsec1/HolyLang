@@ -159,7 +159,7 @@ fn parse_function(lines: &Vec<&str>, start_i: usize) -> Result<(Function, usize)
         let raw = lines[idx];
         let t = helpers::strip_inline_comment(raw).trim().to_string();
 
-        if t.is_empty() || t.starts_with('#') {
+        if t.is_empty() {
             idx += 1;
             continue;
         }
@@ -193,7 +193,7 @@ fn parse_block(lines: &Vec<&str>, mut idx: usize) -> Result<(Vec<Stmt>, usize, B
         let raw = lines[idx];
         let t = helpers::strip_inline_comment(raw).trim().to_string();
 
-        if t.is_empty() || t.starts_with('#') {
+        if t.is_empty() {
             idx += 1;
             continue;
         }
@@ -224,10 +224,10 @@ fn parse_block(lines: &Vec<&str>, mut idx: usize) -> Result<(Vec<Stmt>, usize, B
 
         // Let block-opening statements through before the brace guard.
         // NOTE to self: any statement that legitimately ends with `{` must be listed here.
+        // But not elif/else, those are handled above.
+        //
         let is_block_opener = t.starts_with("infinite ")
             || t.starts_with("if ")
-            || t.starts_with("elif ")
-            || t.starts_with("else ")
             || t.starts_with("for ")
             || t.starts_with("while ");
 
