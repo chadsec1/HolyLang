@@ -15,9 +15,13 @@ mod var_decl_in_functions_tests {
 
     #[test]
     fn var_decl_invalid_name_errors() {
-        let ints_literals_edge_cases = get_all_ints_literals_edge_cases(); 
+        let literals = get_all_literals_edge_cases(); 
 
-        for l in &ints_literals_edge_cases {
+        for l in &literals {
+            if l.chars().all(|c| c.is_ascii_alphabetic()) {
+                continue
+            }
+
             for t in ALL_TYPES_NO_ARR {
                 assert_parse_err(&wrap(&format!("own {} {} = {}", l, t, l)));
                 assert_parse_err(&wrap(&format!("own {} {} = {}", t, l, l)));
@@ -231,34 +235,15 @@ mod var_decl_in_functions_tests {
         }
     }
 
-
-    #[test]
-    fn var_decl_multi() {
-        for t1 in ALL_TYPES_NO_ARR {
-            for t2 in ALL_TYPES_NO_ARR {
-                for t3 in ALL_TYPES_NO_ARR {
-                    let stmts = parse_body(&format!("own x {}, y {}, z {} = give_3_numbers()", t1, t2, t3));
-                    assert!(matches!(stmts[0], Stmt::VarDeclMulti(_, _)));
-                    if let Stmt::VarDeclMulti(vars, _) = &stmts[0] {
-                        assert_eq!(vars.len(), 3);
-                        assert_eq!(vars[0].name, "x");
-                        assert_eq!(vars[0].type_name, t1.clone());
-                        assert_eq!(vars[1].name, "y");
-                        assert_eq!(vars[1].type_name, t2.clone());
-                        assert_eq!(vars[2].name, "z");
-                        assert_eq!(vars[2].type_name, t3.clone());
-                    } else { panic!("Expected VarDeclMulti"); }
-                }
-            }
-        }
-    }
-
     #[test]
     fn var_decl_unknown_type_errors() {
         let literals_edge_cases = get_all_literals_edge_cases(); 
 
-        assert_parse_err(&wrap("own x badtype = 1"));
         assert_parse_err(&wrap("own x badtype"));
+        for l in &literals_edge_cases {
+            assert_parse_err(&wrap(&format!("own x badtype = {}",  l)));
+            assert_parse_err(&wrap(&format!("own x {} = {}", l, l)));
+        }
 
         let letters: Vec<char> = ('a'..='z')
             .chain('A'..='Z')
@@ -640,30 +625,6 @@ mod var_decl_in_globals_tests {
         }
     }
 
-
-    #[test]
-    fn var_decl_multi() {
-        for t1 in ALL_TYPES_NO_ARR {
-            for t2 in ALL_TYPES_NO_ARR {
-                for t3 in ALL_TYPES_NO_ARR {
-                    let ast = parse(&format!("own x {}, y {}, z {} = give_3_numbers()", t1, t2, t3)).unwrap();
-                    assert_eq!(ast.functions.len(), 0);
-                    assert_eq!(ast.globals.len(), 1);
-
-                    assert!(matches!(ast.globals[0], Stmt::VarDeclMulti(_, _)));
-                    if let Stmt::VarDeclMulti(vars, _) = &ast.globals[0] {
-                        assert_eq!(vars.len(), 3);
-                        assert_eq!(vars[0].name, "x");
-                        assert_eq!(vars[0].type_name, t1.clone());
-                        assert_eq!(vars[1].name, "y");
-                        assert_eq!(vars[1].type_name, t2.clone());
-                        assert_eq!(vars[2].name, "z");
-                        assert_eq!(vars[2].type_name, t3.clone());
-                    } else { panic!("Expected VarDeclMulti"); }
-                }
-            }
-        }
-    }
 
     #[test]
     fn var_decl_unknown_type_errors() {

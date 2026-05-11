@@ -12,6 +12,7 @@ use crate::tests_consts::{
 
 mod const_decl_tests;
 mod var_decl_tests;
+mod var_multi_decl_tests;
 mod var_assign_tests;
 
 mod int_literal_tests;
@@ -37,7 +38,12 @@ mod format_call_tests;
 mod infinite_stmt_tests;
 mod while_stmt_tests;
 mod for_stmt_tests;
+
 mod break_stmt_tests;
+mod continue_stmt_tests;
+
+mod lock_stmt_tests;
+mod unlock_stmt_tests;
 
 mod if_stmt_tests;
 mod return_stmt_tests;
@@ -80,7 +86,7 @@ fn assert_parse_err(src: &str) {
 // all literals (ints, floats, array, strings literals of ints, floats, strings, other arrays, and variable names, and array access and slicing.
 // Some of these literals are illegal semantically, but syntaxally, should be valid.
 //
-fn get_all_literals_edge_cases() -> [String; 125] {
+fn get_all_literals_edge_cases() -> [String; 126] {
     return [
         i8::MIN.to_string(), i8::MAX.to_string(),
         i16::MIN.to_string(), i16::MAX.to_string(),
@@ -99,6 +105,7 @@ fn get_all_literals_edge_cases() -> [String; 125] {
 
         "false".to_string(), "true".to_string(),
         "\"\"".to_string(), "\"h\"".to_string(), "\"hi\"".to_string(),
+        "\"hi, lmao\"".to_string(),
         "i".to_string(), "arr".to_string(), "x".to_string(), "y".to_string(), "xyz".to_string(),
         
         format!("arr[{}]", i8::MIN.to_string()), format!("arr[{}]", i8::MAX.to_string()), 
