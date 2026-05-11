@@ -37,6 +37,8 @@ mod format_call_tests;
 mod infinite_stmt_tests;
 mod while_stmt_tests;
 mod for_stmt_tests;
+mod break_stmt_tests;
+
 mod if_stmt_tests;
 mod return_stmt_tests;
 

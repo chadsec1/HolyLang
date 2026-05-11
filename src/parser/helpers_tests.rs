@@ -204,7 +204,6 @@ mod tests {
     // split_comma_top_level
     mod split_comma_top_level {
         use super::*;
-        // --- happy paths ---
 
         #[test]
         fn empty_string_gives_one_empty_part() {
@@ -307,9 +306,13 @@ mod tests {
         }
 
         #[test]
-        fn deeply_nested_structure() {
+        fn deeply_nested_structures() {
             let result = helpers::split_char_top_level(',', "f(g(h(1, 2), 3), 4), 5").unwrap();
             assert_eq!(result, vec!["f(g(h(1, 2), 3), 4)", "5"]);
+
+            let result = helpers::split_char_top_level(',', "f(g(h(1, 2), 3), 4) 5").unwrap();
+            assert_eq!(result, vec!["f(g(h(1, 2), 3), 4) 5"]);
+
         }
 
         #[test]
@@ -605,8 +608,9 @@ mod tests {
         }
 
         #[test]
-        fn empty_name_is_error() {
-            assert!(helpers::validate_identifier_name("").is_err());
+        #[should_panic(expected = "Compiler bug")]
+        fn empty_name_is_panic() {
+            let _ = helpers::validate_identifier_name("");
         }
 
         #[test]
@@ -678,11 +682,16 @@ mod tests {
         }
 
         #[test]
-        fn identifier_empty() {
+        fn identifier_empty_with_whitespaces_panics() {
             const MAX_SPACES: usize = 10000;
             let mut spaces = String::with_capacity(MAX_SPACES);
             for _ in 0..MAX_SPACES {
-                assert!(helpers::validate_identifier_name(&spaces).is_err());
+                let result = std::panic::catch_unwind(|| { 
+                    let _ = helpers::validate_identifier_name(&spaces);
+                });
+
+                assert!(result.is_err(), "Expected panic");
+
                 spaces.push(' ');
             }
         }
@@ -717,14 +726,16 @@ mod tests {
                 assert!(helpers::validate_identifier_name(&format!("foob{c}ar")).is_err());
                 assert!(helpers::validate_identifier_name(&format!("fooba{c}r")).is_err());
                 assert!(helpers::validate_identifier_name(&format!("foobar{c}")).is_err());
-                assert!(helpers::validate_identifier_name(&format!("{c}{c}{c}{c}")).is_err());
-                assert!(helpers::validate_identifier_name(&format!("{c}{c}{c}")).is_err());
-                assert!(helpers::validate_identifier_name(&format!("{c}{c}")).is_err());
-                assert!(helpers::validate_identifier_name(&format!("{c}")).is_err());
                 assert!(helpers::validate_identifier_name(&format!("{c}_{c}")).is_err());
                 assert!(helpers::validate_identifier_name(&format!("{c}_")).is_err());
                 assert!(helpers::validate_identifier_name(&format!("_{c}")).is_err());
-                assert!(helpers::validate_identifier_name(&format!("{c}")).is_err());
+
+                if !c.is_whitespace() && !c.is_control() {
+                    assert!(helpers::validate_identifier_name(&format!("{c}{c}{c}{c}")).is_err());
+                    assert!(helpers::validate_identifier_name(&format!("{c}{c}{c}")).is_err());
+                    assert!(helpers::validate_identifier_name(&format!("{c}{c}")).is_err());
+                    assert!(helpers::validate_identifier_name(&format!("{c}")).is_err());
+                }
             }
         }
 

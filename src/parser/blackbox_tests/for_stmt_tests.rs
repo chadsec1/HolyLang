@@ -7,6 +7,10 @@ mod for_stmt_tests {
     #[test]
     fn for_statements_invalid_construction_errors() {
         let literals_edge_cases = get_all_literals_edge_cases(); 
+
+        assert_parse_err(&wrap("for range(,) {{\n\n}}"));    
+        assert_parse_err(&wrap("for range() {{\n\n}}"));    
+
         for l in &literals_edge_cases {
             assert_parse_err(&wrap(&format!("for i in {} {{\n\n{}}}", l, l)));    
             assert_parse_err(&wrap(&format!("for range({}) {{\n\n}}", l)));    
@@ -30,8 +34,10 @@ mod for_stmt_tests {
         }
 
         assert_parse_err(&wrap("for {\n\n"));    
+        assert_parse_err(&wrap("for {{\n\n"));    
         assert_parse_err(&wrap("for {}"));    
         assert_parse_err(&wrap("for \n\n}"));    
+        assert_parse_err(&wrap("for \n\n}}"));    
         assert_parse_err(&wrap("for {{\n\n}}"));    
 
         
@@ -88,7 +94,7 @@ mod for_stmt_tests {
     fn for_statements_trailing_exprs_errors() {
         let literals = get_all_literals_edge_cases(); 
 
-        for l in &literals {
+        for l in literals {
             assert_parse_err(&wrap(&format!("for i in {} {{\n\n}} {} {{\n\n}}", l, l)));
             assert_parse_err(&wrap(&format!("for i in {} {{\n\n}}{} {{\n\n}}", l, l)));
             assert_parse_err(&wrap(&format!("for i in {} {{\n\n}} {}{{\n\n}}", l, l)));
@@ -228,11 +234,77 @@ mod for_stmt_tests {
             if let Stmt::For(f) = &stmts[0] {
                 assert_eq!(f.holder_name, "i");
                 assert_eq!(f.branch.len(), 0);
-            } else {
-                panic!("expected while statement");
+                assert!(!matches!(f.value, Expr::RangeCall{ .. }));
+
+            } else { panic!("expected for statement"); }
+        }
+    }
+
+    #[test]
+    fn for_statements_range() {
+        let literals = get_all_literals_edge_cases();
+
+        for l in &literals { 
+            let stmts = parse_body(&format!("for i in range({}, {}){{\n\n}}", l, l));
+            assert_eq!(stmts.len(), 1);
+            if let Stmt::For(f) = &stmts[0] {
+                assert_eq!(f.holder_name, "i");
+                assert_eq!(f.branch.len(), 0);
+                assert!(matches!(f.value, Expr::RangeCall{ .. }));
+            } else { panic!("expected for statement"); }
+        }
+    }
+
+
+    #[test]
+    fn for_statements_range_invalid_arg_count_errors() {
+        let literals = get_all_literals_edge_cases();
+
+        for l in &literals { 
+            for i in 0..=100 {
+                if i == 2 {
+                    continue
+                }
+
+                let mut args = format!("{},", l).repeat(i);
+                if i > 0 {
+                    args = args[.. args.len() - 1].to_string();
+                }
+
+                assert_parse_err(&wrap(&format!("for i in range({}) {{\n\n}}", args)));    
             }
         }
     }
+
+
+    #[test]
+    fn for_statements_range_unterminated_str_args_errors() {
+        let literals = get_all_literals_edge_cases();
+        
+        assert_parse_err(&wrap("for i in range(\"lol) {\n\n}"));
+        
+        for l in literals { 
+            assert_parse_err(&wrap(&format!("for i in range({}, \"xd) {{\n\n}}", l)));
+            assert_parse_err(&wrap(&format!("for i in range(\"xd, {}) {{\n\n}}", l)));
+        }
+    }
+
+    #[test]
+    fn for_statements_range_invalid_args() {
+        let literals = get_all_literals_edge_cases();
+        
+        for l in literals { 
+            if l.starts_with('-') {
+                continue
+            }
+            assert_parse_err(&wrap(&format!("for i in range({} {}, {} {}) {{\n\n}}", l, l, l, l)));
+            assert_parse_err(&wrap(&format!("for i in range({} {}) {{\n\n}}", l, l)));
+            assert_parse_err(&wrap(&format!("for i in range({}, {} {}) {{\n\n}}", l, l, l)));
+            assert_parse_err(&wrap(&format!("for i in range({} {}, {}) {{\n\n}}", l, l, l)));
+            assert_parse_err(&wrap(&format!("for i in range({} {}, {} {}) {{\n\n}}", l, l, l, l)));
+        }
+    }
+
 
     #[test]
     fn for_statements_vars() {
@@ -245,9 +317,7 @@ mod for_stmt_tests {
             if let Expr::Var { name, .. } = &f.value {
                 assert_eq!(name, "x"); 
             } else { panic!("Expected Var expression") }
-        } else {
-            panic!("expected while statement");
-        }
+        } else { panic!("expected for statement"); }
     }
 
     #[test]
@@ -288,9 +358,7 @@ mod for_stmt_tests {
                 panic!("Expected ArrayLiteral");
             }
 
-        } else {
-            panic!("expected while statement");
-        }
+        } else { panic!("expected for statement"); }
     }
 
 
