@@ -552,26 +552,22 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
     }
 
 
-    // Variable locking: lock ...
+    // Variable locking, e.g.
+    // lock var_name
+    // lock var_name, var_name, ...
+    //
     if line.starts_with("lock ") {
-        // possibilities:
-        // lock x
-        // lock x, y
-        //
-        
         let rest = line["lock ".len()..].trim();
-
-        // Not needed, but I like defensive-coding style
         if rest.is_empty() {
-            return Err(HolyError::Parse(format!(
-                    "Lock requires at least one variable name (line {} column {})",
-                    span.line, span.column
-                )));
+            panic!("(Compiler bug) We expected to `line` to be a trimmed, comments-removed line. Instead we got {:?}", rest);
         }
+
+        let split_parts = helpers::split_char_top_level(',', rest)
+                .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
 
         let mut expr_vec = vec![];
 
-        for e in rest.split(',') {
+        for e in split_parts {
             let expr = parse_expr::parse_expr(e, span)?;
             expr_vec.push(expr);
         }
@@ -580,26 +576,22 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
     }
 
 
-    // Variable unlocking: unlock ...
+    // Variable unlocking, e.g.
+    // lock var_name
+    // lock var_name, var_name, ...
+    //
     if line.starts_with("unlock ") {
-        // possibilities:
-        // unlock x
-        // unlock x, y
-        //
-        
         let rest = line["unlock ".len()..].trim();
-        // Not needed, but I like defensive-coding style
         if rest.is_empty() {
-            return Err(HolyError::Parse(format!(
-                "Unlock requires at least one variable name (line {} column {})",
-                span.line, span.column
-            )));
-
+            panic!("(Compiler bug) We expected to `line` to be a trimmed, comments-removed line. Instead we got {:?}", rest);
         }
+
+        let split_parts = helpers::split_char_top_level(',', rest)
+                .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
 
         let mut expr_vec = vec![];
 
-        for e in rest.split(',') {
+        for e in split_parts { 
             let expr = parse_expr::parse_expr(e, span)?;
             expr_vec.push(expr);
         }
@@ -783,10 +775,7 @@ fn parse_type(s: &str, span: &Span) -> Result<Type, HolyError> {
     let token = s.trim();
 
     if token.is_empty() {
-        return Err(HolyError::Parse(format!(
-            "Invalid type construction `{}` (line {} column {})",
-            token, span.line, span.column
-        )));
+        panic!("(Compiler bug) parse_type got called with an empty type string. Caller must always check type string is not empty");
     }
 
     // Split into base name and bracket suffixes
@@ -830,28 +819,24 @@ fn parse_array_suffixes(s: &str, span: &Span) -> Result<Vec<InternalArraySuffix>
             suffixes.push(InternalArraySuffix::Dynamic);
             rest = &rest[2..];
         } else if rest.starts_with('[') {
-            let close = rest.find(']').ok_or_else(|| {
-                HolyError::Parse(format!(
-                    "Unclosed '[' in type at line {} column {}",
-                    span.line, span.column
-                ))
-            })?;
+            let close = rest.find(']').
+                expect("(Compiler bug) Unclosed ], shouldnt be possible. but yeah its possible lol");
+
             let size_str = rest[1..close].trim();
             // Empty brackets are handled by the "[]" branch above; reaching here
             // with an empty size_str means something like "int32[ ]" which is invalid.
+            //
+            // NOTE: Also since caller must always check type against white spaces
+            // its not our responsiblity to give user error here
+            // if we reach here, its a guard panic.
+            //
             if size_str.is_empty() {
-                return Err(HolyError::Parse(format!(
-                    "Empty brackets in type at line {} column {}",
-                    span.line, span.column
-                )));
+                panic!("(Compiler bug) Always check the type whitespaces, types must not have whitespaces");
             }
             suffixes.push(InternalArraySuffix::Fixed(parse_fixed_array_size(size_str, span)?));
             rest = &rest[close + 1..];
         } else {
-            return Err(HolyError::Parse(format!(
-                "Unexpected characters in type suffix `{}` at line {} column {}",
-                rest, span.line, span.column
-            )));
+            panic!("(Compiler bug) Expected [, instead got {:?} this is impossible because parse type shouldve caught it.", rest);
         }
     }
 
