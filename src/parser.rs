@@ -669,12 +669,12 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
 
                 let mut vars = vec![];
                 for (n, t) in var_names.iter().zip(var_types.iter()) {
-                    vars.push(Variable { name: n.clone(), type_name: t.clone(), value: None, span });
+                    vars.push(MultiVariableDeclaration { name: n.clone(), type_name: t.clone(), span });
                 }
                 return Ok(Stmt::VarDeclMulti(vars, value));
             }
 
-            // Otherwise a single declaration.
+            // Otherwise a single variable declaration.
             //
             let left_parts: Vec<&str> = left.split_whitespace().collect();
             if left_parts.len() != 2 {
@@ -691,12 +691,12 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
 
             let value = parse_expr::parse_expr(right, span)?;
 
-            return Ok(Stmt::VarDecl(Variable { name, type_name: var_type, value: Some(value), span: span }));
+            return Ok(Stmt::VarDecl(VariableDeclaration { name, type_name: var_type, value: value, span: span }));
 
 
 
         } else {
-            // no '=', expect "own name type" (explicit type, no initializer)
+            // no '=', expect "own name type"
             let parts: Vec<&str> = rest.split_whitespace().collect();
             if parts.len() != 2 {
                 return Err(HolyError::Parse(format!("Invalid variable declaration `{}` at line {} column {}", line, span.line, span.column)));
@@ -705,8 +705,10 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
             helpers::validate_identifier_name(&name)
                 .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
 
-            let tp = parse_type(parts[1], &span)?;
-            return Ok(Stmt::VarDecl(Variable { name, type_name: tp, value: None, span: span }));
+            let ty = parse_type(parts[1], &span)?;
+            let default_value = ty.get_default_value(span);
+
+            return Ok(Stmt::VarDecl(VariableDeclaration { name, type_name: ty, value: default_value, span: span }));
         }
     }
 
