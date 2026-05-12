@@ -391,40 +391,44 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
                 let start = indx_parts[0].trim();
                 let end = indx_parts[indx_parts.len() - 1].trim();
 
-                let mut start_expr: Option<Box<Expr>> = None;
-                let mut end_expr: Option<Box<Expr>> = None;
-
                 if start.is_empty() && end.is_empty() {
                     return Err(HolyError::Parse(format!(
-                                "Start and or end index are empty! (line {} column {})",
+                                "Start and end expressions are both missing from array slice expression! (line {} column {})",
                                 span.line, span.column
                             )));
                 }
 
                 // i.e. x[:EXPRESSION]
                 if start.is_empty() {
-                    end_expr = Some(Box::new(parse_expr(end, span)?));
-                }
+                    let end_expr = Box::new(parse_expr(end, span)?);
+
+                    return Ok(Expr::ArraySlicing { 
+                                array: Box::new(arr_expr), 
+                                range: ArraySliceRange::To(end_expr),
+                                span 
+                            })
 
                 // i.e. x[EXPRESSION:]
-                if end.is_empty() {
-                    start_expr = Some(Box::new(parse_expr(start, span)?));
+                } else if end.is_empty() {
+                    let start_expr = Box::new(parse_expr(start, span)?);
+
+                    return Ok(Expr::ArraySlicing { 
+                                array: Box::new(arr_expr), 
+                                range: ArraySliceRange::From(start_expr),
+                                span 
+                            })
+                } else {
+                    // i.e. x[EXPRESSION:EXPRESSION]
+                    let start_expr = Box::new(parse_expr(start, span)?);
+                    let end_expr = Box::new(parse_expr(end, span)?);
+                    
+                    return Ok(Expr::ArraySlicing { 
+                                array: Box::new(arr_expr), 
+                                range: ArraySliceRange::FromTo(start_expr, end_expr),
+                                span 
+                            })
                 }
 
-                // i.e. x[EXPRESSION:EXPRESSION]
-                if !start.is_empty() && !end.is_empty() {
-                    start_expr = Some(Box::new(parse_expr(start, span)?));
-                    end_expr = Some(Box::new(parse_expr(end, span)?));
-                }
-
-                
-                return Ok(
-                    Expr::ArraySlicing { 
-                        array: Box::new(arr_expr), 
-                        start: start_expr,
-                        end: end_expr,
-                        span 
-                    });
             }
         }
     }
