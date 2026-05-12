@@ -17,7 +17,7 @@ mod copy_call_tests {
                 if let Stmt::VarDecl(v) = &stmts[0] {
                     assert_eq!(v.name, "z");
                     assert_eq!(v.type_name, t.clone());
-                    assert!(matches!(v.value, Some(Expr::CopyCall { .. })));
+                    assert!(matches!(v.value, Expr::CopyCall { .. }));
                 } else { panic!("Expected VarDecl"); }
             }
         }

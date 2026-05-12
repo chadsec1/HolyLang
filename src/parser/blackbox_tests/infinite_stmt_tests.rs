@@ -249,7 +249,6 @@ mod infinite_stmt_in_function_tests {
                     if let Stmt::VarDecl(v) = &stmts[0] {
                         assert_eq!(v.name, l.to_string());
                         assert_eq!(v.type_name, t.clone());
-                        assert!(v.value.is_some());
                     } else { panic!("Expected VarDecl"); }
 
                     if let Stmt::Infinite(inf) = &stmts[1] {
@@ -274,7 +273,6 @@ mod infinite_stmt_in_function_tests {
                 if let Stmt::VarDecl(v) = &stmts[0] {
                     assert_eq!(v.name, l.to_string());
                     assert_eq!(v.type_name, t.clone());
-                    assert!(v.value.is_none());
                 } else { panic!("Expected VarDecl"); }
 
                 if let Stmt::Infinite(inf) = &stmts[1] {
@@ -309,7 +307,6 @@ mod infinite_stmt_in_function_tests {
                     if let Stmt::VarDecl(v) = &stmts[1] {
                         assert_eq!(v.name, l.to_string());
                         assert_eq!(v.type_name, t.clone());
-                        assert!(v.value.is_some());
                     } else { panic!("Expected VarDecl"); }
 
                 }
@@ -335,15 +332,10 @@ mod infinite_stmt_in_function_tests {
                 if let Stmt::VarDecl(v) = &stmts[1] {
                     assert_eq!(v.name, l.to_string());
                     assert_eq!(v.type_name, t.clone());
-                    assert!(v.value.is_none());
                 } else { panic!("Expected VarDecl"); }
             }
         }
     }
-
-
-
-
 
     #[test]
     fn infinite_statements_with_var_decl_with_value() {
@@ -362,7 +354,6 @@ mod infinite_stmt_in_function_tests {
                         if let Stmt::VarDecl(v) = &inf.branch[0] {
                             assert_eq!(v.name, l.to_string());
                             assert_eq!(v.type_name, t.clone());
-                            assert!(v.value.is_some());
                         } else { panic!("Expected VarDecl"); }
                     } else {
                         panic!("Expected infinite statement");
@@ -388,7 +379,6 @@ mod infinite_stmt_in_function_tests {
                     if let Stmt::VarDecl(v) = &inf.branch[0] {
                         assert_eq!(v.name, l.to_string());
                         assert_eq!(v.type_name, t.clone());
-                        assert!(v.value.is_none());
                     } else { panic!("Expected VarDecl"); }
                 } else {
                     panic!("Expected infinite statement");
@@ -607,7 +597,6 @@ mod infinite_stmt_in_globals_tests {
                     if let Stmt::VarDecl(v) = &ast.globals[0] {
                         assert_eq!(v.name, l.to_string());
                         assert_eq!(v.type_name, t.clone());
-                        assert!(v.value.is_some());
                     } else { panic!("Expected VarDecl"); }
 
                     if let Stmt::Infinite(inf) = &ast.globals[1] {
@@ -633,7 +622,6 @@ mod infinite_stmt_in_globals_tests {
                 if let Stmt::VarDecl(v) = &ast.globals[0] {
                     assert_eq!(v.name, l.to_string());
                     assert_eq!(v.type_name, t.clone());
-                    assert!(v.value.is_none());
                 } else { panic!("Expected VarDecl"); }
 
                 if let Stmt::Infinite(inf) = &ast.globals[1] {
@@ -669,9 +657,7 @@ mod infinite_stmt_in_globals_tests {
                     if let Stmt::VarDecl(v) = &ast.globals[1] {
                         assert_eq!(v.name, l.to_string());
                         assert_eq!(v.type_name, t.clone());
-                        assert!(v.value.is_some());
                     } else { panic!("Expected VarDecl"); }
-
                 }
             }
         }
@@ -696,7 +682,6 @@ mod infinite_stmt_in_globals_tests {
                 if let Stmt::VarDecl(v) = &ast.globals[1] {
                     assert_eq!(v.name, l.to_string());
                     assert_eq!(v.type_name, t.clone());
-                    assert!(v.value.is_none());
                 } else { panic!("Expected VarDecl"); }
             }
         }
@@ -724,7 +709,6 @@ mod infinite_stmt_in_globals_tests {
                         if let Stmt::VarDecl(v) = &inf.branch[0] {
                             assert_eq!(v.name, l.to_string());
                             assert_eq!(v.type_name, t.clone());
-                            assert!(v.value.is_some());
                         } else { panic!("Expected VarDecl"); }
                     } else {
                         panic!("Expected infinite statement");
@@ -751,7 +735,6 @@ mod infinite_stmt_in_globals_tests {
                     if let Stmt::VarDecl(v) = &inf.branch[0] {
                         assert_eq!(v.name, l.to_string());
                         assert_eq!(v.type_name, t.clone());
-                        assert!(v.value.is_none());
                     } else { panic!("Expected VarDecl"); }
                 } else {
                     panic!("Expected infinite statement");

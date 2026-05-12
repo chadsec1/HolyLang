@@ -39,13 +39,12 @@ mod array_access_tests_in_functions {
                     if let Stmt::VarDecl(v) = &stmts[0] {
                         assert_eq!(v.name, l.to_string());
                         assert_eq!(v.type_name, t.clone());
-                        assert!(v.value.is_some());
-                        if let Expr::ArrayAccess{ array, .. } = v.value.clone().unwrap() {
-                            if let Expr::Var{ name, .. } = &*array {
+                        if let Expr::ArrayAccess{ array, .. } = &v.value {
+                            if let Expr::Var{ name, .. } = &**array {
                                 assert_eq!(name, &arr_name.to_string());
                             } else { panic!("Expected Var in ArrayAccess expression 'array' field, instead got {:?}", array); }
 
-                        } else { panic!("Expected ArrayAccess expression, instead got {:?}", v.value.clone().unwrap()); }
+                        } else { panic!("Expected ArrayAccess expression, instead got {:?}", v.value); }
                     } else { panic!("Expected VarDecl"); }
                 }
             }
@@ -115,13 +114,13 @@ mod array_access_tests_in_globals {
                     if let Stmt::VarDecl(v) = &ast.globals[0] {
                         assert_eq!(v.name, l.to_string());
                         assert_eq!(v.type_name, t.clone());
-                        assert!(v.value.is_some());
-                        if let Expr::ArrayAccess{ array, .. } = v.value.clone().unwrap() {
-                            if let Expr::Var{ name, .. } = &*array {
+
+                        if let Expr::ArrayAccess{ array, .. } = &v.value {
+                            if let Expr::Var{ name, .. } = &**array {
                                 assert_eq!(name, &arr_name.to_string());
                             } else { panic!("Expected Var in ArrayAccess expression 'array' field, instead got {:?}", array); }
 
-                        } else { panic!("Expected ArrayAccess expression, instead got {:?}", v.value.clone().unwrap()); }
+                        } else { panic!("Expected ArrayAccess expression, instead got {:?}", v.value); }
                     } else { panic!("Expected VarDecl"); }
                 }
             }

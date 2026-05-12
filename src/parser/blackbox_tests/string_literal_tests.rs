@@ -14,7 +14,7 @@ mod string_literals_tests {
                 assert_eq!(v.name, "x");
                 assert_eq!(v.type_name, t.clone());
 
-                if let Some(Expr::StringLiteral { value, .. }) = &v.value {
+                if let Expr::StringLiteral { value, .. } = &v.value {
                     assert_eq!(value, "hello");
                 } else { panic!("Expected StringLiteral"); }
             } else { panic!("Expected VarDecl"); }
@@ -31,7 +31,7 @@ mod string_literals_tests {
                 assert_eq!(v.name, "x");
                 assert_eq!(v.type_name, t.clone());
 
-                if let Some(Expr::StringLiteral { value, .. }) = &v.value {
+                if let Expr::StringLiteral { value, .. } = &v.value {
                     assert_eq!(value, "hello\nworld");
                 } else { panic!("Expected StringLiteral"); }
             } else { panic!("Expected VarDecl"); }
@@ -48,7 +48,7 @@ mod string_literals_tests {
                 assert_eq!(v.name, "x");
                 assert_eq!(v.type_name, t.clone());
 
-                if let Some(Expr::StringLiteral { value, .. }) = &v.value {
+                if let Expr::StringLiteral { value, .. } = &v.value {
                     assert_eq!(value, r#"say "hi""#);
                 } else { panic!(); }
             } else { panic!("Expected VarDecl"); }
@@ -73,7 +73,7 @@ mod string_literals_tests {
                 assert_eq!(v.name, "x");
                 assert_eq!(v.type_name, t.clone());
 
-                if let Some(Expr::StringLiteral { value, .. }) = &v.value {
+                if let Expr::StringLiteral { value, .. } = &v.value {
                     assert_eq!(value, "hello # world");
                 } else { panic!(); }
             } else { panic!("Expected VarDecl"); }
@@ -92,7 +92,7 @@ mod string_literals_tests {
                 assert_eq!(v.name, "x");
                 assert_eq!(v.type_name, t.clone());
 
-                if let Some(Expr::StringLiteral { value, .. }) = &v.value {
+                if let Expr::StringLiteral { value, .. } = &v.value {
                     assert_eq!(value, "hello } world");
                 } else { panic!(); }
             } else { panic!("Expected VarDecl"); }
@@ -110,7 +110,7 @@ mod string_literals_tests {
                 assert_eq!(v.name, "x");
                 assert_eq!(v.type_name, t.clone());
 
-                if let Some(Expr::StringLiteral { value, .. }) = &v.value {
+                if let Expr::StringLiteral { value, .. } = &v.value {
                     assert_eq!(value, "hello { world");
                 } else { panic!(); }
             } else { panic!("Expected VarDecl"); }

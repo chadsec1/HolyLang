@@ -23,7 +23,7 @@ mod float64_literals_tests {
                 assert_eq!(v.name, "x");
                 assert_eq!(v.type_name, t.clone());
 
-                if let Some(Expr::Float64Literal { value, .. }) = &v.value {
+                if let Expr::Float64Literal { value, .. } = &v.value {
                     assert_eq!(*value, 1.0);
                 } else { panic!("Expected Float64Literal"); }
             } else { panic!("Expected VarDecl"); }
@@ -40,7 +40,7 @@ mod float64_literals_tests {
                 assert_eq!(v.name, "x");
                 assert_eq!(v.type_name, t.clone());
 
-                if let Some(Expr::Float64Literal { value, .. }) = &v.value {
+                if let Expr::Float64Literal { value, .. } = &v.value {
                     assert_eq!(*value, 1.123456789);
                 } else { panic!("Expected Float64Literal"); }
             } else { panic!("Expected VarDecl"); }

@@ -15,9 +15,8 @@ mod array_slicing_tests_in_functions {
             for lit in &literals_edge_cases {
                 let stmts = parse_body(&format!("{}[{}:{}]", arr_name, lit, lit));
                 if let Stmt::Expr(e) = &stmts[0] {
-                    if let Expr::ArraySlicing { start, end, .. } = &e {
-                        assert!(start.is_some());
-                        assert!(end.is_some());
+                    if let Expr::ArraySlicing { range, .. } = &e {
+                        assert!(matches!(range, ArraySliceRange::FromTo(_, _)))
                     } else { panic!("Expected ArraySlicing"); }
                 
                 } else { panic!("Expected Expr, instead got {:?}", stmts); }
@@ -36,9 +35,8 @@ mod array_slicing_tests_in_functions {
                 for lit in &literals_edge_cases {
                     let stmts = parse_body(&format!("own {} {} = {}[{}:{}]", l, t, arr_name, lit, lit));
                     if let Stmt::VarDecl(v) = &stmts[0] {
-                        if let Some(Expr::ArraySlicing { start, end, .. }) = &v.value {
-                            assert!(start.is_some());
-                            assert!(end.is_some());
+                        if let Expr::ArraySlicing { range, .. } = &v.value {
+                            assert!(matches!(range, ArraySliceRange::FromTo(_, _)))
                         } else { panic!("Expected ArraySlicing"); }
                     
                     } else { panic!("Expected VarDecl"); }
@@ -70,9 +68,8 @@ mod array_slicing_tests_in_functions {
             for lit in &literals_edge_cases {
                 let stmts = parse_body(&format!("{}[:{}]",  arr_name, lit));
                 if let Stmt::Expr(e) = &stmts[0] {
-                    if let Expr::ArraySlicing { start, end, .. } = &e {
-                        assert!(start.is_none());
-                        assert!(end.is_some());
+                    if let Expr::ArraySlicing { range, .. } = &e {
+                        assert!(matches!(range, ArraySliceRange::To(_)))
                     } else { panic!("Expected ArraySlicing"); }
                 
                 } else { panic!("Expected Expr, instead got {:?}", stmts); }
@@ -92,9 +89,8 @@ mod array_slicing_tests_in_functions {
                 for lit in &literals_edge_cases {
                     let stmts = parse_body(&format!("own {} {} = {}[:{}]", l, t, arr_name, lit));
                     if let Stmt::VarDecl(v) = &stmts[0] {
-                        if let Some(Expr::ArraySlicing { start, end, .. }) = &v.value {
-                            assert!(start.is_none());
-                            assert!(end.is_some());
+                        if let Expr::ArraySlicing { range, .. } = &v.value {
+                            assert!(matches!(range, ArraySliceRange::To(_)))
                         } else { panic!("Expected ArraySlicing"); }
                     
                     } else { panic!("Expected VarDecl"); }
@@ -131,9 +127,8 @@ mod array_slicing_tests_in_functions {
             for lit in &literals_edge_cases {
                 let stmts = parse_body(&format!("{}[{}:]", arr_name, lit));
                 if let Stmt::Expr(e) = &stmts[0] {
-                    if let Expr::ArraySlicing { start, end, .. } = &e {
-                        assert!(start.is_some());
-                        assert!(end.is_none());
+                    if let Expr::ArraySlicing { range, .. } = &e {
+                        assert!(matches!(range, ArraySliceRange::From(_)))
                     } else { panic!("Expected ArraySlicing"); }
                 
                 } else { panic!("Expected Expr, instead got {:?}", stmts); }
@@ -154,9 +149,8 @@ mod array_slicing_tests_in_functions {
                 for lit in &literals_edge_cases {
                     let stmts = parse_body(&format!("own {} {} = {}[{}:]", l, t, arr_name, lit));
                     if let Stmt::VarDecl(v) = &stmts[0] {
-                        if let Some(Expr::ArraySlicing { start, end, .. }) = &v.value {
-                            assert!(start.is_some());
-                            assert!(end.is_none());
+                        if let Expr::ArraySlicing { range, .. } = &v.value {
+                            assert!(matches!(range, ArraySliceRange::From(_)))
                         } else { panic!("Expected ArraySlicing"); }
                     
                     } else { panic!("Expected VarDecl"); }
@@ -228,9 +222,8 @@ mod array_slicing_tests_in_globals {
                 assert_eq!(ast.globals.len(), 1);
 
                 if let Stmt::Expr(e) = &ast.globals[0] {
-                    if let Expr::ArraySlicing { start, end, .. } = &e {
-                        assert!(start.is_some());
-                        assert!(end.is_some());
+                    if let Expr::ArraySlicing { range, .. } = &e {
+                        assert!(matches!(range, ArraySliceRange::FromTo(_, _)))
                     } else { panic!("Expected ArraySlicing"); }
                 
                 } else { panic!("Expected VarDecl"); }
@@ -252,9 +245,8 @@ mod array_slicing_tests_in_globals {
                     assert_eq!(ast.functions.len(), 0);
                     assert_eq!(ast.globals.len(), 1);
                     if let Stmt::VarDecl(v) = &ast.globals[0] {
-                        if let Some(Expr::ArraySlicing { start, end, .. }) = &v.value {
-                            assert!(start.is_some());
-                            assert!(end.is_some());
+                        if let Expr::ArraySlicing { range, .. } = &v.value {
+                            assert!(matches!(range, ArraySliceRange::FromTo(_, _)))
                         } else { panic!("Expected ArraySlicing"); }
                     
                     } else { panic!("Expected VarDecl"); }
@@ -291,9 +283,8 @@ mod array_slicing_tests_in_globals {
                 assert_eq!(ast.globals.len(), 1);
 
                 if let Stmt::Expr(e) = &ast.globals[0] {
-                    if let Expr::ArraySlicing { start, end, .. } = &e {
-                        assert!(start.is_none());
-                        assert!(end.is_some());
+                    if let Expr::ArraySlicing { range, .. } = &e {
+                        assert!(matches!(range, ArraySliceRange::To(_)))
                     } else { panic!("Expected ArraySlicing"); }
                 
                 } else { panic!("Expected VarDecl"); }
@@ -315,11 +306,9 @@ mod array_slicing_tests_in_globals {
                     assert_eq!(ast.functions.len(), 0);
                     assert_eq!(ast.globals.len(), 1);
 
-
                     if let Stmt::VarDecl(v) = &ast.globals[0] {
-                        if let Some(Expr::ArraySlicing { start, end, .. }) = &v.value {
-                            assert!(start.is_none());
-                            assert!(end.is_some());
+                        if let Expr::ArraySlicing { range, .. } = &v.value {
+                            assert!(matches!(range, ArraySliceRange::To(_)))
                         } else { panic!("Expected ArraySlicing"); }
                     
                     } else { panic!("Expected VarDecl"); }
@@ -353,9 +342,8 @@ mod array_slicing_tests_in_globals {
             for lit in &literals_edge_cases {
                 let stmts = parse_body(&format!("{}[{}:]", arr_name, lit));
                 if let Stmt::Expr(e) = &stmts[0] {
-                    if let Expr::ArraySlicing { start, end, .. } = &e {
-                        assert!(start.is_some());
-                        assert!(end.is_none());
+                    if let Expr::ArraySlicing { range, .. } = &e {
+                        assert!(matches!(range, ArraySliceRange::From(_)))
                     } else { panic!("Expected ArraySlicing"); }
                 
                 } else { panic!("Expected Expr, instead got {:?}", stmts); }
@@ -376,9 +364,8 @@ mod array_slicing_tests_in_globals {
                 for lit in &literals_edge_cases {
                     let stmts = parse_body(&format!("own {} {} = {}[{}:]", l, t, arr_name, lit));
                     if let Stmt::VarDecl(v) = &stmts[0] {
-                        if let Some(Expr::ArraySlicing { start, end, .. }) = &v.value {
-                            assert!(start.is_some());
-                            assert!(end.is_none());
+                        if let Expr::ArraySlicing { range, .. } = &v.value {
+                            assert!(matches!(range, ArraySliceRange::From(_)))
                         } else { panic!("Expected ArraySlicing"); }
                     
                     } else { panic!("Expected VarDecl"); }

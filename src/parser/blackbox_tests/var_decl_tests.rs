@@ -43,7 +43,6 @@ mod var_decl_in_functions_tests {
                 if let Stmt::VarDecl(v) = &stmts[0] {
                     assert_eq!(v.name, "x");
                     assert_eq!(v.type_name, t.clone());
-                    assert!(v.value.is_some());
                 } else {
                     panic!("Expected VarDecl");
                 }
@@ -58,7 +57,7 @@ mod var_decl_in_functions_tests {
             if let Stmt::VarDecl(v) = &stmts[0] {
                 assert_eq!(v.name, "x");
                 assert_eq!(v.type_name, t.clone());
-                assert!(v.value.is_none());
+                assert_eq!(v.type_name.get_default_value(v.span), v.value);
             } else {
                 panic!("Expected VarDecl");
             }
@@ -77,7 +76,7 @@ mod var_decl_in_functions_tests {
             assert_eq!(v.name, "y");
             assert_eq!(v.type_name, Type::Float64);
 
-            if let Some(Expr::Float64Literal { value, .. }) = &v.value {
+            if let Expr::Float64Literal { value, .. } = &v.value {
                 assert_eq!(*value, 1.0);
             } else { panic!("Expected Float64Literal"); }
         } else { panic!("Expected VarDecl"); }    
@@ -91,8 +90,9 @@ mod var_decl_in_functions_tests {
         if let Stmt::VarDecl(v) = &stmts[0] {
             assert_eq!(v.name, "x");
             assert_eq!(v.type_name, Type::Bool);
+            assert_ne!(Type::Bool.get_default_value(span()), v.value);
 
-            if let Some(Expr::BoolLiteral { value, .. }) = &v.value {
+            if let Expr::BoolLiteral { value, .. } = &v.value {
                 assert_eq!(*value, true);
             } else { panic!("Expected BoolLiteral"); }
     
@@ -107,8 +107,9 @@ mod var_decl_in_functions_tests {
         if let Stmt::VarDecl(v) = &stmts[0] {
             assert_eq!(v.name, "x");
             assert_eq!(v.type_name, Type::String);
+            assert_ne!(Type::String.get_default_value(span()), v.value);
             
-            if let Some(Expr::StringLiteral { value, .. }) = &v.value {
+            if let Expr::StringLiteral { value, .. } = &v.value {
                 assert_eq!(*value, "hello");
             } else { panic!("Expected StringLiteral"); }
     
@@ -128,8 +129,10 @@ mod var_decl_in_functions_tests {
                 if let Stmt::VarDecl(v) = &stmts[0] {
                     assert_eq!(v.name, "x");
                     assert_eq!(v.type_name, Type::Array(Box::new(t.clone())));
+            
+                    assert_ne!(v.type_name.get_default_value(v.span), v.value);
 
-                    if let Some(Expr::ArrayLiteral { elements, .. }) = &v.value {
+                    if let Expr::ArrayLiteral { elements, .. } = &v.value {
                         assert_eq!(elements.len(), 3);
                     } else {
                         panic!("Expected ArrayLiteral");
@@ -158,8 +161,9 @@ mod var_decl_in_functions_tests {
             if let Stmt::VarDecl(v) = &stmts[0] {
                 assert_eq!(v.name, "x");
                 assert_eq!(v.type_name, t.clone());
+                assert_ne!(v.type_name.get_default_value(v.span), v.value);
 
-                if let Some(Expr::ArrayLiteral { elements, .. }) = &v.value {
+                if let Expr::ArrayLiteral { elements, .. } = &v.value {
                     assert!(elements.is_empty());
                 } else {
                     panic!("Expected ArrayLiteral");
@@ -181,7 +185,7 @@ mod var_decl_in_functions_tests {
                     assert_eq!(v.name, "x");
                     assert_eq!(v.type_name, Type::Array(Box::new(t.clone())));
 
-                    if let Some(Expr::ArrayLiteral { elements, .. }) = &v.value {
+                    if let Expr::ArrayLiteral { elements, .. } = &v.value {
                         assert_eq!(elements.len(), 2);
                         assert!(matches!(elements[0], Expr::ArrayLiteral { .. }));
                         assert!(matches!(elements[1], Expr::ArrayLiteral { .. }));
@@ -202,8 +206,9 @@ mod var_decl_in_functions_tests {
             if let Stmt::VarDecl(v) = &stmts[0] {
                 assert_eq!(v.name, "x");
                 assert_eq!(v.type_name, t.clone());
+                assert_ne!(v.type_name.get_default_value(v.span), v.value);
 
-                if let Some(Expr::ArrayLiteral { elements, .. }) = &v.value {
+                if let Expr::ArrayLiteral { elements, .. } = &v.value {
                     assert_eq!(elements.len(), 0);
                 } else {
                     panic!("Expected ArrayLiteral");
@@ -224,13 +229,17 @@ mod var_decl_in_functions_tests {
                 s2.push_str("]");
                 let stmts = parse_body(&format!("own x {} = [{}{}]", t, s1, s2 ));
                 if let Stmt::VarDecl(v) = &stmts[0] {
-                    if let Some(Expr::ArrayLiteral { elements, .. }) = &v.value {
+                    assert_eq!(v.type_name, t.clone());
+                    assert_eq!(v.name, "x");
+                    assert_ne!(v.type_name.get_default_value(v.span), v.value);
+
+                    if let Expr::ArrayLiteral { elements, .. } = &v.value {
                         assert_eq!(elements.len(), 1);
 
                     } else {
                         panic!("Expected ArrayLiteral");
                     }
-                }
+                } else { panic!("Expected VarDecl"); }
             }
         }
     }
@@ -319,14 +328,12 @@ mod var_decl_in_functions_tests {
                     if let Stmt::VarDecl(v) = &stmts[0] {
                         assert_eq!(v.name, l.to_string());
                         assert_eq!(v.type_name, t.clone());
-                        assert!(v.value.is_some());
                     } else { panic!("Expected VarDecl"); }
 
 
                     if let Stmt::VarDecl(v) = &stmts[1] {
                         assert_eq!(v.name, l.to_string());
                         assert_eq!(v.type_name, t.clone());
-                        assert!(v.value.is_some());
                     } else { panic!("Expected VarDecl"); }
                 }
             }
@@ -350,14 +357,13 @@ mod var_decl_in_functions_tests {
                     if let Stmt::VarDecl(v) = &stmts[0] {
                         assert_eq!(v.name, l.to_string());
                         assert_eq!(v.type_name, t.clone());
-                        assert!(v.value.is_none());
+                        assert_eq!(v.type_name.get_default_value(v.span), v.value);
                     } else { panic!("Expected VarDecl"); }
 
 
                     if let Stmt::VarDecl(v) = &stmts[1] {
                         assert_eq!(v.name, l.to_string());
                         assert_eq!(v.type_name, t.clone());
-                        assert!(v.value.is_some());
                     } else { panic!("Expected VarDecl"); }
                 }
             }
@@ -419,7 +425,6 @@ mod var_decl_in_globals_tests {
                 if let Stmt::VarDecl(v) = &ast.globals[0] {
                     assert_eq!(v.name, "x");
                     assert_eq!(v.type_name, t.clone());
-                    assert!(v.value.is_some());
                 } else {
                     panic!("Expected VarDecl");
                 }
@@ -437,7 +442,7 @@ mod var_decl_in_globals_tests {
             if let Stmt::VarDecl(v) = &ast.globals[0] {
                 assert_eq!(v.name, "x");
                 assert_eq!(v.type_name, t.clone());
-                assert!(v.value.is_none());
+                assert_eq!(v.type_name.get_default_value(v.span), v.value);
             } else {
                 panic!("Expected VarDecl");
             }
@@ -456,8 +461,9 @@ mod var_decl_in_globals_tests {
         if let Stmt::VarDecl(v) = &ast.globals[0] {
             assert_eq!(v.name, "y");
             assert_eq!(v.type_name, Type::Float64);
+            assert_ne!(v.type_name.get_default_value(v.span), v.value);
 
-            if let Some(Expr::Float64Literal { value, .. }) = &v.value {
+            if let Expr::Float64Literal { value, .. } = &v.value {
                 assert_eq!(*value, 1.0);
             } else { panic!("Expected Float64Literal"); }
         } else { panic!("Expected VarDecl"); }    
@@ -473,8 +479,9 @@ mod var_decl_in_globals_tests {
         if let Stmt::VarDecl(v) = &ast.globals[0] {
             assert_eq!(v.name, "x");
             assert_eq!(v.type_name, Type::Bool);
+            assert_ne!(v.type_name.get_default_value(v.span), v.value);
 
-            if let Some(Expr::BoolLiteral { value, .. }) = &v.value {
+            if let Expr::BoolLiteral { value, .. } = &v.value {
                 assert_eq!(*value, true);
             } else { panic!("Expected BoolLiteral"); }
     
@@ -490,8 +497,9 @@ mod var_decl_in_globals_tests {
         if let Stmt::VarDecl(v) = &ast.globals[0] {
             assert_eq!(v.name, "x");
             assert_eq!(v.type_name, Type::String);
+            assert_ne!(v.type_name.get_default_value(v.span), v.value);
             
-            if let Some(Expr::StringLiteral { value, .. }) = &v.value {
+            if let Expr::StringLiteral { value, .. } = &v.value {
                 assert_eq!(*value, "hello");
             } else { panic!("Expected StringLiteral"); }
     
@@ -513,7 +521,7 @@ mod var_decl_in_globals_tests {
                     assert_eq!(v.name, "x");
                     assert_eq!(v.type_name, Type::Array(Box::new(t.clone())));
 
-                    if let Some(Expr::ArrayLiteral { elements, .. }) = &v.value {
+                    if let Expr::ArrayLiteral { elements, .. } = &v.value {
                         assert_eq!(elements.len(), 3);
                     } else {
                         panic!("Expected ArrayLiteral");
@@ -544,7 +552,7 @@ mod var_decl_in_globals_tests {
                 assert_eq!(v.name, "x");
                 assert_eq!(v.type_name, t.clone());
 
-                if let Some(Expr::ArrayLiteral { elements, .. }) = &v.value {
+                if let Expr::ArrayLiteral { elements, .. } = &v.value {
                     assert!(elements.is_empty());
                 } else {
                     panic!("Expected ArrayLiteral");
@@ -567,7 +575,7 @@ mod var_decl_in_globals_tests {
                     assert_eq!(v.name, "x");
                     assert_eq!(v.type_name, Type::Array(Box::new(t.clone())));
 
-                    if let Some(Expr::ArrayLiteral { elements, .. }) = &v.value {
+                    if let Expr::ArrayLiteral { elements, .. } = &v.value {
                         assert_eq!(elements.len(), 2);
                         assert!(matches!(elements[0], Expr::ArrayLiteral { .. }));
                         assert!(matches!(elements[1], Expr::ArrayLiteral { .. }));
@@ -590,7 +598,7 @@ mod var_decl_in_globals_tests {
                 assert_eq!(v.name, "x");
                 assert_eq!(v.type_name, t.clone());
 
-                if let Some(Expr::ArrayLiteral { elements, .. }) = &v.value {
+                if let Expr::ArrayLiteral { elements, .. } = &v.value {
                     assert_eq!(elements.len(), 0);
                 } else {
                     panic!("Expected ArrayLiteral");
@@ -614,7 +622,7 @@ mod var_decl_in_globals_tests {
                 assert_eq!(ast.globals.len(), 1);
 
                 if let Stmt::VarDecl(v) = &ast.globals[0] {
-                    if let Some(Expr::ArrayLiteral { elements, .. }) = &v.value {
+                    if let Expr::ArrayLiteral { elements, .. } = &v.value {
                         assert_eq!(elements.len(), 1);
 
                     } else {
@@ -708,14 +716,12 @@ mod var_decl_in_globals_tests {
                     if let Stmt::VarDecl(v) = &ast.globals[0] {
                         assert_eq!(v.name, l.to_string());
                         assert_eq!(v.type_name, t.clone());
-                        assert!(v.value.is_some());
                     } else { panic!("Expected VarDecl"); }
 
 
                     if let Stmt::VarDecl(v) = &ast.globals[1] {
                         assert_eq!(v.name, l.to_string());
                         assert_eq!(v.type_name, t.clone());
-                        assert!(v.value.is_some());
                     } else { panic!("Expected VarDecl"); }
                 }
             }
@@ -740,14 +746,13 @@ mod var_decl_in_globals_tests {
                     if let Stmt::VarDecl(v) = &ast.globals[0] {
                         assert_eq!(v.name, l.to_string());
                         assert_eq!(v.type_name, t.clone());
-                        assert!(v.value.is_none());
+                        assert_eq!(v.type_name.get_default_value(v.span), v.value);
                     } else { panic!("Expected VarDecl"); }
 
 
                     if let Stmt::VarDecl(v) = &ast.globals[1] {
                         assert_eq!(v.name, l.to_string());
                         assert_eq!(v.type_name, t.clone());
-                        assert!(v.value.is_some());
                     } else { panic!("Expected VarDecl"); }
                 }
             }

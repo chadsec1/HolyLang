@@ -15,7 +15,7 @@ mod blackbox_int_literals_tests {
                 assert_eq!(v.name, "x");
                 assert_eq!(v.type_name, t.clone());
 
-                if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                if let Expr::IntLiteral { value, .. } = &v.value {
                     assert!(matches!(value, IntLiteralValue::Int8(1)));
                 } else { panic!("Expected IntLiteral"); }
             } else { panic!("Expected VarDecl"); }
@@ -34,7 +34,7 @@ mod blackbox_int_literals_tests {
                 assert_eq!(v.name, "a");
                 assert_eq!(v.type_name, t.clone());
 
-                if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                if let Expr::IntLiteral { value, .. } = &v.value {
                     assert!(matches!(value, IntLiteralValue::Int8(127)));
                 } else { panic!("Expected IntLiteral"); }
             } else { panic!("Expected VarDecl"); }
@@ -43,7 +43,7 @@ mod blackbox_int_literals_tests {
                 assert_eq!(v.name, "b");
                 assert_eq!(v.type_name, t.clone());
 
-                if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                if let Expr::IntLiteral { value, .. } = &v.value {
                     assert!(matches!(value, IntLiteralValue::Int16(128)));
                 } else { panic!("Expected IntLiteral"); }
             } else { panic!("Expected VarDecl"); }
@@ -60,7 +60,7 @@ mod blackbox_int_literals_tests {
                 assert_eq!(v.name, "x");
                 assert_eq!(v.type_name, t.clone());
 
-                if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                if let Expr::IntLiteral { value, .. } = &v.value {
                     assert!(matches!(value, IntLiteralValue::Int16(128)));
                 } else { panic!("Expected IntLiteral"); }
             } else { panic!("Expected VarDecl"); }
@@ -79,7 +79,7 @@ mod blackbox_int_literals_tests {
                 assert_eq!(v.name, "a");
                 assert_eq!(v.type_name, t.clone());
 
-                if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                if let Expr::IntLiteral { value, .. } = &v.value {
                     assert!(matches!(value, IntLiteralValue::Int16(32767)));
                 } else { panic!("Expected IntLiteral"); }
 
@@ -89,7 +89,7 @@ mod blackbox_int_literals_tests {
                 assert_eq!(v.name, "b");
                 assert_eq!(v.type_name, t.clone());
 
-                if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                if let Expr::IntLiteral { value, .. } = &v.value {
                     assert!(matches!(value, IntLiteralValue::Int32(32768)));
                 } else { panic!("Expected IntLiteral"); }
             } else { panic!("Expected VarDecl"); }
@@ -106,7 +106,7 @@ mod blackbox_int_literals_tests {
                 assert_eq!(v.name, "x");
                 assert_eq!(v.type_name, t.clone());
 
-                if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                if let Expr::IntLiteral { value, .. } = &v.value {
                     assert!(matches!(value, IntLiteralValue::Int32(32768)));
                 } else { panic!(); }
             } else { panic!("Expected VarDecl"); }
@@ -125,7 +125,7 @@ mod blackbox_int_literals_tests {
                 assert_eq!(v.name, "a");
                 assert_eq!(v.type_name, t.clone());
 
-                if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                if let Expr::IntLiteral { value, .. } = &v.value {
                     assert!(matches!(value, IntLiteralValue::Int32(2147483647)));
                 } else { panic!("Expcted IntLiteral"); }
             } else { panic!("Expected VarDecl"); }
@@ -134,7 +134,7 @@ mod blackbox_int_literals_tests {
                 assert_eq!(v.name, "b");
                 assert_eq!(v.type_name, t.clone());
 
-                if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                if let Expr::IntLiteral { value, .. } = &v.value {
                     assert!(matches!(value, IntLiteralValue::Int64(2147483648)));
                 } else { panic!("Expcted IntLiteral"); }
             } else { panic!("Expected VarDecl"); }
@@ -152,7 +152,7 @@ mod blackbox_int_literals_tests {
                 assert_eq!(v.name, "x");
                 assert_eq!(v.type_name, t.clone());
 
-                if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                if let Expr::IntLiteral { value, .. } = &v.value {
                     assert!(matches!(value, IntLiteralValue::Int64(2147483648)));
                 } else { panic!("Expcted IntLiteral"); }
             } else { panic!("Expected VarDecl"); }
@@ -170,7 +170,7 @@ mod blackbox_int_literals_tests {
                 assert_eq!(v.name, "a");
                 assert_eq!(v.type_name, t.clone());
 
-                if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                if let Expr::IntLiteral { value, .. } = &v.value {
                     assert!(matches!(value, IntLiteralValue::Int64(9223372036854775807)));
                 } else { panic!("Expcted IntLiteral"); }
             } else { panic!("Expected VarDecl"); }
@@ -179,7 +179,7 @@ mod blackbox_int_literals_tests {
                 assert_eq!(v.name, "b");
                 assert_eq!(v.type_name, t.clone());
 
-                if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                if let Expr::IntLiteral { value, .. } = &v.value {
                     assert!(matches!(value, IntLiteralValue::Int128(9223372036854775808)));
                 } else { panic!("Expcted IntLiteral"); }
             } else { panic!("Expected VarDecl"); }
@@ -196,7 +196,7 @@ mod blackbox_int_literals_tests {
                 assert_eq!(v.name, "x");
                 assert_eq!(v.type_name, t.clone());
 
-                if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                if let Expr::IntLiteral { value, .. } = &v.value {
                     assert!(matches!(value, IntLiteralValue::Int128(9223372036854775808)));
                 } else { panic!("Expcted IntLiteral"); }
             } else { panic!("Expected VarDecl"); }
@@ -215,7 +215,7 @@ mod blackbox_int_literals_tests {
                 assert_eq!(v.name, "a");
                 assert_eq!(v.type_name, t.clone());
 
-                if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                if let Expr::IntLiteral { value, .. } = &v.value {
                     assert!(matches!(value, IntLiteralValue::Int128(170141183460469231731687303715884105727)));
                 } else { panic!("Expcted IntLiteral"); }
             } else { panic!("Expected VarDecl"); }
@@ -224,7 +224,7 @@ mod blackbox_int_literals_tests {
                 assert_eq!(v.name, "b");
                 assert_eq!(v.type_name, t.clone());
 
-                if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                if let Expr::IntLiteral { value, .. } = &v.value {
                     assert!(matches!(value, IntLiteralValue::Uint128(170141183460469231731687303715884105728)));
                 } else { panic!("Expcted IntLiteral"); }
             } else { panic!("Expected VarDecl"); }
@@ -240,7 +240,7 @@ mod blackbox_int_literals_tests {
                 assert_eq!(v.name, "x");
                 assert_eq!(v.type_name, t.clone());
 
-                if let Some(Expr::IntLiteral { value, .. }) = &v.value {
+                if let Expr::IntLiteral { value, .. } = &v.value {
                     assert!(matches!(value, IntLiteralValue::Uint128(340282366920938463463374607431768211455)));
                 } else { panic!(); }
             } else { panic!("Expected VarDecl"); }
@@ -259,7 +259,7 @@ mod blackbox_int_literals_tests {
                 assert_eq!(v.name, "x");
                 assert_eq!(v.type_name, t.clone());
 
-                assert!(matches!(v.value, Some(Expr::IntLiteral { value: IntLiteralValue::Int8(-128), .. })))
+                assert!(matches!(v.value, Expr::IntLiteral { value: IntLiteralValue::Int8(-128), .. }))
             } else { panic!("Expected VarDecl"); }
         }
     }

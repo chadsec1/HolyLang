@@ -11,7 +11,7 @@ mod bool_literals_tests {
             assert_eq!(stmts.len(), 1);
             if let Stmt::VarDecl(v) = &stmts[0] {
                 assert_eq!(v.type_name, t.clone());
-                assert!(matches!(v.value, Some(Expr::BoolLiteral { value: true, .. })));
+                assert!(matches!(v.value, Expr::BoolLiteral { value: true, .. }));
             } else { panic!("Expected VarDecl"); }
         }
     }
@@ -23,7 +23,7 @@ mod bool_literals_tests {
             assert_eq!(stmts.len(), 1);
             if let Stmt::VarDecl(v) = &stmts[0] {
                 assert_eq!(v.type_name, t.clone());
-                assert!(matches!(v.value, Some(Expr::BoolLiteral { value: false, .. })));
+                assert!(matches!(v.value, Expr::BoolLiteral { value: false, .. }));
             } else { panic!("Expected VarDecl"); }
         }
     }

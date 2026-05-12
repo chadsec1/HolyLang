@@ -26,7 +26,7 @@ mod comment_tests {
             if let Stmt::VarDecl(v) = &stmts[0] {
                 assert_eq!(v.name, "x");
                 assert_eq!(v.type_name, t.clone());
-                if let Expr::StringLiteral { value, .. } = v.value.clone().unwrap() {
+                if let Expr::StringLiteral { value, .. } = &v.value {
                     assert_eq!(value, "val # not comment");
                 } else { panic!("Expected Var Expression"); }
             } else { panic!("Expected VarDecl"); }

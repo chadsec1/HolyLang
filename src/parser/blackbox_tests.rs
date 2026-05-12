@@ -83,6 +83,10 @@ fn assert_parse_err(src: &str) {
     );
 }
 
+fn span() -> Span {
+    Span { line: 1, column: 0 }
+}
+
 // all literals (ints, floats, array, strings literals of ints, floats, strings, other arrays, and variable names, and array access and slicing.
 // Some of these literals are illegal semantically, but syntaxally, should be valid.
 //
@@ -235,8 +239,6 @@ mod tests {
                     if let Stmt::VarDecl(v) = &ast.globals[0] {
                         assert_eq!(v.name, l.to_string());
                         assert_eq!(v.type_name, t.clone());
-                        assert!(v.value.is_some());
-
                     } else { panic!("Expected VarDecl, instead got: {:?}", ast.globals[0]); }
 
                 }

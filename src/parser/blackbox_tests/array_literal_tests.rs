@@ -33,9 +33,8 @@ mod array_literal_in_function_tests {
                 if let Stmt::VarDecl(v) = &stmts[0] {
                     assert_eq!(v.name, "x");
                     assert_eq!(v.type_name, t.clone());
-                    assert!(v.value.is_some());
 
-                    if let Expr::ArrayLiteral { elements, .. } = &v.value.clone().unwrap() {
+                    if let Expr::ArrayLiteral { elements, .. } = &v.value {
                         assert_eq!(elements.len(), 3);
                     } else {
                         panic!("Expected ArrayLiteral, instead we got {:?}", &v.value);
@@ -57,9 +56,8 @@ mod array_literal_in_function_tests {
                 if let Stmt::VarDecl(v) = &stmts[0] {
                     assert_eq!(v.name, "x");
                     assert_eq!(v.type_name, Type::Array(Box::new(t.clone())));
-                    assert!(v.value.is_some());
 
-                    if let Expr::ArrayLiteral { elements, .. } = &v.value.clone().unwrap() {
+                    if let Expr::ArrayLiteral { elements, .. } = &v.value {
                         assert_eq!(elements.len(), 3);
                     } else {
                         panic!("Expected ArrayLiteral, instead we got {:?}", &v.value);
@@ -82,9 +80,8 @@ mod array_literal_in_function_tests {
                     if let Stmt::VarDecl(v) = &stmts[0] {
                         assert_eq!(v.name, "x");
                         assert_eq!(v.type_name, Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i)));
-                        assert!(v.value.is_some());
 
-                        if let Expr::ArrayLiteral { elements, .. } = &v.value.clone().unwrap() {
+                        if let Expr::ArrayLiteral { elements, .. } = &v.value {
                             assert_eq!(elements.len(), 3);
                         } else {
                             panic!("Expected ArrayLiteral, instead we got {:?}", &v.value);
@@ -107,9 +104,8 @@ mod array_literal_in_function_tests {
                 if let Stmt::VarDecl(v) = &stmts[0] {
                     assert_eq!(v.name, "x");
                     assert_eq!(v.type_name, Type::FixedArray(Box::new(t.clone()), FixedArraySize::Const("y".to_string())));
-                    assert!(v.value.is_some());
 
-                    if let Expr::ArrayLiteral { elements, .. } = &v.value.clone().unwrap() {
+                    if let Expr::ArrayLiteral { elements, .. } = &v.value {
                         assert_eq!(elements.len(), 3);
                     } else {
                         panic!("Expected ArrayLiteral, instead we got {:?}", &v.value);

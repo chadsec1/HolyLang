@@ -16,8 +16,9 @@ mod format_call_tests {
                 if let Stmt::VarDecl(v) = &stmts[0] {
                     assert_eq!(v.name, "s");
                     assert_eq!(v.type_name, t.clone());
+                    assert_ne!(v.type_name.get_default_value(span()), v.value);
 
-                    assert!(matches!(v.value, Some(Expr::FormatCall { .. })));
+                    assert!(matches!(v.value, Expr::FormatCall { .. }));
                 } else { panic!("Expected VarDecl"); }
 
             }
@@ -36,13 +37,14 @@ mod format_call_tests {
                 if let Stmt::VarDecl(v) = &stmts[0] {
                     assert_eq!(v.name, "x");
                     assert_eq!(v.type_name, t.clone());
+                    assert_ne!(v.type_name.get_default_value(span()), v.value);
                 } else { panic!("Expected VarDecl"); }
 
 
                 if let Stmt::VarDecl(v) = &stmts[1] {
                     assert_eq!(v.name, "s");
                     assert_eq!(v.type_name, t.clone());
-                    assert!(matches!(v.value, Some(Expr::FormatCall { .. })));
+                    assert!(matches!(v.value, Expr::FormatCall { .. }));
                 } else { panic!("Expected VarDecl"); }
             }
         }

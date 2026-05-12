@@ -38,7 +38,10 @@ mod bin_op_in_function_tests {
                         let stmts = parse_body(&format!("own x {} = {} {} {}", t, l1, s, l2));
                         assert_eq!(stmts.len(), 1);
                         if let Stmt::VarDecl(v) = &stmts[0] {
-                            if let Some(Expr::BinOp { op, .. }) = &v.value {
+                            assert_eq!(v.name, "x");
+                            assert_eq!(v.type_name, t.clone());
+                            assert_ne!(v.type_name.get_default_value(span()), v.value);
+                            if let Expr::BinOp { op, .. } = &v.value {
                                 assert_eq!(op, b);
                             } else {
                                 panic!("Expected {:?}, instead we got {:?}", b, &v);
@@ -143,8 +146,10 @@ mod bin_op_in_function_tests {
                     let stmts = parse_body(&format!("own x {} = {} {} {}", et2, en1, s, en2));
                     assert_eq!(stmts.len(), 1);
                     if let Stmt::VarDecl(v) = &stmts[0] {
+                        assert_eq!(v.name, "x");
                         assert_eq!(v.type_name, et2.clone());
-                        if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
+                        assert_ne!(v.type_name.get_default_value(span()), v.value);
+                        if let Expr::BinOp { left, right, op, .. } = &v.value {
                             assert_eq!(op, b);
 
                             if let Expr::IntLiteral { value, .. } = **left {
@@ -296,7 +301,10 @@ mod bin_op_in_function_tests {
                     assert_eq!(stmts.len(), 1);
                     if let Stmt::VarDecl(v) = &stmts[0] {
                         assert_eq!(v.type_name, et2.clone());
-                        if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
+                        assert_eq!(v.name, "x");
+                        assert_ne!(v.type_name.get_default_value(span()), v.value);
+
+                        if let Expr::BinOp { left, right, op, .. } = &v.value {
                             assert_eq!(op, b);
 
                             if let Expr::IntLiteral { value, .. } = **left {
@@ -365,7 +373,11 @@ mod bin_op_in_function_tests {
                 assert_eq!(stmts.len(), 1);
                 if let Stmt::VarDecl(v) = &stmts[0] {
                     assert_eq!(v.type_name, t.clone());
-                    if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
+
+                    assert_eq!(v.name, "x");
+                    assert_ne!(v.type_name.get_default_value(span()), v.value);
+
+                    if let Expr::BinOp { left, right, op, .. } = &v.value {
                         assert_eq!(op, b);
 
                         assert!(matches!(**left, Expr::Var { .. }));
@@ -482,7 +494,11 @@ mod bin_op_in_function_tests {
                 assert_eq!(stmts.len(), 1);
                 if let Stmt::VarDecl(v) = &stmts[0] {
                     assert_eq!(v.type_name, et.clone());
-                    if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
+
+                    assert_eq!(v.name, "x");
+                    assert_ne!(v.type_name.get_default_value(span()), v.value);
+
+                    if let Expr::BinOp { left, right, op, .. } = &v.value {
                         assert_eq!(op, b);
 
                         assert!(matches!(**left, Expr::Var { .. }));
@@ -509,7 +525,11 @@ mod bin_op_in_function_tests {
                 assert_eq!(stmts.len(), 1);
                 if let Stmt::VarDecl(v) = &stmts[0] {
                     assert_eq!(v.type_name, et.clone());
-                    if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
+
+                    assert_eq!(v.name, "x");
+                    assert_ne!(v.type_name.get_default_value(span()), v.value);
+
+                    if let Expr::BinOp { left, right, op, .. } = &v.value {
                         assert_eq!(op, b);
 
                         if let Expr::IntLiteral { value, .. } = **left {
@@ -570,7 +590,11 @@ mod bin_op_in_function_tests {
                 assert_eq!(stmts.len(), 1);
                 if let Stmt::VarDecl(v) = &stmts[0] {
                     assert_eq!(v.type_name, et.clone());
-                    if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
+
+                    assert_eq!(v.name, "x");
+                    assert_ne!(v.type_name.get_default_value(span()), v.value);
+
+                    if let Expr::BinOp { left, right, op, .. } = &v.value {
                         assert_eq!(op, b);
 
                         assert!(matches!(**left, Expr::Var { .. }));
@@ -599,7 +623,11 @@ mod bin_op_in_function_tests {
                 assert_eq!(stmts.len(), 1);
                 if let Stmt::VarDecl(v) = &stmts[0] {
                     assert_eq!(v.type_name, et.clone());
-                    if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
+
+                    assert_eq!(v.name, "x");
+                    assert_ne!(v.type_name.get_default_value(span()), v.value);
+
+                    if let Expr::BinOp { left, right, op, .. } = &v.value {
                         assert_eq!(op, b);
 
                         if let Expr::IntLiteral { value, .. } = **left {
@@ -717,7 +745,10 @@ mod bin_op_in_function_tests {
                     assert_eq!(stmts.len(), 1);
                     if let Stmt::VarDecl(v) = &stmts[0] {
                         assert_eq!(v.type_name, t.clone());
-                        if let Some(Expr::BinOp { op, left, .. }) = &v.value {
+
+                        assert_eq!(v.name, "x");
+                        assert_ne!(v.type_name.get_default_value(span()), v.value);
+                        if let Expr::BinOp { op, left, .. } = &v.value {
                             assert_eq!(op, b);
                             assert!(matches!(**left, Expr::BinOp { .. }));
                         } else {
@@ -781,7 +812,7 @@ mod bin_op_in_globals_tests {
                         assert_eq!(ast.globals.len(), 1);
 
                         if let Stmt::VarDecl(v) = &ast.globals[0] {
-                            if let Some(Expr::BinOp { op, .. }) = &v.value {
+                            if let Expr::BinOp { op, .. } = &v.value {
                                 assert_eq!(op, b);
                             } else {
                                 panic!("Expected {:?}, instead we got {:?}", b, &v);
@@ -891,7 +922,7 @@ mod bin_op_in_globals_tests {
 
                     if let Stmt::VarDecl(v) = &ast.globals[0] {
                         assert_eq!(v.type_name, et2.clone());
-                        if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
+                        if let Expr::BinOp { left, right, op, .. } = &v.value {
                             assert_eq!(op, b);
 
                             if let Expr::IntLiteral { value, .. } = **left {
@@ -1047,7 +1078,7 @@ mod bin_op_in_globals_tests {
 
                     if let Stmt::VarDecl(v) = &ast.globals[0] {
                         assert_eq!(v.type_name, et2.clone());
-                        if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
+                        if let Expr::BinOp { left, right, op, .. } = &v.value {
                             assert_eq!(op, b);
 
                             if let Expr::IntLiteral { value, .. } = **left {
@@ -1120,7 +1151,7 @@ mod bin_op_in_globals_tests {
 
                 if let Stmt::VarDecl(v) = &ast.globals[0] {
                     assert_eq!(v.type_name, t.clone());
-                    if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
+                    if let Expr::BinOp { left, right, op, .. } = &v.value {
                         assert_eq!(op, b);
 
                         assert!(matches!(**left, Expr::Var { .. }));
@@ -1243,7 +1274,7 @@ mod bin_op_in_globals_tests {
 
                 if let Stmt::VarDecl(v) = &ast.globals[0] {
                     assert_eq!(v.type_name, et.clone());
-                    if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
+                    if let Expr::BinOp { left, right, op, .. } = &v.value {
                         assert_eq!(op, b);
 
                         assert!(matches!(**left, Expr::Var { .. }));
@@ -1272,7 +1303,7 @@ mod bin_op_in_globals_tests {
 
                 if let Stmt::VarDecl(v) = &ast.globals[0] {
                     assert_eq!(v.type_name, et.clone());
-                    if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
+                    if let Expr::BinOp { left, right, op, .. } = &v.value {
                         assert_eq!(op, b);
 
                         if let Expr::IntLiteral { value, .. } = **left {
@@ -1335,7 +1366,7 @@ mod bin_op_in_globals_tests {
 
                 if let Stmt::VarDecl(v) = &ast.globals[0] {
                     assert_eq!(v.type_name, et.clone());
-                    if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
+                    if let Expr::BinOp { left, right, op, .. } = &v.value {
                         assert_eq!(op, b);
 
                         assert!(matches!(**left, Expr::Var { .. }));
@@ -1366,7 +1397,7 @@ mod bin_op_in_globals_tests {
 
                 if let Stmt::VarDecl(v) = &ast.globals[0] {
                     assert_eq!(v.type_name, et.clone());
-                    if let Some(Expr::BinOp { left, right, op, .. }) = &v.value {
+                    if let Expr::BinOp { left, right, op, .. } = &v.value {
                         assert_eq!(op, b);
 
                         if let Expr::IntLiteral { value, .. } = **left {
@@ -1487,8 +1518,10 @@ mod bin_op_in_globals_tests {
                     assert_eq!(ast.globals.len(), 1);
 
                     if let Stmt::VarDecl(v) = &ast.globals[0] {
+                        assert_eq!(v.name, "x");
                         assert_eq!(v.type_name, t.clone());
-                        if let Some(Expr::BinOp { op, left, .. }) = &v.value {
+                        assert_ne!(v.type_name.get_default_value(span()), v.value);
+                        if let Expr::BinOp { op, left, .. } = &v.value {
                             assert_eq!(op, b);
                             assert!(matches!(**left, Expr::BinOp { .. }));
                         } else {

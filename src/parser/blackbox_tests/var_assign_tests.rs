@@ -64,15 +64,15 @@ mod var_assign_tests {
                     if let Stmt::VarDecl(v) = &stmts[0] {
                         assert_eq!(v.name, l.to_string());
                         assert_eq!(v.type_name, t.clone());
-                        assert!(v.value.is_none());
+                        assert_eq!(v.type_name.get_default_value(v.span), v.value);
+
+                        if let Stmt::VarAssign(va) = &stmts[1] {
+                            assert_eq!(va.name, l.to_string());
+                        } else {
+                            panic!("Expected VarAssign");
+                        }
+
                     } else { panic!("Expected VarDecl"); }    
-
-
-                    if let Stmt::VarAssign(va) = &stmts[1] {
-                        assert_eq!(va.name, l.to_string());
-                    } else {
-                        panic!("Expected VarAssign");
-                    }
                 }
             }
         }
@@ -94,8 +94,7 @@ mod var_assign_tests {
                     if let Stmt::VarDecl(v) = &stmts[0] {
                         assert_eq!(v.name, l.to_string());
                         assert_eq!(v.type_name, t.clone());
-                        assert!(v.value.is_some());
-                    } else { panic!("Expected VarDecl"); }    
+                    } else { panic!("Expected VarDecl"); }
 
 
                     if let Stmt::VarAssign(va) = &stmts[1] {

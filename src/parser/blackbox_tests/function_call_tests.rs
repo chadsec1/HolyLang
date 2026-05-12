@@ -10,7 +10,11 @@ mod function_call_tests {
             let stmts = parse_body(&format!("own x {} = noop()", t));
 
             if let Stmt::VarDecl(v) = &stmts[0] {
-                if let Some(Expr::Call { name, args, .. }) = &v.value {
+                assert_eq!(v.name, "x");
+                assert_eq!(v.type_name, t.clone());
+                assert_ne!(v.type_name.get_default_value(span()), v.value);
+
+                if let Expr::Call { name, args, .. } = &v.value {
                     assert_eq!(name, "noop");
                     assert!(args.is_empty());
                 } else { panic!("Expected Call"); }
@@ -28,8 +32,9 @@ mod function_call_tests {
                 if let Stmt::VarDecl(v) = &stmts[0] {
                     assert_eq!(v.name, "x");
                     assert_eq!(v.type_name, t.clone());
+                    assert_ne!(v.type_name.get_default_value(span()), v.value);
 
-                    if let Some(Expr::Call { name, args, .. }) = &v.value {
+                    if let Expr::Call { name, args, .. } = &v.value {
                         assert_eq!(name, "add");
                         assert_eq!(args.len(), 2);
                         assert!(matches!(args[1], Expr::StringLiteral { .. }));
@@ -46,8 +51,9 @@ mod function_call_tests {
             if let Stmt::VarDecl(v) = &stmts[0] {
                 assert_eq!(v.name, "x");
                 assert_eq!(v.type_name, t.clone());
+                assert_ne!(v.type_name.get_default_value(span()), v.value);
                    
-                if let Some(Expr::Call { name, args, .. }) = &v.value {
+                if let Expr::Call { name, args, .. } = &v.value {
                     assert_eq!(name, "add");
                     assert_eq!(args.len(), 2);
                     assert!(matches!(args[0], Expr::Var { .. }));
@@ -67,7 +73,9 @@ mod function_call_tests {
                 if let Stmt::VarDecl(v) = &stmts[0] {
                     assert_eq!(v.name, "x");
                     assert_eq!(v.type_name, t.clone());
-                    if let Some(Expr::Call { name, args, .. }) = &v.value {
+                    assert_ne!(v.type_name.get_default_value(span()), v.value);
+                
+                    if let Expr::Call { name, args, .. } = &v.value {
                         assert_eq!(name, "add");
                         assert_eq!(args.len(), 2);
                         assert!(matches!(args[0], Expr::Var { .. }));
@@ -86,7 +94,9 @@ mod function_call_tests {
                 if let Stmt::VarDecl(v) = &stmts[0] {
                     assert_eq!(v.name, "x");
                     assert_eq!(v.type_name, t.clone());
-                    if let Some(Expr::Call { name, args, .. }) = &v.value {
+                    assert_ne!(v.type_name.get_default_value(span()), v.value);
+                    
+                    if let Expr::Call { name, args, .. } = &v.value {
                         assert_eq!(name, "outer");
                         assert_eq!(args.len(), 2);
                     

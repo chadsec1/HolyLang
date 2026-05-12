@@ -17,11 +17,14 @@ mod unary_op_tests {
                 let stmts = parse_body(&format!("own x {} = -{}", t, l));
                 if let Stmt::VarDecl(v) = &stmts[0] {
                     assert_eq!(v.type_name, t.clone());
+            
+                    assert_eq!(v.name, "x");
+                    assert_ne!(v.type_name.get_default_value(span()), v.value);
 
                     // a negative value would produce unary though because - earlier makes it do
                     // so. since theres no expressions before it. (--1 is -1 negated, etc)
                     if l.starts_with("-") {
-                        if let Some(Expr::UnaryOp { op, expr, .. }) = &v.value {
+                        if let Expr::UnaryOp { op, expr, .. } = &v.value {
                             assert_eq!(*op, UnaryOpKind::Negate);
                             if let Expr::IntLiteral { value, .. } = &**expr {
                                 if value.is_signed() {
@@ -36,7 +39,7 @@ mod unary_op_tests {
                         } else { panic!("Expected Unary negate"); }
                     
                     } else {
-                        if let Expr::IntLiteral { value, .. } = v.value.clone().unwrap() {
+                        if let Expr::IntLiteral { value, .. } = v.value {
                             if value.is_signed() {
                                 let val_l = value.as_i128();
                                 if val_l == 0 {
@@ -63,7 +66,11 @@ mod unary_op_tests {
             let stmts = parse_body(&format!("own x {} = -y", t));
             if let Stmt::VarDecl(v) = &stmts[0] {
                 assert_eq!(v.type_name, t.clone());
-                if let Some(Expr::UnaryOp { op, expr, .. }) = &v.value {
+
+                assert_eq!(v.name, "x");
+                assert_ne!(v.type_name.get_default_value(span()), v.value);
+
+                if let Expr::UnaryOp { op, expr, .. } = &v.value {
                     assert_eq!(*op, UnaryOpKind::Negate);
                     assert!(matches!(**expr, Expr::Var { .. }));
                 } else { panic!("Expected Unary negate"); }
@@ -79,7 +86,11 @@ mod unary_op_tests {
                 let stmts = parse_body(&format!("own x {} = -y[{}]", t, l));
                 if let Stmt::VarDecl(v) = &stmts[0] {
                     assert_eq!(v.type_name, t.clone());
-                    if let Some(Expr::UnaryOp { op, expr, .. }) = &v.value {
+
+                    assert_eq!(v.name, "x");
+                    assert_ne!(v.type_name.get_default_value(span()), v.value);
+
+                    if let Expr::UnaryOp { op, expr, .. } = &v.value {
                         assert_eq!(*op, UnaryOpKind::Negate);
                         assert!(matches!(**expr, Expr::ArrayAccess { .. }));
                     } else { panic!("Expected Unary negate"); }

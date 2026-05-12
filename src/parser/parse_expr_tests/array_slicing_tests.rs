@@ -10,10 +10,9 @@ mod array_slicing_tests {
         
         for l in literals { 
             match parse(&format!("arr[{}:{}]", l, l)).unwrap() {
-                Expr::ArraySlicing { array, start, end, .. } => {
+                Expr::ArraySlicing { array, range, .. } => {
                     assert!(matches!(*array, Expr::Var { name, .. } if name == "arr"));
-                    assert!(start.is_some());
-                    assert!(end.is_some());
+                    assert!(matches!(range, ArraySliceRange::FromTo(_, _)))
                 }
                 other => panic!("expected ArraySlicing, got {:?}", other),
             }
@@ -55,10 +54,9 @@ mod array_slicing_tests {
         
         for l in literals { 
             match parse(&format!("arr[{}:]", l)).unwrap() {
-                Expr::ArraySlicing { array, start, end, .. } => {
+                Expr::ArraySlicing { array, range, .. } => {
                     assert!(matches!(*array, Expr::Var { name, .. } if name == "arr"));
-                    assert!(start.is_some());
-                    assert!(end.is_none());
+                    assert!(matches!(range, ArraySliceRange::From(_)))
                 }
                 other => panic!("expected ArraySlicing, got {:?}", other),
             }
@@ -86,10 +84,9 @@ mod array_slicing_tests {
         
         for l in literals { 
             match parse(&format!("arr[:{}]", l)).unwrap() {
-                Expr::ArraySlicing { array, start, end, .. } => {
+                Expr::ArraySlicing { array, range, .. } => {
                     assert!(matches!(*array, Expr::Var { name, .. } if name == "arr"));
-                    assert!(start.is_none());
-                    assert!(end.is_some());
+                    assert!(matches!(range, ArraySliceRange::To(_)))
                 }
                 other => panic!("expected ArraySlicing, got {:?}", other),
             }
