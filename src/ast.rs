@@ -19,9 +19,6 @@ mod types_tests;
 #[cfg(test)]
 mod int_literal_value_tests;
 
-
-
-
 /// The main parent Abstract Syntax Tree node.
 /// 
 /// `globals` contain a list of global constant defintions
@@ -30,7 +27,18 @@ mod int_literal_value_tests;
 ///
 #[derive(Debug)]
 pub struct AST {
-    pub globals: Vec<Stmt>,
+    pub globals: Vec<GlobalStmt>,
     pub functions: Vec<Function>,
 }
 
+
+/// Statements that are legally allowed to be in the global scope
+/// such as constants, etc.
+///
+#[derive(Debug)]
+pub enum GlobalStmt {
+    Const(Constant),
+
+    #[allow(dead_code)]
+    _PlaceholderDummyUntilIAddMoreStmtsHereLikeStructsAndEnums // prevents irrefutable pattern warnings
+}

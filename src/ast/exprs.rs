@@ -1,4 +1,5 @@
 use super::{ IntLiteralValue, Span };
+
 /// Abstract syntax tree expressions nodes
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
@@ -52,8 +53,7 @@ pub enum Expr {
     },
     ArraySlicing {
         array: Box<Expr>,
-        start: Option<Box<Expr>>,
-        end: Option<Box<Expr>>,
+        range: ArraySliceRange,
         span: Span,
     },
 
@@ -76,6 +76,22 @@ pub enum Expr {
 
 }
 
+
+/// Array slice range type:
+/// From, e.g. "x[ EXPRESSION : ]"
+/// To, e.g. "x[ : EXPRESSION ]"
+/// FromTo, e.g. "x[ EXPRESSION : EXPRESSION ]"
+///
+#[derive(Debug, Clone, PartialEq)]
+pub enum ArraySliceRange {
+    From(Box<Expr>),
+    To(Box<Expr>),
+    FromTo(Box<Expr>, Box<Expr>)
+}
+
+
+
+/// Unary operations types:
 /// Logical NEGATE, such as "-EXPRESSION"
 /// Bitwise NOT, e.g. "~EXPRESSION"
 /// Logical NOT, e.g. "!EXPRESSION"
@@ -87,6 +103,14 @@ pub enum UnaryOpKind {
     Not,
 }
 
+/// Binary operations types:
+/// Add, e.g. "EXPRESSION + EXPRESSION"
+/// Subtract, e.g. "EXPRESSION - EXPRESSION"
+/// Multiply, e.g. "EXPRESSION * EXPRESSION"
+/// Divide, e.g. "EXPRESSION / EXPRESSION"
+///
+/// etc, etc.
+///
 #[derive(Debug, Clone, PartialEq)]
 pub enum BinOpKind {
     Add,
@@ -108,3 +132,6 @@ pub enum BinOpKind {
     Less,
     LessEqual
 }
+
+
+

@@ -1,4 +1,9 @@
 /// Fixed array size can only be represented as a const, or a literal usize.
+
+use crate::ast::exprs::Expr;
+use crate::ast::span::Span;
+use crate::ast::int_literal_value::IntLiteralValue;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum FixedArraySize {
     Literal(usize),
@@ -115,10 +120,6 @@ impl Type {
         return fixed_array_to_dynamic_array_type_full_hazmat(self);
     }
 
-
-    
-
-
     pub fn get_array_inner_most_type(&self) -> &Type {
         if !matches!(self, Type::Array(_) | Type::FixedArray(_, _)) {
             panic!("(Compiler bug) Do not call get_array_inner_most_type unless you are sure Type is an array. Self: {:?}", self);
@@ -133,6 +134,52 @@ impl Type {
             }
         }
     }
+
+    // When variable is declared, e.g.
+    // own VAR_NAME TYPE_NAME
+    //
+    // It has no value. So parser has to assign it a value.
+    // Parser must use TYPE.get_default_value()
+    // to get the default value for a type.
+    //
+    // Integers are 0, Float64 is 0.0, Strings are "", and dynamic arrays are empty.
+    // Any other types produces a panic, because it requires programmer explicit initialization 
+    //
+    pub fn get_default_value(&self, span: Span) -> Expr {
+        match self {
+            Type::Int8 => Expr::IntLiteral { value: IntLiteralValue::Int8(0), span },
+            Type::Int16 => Expr::IntLiteral { value: IntLiteralValue::Int16(0), span },
+            Type::Int32 => Expr::IntLiteral { value: IntLiteralValue::Int32(0), span },
+
+            Type::Int64 => Expr::IntLiteral { value: IntLiteralValue::Int64(0), span },
+            Type::Int128 => Expr::IntLiteral { value: IntLiteralValue::Int128(0), span },
+
+            Type::Byte => Expr::IntLiteral { value: IntLiteralValue::Byte(0), span },
+            Type::Uint16 => Expr::IntLiteral { value: IntLiteralValue::Uint16(0), span },
+            Type::Uint32 => Expr::IntLiteral { value: IntLiteralValue::Uint32(0), span },
+            Type::Uint64 => Expr::IntLiteral { value: IntLiteralValue::Uint64(0), span },
+            Type::Uint128 => Expr::IntLiteral { value: IntLiteralValue::Uint128(0), span },
+            Type::Usize => Expr::IntLiteral { value: IntLiteralValue::Usize(0), span },
+
+            Type::Float64 => Expr::Float64Literal { value: 0.0, span },
+
+            Type::Bool => Expr::BoolLiteral { value: false, span: span },
+
+            Type::String => Expr::StringLiteral { value: "".to_string(), span },
+            Type::Array(t) => {
+                // This is just to ensure it doesnt have any fixedArrays with in.
+                if t.is_array_type() {
+                    t.get_default_value(span);
+                }
+
+                Expr::ArrayLiteral { elements: Vec::new(), span: span }
+            },
+            Type::FixedArray(_, _) => panic!(),
+        }
+    }
+
+
+    
 }
 
 

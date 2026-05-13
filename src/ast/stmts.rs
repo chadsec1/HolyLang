@@ -8,10 +8,17 @@ pub struct Param {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Variable {
+pub struct VariableDeclaration {
     pub name: String,
     pub type_name: Type,
-    pub value: Option<Expr>,
+    pub value: Expr,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct MultiVariableDeclaration {
+    pub name: String,
+    pub type_name: Type,
     pub span: Span,
 }
 
@@ -92,8 +99,8 @@ pub struct ContinueStmt {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Stmt {
-    VarDecl(Variable),
-    VarDeclMulti(Vec<Variable>, Expr),
+    VarDecl(VariableDeclaration),
+    VarDeclMulti(Vec<MultiVariableDeclaration>, Expr),
     VarAssign(VariableAssignment),
     VarAssignMulti(MultiAssignment),
     Const(Constant),
@@ -107,7 +114,6 @@ pub enum Stmt {
     Continue(ContinueStmt),
     If(IfStmt),
     Infinite(InfiniteStmt),
-    Func(Function), 
 }
 
 
