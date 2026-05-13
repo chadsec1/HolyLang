@@ -45,13 +45,17 @@ pub fn parse(source: &str) -> Result<AST, HolyError> {
             i = new_i;
             continue;
 
-        // Or the start of a global statement.
-        // It's up to semantic phase to validate if the statement is legal or not.
+        // Or its a global statement.
         } else {
-            let (stmt, new_i) = parse_stmt_at(&lines, i)?;
-            ast.globals.push(stmt);
-            i = new_i;
-            continue;
+            let span = Span { line: i + 1, column: 0 };
+            if line.starts_with("const ") {
+                let cons = parse_const_stmt(line, span)?;
+                ast.globals.push(GlobalStmt::Const(cons));
+                i += 1;
+                continue;
+            }
+
+            return Err(HolyError::Parse(format!("Statement `{}` cannot be in the global scope (line {})", line, span.line)));
         }
     }
 
@@ -182,6 +186,40 @@ fn parse_function(lines: &Vec<&str>, start_i: usize) -> Result<(Function, usize)
         lines[start_i]
     )))
 
+}
+
+
+fn parse_const_stmt(line: &str, span: Span) -> Result<Constant, HolyError> {
+    // Constant declaration: 
+    // CONST CONST_NAME TYPE_NAME = EXPRESSION
+    //
+
+    let rest = line["const ".len()..].trim(); // slicing is safe in rust, and would panic at
+                                              // runtime if violated.
+
+    if let Some(eq_pos) = rest.find('=') {
+        let left = rest[..eq_pos].trim();
+        let right = rest[eq_pos + 1..].trim() ;
+
+        let left_parts: Vec<&str> = left.split_whitespace().collect();
+        if left_parts.len() != 2 {
+            return Err(HolyError::Parse(format!("Invalid constant declaration: `{}` (line {} column {})", line, span.line, span.column)));
+        }
+
+        let name = left_parts[0].to_string();
+        let var_type = parse_type(left_parts[1], &span)?;
+       
+        // Ensure the constant name doesnt have special characters, except _, and doesnt start with a
+        // number.
+        helpers::validate_identifier_name(&name)
+            .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+
+        let value = parse_expr::parse_expr(right, span)?;
+
+        return Ok(Constant { name, type_name: var_type, value: value, span });
+    } else {
+        return Err(HolyError::Parse(format!("Invalid constant declaration, it's missing the `=' sign: `{}` (line {} column {})", line, span.line, span.column)));
+    }
 }
 
 
@@ -600,33 +638,7 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
     }
 
 
-    // Constant declaration: CONST CONST_NAME TYPE_NAME = EXPRESSION
-    if line.starts_with("const ") {
-        let rest = line["const ".len()..].trim();
-        if let Some(eq_pos) = rest.find('=') {
-            let left = rest[..eq_pos].trim();
-            let right = rest[eq_pos + 1..].trim() ;
 
-            let left_parts: Vec<&str> = left.split_whitespace().collect();
-            if left_parts.len() != 2 {
-                return Err(HolyError::Parse(format!("Invalid constant declaration `{}` at line {}", line, line_no)));
-            }
-
-            let name = left_parts[0].to_string();
-            let var_type = parse_type(left_parts[1], &span)?;
-           
-            // ensure constant name doesnt have special characters, except _, and doesnt start with a
-            // number.
-            helpers::validate_identifier_name(&name)
-                .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
-
-            let value = parse_expr::parse_expr(right, span)?;
-
-            return Ok(Stmt::Const(Constant { name, type_name: var_type, value: value, span: span }));
-        } else {
-            return Err(HolyError::Parse(format!("Invalid constant declaration `{}` at line {}", line, line_no)));
-        }
-    }
 
     // Variable declaration: own VAR_NAME ...
     if line.starts_with("own ") {
@@ -708,8 +720,15 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
             let ty = parse_type(parts[1], &span)?;
             let default_value = ty.get_default_value(span);
 
-            return Ok(Stmt::VarDecl(VariableDeclaration { name, type_name: ty, value: default_value, span: span }));
+            return Ok(Stmt::VarDecl(VariableDeclaration { name, type_name: ty, value: default_value, span: span }))
         }
+    }
+
+
+    // Constant declaration within function scope: 
+    if line.starts_with("const ") {
+        let cons = parse_const_stmt(line, span)?;
+        return Ok(Stmt::Const(cons))
     }
 
     // Enforces variable assignment to be clean
