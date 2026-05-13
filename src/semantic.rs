@@ -508,11 +508,7 @@ fn check_stmts(
                 
                 if let Expr::Call { name, args, span } = &mut expr.value {
                     // check_call with require_ret = true -> Option<Vec<Type>>
-                    let ret_opt = check_call(name, args, locals, fun_sigs, true, *span)?;
-                    let ret_vec = ret_opt.ok_or_else(|| HolyError::Semantic(format!(
-                        "Call to function `{}` used in multi-assignment but function has no declared return types (line {} column {})",
-                        name, span.line, span.column
-                    )))?;
+                    let ret_vec = check_call(name, args, locals, fun_sigs, true, *span)?.unwrap();
 
                     if ret_vec.len() != expr.names.len() {
                         return Err(HolyError::Semantic(format!(
