@@ -25,6 +25,7 @@ use crate::tests_consts::{
 
 mod const_tests;
 mod var_decl_tests;
+// mod var_multi_decl_tests;
 mod var_assign_tests;
 mod ownership_tests;
 mod expr_tests;
