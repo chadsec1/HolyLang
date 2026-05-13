@@ -5,7 +5,7 @@ mod continue_stmt_in_function_tests {
     use super::*; 
 
     #[test]
-    fn continue_statements_invalid_errors() {
+    fn invalid_errors() {
         let literals_edge_cases = get_all_literals_edge_cases(); 
 
         assert_parse_err(&wrap("continue range(,)"));    
@@ -80,7 +80,7 @@ mod continue_stmt_in_function_tests {
     }
 
     #[test]
-    fn continue_stmt_in_var_decl_errors() {
+    fn in_var_decl_errors() {
         let letters: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
          
         for l in letters {
@@ -92,7 +92,7 @@ mod continue_stmt_in_function_tests {
 
 
     #[test]
-    fn continue_stmt_in_infinite_stmt() {
+    fn in_infinite_stmt() {
         let stmts = parse_body("infinite {\ncontinue\n}");
         assert_eq!(stmts.len(), 1);
         if let Stmt::Infinite(inf) = &stmts[0] {
@@ -103,7 +103,7 @@ mod continue_stmt_in_function_tests {
 
 
     #[test]
-    fn continue_stmt_in_while_stmt() {
+    fn in_while_stmt() {
         let literals = get_all_literals_edge_cases();
 
         for l in literals {
@@ -118,7 +118,7 @@ mod continue_stmt_in_function_tests {
 
 
     #[test]
-    fn continue_stmt_in_for_stmt() {
+    fn in_for_stmt() {
         let literals = get_all_literals_edge_cases();
 
         for l in &literals { 
@@ -135,7 +135,7 @@ mod continue_stmt_in_function_tests {
     }
 
     #[test]
-    fn continue_stmt_in_for_stmt_range() {
+    fn in_for_stmt_range() {
         let literals = get_all_literals_edge_cases();
 
         for l in &literals { 
@@ -152,7 +152,7 @@ mod continue_stmt_in_function_tests {
 
 
     #[test]
-    fn continue_stmt_in_if_stmt() {
+    fn in_if_stmt() {
         let literals = get_all_literals_edge_cases();
 
         for l in literals {
@@ -169,7 +169,7 @@ mod continue_stmt_in_function_tests {
     }
 
     #[test]
-    fn continue_stmt_in_if_else_stmt() {
+    fn in_if_else_stmt() {
         let literals = get_all_literals_edge_cases();
 
         for l in literals {
@@ -187,7 +187,7 @@ mod continue_stmt_in_function_tests {
     }
 
     #[test]
-    fn continue_stmt_in_if_with_else_stmt() {
+    fn in_if_with_else_stmt() {
         let literals = get_all_literals_edge_cases();
 
         for l in literals {
@@ -206,7 +206,7 @@ mod continue_stmt_in_function_tests {
     }
 
     #[test]
-    fn continue_stmt_in_if_elif_stmt() {
+    fn in_if_elif_stmt() {
         let literals = get_all_literals_edge_cases();
 
         for l in literals {
@@ -225,7 +225,7 @@ mod continue_stmt_in_function_tests {
 
 
     #[test]
-    fn continue_stmt_in_if_with_elif_stmt() {
+    fn in_if_with_elif_stmt() {
         let literals = get_all_literals_edge_cases();
 
         for l in literals {
@@ -245,7 +245,7 @@ mod continue_stmt_in_function_tests {
 
 
     #[test]
-    fn continue_stmt_in_if_else_with_elif_stmt() {
+    fn in_if_else_with_elif_stmt() {
         let literals = get_all_literals_edge_cases();
 
         for l in literals {
@@ -266,7 +266,7 @@ mod continue_stmt_in_function_tests {
     }
 
     #[test]
-    fn continue_stmt_in_if_with_else_with_elif_stmt() {
+    fn in_if_with_else_with_elif_stmt() {
         let literals = get_all_literals_edge_cases();
 
         for l in literals {
@@ -304,7 +304,7 @@ mod continue_stmt_in_global_tests {
     use super::*; 
 
     #[test]
-    fn continue_statements_invalid_errors() {
+    fn invalid_errors() {
         let literals_edge_cases = get_all_literals_edge_cases(); 
 
         assert_parse_err("continue range(,)");    
@@ -372,16 +372,12 @@ mod continue_stmt_in_global_tests {
     }
 
     #[test]
-    fn continue_stmt() {
-        let ast = parse("continue").unwrap();
-        assert_eq!(ast.functions.len(), 0);
-        assert_eq!(ast.globals.len(), 1);
-
-        assert!(matches!(ast.globals[0], Stmt::Continue(_)));
+    fn continue_stmt_errors() {
+        assert_parse_err("continue");
     }
 
     #[test]
-    fn continue_stmt_in_var_decl_errors() {
+    fn in_var_decl_errors() {
         let letters: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
          
         for l in letters {
@@ -393,220 +389,102 @@ mod continue_stmt_in_global_tests {
 
 
     #[test]
-    fn continue_stmt_in_infinite_stmt() {
-        let ast = parse("infinite {\ncontinue\n}").unwrap();
-        assert_eq!(ast.functions.len(), 0);
-        assert_eq!(ast.globals.len(), 1);
-
-        if let Stmt::Infinite(inf) = &ast.globals[0] {
-            assert_eq!(inf.branch.len(), 1);
-            assert!(matches!(inf.branch[0], Stmt::Continue(_)));
-        } else {panic!("Expected infinite statement"); }
+    fn in_infinite_stmt_errors() {
+        assert_parse_err("infinite {\ncontinue\n}");
     }
 
 
     #[test]
-    fn continue_stmt_in_while_stmt() {
+    fn in_while_stmt_errors() {
         let literals = get_all_literals_edge_cases();
 
         for l in literals {
-            let ast = parse(&format!("while {} {{\ncontinue\n}}", l)).unwrap();
-            assert_eq!(ast.functions.len(), 0);
-            assert_eq!(ast.globals.len(), 1);
-
-            if let Stmt::While(w) = &ast.globals[0] {
-                assert_eq!(w.branch.len(), 1);
-                assert!(matches!(w.branch[0], Stmt::Continue(_)));
-            } else {panic!("Expected infinite statement"); }
+            assert_parse_err(&format!("while {} {{\ncontinue\n}}", l));
         }
     }
 
 
     #[test]
-    fn continue_stmt_in_for_stmt() {
+    fn in_for_stmt_errors() {
         let literals = get_all_literals_edge_cases();
 
         for l in &literals { 
-            let ast = parse(&format!("for i in {} {{\ncontinue\n}}", l)).unwrap();
-            assert_eq!(ast.functions.len(), 0);
-            assert_eq!(ast.globals.len(), 1);
-
-            if let Stmt::For(f) = &ast.globals[0] {
-                assert_eq!(f.holder_name, "i");
-                assert_eq!(f.branch.len(), 1);
-                assert!(matches!(f.branch[0], Stmt::Continue(_)));
-                assert!(!matches!(f.value, Expr::RangeCall{ .. }));
-
-            } else { panic!("expected for statement"); }
+            assert_parse_err(&format!("for i in {} {{\ncontinue\n}}", l));
         }
     }
 
     #[test]
-    fn continue_stmt_in_for_stmt_range() {
+    fn in_for_stmt_range_errors() {
         let literals = get_all_literals_edge_cases();
 
         for l in &literals { 
-            let ast = parse(&format!("for i in range({}, {}){{\ncontinue\n}}", l, l)).unwrap();
-            assert_eq!(ast.functions.len(), 0);
-            assert_eq!(ast.globals.len(), 1);
-
-            if let Stmt::For(f) = &ast.globals[0] {
-                assert_eq!(f.holder_name, "i");
-                assert_eq!(f.branch.len(), 1);
-                assert!(matches!(f.branch[0], Stmt::Continue(_)));
-                assert!(matches!(f.value, Expr::RangeCall{ .. }));
-            } else { panic!("expected for statement"); }
+            assert_parse_err(&format!("for i in range({}, {}){{\ncontinue\n}}", l, l));
         }
     }
 
 
     #[test]
-    fn continue_stmt_in_if_stmt() {
+    fn in_if_stmt_errors() {
         let literals = get_all_literals_edge_cases();
 
         for l in literals {
-            let ast = parse(&format!("if {} {{\ncontinue\n}}", l)).unwrap();
-            assert_eq!(ast.functions.len(), 0);
-            assert_eq!(ast.globals.len(), 1);
-
-            if let Stmt::If(i) = &ast.globals[0] {
-                assert_eq!(i.if_branch.len(), 1);
-                assert_eq!(i.elif_branches.len(), 0);
-                assert!(i.else_branch.is_none());
-
-                assert!(matches!(i.if_branch[0], Stmt::Continue(_)));
-            } else {panic!("Expected if statement"); }
+            assert_parse_err(&format!("if {} {{\ncontinue\n}}", l));
         }
     }
 
     #[test]
-    fn continue_stmt_in_if_else_stmt() {
+    fn in_if_else_stmt_errors() {
         let literals = get_all_literals_edge_cases();
 
         for l in literals {
-            let ast = parse(&format!("if {} {{\n\n}} else {{\ncontinue\n}}", l)).unwrap();
-            assert_eq!(ast.functions.len(), 0);
-            assert_eq!(ast.globals.len(), 1);
-
-            if let Stmt::If(i) = &ast.globals[0] {
-                assert_eq!(i.if_branch.len(), 0);
-                assert_eq!(i.elif_branches.len(), 0);
-                assert!(i.else_branch.is_some());
-                assert_eq!(i.else_branch.clone().unwrap().len(), 1);
-
-                assert!(matches!(i.else_branch.clone().unwrap()[0], Stmt::Continue(_)));
-            } else {panic!("Expected if statement"); }
+            assert_parse_err(&format!("if {} {{\n\n}} else {{\ncontinue\n}}", l));
         }
     }
 
     #[test]
-    fn continue_stmt_in_if_with_else_stmt() {
+    fn in_if_with_else_stmt_errors() {
         let literals = get_all_literals_edge_cases();
 
         for l in literals {
-            let ast = parse(&format!("if {} {{\ncontinue\n}} else {{\ncontinue\n}}", l)).unwrap();
-            assert_eq!(ast.functions.len(), 0);
-            assert_eq!(ast.globals.len(), 1);
-
-            if let Stmt::If(i) = &ast.globals[0] {
-                assert_eq!(i.if_branch.len(), 1);
-                assert_eq!(i.elif_branches.len(), 0);
-                assert!(i.else_branch.is_some());
-                assert_eq!(i.else_branch.clone().unwrap().len(), 1);
-
-                assert!(matches!(i.if_branch[0], Stmt::Continue(_)));
-                assert!(matches!(i.else_branch.clone().unwrap()[0], Stmt::Continue(_)));
-            } else {panic!("Expected if statement"); }
+            assert_parse_err(&format!("if {} {{\ncontinue\n}} else {{\ncontinue\n}}", l));
         }
     }
 
     #[test]
-    fn continue_stmt_in_if_elif_stmt() {
+    fn in_if_elif_stmt_errors() {
         let literals = get_all_literals_edge_cases();
 
         for l in literals {
-            let ast = parse(&format!("if {} {{\n\n}} elif {} {{\ncontinue\n}}", l, l)).unwrap();
-            assert_eq!(ast.functions.len(), 0);
-            assert_eq!(ast.globals.len(), 1);
-
-            if let Stmt::If(i) = &ast.globals[0] {
-                assert_eq!(i.if_branch.len(), 0);
-                assert_eq!(i.elif_branches.len(), 1);
-                assert_eq!(i.elif_branches[0].1.len(), 1);
-                assert!(i.else_branch.is_none());
-
-                assert!(matches!(i.elif_branches[0].1[0], Stmt::Continue(_)));
-            } else {panic!("Expected if statement"); }
+            assert_parse_err(&format!("if {} {{\n\n}} elif {} {{\ncontinue\n}}", l, l));
         }
     }
 
 
     #[test]
-    fn continue_stmt_in_if_with_elif_stmt() {
+    fn in_if_with_elif_stmt_errors() {
         let literals = get_all_literals_edge_cases();
 
         for l in literals {
-            let ast = parse(&format!("if {} {{\ncontinue\n}} elif {} {{\ncontinue\n}}", l, l)).unwrap();
-            assert_eq!(ast.functions.len(), 0);
-            assert_eq!(ast.globals.len(), 1);
-
-            if let Stmt::If(i) = &ast.globals[0] {
-                assert_eq!(i.if_branch.len(), 1);
-                assert_eq!(i.elif_branches.len(), 1);
-                assert_eq!(i.elif_branches[0].1.len(), 1);
-                assert!(i.else_branch.is_none());
-
-                assert!(matches!(i.if_branch[0], Stmt::Continue(_)));
-                assert!(matches!(i.elif_branches[0].1[0], Stmt::Continue(_)));
-            } else {panic!("Expected if statement"); }
+            assert_parse_err(&format!("if {} {{\ncontinue\n}} elif {} {{\ncontinue\n}}", l, l));
         }
     }
 
 
     #[test]
-    fn continue_stmt_in_if_else_with_elif_stmt() {
+    fn in_if_else_with_elif_stmt_errors() {
         let literals = get_all_literals_edge_cases();
 
         for l in literals {
-            let ast = parse(&format!("if {} {{\n\n}} elif {} {{\ncontinue\n}} else {{\ncontinue\n}}", l, l)).unwrap();
-            assert_eq!(ast.functions.len(), 0);
-            assert_eq!(ast.globals.len(), 1);
-
-            if let Stmt::If(i) = &ast.globals[0] {
-                assert_eq!(i.if_branch.len(), 0);
-                assert_eq!(i.elif_branches.len(), 1);
-                assert_eq!(i.elif_branches[0].1.len(), 1);
-
-                assert!(i.else_branch.is_some());
-                assert_eq!(i.else_branch.clone().unwrap().len(), 1);
-
-                assert!(matches!(i.elif_branches[0].1[0], Stmt::Continue(_)));
-                assert!(matches!(i.else_branch.clone().unwrap()[0], Stmt::Continue(_)));
-            } else {panic!("Expected if statement"); }
+            assert_parse_err(&format!("if {} {{\n\n}} elif {} {{\ncontinue\n}} else {{\ncontinue\n}}", l, l));
         }
     }
 
     #[test]
-    fn continue_stmt_in_if_with_else_with_elif_stmt() {
+    fn in_if_with_else_with_elif_stmt_errors() {
         let literals = get_all_literals_edge_cases();
 
         for l in literals {
-            let ast = parse(&format!("if {} {{\ncontinue\n}} elif {} {{\ncontinue\n}} else {{\ncontinue\n}}", l, l)).unwrap();
-            assert_eq!(ast.functions.len(), 0);
-            assert_eq!(ast.globals.len(), 1);
-
-            if let Stmt::If(i) = &ast.globals[0] {
-                assert_eq!(i.if_branch.len(), 1);
-                assert_eq!(i.elif_branches.len(), 1);
-                assert_eq!(i.elif_branches[0].1.len(), 1);
-
-                assert!(i.else_branch.is_some());
-                assert_eq!(i.else_branch.clone().unwrap().len(), 1);
-
-                assert!(matches!(i.if_branch[0], Stmt::Continue(_)));
-                assert!(matches!(i.elif_branches[0].1[0], Stmt::Continue(_)));
-                assert!(matches!(i.else_branch.clone().unwrap()[0], Stmt::Continue(_)));
-            } else {panic!("Expected if statement"); }
+            assert_parse_err(&format!("if {} {{\ncontinue\n}} elif {} {{\ncontinue\n}} else {{\ncontinue\n}}", l, l));
         }
     }
 }

@@ -215,32 +215,16 @@ mod tests {
         }
     }
 
-    // Should be fine
-    // it's up to the semantics phase to detect this illegal statement
-    //
     #[test]
-    fn parse_statement_outside_function_passes() {
+    fn parse_statement_outside_function_errors() {
         let literals_edge_cases = get_all_literals_edge_cases(); 
         let letters: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
         
         for lit in &literals_edge_cases {
             for l in &letters {
-                let ast = parse(&format!("{}", l)).unwrap();
-                
-                assert!(ast.functions.is_empty());
-                assert_eq!(ast.globals.len(), 1);
-                
+                assert_parse_err(&format!("{}", l));
                 for t in ALL_TYPES_NO_ARR {
-                    let ast = parse(&format!("own {} {} = {}", l, t, lit)).unwrap();
-
-                    assert!(ast.functions.is_empty());
-                    assert_eq!(ast.globals.len(), 1);
-                
-                    if let Stmt::VarDecl(v) = &ast.globals[0] {
-                        assert_eq!(v.name, l.to_string());
-                        assert_eq!(v.type_name, t.clone());
-                    } else { panic!("Expected VarDecl, instead got: {:?}", ast.globals[0]); }
-
+                    assert_parse_err(&format!("own {} {} = {}", l, t, lit));
                 }
             }
         }

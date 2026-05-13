@@ -66,6 +66,16 @@ mod array_access_tests_in_functions {
 }
 
 
+//
+//
+//
+//
+//
+//
+//
+//
+//
+
 
 
 // Same tests, but now in globals.
@@ -74,7 +84,7 @@ mod array_access_tests_in_globals {
     use super::*;
 
     #[test]
-    fn array_single_access() {
+    fn array_single_access_errors() {
         let literals_edge_cases = get_all_literals_edge_cases();
         let letters: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
          
@@ -82,24 +92,13 @@ mod array_access_tests_in_globals {
             let arr_name = format!("{}{}", l, l);
 
             for lit in &literals_edge_cases {
-                let ast = parse(&format!("{}[{}]", arr_name, lit)).unwrap();
-                assert_eq!(ast.functions.len(), 0);
-                assert_eq!(ast.globals.len(), 1);
-
-                if let Stmt::Expr(e) = &ast.globals[0] {
-                    if let Expr::ArrayAccess{ array, .. } = &e {
-                        if let Expr::Var{ name, .. } = &**array {
-                            assert_eq!(name, &arr_name.to_string());
-                        } else { panic!("Expected Var in ArrayAccess expression 'array' field, instead got {:?}", array); }
-
-                    } else { panic!("Expected ArrayAccess expression, instead got {:?}", e); }
-                } else { panic!("Expected Expr, instead got {:?}", ast); }
+                assert_parse_err(&format!("{}[{}]", arr_name, lit));
             }
         }
     }
 
     #[test]
-    fn array_single_access_in_var_decl() {
+    fn array_single_access_in_var_decl_errors() {
         let literals_edge_cases = get_all_literals_edge_cases();
         let letters: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
          
@@ -107,21 +106,7 @@ mod array_access_tests_in_globals {
             let arr_name = format!("{}{}", l, l);
             for lit in &literals_edge_cases {
                 for t in ALL_TYPES_NO_ARR {
-                    let ast = parse(&format!("own {} {} = {}[{}]", l, t, arr_name, lit)).unwrap();
-                    assert_eq!(ast.functions.len(), 0);
-                    assert_eq!(ast.globals.len(), 1);
-
-                    if let Stmt::VarDecl(v) = &ast.globals[0] {
-                        assert_eq!(v.name, l.to_string());
-                        assert_eq!(v.type_name, t.clone());
-
-                        if let Expr::ArrayAccess{ array, .. } = &v.value {
-                            if let Expr::Var{ name, .. } = &**array {
-                                assert_eq!(name, &arr_name.to_string());
-                            } else { panic!("Expected Var in ArrayAccess expression 'array' field, instead got {:?}", array); }
-
-                        } else { panic!("Expected ArrayAccess expression, instead got {:?}", v.value); }
-                    } else { panic!("Expected VarDecl"); }
+                    assert_parse_err(&format!("own {} {} = {}[{}]", l, t, arr_name, lit));
                 }
             }
         }
@@ -139,6 +124,36 @@ mod array_access_tests_in_globals {
             }
         }
     }
+
+    #[test]
+    fn array_single_access_in_const() {
+        let literals_edge_cases = get_all_literals_edge_cases();
+        let letters: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
+         
+        for l in letters {
+            let arr_name = format!("{}{}", l, l);
+            for lit in &literals_edge_cases {
+                for t in ALL_TYPES_NO_ARR {
+                    let ast = parse(&format!("const {} {} = {}[{}]", l, t, arr_name, lit)).unwrap();
+                    assert_eq!(ast.functions.len(), 0);
+                    assert_eq!(ast.globals.len(), 1);
+
+                    if let GlobalStmt::Const(c) = &ast.globals[0] {
+                        assert_eq!(c.name, l.to_string());
+                        assert_eq!(c.type_name, t.clone());
+                        if let Expr::ArrayAccess{ array, .. } = &c.value {
+                            if let Expr::Var{ name, .. } = &**array {
+                                assert_eq!(name, &arr_name.to_string());
+                            } else { panic!("Expected Var in ArrayAccess expression 'array' field, instead got {:?}", array); }
+
+                        } else { panic!("Expected ArrayAccess expression, instead got {:?}", c.value); }
+                    } else { panic!("Expected Const"); }
+                }
+            }
+        }
+    }
+
+
 
 }
 

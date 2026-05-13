@@ -5,7 +5,7 @@ mod lock_stmt_in_function_tests {
     use super::*; 
 
     #[test]
-    fn lock_statements_invalid_errors() {
+    fn invalid_errors() {
         let literals_edge_cases = get_all_literals_edge_cases(); 
 
         assert_parse_err(&wrap("lock range(,)"));    
@@ -92,7 +92,7 @@ mod lock_stmt_in_function_tests {
     }
 
     #[test]
-    fn lock_stmt_unterminated_string_errors() {
+    fn unterminated_string_errors() {
         let literals = get_all_literals_edge_cases();
 
         assert_parse_err(&wrap("lock \"hi"));    
@@ -105,7 +105,7 @@ mod lock_stmt_in_function_tests {
     }
 
     #[test]
-    fn lock_stmt_multiple() {
+    fn multiple() {
         let literals = get_all_literals_edge_cases();
 
         for l in literals { 
@@ -134,7 +134,7 @@ mod lock_stmt_in_global_tests {
     use super::*; 
 
     #[test]
-    fn lock_statements_invalid_errors() {
+    fn invalid_errors() {
         let literals_edge_cases = get_all_literals_edge_cases(); 
 
         assert_parse_err("lock range(,)");    
@@ -204,23 +204,16 @@ mod lock_stmt_in_global_tests {
 
 
     #[test]
-    fn lock_stmt() {
+    fn lock_stmt_errors() {
         let literals = get_all_literals_edge_cases();
 
         for l in literals { 
-            let ast = parse(&format!("lock {}", l)).unwrap();
-            assert_eq!(ast.functions.len(), 0);
-            assert_eq!(ast.globals.len(), 1);
-        
-            if let Stmt::Lock(expr_vec) = &ast.globals[0] {
-                assert_eq!(expr_vec.len(), 1);
-            } else {panic!("Expected lock statement"); }
-
+            assert_parse_err(&format!("lock {}", l));
         }
     }
 
     #[test]
-    fn lock_stmt_unterminated_string_errors() {
+    fn unterminated_string_errors() {
         let literals = get_all_literals_edge_cases();
 
         assert_parse_err(&wrap("lock \"hi"));    
@@ -233,18 +226,11 @@ mod lock_stmt_in_global_tests {
     }
 
     #[test]
-    fn lock_stmt_multiple() {
+    fn multiple_errors() {
         let literals = get_all_literals_edge_cases();
 
         for l in literals { 
-            let ast = parse(&format!("lock {}, {}, {}", l, l, l)).unwrap();
-            assert_eq!(ast.functions.len(), 0);
-            assert_eq!(ast.globals.len(), 1);
-        
-            if let Stmt::Lock(expr_vec) = &ast.globals[0] {
-                assert_eq!(expr_vec.len(), 3);
-            } else {panic!("Expected lock statement"); }
-
+            assert_parse_err(&format!("lock {}, {}, {}", l, l, l));
         }
     }
 

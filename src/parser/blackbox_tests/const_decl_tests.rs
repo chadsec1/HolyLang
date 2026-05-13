@@ -334,7 +334,7 @@ mod const_decl_in_global_tests {
                 assert_eq!(ast.functions.len(), 0);
                 assert_eq!(ast.globals.len(), 1);
 
-                if let Stmt::Const(c) = &ast.globals[0] {
+                if let GlobalStmt::Const(c) = &ast.globals[0] {
                     assert_eq!(c.name, "x");
                     assert_eq!(c.type_name, t.clone());
                 } else { panic!("Expected Const Declaration"); }
@@ -344,144 +344,70 @@ mod const_decl_in_global_tests {
 
 
     #[test]
-    fn const_decl_in_infinite_loop() {
+    fn const_decl_in_infinite_loop_errors() {
         let literals_edge_cases = get_all_literals_edge_cases(); 
 
         for l in &literals_edge_cases {
             for t in ALL_TYPES_NO_ARR {
-                let ast = parse(&format!("infinite {{\nconst x {} = {}\n}}", t, l)).unwrap();
-                assert_eq!(ast.functions.len(), 0);
-                assert_eq!(ast.globals.len(), 1);
-
-                if let Stmt::Infinite(inf) = &ast.globals[0] {
-                    assert_eq!(inf.branch.len(), 1);
-
-                    if let Stmt::Const(c) = &inf.branch[0] {
-                        assert_eq!(c.name, "x");
-                        assert_eq!(c.type_name, t.clone());
-                    } else { panic!("Expected Const Declaration"); }
-                } else { panic!("Expected infinite statement"); }
+                assert_parse_err(&format!("infinite {{\nconst x {} = {}\n}}", t, l));
             }
         }
     }
 
     #[test]
-    fn const_decl_in_while_loop() {
+    fn const_decl_in_while_loop_errors() {
         let literals_edge_cases = get_all_literals_edge_cases(); 
 
         for l in &literals_edge_cases {
             for t in ALL_TYPES_NO_ARR {
-                let ast = parse(&format!("while {} {{\nconst x {} = {}\n}}", l, t, l)).unwrap();
-                assert_eq!(ast.functions.len(), 0);
-                assert_eq!(ast.globals.len(), 1);
-
-                if let Stmt::While(w) = &ast.globals[0] {
-                    assert_eq!(w.branch.len(), 1);
-
-                    if let Stmt::Const(c) = &w.branch[0] {
-                        assert_eq!(c.name, "x");
-                        assert_eq!(c.type_name, t.clone());
-                    } else { panic!("Expected Const Declaration"); }
-                } else { panic!("Expected while statement"); }
+                assert_parse_err(&format!("while {} {{\nconst x {} = {}\n}}", l, t, l));
             }
         }
     }
 
 
     #[test]
-    fn const_decl_in_if_main_branch() {
+    fn const_decl_in_if_main_branch_errors() {
         let literals_edge_cases = get_all_literals_edge_cases(); 
 
         for l in &literals_edge_cases {
             for t in ALL_TYPES_NO_ARR {
-                let ast = parse(&format!("if {} {{\nconst x {} = {}\n}}", l, t, l)).unwrap();
-                assert_eq!(ast.functions.len(), 0);
-                assert_eq!(ast.globals.len(), 1);
-
-                if let Stmt::If(i) = &ast.globals[0] {
-                    assert_eq!(i.if_branch.len(), 1);
-                    assert_eq!(i.elif_branches.len(), 0);
-                    assert!(i.else_branch.is_none());
-
-                    if let Stmt::Const(c) = &i.if_branch[0] {
-                        assert_eq!(c.name, "x");
-                        assert_eq!(c.type_name, t.clone());
-                    } else { panic!("Expected Const Declaration"); }
-                } else { panic!("Expected if statement, got {:?}", ast); }
+                assert_parse_err(&format!("if {} {{\nconst x {} = {}\n}}", l, t, l));
             }
         }
     }
 
     #[test]
-    fn const_decl_in_if_else_branch() {
+    fn const_decl_in_if_else_branch_errors() {
         let literals_edge_cases = get_all_literals_edge_cases(); 
 
         for l in &literals_edge_cases {
             for t in ALL_TYPES_NO_ARR {
-                let ast = parse(&format!("if {} {{\n\n}} else {{\nconst x {} = {}\n}}", l, t, l)).unwrap();
-                assert_eq!(ast.functions.len(), 0);
-                assert_eq!(ast.globals.len(), 1);
-
-                if let Stmt::If(i) = &ast.globals[0] {
-                    assert_eq!(i.if_branch.len(), 0);
-                    assert_eq!(i.elif_branches.len(), 0);
-                    assert!(i.else_branch.is_some());
-
-                    let else_branch = i.else_branch.clone().unwrap();
-
-                    if let Stmt::Const(c) = &else_branch[0] {
-                        assert_eq!(c.name, "x");
-                        assert_eq!(c.type_name, t.clone());
-                    } else { panic!("Expected Const Declaration"); }
-                } else { panic!("Expected if statement, got {:?}", ast); }
+                assert_parse_err(&format!("if {} {{\n\n}} else {{\nconst x {} = {}\n}}", l, t, l));
             }
         }
     }
 
 
     #[test]
-    fn const_decl_in_if_elif_branch() {
+    fn const_decl_in_if_elif_branch_errors() {
         let literals_edge_cases = get_all_literals_edge_cases(); 
 
         for l in &literals_edge_cases {
             for t in ALL_TYPES_NO_ARR {
-                let ast = parse(&format!("if {} {{\n\n}} elif {} {{\nconst x {} = {}\n}}", l, l, t, l)).unwrap();
-                assert_eq!(ast.functions.len(), 0);
-                assert_eq!(ast.globals.len(), 1);
-
-                if let Stmt::If(i) = &ast.globals[0] {
-                    assert_eq!(i.if_branch.len(), 0);
-                    assert_eq!(i.elif_branches.len(), 1);
-                    assert!(i.else_branch.is_none());
-
-                    if let Stmt::Const(c) = &i.elif_branches[0].1[0] {
-                        assert_eq!(c.name, "x");
-                        assert_eq!(c.type_name, t.clone());
-                    } else { panic!("Expected Const Declaration"); }
-                } else { panic!("Expected if statement, got {:?}", ast); }
+                assert_parse_err(&format!("if {} {{\n\n}} elif {} {{\nconst x {} = {}\n}}", l, l, t, l));
             }
         }
     }
 
 
     #[test]
-    fn const_decl_in_for_branch() {
+    fn const_decl_in_for_branch_errors() {
         let literals_edge_cases = get_all_literals_edge_cases(); 
 
         for l in &literals_edge_cases {
             for t in ALL_TYPES_NO_ARR {
-                let ast = parse(&format!("for x in {} {{\nconst x {} = {}\n}}", l, t, l)).unwrap();
-                assert_eq!(ast.functions.len(), 0);
-                assert_eq!(ast.globals.len(), 1);
-
-                if let Stmt::For(f) = &ast.globals[0] {
-                    assert_eq!(f.branch.len(), 1);
-
-                    if let Stmt::Const(c) = &f.branch[0] {
-                        assert_eq!(c.name, "x");
-                        assert_eq!(c.type_name, t.clone());
-                    } else { panic!("Expected Const Declaration"); }
-                } else { panic!("Expected for statement, got {:?}", ast); }
+                assert_parse_err(&format!("for x in {} {{\nconst x {} = {}\n}}", l, t, l));
             }
         }
     }
@@ -490,21 +416,12 @@ mod const_decl_in_global_tests {
     // This is semantically not allowed, but it is syntaxally valid.
     //
     #[test]
-    fn const_decl_and_assign() {
+    fn const_decl_and_assign_errors() {
         let literals_edge_cases = get_all_literals_edge_cases(); 
 
         for l in &literals_edge_cases {
             for t in ALL_TYPES_NO_ARR {
-                let ast = parse(&format!("const x {} = {}\nx = {}", t, l, l)).unwrap();
-                assert_eq!(ast.functions.len(), 0);
-                assert_eq!(ast.globals.len(), 2);
-
-                if let Stmt::Const(c) = &ast.globals[0] {
-                    assert_eq!(c.name, "x");
-                    assert_eq!(c.type_name, t.clone());
-                } else {
-                    panic!("Expected VarDecl");
-                }
+                assert_parse_err(&format!("const x {} = {}\nx = {}", t, l, l));
             }
         }
     }

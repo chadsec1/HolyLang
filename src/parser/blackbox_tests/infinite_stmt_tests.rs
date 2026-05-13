@@ -4,9 +4,8 @@ use super::*;
 mod infinite_stmt_in_function_tests {
     use super::*;
 
-
     #[test]
-    fn infinite_statements_invalid_construction_errors() {
+    fn invalid_construction_errors() {
         let literals_edge_cases = get_all_literals_edge_cases(); 
 
         for l in &literals_edge_cases {
@@ -82,7 +81,7 @@ mod infinite_stmt_in_function_tests {
     }
 
     #[test]
-    fn infinite_statements_trailing_exprs_errors() {
+    fn trailing_exprs_errors() {
         let literals = get_all_literals_edge_cases(); 
 
         for l in &literals{
@@ -114,7 +113,7 @@ mod infinite_stmt_in_function_tests {
     }
 
     #[test]
-    fn infinite_statements_trailing_kw_errors() {
+    fn trailing_kw_errors() {
         let literals = get_all_literals_edge_cases(); 
 
         for kw in consts::RESERVED_KEYWORDS { 
@@ -173,7 +172,7 @@ mod infinite_stmt_in_function_tests {
     }
 
     #[test]
-    fn infinite_statements_trailing_types_errors() {
+    fn trailing_types_errors() {
         for t in ALL_TYPES_NO_ARR {
             assert_parse_err(&wrap(&format!("infinite {{\n\n}} {} {{\n\n}}", t)));    
             assert_parse_err(&wrap(&format!("infinite {{\n\n}}{} {{\n\n}}", t)));    
@@ -205,7 +204,7 @@ mod infinite_stmt_in_function_tests {
 
 
     #[test]
-    fn infinite_statements_spaces_after_errors() {
+    fn spaces_after_errors() {
         const MAX_SPACES: usize = 5000;
         
         let mut spaces = String::with_capacity(MAX_SPACES);
@@ -216,7 +215,7 @@ mod infinite_stmt_in_function_tests {
     }
 
     #[test]
-    fn infinite_statements_spaces_before_passes() {
+    fn spaces_before_passes() {
         const MAX_SPACES: usize = 5000;
         
         let mut spaces = String::with_capacity(MAX_SPACES);
@@ -236,7 +235,7 @@ mod infinite_stmt_in_function_tests {
 
 
     #[test]
-    fn infinite_statements_below_var_decl_with_value() {
+    fn below_var_decl_with_value() {
         let letters: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
         let literals_edge_cases = get_all_literals_edge_cases();
 
@@ -262,7 +261,7 @@ mod infinite_stmt_in_function_tests {
     }
 
     #[test]
-    fn infinite_statements_below_var_decl_without_value() {
+    fn below_var_decl_without_value() {
         let letters: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
 
         for l in &letters {
@@ -288,7 +287,7 @@ mod infinite_stmt_in_function_tests {
 
 
     #[test]
-    fn infinite_statements_after_var_decl_with_value() {
+    fn after_var_decl_with_value() {
         let letters: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
         let literals_edge_cases = get_all_literals_edge_cases();
 
@@ -315,7 +314,7 @@ mod infinite_stmt_in_function_tests {
     }
 
     #[test]
-    fn infinite_statements_after_var_decl_without_value() {
+    fn after_var_decl_without_value() {
         let letters: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
 
         for l in &letters {
@@ -338,7 +337,7 @@ mod infinite_stmt_in_function_tests {
     }
 
     #[test]
-    fn infinite_statements_with_var_decl_with_value() {
+    fn with_var_decl_with_value() {
         let letters: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
         let literals_edge_cases = get_all_literals_edge_cases();
 
@@ -365,7 +364,7 @@ mod infinite_stmt_in_function_tests {
 
 
     #[test]
-    fn infinite_statements_with_var_decl_without_value() {
+    fn with_var_decl_without_value() {
         let letters: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
 
         for l in &letters {
@@ -388,7 +387,7 @@ mod infinite_stmt_in_function_tests {
     }
 
     #[test]
-    fn infinite_statements_with_expr_stmt() {
+    fn with_expr_stmt() {
         let literals_edge_cases = get_all_literals_edge_cases();
 
         for l in literals_edge_cases {
@@ -405,7 +404,7 @@ mod infinite_stmt_in_function_tests {
     }
 
     #[test]
-    fn infinite_statements_before_expr_stmt() {
+    fn before_expr_stmt() {
         let literals_edge_cases = get_all_literals_edge_cases();
 
         for l in literals_edge_cases {
@@ -420,7 +419,7 @@ mod infinite_stmt_in_function_tests {
     }
 
     #[test]
-    fn infinite_statements_after_expr_stmt() {
+    fn after_expr_stmt() {
         let literals_edge_cases = get_all_literals_edge_cases();
 
         for l in literals_edge_cases {
@@ -435,14 +434,14 @@ mod infinite_stmt_in_function_tests {
     }
 
     #[test]
-    fn infinite_statements_invalid_branch_stmts_errors() {
+    fn invalid_branch_stmts_errors() {
         for t in ALL_TYPES_NO_ARR {
             assert_parse_err(&wrap(&format!("infinite {{\n{}\n}}", t)));
         }
     }
 
     #[test]
-    fn infinite_statements_nested() {
+    fn nested() {
         let mut s = format!("infinite {{\n\n}}");
 
         for _ in 0..100 {
@@ -475,7 +474,7 @@ mod infinite_stmt_in_globals_tests {
 
 
     #[test]
-    fn infinite_statements_invalid_construction_errors() {
+    fn invalid_construction_errors() {
         let literals_edge_cases = get_all_literals_edge_cases(); 
 
         for l in &literals_edge_cases {
@@ -550,7 +549,7 @@ mod infinite_stmt_in_globals_tests {
     }
 
     #[test]
-    fn infinite_statements_spaces_after_errors() {
+    fn spaces_after_errors() {
         const MAX_SPACES: usize = 5000;
         
         let mut spaces = String::with_capacity(MAX_SPACES);
@@ -561,21 +560,12 @@ mod infinite_stmt_in_globals_tests {
     }
 
     #[test]
-    fn infinite_statements_spaces_before_passes() {
+    fn spaces_before_errors() {
         const MAX_SPACES: usize = 5000;
         
         let mut spaces = String::with_capacity(MAX_SPACES);
         for _ in 0..=MAX_SPACES {
-            let ast = parse(&format!("{} infinite {{\n\n}}", spaces)).unwrap();
-            assert_eq!(ast.functions.len(), 0);
-            assert_eq!(ast.globals.len(), 1);
-
-            if let Stmt::Infinite(inf) = &ast.globals[0] {
-                assert_eq!(inf.branch.len(), 0);
-
-            } else {
-                panic!("Expected infinite statement");
-            }
+            assert_parse_err(&format!("{} infinite {{\n\n}}", spaces));
             spaces.push(' ');
 
         }
@@ -583,52 +573,26 @@ mod infinite_stmt_in_globals_tests {
 
 
     #[test]
-    fn infinite_statements_below_var_decl_with_value() {
+    fn below_var_decl_with_value_errors() {
         let letters: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
         let literals_edge_cases = get_all_literals_edge_cases();
 
         for lit in literals_edge_cases {
             for l in &letters {
                 for t in ALL_TYPES_NO_ARR {
-                    let ast = parse(&format!("own {} {} = {}\ninfinite {{\n\n}}", l, t, lit)).unwrap();
-                    assert_eq!(ast.functions.len(), 0);
-                    assert_eq!(ast.globals.len(), 2);
-
-                    if let Stmt::VarDecl(v) = &ast.globals[0] {
-                        assert_eq!(v.name, l.to_string());
-                        assert_eq!(v.type_name, t.clone());
-                    } else { panic!("Expected VarDecl"); }
-
-                    if let Stmt::Infinite(inf) = &ast.globals[1] {
-                        assert_eq!(inf.branch.len(), 0);
-                    } else {
-                        panic!("Expected infinite statement");
-                    }
+                    assert_parse_err(&format!("own {} {} = {}\ninfinite {{\n\n}}", l, t, lit));
                 }
             }
         }
     }
 
     #[test]
-    fn infinite_statements_below_var_decl_without_value() {
+    fn below_var_decl_without_value_errors() {
         let letters: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
 
         for l in &letters {
             for t in ALL_TYPES_NO_ARR {
-                let ast = parse(&format!("own {} {}\ninfinite {{\n\n}}", l, t)).unwrap();
-                assert_eq!(ast.functions.len(), 0);
-                assert_eq!(ast.globals.len(), 2);
-
-                if let Stmt::VarDecl(v) = &ast.globals[0] {
-                    assert_eq!(v.name, l.to_string());
-                    assert_eq!(v.type_name, t.clone());
-                } else { panic!("Expected VarDecl"); }
-
-                if let Stmt::Infinite(inf) = &ast.globals[1] {
-                    assert_eq!(inf.branch.len(), 0);
-                } else {
-                    panic!("Expected infinite statement");
-                }
+                assert_parse_err(&format!("own {} {}\ninfinite {{\n\n}}", l, t));
             }
         }
     }
@@ -637,82 +601,40 @@ mod infinite_stmt_in_globals_tests {
 
 
     #[test]
-    fn infinite_statements_after_var_decl_with_value() {
+    fn after_var_decl_with_value_errors() {
         let letters: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
         let literals_edge_cases = get_all_literals_edge_cases();
 
         for lit in literals_edge_cases {
             for l in &letters {
                 for t in ALL_TYPES_NO_ARR {
-                    let ast = parse(&format!("infinite {{\n\n}}\nown {} {} = {}", l, t, lit)).unwrap();
-                    assert_eq!(ast.functions.len(), 0);
-                    assert_eq!(ast.globals.len(), 2);
-
-                    if let Stmt::Infinite(inf) = &ast.globals[0] {
-                        assert_eq!(inf.branch.len(), 0);
-                    } else {
-                        panic!("Expected infinite statement");
-                    }
-
-                    if let Stmt::VarDecl(v) = &ast.globals[1] {
-                        assert_eq!(v.name, l.to_string());
-                        assert_eq!(v.type_name, t.clone());
-                    } else { panic!("Expected VarDecl"); }
+                    assert_parse_err(&format!("infinite {{\n\n}}\nown {} {} = {}", l, t, lit));
                 }
             }
         }
     }
 
     #[test]
-    fn infinite_statements_after_var_decl_without_value() {
+    fn after_var_decl_without_value_errors() {
         let letters: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
 
         for l in &letters {
             for t in ALL_TYPES_NO_ARR {
-                let ast = parse(&format!("infinite {{\n\n}}\nown {} {}", l, t)).unwrap();
-                assert_eq!(ast.functions.len(), 0);
-                assert_eq!(ast.globals.len(), 2);
-
-                if let Stmt::Infinite(inf) = &ast.globals[0] {
-                    assert_eq!(inf.branch.len(), 0);
-                } else {
-                    panic!("Expected infinite statement");
-                }
-
-                if let Stmt::VarDecl(v) = &ast.globals[1] {
-                    assert_eq!(v.name, l.to_string());
-                    assert_eq!(v.type_name, t.clone());
-                } else { panic!("Expected VarDecl"); }
+                assert_parse_err(&format!("infinite {{\n\n}}\nown {} {}", l, t));
             }
         }
     }
 
 
-
-
-
     #[test]
-    fn infinite_statements_with_var_decl_with_value() {
+    fn with_var_decl_with_value_errors() {
         let letters: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
         let literals_edge_cases = get_all_literals_edge_cases();
 
         for lit in literals_edge_cases {
             for l in &letters {
                 for t in ALL_TYPES_NO_ARR {
-                    let ast = parse(&format!("infinite {{\nown {} {} = {}\n}}", l, t, lit)).unwrap();
-                    assert_eq!(ast.functions.len(), 0);
-                    assert_eq!(ast.globals.len(), 1);
-
-                    if let Stmt::Infinite(inf) = &ast.globals[0] {
-                        assert_eq!(inf.branch.len(), 1);
-
-                        if let Stmt::VarDecl(v) = &inf.branch[0] {
-                            assert_eq!(v.name, l.to_string());
-                            assert_eq!(v.type_name, t.clone());
-                        } else { panic!("Expected VarDecl"); }
-                    } else {
-                        panic!("Expected infinite statement");
-                    }
+                    assert_parse_err(&format!("infinite {{\nown {} {} = {}\n}}", l, t, lit));
                 }
             }
         }
@@ -720,102 +642,58 @@ mod infinite_stmt_in_globals_tests {
 
 
     #[test]
-    fn infinite_statements_with_var_decl_without_value() {
+    fn with_var_decl_without_value_errors() {
         let letters: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
 
         for l in &letters {
             for t in ALL_TYPES_NO_ARR {
-                let ast = parse(&format!("infinite {{\nown {} {}\n}}", l, t)).unwrap();
-                assert_eq!(ast.functions.len(), 0);
-                assert_eq!(ast.globals.len(), 1);
-
-                if let Stmt::Infinite(inf) = &ast.globals[0] {
-                    assert_eq!(inf.branch.len(), 1);
-
-                    if let Stmt::VarDecl(v) = &inf.branch[0] {
-                        assert_eq!(v.name, l.to_string());
-                        assert_eq!(v.type_name, t.clone());
-                    } else { panic!("Expected VarDecl"); }
-                } else {
-                    panic!("Expected infinite statement");
-                }
+                assert_parse_err(&format!("infinite {{\nown {} {}\n}}", l, t));
             }
         }
     }
 
     #[test]
-    fn infinite_statements_with_expr_stmt() {
+    fn with_expr_stmt_errors() {
         let literals_edge_cases = get_all_literals_edge_cases();
 
         for l in literals_edge_cases {
-            let ast = parse(&format!("infinite {{\n{}\n}}", l)).unwrap();
-            assert_eq!(ast.functions.len(), 0);
-            assert_eq!(ast.globals.len(), 1);
-
-            if let Stmt::Infinite(inf) = &ast.globals[0] {
-                assert_eq!(inf.branch.len(), 1);
-                assert!(matches!(inf.branch[0], Stmt::Expr(_)));
-            } else {
-                panic!("Expected infinite statement");
-            }
+            assert_parse_err(&format!("infinite {{\n{}\n}}", l));
         }
     }
 
     #[test]
-    fn infinite_statements_before_expr_stmt() {
+    fn before_expr_stmt_errors() {
         let literals_edge_cases = get_all_literals_edge_cases();
 
         for l in literals_edge_cases {
-            let ast = parse(&format!("{}\ninfinite {{\n\n}}", l)).unwrap();
-            assert_eq!(ast.functions.len(), 0);
-            assert_eq!(ast.globals.len(), 2);
-
-            assert!(matches!(ast.globals[0], Stmt::Expr(_)));
-
-            if let Stmt::Infinite(inf) = &ast.globals[1] {
-                assert_eq!(inf.branch.len(), 0);
-            } else {panic!("Expected infinite statement"); }
+            assert_parse_err(&format!("{}\ninfinite {{\n\n}}", l));
         }
     }
 
 
     #[test]
-    fn infinite_statements_after_expr_stmt() {
+    fn after_expr_stmt_errors() {
         let literals_edge_cases = get_all_literals_edge_cases();
 
         for l in literals_edge_cases {
-            let ast = parse(&format!("infinite {{\n\n}}\n{}", l)).unwrap();
-            assert_eq!(ast.functions.len(), 0);
-            assert_eq!(ast.globals.len(), 2);
-
-            if let Stmt::Infinite(inf) = &ast.globals[0] {
-                assert_eq!(inf.branch.len(), 0);
-            } else {panic!("Expected infinite statement"); }
-            
-            assert!(matches!(ast.globals[1], Stmt::Expr(_)));
+            assert_parse_err(&format!("infinite {{\n\n}}\n{}", l));
         }
     }
 
     #[test]
-    fn infinite_statements_invalid_branch_stmts_errors() {
+    fn invalid_branch_stmts_errors() {
         for t in ALL_TYPES_NO_ARR {
             assert_parse_err(&format!("infinite {{\n{}\n}}", t));
         }
     }
 
     #[test]
-    fn infinite_statements_nested() {
+    fn nested() {
         let mut s = format!("infinite {{\n\n}}");
 
         for _ in 0..100 {
             s = format!("infinite {{\n{}\n}}", s);
-            let ast = parse(&s).unwrap();
-            assert_eq!(ast.functions.len(), 0);
-            assert_eq!(ast.globals.len(), 1);
-
-            if let Stmt::Infinite(inf) = &ast.globals[0] {
-                assert_eq!(inf.branch.len(), 1);
-            } else {panic!("Expected infinite statement"); }
+            assert_parse_err(&s);
         }
     }
 
