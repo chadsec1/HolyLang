@@ -253,7 +253,6 @@ fn check_stmts(
                                 "Variable identifier name `{}` is already taken by a function. (line {} column {})", 
                                 &var.name, var.span.line, var.span.column
                             )));
-
                 }
 
                 let expr_ty = infer::infer_expr_type(&mut var.value, locals, fun_sigs, Some(var.type_name.clone()))?;
@@ -263,8 +262,6 @@ fn check_stmts(
                         var.name, expr_ty, var.type_name, var.span.line, var.span.column
                     )));
                 }
-
-            
 
                 // HolyLang commandment 1. You shall not overshadow variables
                 if let Some(_) = locals.get(&var.name) {
@@ -340,14 +337,10 @@ fn check_stmts(
             }
 
             Stmt::VarDeclMulti(var_list, call_expr) => {
-                // Expect the rhs to be a Call
+                // Expect the right-hand side to be a function Call expression
                 if let Expr::Call { name, args, span } = call_expr {
                     // check_call with require_ret = true -> Option<Vec<Type>>
-                    let ret_opt = check_call(name, args, locals, fun_sigs, true, *span)?;
-                    let ret_vec = ret_opt.ok_or_else(|| HolyError::Semantic(format!(
-                        "Call to function `{}` used in multi-declaration but function has no declared return types (line {} column {})",
-                        name, span.line, span.column
-                    )))?;
+                    let ret_vec = check_call(name, args, locals, fun_sigs, true, *span)?.unwrap();
 
                     if ret_vec.len() != var_list.len() {
                         return Err(HolyError::Semantic(format!(
@@ -1017,7 +1010,7 @@ fn update_local_assignments_from_clone(upstream: &mut HashMap<String, BindingInf
 ///   `Ok(None)` when no return type (allowed only when `require_ret == false`).
 fn check_call(
     name: &str,
-    args: &mut [Expr],
+    args: &mut Vec<Expr>,
     locals: &mut HashMap<String, BindingInfo>,
     fun_sigs: &HashMap<String, (Vec<Type>, Option<Vec<Type>>)>,
     require_ret: bool,
