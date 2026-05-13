@@ -35,7 +35,7 @@ pub struct AST {
 /// Statements that are legally allowed to be in the global scope
 /// such as constants, etc.
 ///
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum GlobalStmt {
     Const(Constant),
 

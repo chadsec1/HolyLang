@@ -2,9 +2,13 @@ use std::collections::HashMap;
 
 use crate::error::HolyError;
 use crate::ast::{
-    AST, Expr, Function, Stmt, Type, Span
+    AST, Expr, Function, GlobalStmt, Stmt, Type, Span, Constant 
 };
 
+mod branch_analysis;
+mod constants;
+mod infer;
+mod helpers;
 
 #[cfg(test)]
 mod helpers_tests;
@@ -14,11 +18,6 @@ mod blackbox_tests;
 
 #[cfg(test)]
 mod branch_analysis_tests;
-
-mod branch_analysis;
-mod constants;
-mod infer;
-mod helpers;
  
 
 #[derive(Clone, Debug)]
@@ -63,8 +62,8 @@ pub fn check_semantics(ast: &mut AST) -> Result<(), HolyError> {
     
     // Second pass: check each global statement
     let mut globals: HashMap<String, BindingInfo> = HashMap::new();
-    for stmt in &mut ast.globals {
-        check_global_stmt(stmt, &mut globals, &fun_sigs)?;
+    for global_stmt in &mut ast.globals {
+        check_global_stmt(global_stmt, &mut globals, &fun_sigs)?;
     }
 
 
@@ -158,55 +157,57 @@ fn check_function(
 /// and error if not.
 ///
 fn check_global_stmt(
-    stmt: &mut Stmt,
+    globalstmt: &mut GlobalStmt,
     storage: &mut HashMap<String, BindingInfo>, 
     fun_sigs: &HashMap<String, (Vec<Type>, Option<Vec<Type>>)>,
 ) -> Result<(), HolyError> { 
-    match stmt {
-        Stmt::Const(cons) => {
-            if fun_sigs.contains_key(&cons.name) {
-                return Err(HolyError::Semantic(format!(
-                            "Constant identifier name `{}` is already taken by a function, pick a different name for your variable. (line {} column {})", 
-                            &cons.name, cons.span.line, cons.span.column
-                        )));
-            }
+    match globalstmt {
+        GlobalStmt::Const(cons) => check_const(cons, storage, fun_sigs),
 
-            if storage.contains_key(&cons.name) {
-                return Err(HolyError::Semantic(format!(
-                        "Cannot use `{}` as the constant identifier name as it is already declared. Overshadowing is not allowed. (line {} column {})", 
-                        &cons.name, cons.span.line, cons.span.column
-                    )));
-            }
+        other => panic!("(Compiler bug) Unimplemented {:?}", other)
 
-
-            // Validate the constant type against the expression, AND internally coerce literals if
-            // possible (i.e. int8 -> int32, etc), AND validate the constant value expression 
-            // to ensure it is known at compile-time, AND evaluate it, and then fold it.
-            //
-            constants::eval_const_expr_and_fold_it(cons, storage, fun_sigs)?;
-
-            // register the constant in storage (could be locals, or globals. we don't care.) 
-            storage.insert(
-                cons.name.clone(),
-                BindingInfo {
-                    ty: cons.type_name.clone(),
-                    kind: BindingKind::Const {
-                        value: cons.value.clone()
-                    }
-                }
-            );
-
-            Ok(())
-        },
-
-        _ => {
-            let stmt_span = helpers::stmt_span(&stmt);
-            return Err(HolyError::Semantic(format!(
-                    "Statement cannot be global. (line {} column {})",
-                    stmt_span.line, stmt_span.column
-                )));
-        }
     }
+}
+
+fn check_const(
+    cons: &mut Constant,
+    storage: &mut HashMap<String, BindingInfo>, 
+    fun_sigs: &HashMap<String, (Vec<Type>, Option<Vec<Type>>)>,
+) -> Result<(), HolyError> {
+    if fun_sigs.contains_key(&cons.name) {
+        return Err(HolyError::Semantic(format!(
+                    "Constant identifier name `{}` is already taken by a function. (line {} column {})", 
+                    &cons.name, cons.span.line, cons.span.column
+                )));
+    }
+
+    if storage.contains_key(&cons.name) {
+        return Err(HolyError::Semantic(format!(
+                "Cannot use `{}` as the constant identifier name as it is already declared. Overshadowing is not allowed. (line {} column {})", 
+                &cons.name, cons.span.line, cons.span.column
+            )));
+    }
+
+
+    // Validate the constant type against the expression, AND internally coerce literals if
+    // possible (i.e. int8 -> int32, etc), AND validate the constant value expression 
+    // to ensure it is known at compile-time, AND evaluate it, and then fold it.
+    //
+    constants::eval_const_expr_and_fold_it(cons, storage, fun_sigs)?;
+
+    // register the constant in storage (could be locals, or globals. we don't care.) 
+    storage.insert(
+        cons.name.clone(),
+        BindingInfo {
+            ty: cons.type_name.clone(),
+            kind: BindingKind::Const {
+                value: cons.value.clone()
+            }
+        }
+    );
+
+    Ok(())
+
 }
 
 
@@ -243,35 +244,24 @@ fn check_stmts(
         let stmt_span = helpers::stmt_span(&stmt);
 
         match stmt {
-            Stmt::Const(_) => {
-                // Its fine, since we already checked its a const
-                check_global_stmt(stmt, locals, fun_sigs)?;
+            Stmt::Const(cons) => {
+                check_const(cons, locals, fun_sigs)?;
             },
             Stmt::VarDecl(var) => {
                 if fun_sigs.contains_key(&var.name) {
                     return Err(HolyError::Semantic(format!(
-                                "Variable identifier name `{}` is already taken by a function, pick a different name for your variable. (line {} column {})", 
+                                "Variable identifier name `{}` is already taken by a function. (line {} column {})", 
                                 &var.name, var.span.line, var.span.column
                             )));
 
                 }
-                // if `own x TYPE = EXPRESSION`, check if EXPRESSION is a literal, and if so, see if it is compatiable with TYPE
-                if let Some(expr) = &mut var.value {
-                    // On second thought, I don't think this is needed.
-                    // infer::assign_infer_type_to_expr_value(expr, var.type_name.clone())?;
 
-                    // Infer and check the expression type.
-
-                    let expr_ty = infer::infer_expr_type(expr, locals, fun_sigs, Some(var.type_name.clone()))?;
-                    if expr_ty != var.type_name {
-                        return Err(HolyError::Semantic(format!(
-                            "Type mismatch assigning to `{}`: got `{}`, expected `{}` (line {} column {})",
-                            var.name, expr_ty, var.type_name, var.span.line, var.span.column
-                        )));
-                    }
-
-                } else {
-                    helpers::assign_default_value_for_type(&mut var.value, &var.type_name, var.span)?;
+                let expr_ty = infer::infer_expr_type(&mut var.value, locals, fun_sigs, Some(var.type_name.clone()))?;
+                if expr_ty != var.type_name {
+                    return Err(HolyError::Semantic(format!(
+                        "Type mismatch assigning to `{}`: got `{}`, expected `{}` (line {} column {})",
+                        var.name, expr_ty, var.type_name, var.span.line, var.span.column
+                    )));
                 }
 
             
@@ -286,12 +276,9 @@ fn check_stmts(
 
 
                 let mut value_len: Option<usize> = None;
-                if var.value.is_none() {
-                    panic!("(Compiler bug) Variable value is none even after we attempted to assign default value! {:?}", var);
-                }
 
                 // Check if source value is a variable and if its locked or moved, and moves it
-                if let Some(Expr::Var { name: src_name, span }) = &var.value {
+                if let Expr::Var { name: src_name, span } = &var.value {
                     let src = locals.get_mut(src_name).unwrap_or_else(|| panic!(
                             "(Compiler bug) infer_expr_type should've already errored if source variable didnt exist, but it didnt. var: {:?}", 
                             var
@@ -324,7 +311,7 @@ fn check_stmts(
                     }
                 }
 
-                match var.value.clone().unwrap() {
+                match var.value.clone() {
                     Expr::ArrayLiteral{elements, span: _} => {
                         value_len = Some(elements.len())
                     }
@@ -343,7 +330,7 @@ fn check_stmts(
                     BindingInfo {
                         ty: var.type_name.clone(),
                         kind: BindingKind::Var {
-                            value: var.value.clone(),
+                            value: Some(var.value.clone()),
                             moved: false,
                             locked: false,
                             len: value_len
@@ -394,7 +381,7 @@ fn check_stmts(
                             BindingInfo {
                                 ty: var.type_name.clone(), 
                                 kind: BindingKind::Var {
-                                    value: var.value.clone(), 
+                                    value: None,
                                     moved: false, 
                                     locked: false,
                                     len: None
@@ -993,8 +980,6 @@ fn check_stmts(
                 }
                 
             }
-
-            Stmt::Func(_) => {}
         }
     }
 
