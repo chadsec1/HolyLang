@@ -5,108 +5,12 @@ use crate::ast::{
 };
 
 
-// When variable is declared like
-// own x int32
-// its value is None, so we need to set it to a default value based on its type.
-// ints default are 0, floats are 0.0, string is "", etc.
-// Only primitives listed above though. Everything else needs a value.
-//
-// ty is the expression holder type (i.e. variable type)
-// expr is the value literal its self
-pub fn assign_default_value_for_type(expr: &mut Option<Expr>, ty: &Type, span: Span) -> Result<(), HolyError> {
-        
-
-    // Reason why we don't just take a &mut Expr, is because variables values are defined as
-    // Option<Expr>.
-    //
-    // So this guard statement will be fine and will catch most misuse of this function.
-    if expr.is_some() {
-        panic!(
-            "(Compiler bug) Cannot assign default value for an expression that already has a value. Expression: {:?}\nType: {:?}",
-            expr, ty
-        );
-    }
-
-
-    
-    match ty {
-        Type::Int8 
-        | Type::Int16 
-        | Type::Int32
-        | Type::Int64 
-        | Type::Int128 
-        | Type::Byte
-        | Type::Uint16
-        | Type::Uint32
-        | Type::Uint64
-        | Type::Uint128
-        | Type::Usize
-        | Type::Float64
-        | Type::Bool
-        | Type::String
-            => {
-            *expr = Some(get_default_expr_for_type_hazmat(ty, span))
-        }
-
-        Type::Array(_) => {
-            *expr = Some(Expr::ArrayLiteral { elements: Vec::new(), span: span })
-        }
-
-
-        Type::FixedArray(_, _) => {
-            // TODO: In future, allow default fixed array types to have default values. up tp its
-            // size.
-            //
-            // for now i will just error
-            return Err(HolyError::Semantic(format!(
-                    "Default values are not allowed for fixed-size arrays (line {} column {})",
-                    span.line, span.column
-                )));
-
-        }
-    }
-
-    Ok(())
-}
-
-
-fn get_default_expr_for_type_hazmat(ty: &Type, span: Span) -> Expr {
-    match ty {
-        Type::Int8 => Expr::IntLiteral { value: IntLiteralValue::Int8(0), span },
-        Type::Int16 => Expr::IntLiteral { value: IntLiteralValue::Int16(0), span },
-        Type::Int32 => Expr::IntLiteral { value: IntLiteralValue::Int32(0), span },
-
-        Type::Int64 => Expr::IntLiteral { value: IntLiteralValue::Int64(0), span },
-        Type::Int128 => Expr::IntLiteral { value: IntLiteralValue::Int128(0), span },
-
-        Type::Usize => Expr::IntLiteral { value: IntLiteralValue::Usize(0), span },
-        Type::Byte => Expr::IntLiteral { value: IntLiteralValue::Byte(0), span },
-        Type::Uint16 => Expr::IntLiteral { value: IntLiteralValue::Uint16(0), span },
-        Type::Uint32 => Expr::IntLiteral { value: IntLiteralValue::Uint32(0), span },
-        Type::Uint64 => Expr::IntLiteral { value: IntLiteralValue::Uint64(0), span },
-        Type::Uint128 => Expr::IntLiteral { value: IntLiteralValue::Uint128(0), span },
-
-        Type::Float64 => Expr::Float64Literal { value: 0.0, span },
-
-        Type::Bool => Expr::BoolLiteral { value: false, span: span },
-
-        Type::String => Expr::StringLiteral { value: "".to_string(), span },
-
-        other => panic!("(Compiler bug) do not call this function on `{:?}` types", other)
-    }
-}
-
-
-
-
-
 /// Takes 2 integer types, determines which type can hold more than the other
 ///
 pub fn get_bigger_type_of_two_integers(t_1: Type, t_2: Type) -> Type {
     if !t_1.is_integer_type() || !t_2.is_integer_type() {
         panic!("(Compiler bug) you should not call this function unless you are sure both types are integer type. We got {:?} {:?}", t_1, t_2);
     }
-
 
     let t_1_score = match t_1 {
             Type::Int8 => 1,
@@ -174,7 +78,6 @@ pub fn stmt_span(s: &Stmt) -> Span {
         Stmt::Continue(c) => c.span,
         Stmt::Infinite(i) => i.span,
         Stmt::If(i) => i.span,
-        Stmt::Func(f) => f.span,
         Stmt::VarDeclMulti(_, v) => expr_span(v), 
         Stmt::VarAssignMulti(ma) => ma.span,
     }
