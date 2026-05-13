@@ -194,6 +194,95 @@ mod ownership_tests {
     }
 
     #[test]
+    fn varassign_moves_var() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                var_decl("x", t.clone(), l.clone()),
+                var_decl("y", t.clone(), l.clone()),
+                var_assign("y", var_expr("x"))
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            check_semantics(&mut ast).unwrap();
+
+            assert_eq!(ast.functions.len(), 1);
+            assert_eq!(ast.functions[0].body.len(), 3);
+            assert_eq!(ast.globals.len(), 0);
+
+            if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+                assert_eq!(v.name, "x");
+                assert_eq!(v.type_name, t.clone());
+                assert_eq!(v.value, l.clone());
+            } else { panic!("expected VarDecl, got {:?}", ast); }
+
+            if let Stmt::VarDecl(v) = &ast.functions[0].body[1] {
+                assert_eq!(v.name, "y");
+                assert_eq!(v.type_name, t.clone());
+                assert_eq!(v.value, l.clone());
+            } else { panic!("expected VarDecl, got {:?}", ast); }
+
+            if let Stmt::VarAssign(va) = &ast.functions[0].body[2] {
+                assert_eq!(va.name, "y");
+                assert_eq!(va.value, var_expr("x"));
+            } else { panic!("expected VarAssign, got {:?}", ast); }
+
+        }
+    }
+
+    #[test]
+    fn varassign_does_not_move_local_const() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                const_define_locally("x", t.clone(), l.clone()),
+                var_decl("y", t.clone(), l.clone()),
+                var_assign("y", var_expr("x")),
+                var_decl("z", t.clone(), var_expr("x"))
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            check_semantics(&mut ast).unwrap();
+
+            assert_eq!(ast.globals.len(), 0);
+            assert_eq!(ast.functions.len(), 1);
+            assert_eq!(ast.functions[0].body.len(), 4);
+
+            if let Stmt::Const(c) = &ast.functions[0].body[0] {
+                assert_eq!(c.name, "x");
+                assert_eq!(c.type_name, t.clone());
+                assert_eq!(c.value, l.clone());
+            } else { panic!("expected Const, got {:?}", ast); }
+
+            if let Stmt::VarDecl(v) = &ast.functions[0].body[1] {
+                assert_eq!(v.name, "y");
+                assert_eq!(v.type_name, t.clone());
+                assert_eq!(v.value, l.clone());
+            } else { panic!("expected VarDecl, got {:?}", ast); }
+
+            if let Stmt::VarAssign(va) = &ast.functions[0].body[2] {
+                assert_eq!(va.name, "y");
+                assert_eq!(va.value, var_expr("x"));
+            } else { panic!("expected VarAssign, got {:?}", ast); }
+
+        
+            if let Stmt::VarDecl(v) = &ast.functions[0].body[3] {
+                assert_eq!(v.name, "z");
+                assert_eq!(v.type_name, t.clone());
+                assert_eq!(v.value, var_expr("x"));
+            } else { panic!("expected VarDecl, got {:?}", ast); }
+        
+        }
+    }
+
+
+
+
+
+
+    #[test]
     fn copy_call_allows_reuse() {
         // own a T = EXPRESSION
         // own b T = copy(a)  (copies, does not move)
