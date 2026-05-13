@@ -4,8 +4,10 @@ use crate::ast::{
 };
 
 
-/// This takes 2 expressions, and tries to infer types, and convert each other types to same if
-/// possible (only for integer literlas and float literals)
+/// This takes 2 expressions, and tries to get types, and convert each other types to the same type 
+/// if possible (only for integer literals)
+/// 
+/// This is used for binary operations where at least one side is an integer literal.
 ///
 pub fn advanced_infer_2_types(
     left: &mut Expr, 
