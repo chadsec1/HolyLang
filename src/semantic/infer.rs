@@ -1,8 +1,7 @@
 use super::*;
 use crate::ast::{
-    IntLiteralValue, UnaryOpKind, BinOpKind, FixedArraySize
+    IntLiteralValue, UnaryOpKind, BinOpKind, FixedArraySize, ArraySliceRange
 };
-
 
 
 /// This takes 2 expressions, and tries to infer types, and convert each other types to same if
@@ -43,11 +42,6 @@ pub fn advanced_infer_2_types(
 
 
 }
-
-
-
-
-
 
 
 /// Infer the type of an expression, and update literal nodes (and nested nodes) where possible.
@@ -265,36 +259,75 @@ pub fn infer_expr_type(
 
         }
 
-        Expr::ArraySlicing { array, start, end,  span } => {
+        Expr::ArraySlicing { array, range,  span } => {
             if let Expr::Var { name, span: inner_span } = &**array {
-                if start.is_none() && end.is_none() {
-                    panic!("(Compiler bug) We expected the parser to not allow such invalid syntax of no start and no end indexes in array multiple access");
-                }
-
-                // If both start and end are present, ensure that start is not larger than end,
-                // and end not smaller than start.
-                // This is **basic** out-of-bounds safety check against int literals.
-                // The real out-of-bounds safety guarantees is inserted in the binary machine code that'd panic if index is
-                // larger than array, thanks to rust.
-                if start.is_some() && end.is_some() {
-                    if let Expr::IntLiteral { value: IntLiteralValue::Usize(start_num), .. } = start.as_deref().unwrap() {
-
-                        if let Expr::IntLiteral { value: IntLiteralValue::Usize(end_num), .. } = end.as_deref().unwrap() {
-                            if start_num > end_num {
-                                return Err(HolyError::Semantic(format!(
-                                    "Start index `{}` cannot be larger than end index `{}` (line {} column {})", 
-                                    start_num, end_num, span.line, span.column
-                                )));
-                            }
-                        }
-                    }
-                }
-
-
                 if let Some(info) = locals.get(name).cloned() {
                     if !info.ty.is_array_type() {
                         return Err(HolyError::Semantic(format!("Array access on non-array variable `{}` (line {} column {})", name, span.line, span.column)));
                     }
+
+                    // If the range is FromTo (e.g. x[1:10])
+                    // ensure that `start` index is not larger than `end`,
+                    //
+                    // This is **basic** out-of-bounds safety check against int literals.
+                    // The real out-of-bounds safety guarantees is inserted in the binary machine code that'd panic if index is
+                    // larger than array, thanks to rust.
+                    //
+                    match range {
+                        ArraySliceRange::FromTo(start, end) => {
+                            if let Expr::IntLiteral { value: IntLiteralValue::Usize(start_num), .. } = &**start {
+                                if let Expr::IntLiteral { value: IntLiteralValue::Usize(end_num), .. } = &**end {
+                                    if start_num > end_num {
+                                        return Err(HolyError::Semantic(format!(
+                                            "Start index `{}` cannot be larger than end index `{}` (line {} column {})", 
+                                            start_num, end_num, span.line, span.column
+                                        )));
+                                    }
+                                }
+                            }
+
+                            // Ensure that the type of the start index expression is usize, and try to
+                            // convert it if possible.
+                            let start_ety = infer_expr_type(start, locals, fun_sigs, Some(Type::Usize))?;
+                            if start_ety != Type::Usize { 
+                                return Err(HolyError::Semantic(format!(
+                                                "Expected start index to be of type `usize` for array `{}`, instead we got `{}` (line {} column {})", 
+                                                name, start_ety, span.line, span.column
+                                            )));
+                            }
+
+                            // Same as above, for end index.
+                            let end_ety = infer_expr_type(end, locals, fun_sigs, Some(Type::Usize))?;
+                            if end_ety != Type::Usize { 
+                                return Err(HolyError::Semantic(format!(
+                                            "Expected end index to be of type `usize` for array `{}`, instead we got `{}` (line {} column {})", 
+                                            name, end_ety, span.line, span.column
+                                        )));
+                            }
+                        },
+
+                        ArraySliceRange::From(start) => {
+                            let start_ety = infer_expr_type(start, locals, fun_sigs, Some(Type::Usize))?;
+                            if start_ety != Type::Usize { 
+                                return Err(HolyError::Semantic(format!(
+                                                "Expected start index to be of type `usize` for array `{}`, instead we got `{}` (line {} column {})", 
+                                                name, start_ety, span.line, span.column
+                                            )));
+                            }
+                        },
+
+                        ArraySliceRange::To(end) => {
+                            // Same as above, for end index.
+                            let end_ety = infer_expr_type(end, locals, fun_sigs, Some(Type::Usize))?;
+                            if end_ety != Type::Usize { 
+                                return Err(HolyError::Semantic(format!(
+                                            "Expected end index to be of type `usize` for array `{}`, instead we got `{}` (line {} column {})", 
+                                            name, end_ety, span.line, span.column
+                                        )));
+                            }
+                        }
+                    }
+
 
                     match info.kind {
                         BindingKind::Var { moved, len, .. } => {
@@ -311,32 +344,20 @@ pub fn infer_expr_type(
                             // TODO: Though it'd still be nice if we improve upon this 
                             //
                             if len.is_some() {
-                                if let Some(s) = &mut *start {
-                                    // Ensure that the type of the start index expression is usize, and try to
-                                    // convert it if possible.
-                                    let start_ety = infer_expr_type(s, locals, fun_sigs, Some(Type::Usize))?;
-                                    if start_ety != Type::Usize { 
-                                        return Err(HolyError::Semantic(format!(
-                                                    "Expected start index to be of type `usize` for array `{}`, instead we got `{}` (line {} column {})", 
-                                                    name, start_ety, span.line, span.column
-                                                )));
+                                match range {
+                                    ArraySliceRange::From(start) => {
+                                        check_usize_literal_to_src(&start, len.unwrap(), span.clone(), locals.clone())?;
+                                    },
+
+                                    ArraySliceRange::To(end) => {
+                                        check_usize_literal_to_src(&end, len.unwrap(), span.clone(), locals.clone())?;
+                                    },
+
+                                    ArraySliceRange::FromTo(start, end) => {
+                                        check_usize_literal_to_src(&start, len.unwrap(), span.clone(), locals.clone())?;
+                                        check_usize_literal_to_src(&end, len.unwrap(), span.clone(), locals.clone())?;
                                     }
 
-                                    check_usize_literal_to_src(&s, len.unwrap(), span.clone(), locals.clone())?;
-                                }
-             
-                                if let Some(e) = &mut *end {
-                                    // Same as above, for end index.
-                                    let end_ety = infer_expr_type(e, locals, fun_sigs, Some(Type::Usize))?;
-                                    if end_ety != Type::Usize { 
-                                        return Err(HolyError::Semantic(format!(
-                                                    "Expected end index to be of type `usize` for array `{}`, instead we got `{}` (line {} column {})", 
-                                                    name, end_ety, span.line, span.column
-                                                )));
-                                    }
-
-
-                                    check_usize_literal_to_src(&e, len.unwrap(), span.clone(), locals.clone())?;
                                 }
                             }
                         },
@@ -367,7 +388,7 @@ pub fn infer_expr_type(
                 }
             } else {
                 return Err(HolyError::Semantic(format!(
-                        "Expected variable of any `array` type, instead got an `{}` (line {} column {})", 
+                        "Expected variable of `array` or `fixed array` type, instead got `{}` (line {} column {})", 
                         array, span.line, span.column
                     )));
             }
