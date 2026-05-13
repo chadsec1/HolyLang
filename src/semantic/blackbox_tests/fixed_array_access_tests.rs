@@ -24,8 +24,8 @@ mod fixed_array_access_tests {
                         span: span(),
                     };
                     let body = vec![
-                        var_decl("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), Some(arr_lit.clone())),
-                        var_decl("x", t.clone(), Some(access)),
+                        var_decl("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), arr_lit.clone()),
+                        var_decl("x", t.clone(), access),
                     ];
                     let func = void_func("foo", vec![], body);
                     let mut ast = ast_one(func);
@@ -50,9 +50,9 @@ mod fixed_array_access_tests {
                 span: span(),
             };
             let body = vec![
-                var_decl("e", t.clone(), Some(l.clone())),
-                var_decl("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(3)), Some(arr_lit.clone())),
-                var_decl("x", t.clone(), Some(access)),
+                var_decl("e", t.clone(), l.clone()),
+                var_decl("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(3)), arr_lit.clone()),
+                var_decl("x", t.clone(), access),
             ];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
@@ -82,9 +82,9 @@ mod fixed_array_access_tests {
                     span: span(),
                 };
                 let body = vec![
-                    var_decl("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(3)), Some(arr_lit.clone())),
+                    var_decl("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(3)), arr_lit.clone()),
                     // var_decl("arr", Type::Array(Box::new(t.clone())), Some(arr_lit)),
-                    var_decl("x", t.clone(), Some(access)),
+                    var_decl("x", t.clone(), access),
                 ];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);

@@ -21,7 +21,7 @@ mod array_tests {
                     span: span(),
                 };
                 let body = vec![
-                    var_decl("x", t.clone(), Some(access)),
+                    var_decl("x", t.clone(), access),
                 ];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
@@ -32,9 +32,6 @@ mod array_tests {
             }       
         }
     }
-
-
-
 
     // Array access on undeclared variable
     #[test]
@@ -47,7 +44,7 @@ mod array_tests {
                     span: span(),
                 };
                 let body = vec![
-                    var_decl("x", t.clone(), Some(access)),
+                    var_decl("x", t.clone(), access),
                 ];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
@@ -71,8 +68,8 @@ mod array_tests {
                     span: span(),
                 };
                 let body = vec![
-                    var_decl("e", t.clone(), Some(l.clone())),
-                    var_decl("x", t.clone(), Some(access)),
+                    var_decl("e", t.clone(), l.clone()),
+                    var_decl("x", t.clone(), access),
                 ];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
@@ -92,13 +89,12 @@ mod array_tests {
             for i in 0..1000 {
                 let access = Expr::ArraySlicing {
                     array: Box::new(var_expr("e")),
-                    start: Some(Box::new(usize_lit(1))),
-                    end: Some(Box::new(usize_lit(i+1))),
+                    range: ArraySliceRange::FromTo(Box::new(usize_lit(1)), Box::new(usize_lit(i+1))),
                     span: span(),
                 };
                 let body = vec![
-                    var_decl("e", t.clone(), Some(l.clone())),
-                    var_decl("x", t.clone(), Some(access)),
+                    var_decl("e", t.clone(), l.clone()),
+                    var_decl("x", t.clone(), access),
                 ];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);

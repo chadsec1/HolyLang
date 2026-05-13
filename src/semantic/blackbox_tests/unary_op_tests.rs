@@ -15,7 +15,7 @@ mod unary_op_tests {
                 expr: Box::new(ul.clone()),
                 span: span(),
             };
-            let body = vec![var_decl("x", t.clone(), Some(neg))];
+            let body = vec![var_decl("x", t.clone(), neg)];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             let result = check_semantics(&mut ast);
@@ -34,7 +34,7 @@ mod unary_op_tests {
                 expr: Box::new(sl.clone()),
                 span: span(),
             };
-            let body = vec![var_decl("x", t.clone(), Some(neg))];
+            let body = vec![var_decl("x", t.clone(), neg)];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             check_semantics(&mut ast).unwrap();

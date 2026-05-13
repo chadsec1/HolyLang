@@ -35,8 +35,8 @@ mod dyn_arrays_tests {
                         span: span(),
                     };
                     let body = vec![
-                        var_decl("x", Type::Array(Box::new(t1.clone())), Some(arr_lit.clone())),
-                        var_decl("y", t1.clone(), Some(access)),
+                        var_decl("x", Type::Array(Box::new(t1.clone())), arr_lit.clone()),
+                        var_decl("y", t1.clone(), access),
                     ];
                     let func = void_func("foo", vec![], body);
                     let mut ast = ast_one(func);
@@ -77,9 +77,9 @@ mod dyn_arrays_tests {
                         span: span(),
                     };
                     let body = vec![
-                        var_decl("e", t2.clone(), Some(l2.clone())),
-                        var_decl("x", Type::Array(Box::new(t1.clone())), Some(arr_lit.clone())),
-                        var_decl("y", t1.clone(), Some(access)),
+                        var_decl("e", t2.clone(), l2.clone()),
+                        var_decl("x", Type::Array(Box::new(t1.clone())), arr_lit.clone()),
+                        var_decl("y", t1.clone(), access),
                     ];
                     let func = void_func("foo", vec![], body);
                     let mut ast = ast_one(func);
@@ -106,18 +106,17 @@ mod dyn_arrays_tests {
             for i in 0..100 {
                 let access = Expr::ArraySlicing {
                     array: Box::new(l.clone()),
-                    start: Some(Box::new(usize_lit(1))),
-                    end: Some(Box::new(usize_lit(i+1))),
+                    range: ArraySliceRange::FromTo(Box::new(usize_lit(1)), Box::new(usize_lit(i+1))),
                     span: span(),
                 };
                 let body = vec![
-                    var_decl("x", Type::Array(Box::new(t.clone())), Some(access)),
+                    var_decl("x", Type::Array(Box::new(t.clone())), access),
                 ];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
                 let result = check_semantics(&mut ast);
                 assert!(result.is_err());
-                assert!(result.unwrap_err().to_string().starts_with("Semantic error: Expected variable of any `array` type"));
+                assert!(result.unwrap_err().to_string().contains("Expected variable of `array`"));
             }
         }
     }
@@ -130,12 +129,11 @@ mod dyn_arrays_tests {
             for i in 1..100 {
                 let access = Expr::ArraySlicing {
                     array: Box::new(var_expr("e")),
-                    start: Some(Box::new(usize_lit(1))),
-                    end: Some(Box::new(usize_lit(i))),
+                    range: ArraySliceRange::FromTo(Box::new(usize_lit(1)), Box::new(usize_lit(i))),
                     span: span(),
                 };
                 let body = vec![
-                    var_decl("x", Type::Array(Box::new(t.clone())), Some(access)),
+                    var_decl("x", Type::Array(Box::new(t.clone())), access),
                 ];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);

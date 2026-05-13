@@ -35,7 +35,6 @@ mod function_calls_tests {
     fn test_call_wrong_arg_type_errors() {
         let literals_scattered = get_all_literals_no_arr_scattered_order();
 
-
         for ((l, t1), t2) in literals_scattered.iter()
             .zip(ALL_TYPES_NO_ARR_SCATTERED.iter())
             .zip(ALL_TYPES_NO_ARR)
@@ -43,7 +42,7 @@ mod function_calls_tests {
             let callee = void_func("bar", vec![param("a", t2.clone())], vec![]);
 
             let body = vec![
-                var_decl("x", t1.clone(), Some(l.clone())),
+                var_decl("x", t1.clone(), l.clone()),
 
                 Stmt::Expr(call_expr("bar", vec![var_expr("x")]))
             ];
@@ -65,10 +64,7 @@ mod function_calls_tests {
                 return_stmt(vec![l.clone(), l.clone()])
             ]);
             let body = vec![
-                var_decl("x", t.clone(), Some(
-                            call_expr("bar", vec![])
-                        )
-                )
+                var_decl("x", t.clone(), call_expr("bar", vec![]))
             ];
             let caller = void_func("main", vec![], body);
             let mut ast = AST { functions: vec![callee, caller], globals: vec![] };
@@ -86,10 +82,7 @@ mod function_calls_tests {
         for t in ALL_TYPES_NO_ARR {
             let callee = void_func("bar", vec![], vec![]);
             let body = vec![
-                var_decl("x", t.clone(), Some(
-                            call_expr("bar", vec![])
-                        )
-                )
+                var_decl("x", t.clone(), call_expr("bar", vec![]))
             ];
             let caller = void_func("main", vec![], body);
             let mut ast = AST { functions: vec![callee, caller], globals: vec![]  };

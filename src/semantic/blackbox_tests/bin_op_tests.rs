@@ -14,7 +14,7 @@ mod bin_op_tests {
                 right: Box::new(str_lit("world")),
                 span: span(),
             };
-            let body = vec![var_decl("s", Type::String, Some(bin))];
+            let body = vec![var_decl("s", Type::String, bin)];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             let result = check_semantics(&mut ast);
@@ -41,7 +41,7 @@ mod bin_op_tests {
                     right: Box::new(l.clone()),
                     span: span(),
                 };
-                let body = vec![var_decl("s", Type::Bool, Some(bin.clone()))];
+                let body = vec![var_decl("s", Type::Bool, bin.clone())];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
                 let result = check_semantics(&mut ast);
@@ -49,7 +49,7 @@ mod bin_op_tests {
 
                 if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
                     assert_eq!(v.type_name, Type::Bool);
-                    assert_eq!(v.value, Some(bin));
+                    assert_eq!(v.value, bin);
                 } else { panic!("expected VarDecl");}
             }
         }
@@ -75,7 +75,7 @@ mod bin_op_tests {
                     right: Box::new(l2.clone()),
                     span: span(),
                 };
-                let body = vec![var_decl("s", t.clone(), Some(bin))];
+                let body = vec![var_decl("s", t.clone(), bin)];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
                 let result = check_semantics(&mut ast);
@@ -98,7 +98,7 @@ mod bin_op_tests {
                     right: Box::new(l.clone()),
                     span: span(),
                 };
-                let body = vec![var_decl("s", t.clone(), Some(bin))];
+                let body = vec![var_decl("s", t.clone(), bin)];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
                 let result = check_semantics(&mut ast);
@@ -126,7 +126,7 @@ mod bin_op_tests {
                     right: Box::new(l2.clone()),
                     span: span(),
                 };
-                let body = vec![var_decl("s", t.clone(), Some(bin))];
+                let body = vec![var_decl("s", t.clone(), bin)];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
                 let result = check_semantics(&mut ast);
@@ -158,7 +158,7 @@ mod bin_op_tests {
                     };
 
 
-                    let body = vec![var_decl("s", Type::Bool, Some(bin))];
+                    let body = vec![var_decl("s", Type::Bool, bin)];
                     let func = void_func("foo", vec![], body);
                     let mut ast = ast_one(func);
                     let result = check_semantics(&mut ast);
@@ -182,7 +182,7 @@ mod bin_op_tests {
                     right: Box::new(bv.clone()),
                     span: span(),
                 };
-                let body = vec![var_decl("s", Type::Bool, Some(bin))];
+                let body = vec![var_decl("s", Type::Bool, bin)];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
                 let result = check_semantics(&mut ast);
@@ -207,8 +207,8 @@ mod bin_op_tests {
                     span: span(),
                 };
                 let body = vec![
-                    var_decl("a", t.clone(), Some(l.clone())),
-                    var_decl("s", t.clone(), Some(bin))
+                    var_decl("a", t.clone(), l.clone()),
+                    var_decl("s", t.clone(), bin)
                 ];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
@@ -234,7 +234,7 @@ mod bin_op_tests {
                     right: Box::new(l.clone()),
                     span: span(),
                 };
-                let body = vec![var_decl("s", t.clone(), Some(bin))];
+                let body = vec![var_decl("s", t.clone(), bin)];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
                 let result = check_semantics(&mut ast);
@@ -254,7 +254,7 @@ mod bin_op_tests {
                         right: Box::new(l.clone()),
                         span: span(),
                     };
-                    let body = vec![var_decl("s", t.clone(), Some(bin))];
+                    let body = vec![var_decl("s", t.clone(), bin)];
                     let func = void_func("foo", vec![], body);
                     let mut ast = ast_one(func);
                     let result = check_semantics(&mut ast);
@@ -275,7 +275,7 @@ mod bin_op_tests {
                         right: Box::new(bool_lit(bv)),
                         span: span(),
                     };
-                    let body = vec![var_decl("s", t.clone(), Some(bin))];
+                    let body = vec![var_decl("s", t.clone(), bin)];
                     let func = void_func("foo", vec![], body);
                     let mut ast = ast_one(func);
                     let result = check_semantics(&mut ast);
@@ -299,7 +299,7 @@ mod bin_op_tests {
                     right: Box::new(l.clone()),
                     span: span(),
                 };
-                let body = vec![var_decl("s", t.clone(), Some(bin))];
+                let body = vec![var_decl("s", t.clone(), bin)];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
                 let result = check_semantics(&mut ast);
@@ -326,7 +326,7 @@ mod bin_op_tests {
                     right: Box::new(l.clone()),
                     span: span(),
                 };
-                let body = vec![var_decl("s", t.clone(), Some(bin))];
+                let body = vec![var_decl("s", t.clone(), bin)];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
                 let result = check_semantics(&mut ast);
@@ -349,7 +349,7 @@ mod bin_op_tests {
                     right: Box::new(l.clone()),
                     span: span(),
                 };
-                let body = vec![var_decl("s", t.clone(), Some(bin))];
+                let body = vec![var_decl("s", t.clone(), bin)];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
                 let result = check_semantics(&mut ast);
@@ -380,7 +380,7 @@ mod bin_op_tests {
                             op: b.clone(),
                             span: span(),
                         };
-                        let body = vec![var_decl("x", t.clone(), Some(bin))];
+                        let body = vec![var_decl("x", t.clone(), bin)];
                         let func = void_func("foo", vec![], body);
                         let mut ast = ast_one(func);
                         let result = check_semantics(&mut ast);
@@ -406,7 +406,7 @@ mod bin_op_tests {
                             op: b.clone(),
                             span: span(),
                         };
-                        let body = vec![var_decl("x", t.clone(), Some(bin))];
+                        let body = vec![var_decl("x", t.clone(), bin)];
                         let func = void_func("foo", vec![], body);
                         let mut ast = ast_one(func);
                         let result = check_semantics(&mut ast);
@@ -449,9 +449,9 @@ mod bin_op_tests {
                 };
 
                 let body = vec![
-                    var_decl("x", t1.clone(), Some(l1.clone())),
-                    var_decl("y", t2.clone(), Some(l2.clone())),
-                    var_decl("z", t1.clone(), Some(bin))
+                    var_decl("x", t1.clone(), l1.clone()),
+                    var_decl("y", t2.clone(), l2.clone()),
+                    var_decl("z", t1.clone(), bin)
                 ];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
@@ -487,9 +487,9 @@ mod bin_op_tests {
                 };
 
                 let body = vec![
-                    var_decl("x", t1.clone(), Some(l1.clone())),
-                    var_decl("y", t2.clone(), Some(l2.clone())),
-                    var_decl("z", t2.clone(), Some(bin))
+                    var_decl("x", t1.clone(), l1.clone()),
+                    var_decl("y", t2.clone(), l2.clone()),
+                    var_decl("z", t2.clone(), bin)
                 ];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);

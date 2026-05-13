@@ -13,7 +13,7 @@ mod locking_unlocking_tests {
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
-                var_decl("x", t.clone(), Some(l.clone())),
+                var_decl("x", t.clone(), l.clone()),
                 Stmt::Lock(vec![var_expr("x")]),
                 var_assign("x", l.clone())
             ];
@@ -31,7 +31,7 @@ mod locking_unlocking_tests {
        
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
-                var_decl("x", t.clone(), Some(l.clone())),
+                var_decl("x", t.clone(), l.clone()),
                 Stmt::Lock(vec![var_expr("x")]),
                 var_assign("x", l.clone()),
             ];
@@ -55,7 +55,7 @@ mod locking_unlocking_tests {
             .zip(literals_scattered.iter())
         {
             let body = vec![
-                var_decl("x", t.clone(), Some(l1.clone())),
+                var_decl("x", t.clone(), l1.clone()),
                 Stmt::Lock(vec![var_expr("x")]),
                 var_assign("x", l2.clone()),
             ];
@@ -78,7 +78,7 @@ mod locking_unlocking_tests {
         let literals = get_all_literals_no_arr();
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
-                var_decl("x", t.clone(), Some(l.clone())),
+                var_decl("x", t.clone(), l.clone()),
                 Stmt::Unlock(vec![l.clone()]),
             ];
             let func = void_func("foo", vec![], body);
@@ -97,7 +97,7 @@ mod locking_unlocking_tests {
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
-                var_decl("x", t.clone(), Some(l.clone())),
+                var_decl("x", t.clone(), l.clone()),
                 Stmt::Lock(vec![var_expr("x")]),
                 Stmt::Unlock(vec![var_expr("x")]),
                 var_assign("x", l.clone()),
@@ -119,7 +119,7 @@ mod locking_unlocking_tests {
             .zip(literals_scattered.iter())
         {
             let body = vec![
-                var_decl("x", t.clone(), Some(l1.clone())),
+                var_decl("x", t.clone(), l1.clone()),
                 Stmt::Lock(vec![var_expr("x")]),
                 Stmt::Unlock(vec![var_expr("x")]),
                 var_assign("x", l2.clone()),
@@ -140,7 +140,7 @@ mod locking_unlocking_tests {
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
-                var_decl("x", t.clone(), Some(l.clone())),
+                var_decl("x", t.clone(), l.clone()),
                 Stmt::Lock(vec![var_expr("x")]),
                 Stmt::Unlock(vec![var_expr("x")]),
                 var_assign("x", l.clone())
@@ -156,7 +156,7 @@ mod locking_unlocking_tests {
         let literals = get_all_literals_no_arr();
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
-                var_decl("x", t.clone(), Some(l.clone())),
+                var_decl("x", t.clone(), l.clone()),
                 Stmt::While(WhileStmt{
                         condition: bool_lit(false),
                         branch: vec![
@@ -179,7 +179,7 @@ mod locking_unlocking_tests {
         let literals = get_all_literals_no_arr();
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
-                var_decl("x", t.clone(), Some(l.clone())),
+                var_decl("x", t.clone(), l.clone()),
                 Stmt::Infinite(InfiniteStmt{
                         branch: vec![
                             Stmt::Unlock(vec![var_expr("x")]),
@@ -207,8 +207,8 @@ mod locking_unlocking_tests {
 
 
             let body = vec![
-                var_decl("x", t.clone(), Some(l.clone())),
-                var_decl("a", Type::Array(Box::new(t.clone())), Some(arr_lit)),
+                var_decl("x", t.clone(), l.clone()),
+                var_decl("a", Type::Array(Box::new(t.clone())), arr_lit),
 
                 Stmt::For(ForStmt{
                     holder_name: "i".to_string(),
@@ -238,7 +238,7 @@ mod locking_unlocking_tests {
         let literals = get_all_literals_no_arr();
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
-                var_decl("x", t.clone(), Some(l.clone())),
+                var_decl("x", t.clone(), l.clone()),
                 Stmt::Lock(vec![var_expr("x")]),
                 Stmt::Unlock(vec![var_expr("x")]),
                 Stmt::Lock(vec![var_expr("x")]),
@@ -256,7 +256,7 @@ mod locking_unlocking_tests {
         let literals = get_all_literals_no_arr();
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
-                var_decl("x", t.clone(), Some(l.clone())),
+                var_decl("x", t.clone(), l.clone()),
                 Stmt::Lock(vec![l.clone()]),
             ];
             let func = void_func("foo", vec![], body);
@@ -274,7 +274,7 @@ mod locking_unlocking_tests {
         let literals = get_all_literals_no_arr();
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
-                var_decl("x", t.clone(), Some(l.clone())),
+                var_decl("x", t.clone(), l.clone()),
                 Stmt::Lock(vec![var_expr("x"), var_expr("x")]),
             ];
             let func = void_func("foo", vec![], body);
@@ -291,7 +291,7 @@ mod locking_unlocking_tests {
         let literals = get_all_literals_no_arr();
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
-                var_decl("x", t.clone(), Some(l.clone())),
+                var_decl("x", t.clone(), l.clone()),
                 Stmt::Lock(vec![var_expr("x")]),
                 Stmt::Lock(vec![var_expr("x")]),
             ];
@@ -308,7 +308,7 @@ mod locking_unlocking_tests {
         let literals = get_all_literals_no_arr();
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
-                var_decl("x", t.clone(), Some(l.clone())),
+                var_decl("x", t.clone(), l.clone()),
                 Stmt::Unlock(vec![var_expr("x")]),
             ];
             let func = void_func("foo", vec![], body);
@@ -325,9 +325,9 @@ mod locking_unlocking_tests {
         let literals = get_all_literals_no_arr();
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
-                var_decl("x", t.clone(), Some(l.clone())),
+                var_decl("x", t.clone(), l.clone()),
                 Stmt::Lock(vec![var_expr("x")]),
-                var_decl("x", t.clone(), Some(l.clone())),
+                var_decl("x", t.clone(), l.clone()),
             ];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
@@ -344,7 +344,7 @@ mod locking_unlocking_tests {
         let literals = get_all_literals_no_arr();
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
-                var_decl("x", t.clone(), Some(l.clone())),
+                var_decl("x", t.clone(), l.clone()),
                 Stmt::While(WhileStmt{
                         condition: bool_lit(false),
                         branch: vec![
@@ -367,7 +367,7 @@ mod locking_unlocking_tests {
         let literals = get_all_literals_no_arr();
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
-                var_decl("x", t.clone(), Some(l.clone())),
+                var_decl("x", t.clone(), l.clone()),
                 Stmt::Infinite(InfiniteStmt{
                         branch: vec![
                             Stmt::Lock(vec![var_expr("x")]),
@@ -395,8 +395,8 @@ mod locking_unlocking_tests {
 
 
             let body = vec![
-                var_decl("x", t.clone(), Some(l.clone())),
-                var_decl("a", Type::Array(Box::new(t.clone())), Some(arr_lit)),
+                var_decl("x", t.clone(), l.clone()),
+                var_decl("a", Type::Array(Box::new(t.clone())), arr_lit),
 
                 Stmt::For(ForStmt{
                     holder_name: "i".to_string(),
@@ -430,8 +430,8 @@ mod locking_unlocking_tests {
             let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
 
             let body = vec![
-                var_decl("a", t1.clone(), None),
-                var_decl("b", t2.clone(), None),
+                var_decl("a", t1.clone(), l1.clone()),
+                var_decl("b", t2.clone(), l2.clone()),
 
                 Stmt::Lock(vec![var_expr("a")]),
 
@@ -461,8 +461,8 @@ mod locking_unlocking_tests {
             let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
 
             let body = vec![
-                var_decl("a", t1.clone(), None),
-                var_decl("b", t2.clone(), None),
+                var_decl("a", t1.clone(), l1.clone()),
+                var_decl("b", t2.clone(), l2.clone()),
 
                 Stmt::Lock(vec![var_expr("b")]),
 
@@ -490,8 +490,8 @@ mod locking_unlocking_tests {
             let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
 
             let body = vec![
-                var_decl("a", t1.clone(), None),
-                var_decl("b", t2.clone(), None),
+                var_decl("a", t1.clone(), l1.clone()),
+                var_decl("b", t2.clone(), l2.clone()),
 
                 Stmt::Lock(vec![var_expr("a"), var_expr("b")]),
 

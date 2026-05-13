@@ -1,8 +1,8 @@
 use super::*;
 use crate::ast::{
-    FixedArraySize, IntLiteralValue,
+    FixedArraySize, IntLiteralValue, ArraySliceRange,
     UnaryOpKind,
-    Param, Variable, VariableAssignment, MultiAssignment, 
+    Param, VariableDeclaration, MultiVariableDeclaration, VariableAssignment, MultiAssignment, 
     IfStmt, WhileStmt, ForStmt, InfiniteStmt, BreakStmt, ContinueStmt, Constant
 };
 
@@ -253,8 +253,6 @@ fn get_all_literals_no_arr_str_bool_float() -> [Expr; 11] {
     return literals;
 }
 
-
-
 fn get_all_literals_no_arr() -> [Expr; 14] {
     let literals = [
         int8_lit(1),
@@ -326,6 +324,51 @@ fn get_all_literals_no_arr_no_usize() -> [Expr; 13] {
     return literals;
 }
 
+fn get_all_literals() -> [Expr; 28] {
+    return [
+        int8_lit(1),
+        int16_lit(1),
+        int32_lit(1),
+        int64_lit(1),
+        int128_lit(1),
+
+        byte_lit(1),
+        uint16_lit(1),
+        uint32_lit(1),
+        uint64_lit(1),
+        uint128_lit(1),
+
+        usize_lit(1),
+
+        float64_lit(1.0),
+
+        bool_lit(false),
+        str_lit("Hi"),
+
+
+        array_lit(vec![int8_lit(1)]),
+        array_lit(vec![int16_lit(1)]),
+        array_lit(vec![int32_lit(1)]),
+        array_lit(vec![int64_lit(1)]),
+        array_lit(vec![int128_lit(1)]),
+
+        array_lit(vec![byte_lit(1)]),
+        array_lit(vec![uint16_lit(1)]),
+        array_lit(vec![uint32_lit(1)]),
+        array_lit(vec![uint64_lit(1)]),
+        array_lit(vec![uint128_lit(1)]),
+
+        array_lit(vec![usize_lit(1)]),
+
+        array_lit(vec![float64_lit(1.0)]),
+
+        array_lit(vec![bool_lit(false)]),
+        array_lit(vec![str_lit("Hi")])
+    ];
+}
+
+
+
 
 
 fn span() -> Span {
@@ -341,7 +384,7 @@ fn ast_one(func: Function) -> AST {
 fn void_func(name: &str, params: Vec<Param>, mut body: Vec<Stmt>) -> Function {
     if body.len() == 0 {
         // Dummy body because empty branches are not allowed.
-        body = vec![var_decl("x", Type::Int8, Some(int32_lit(69)))];
+        body = vec![var_decl("x", Type::Int8, int32_lit(69))];
     }
 
     Function {
@@ -369,7 +412,7 @@ fn param(name: &str, ty: Type) -> Param {
 }
 
 
-fn const_define(name: &str, ty: Type, value: Expr) -> Stmt {
+fn const_define_locally(name: &str, ty: Type, value: Expr) -> Stmt {
     Stmt::Const(Constant {
         name: name.to_string(),
         type_name: ty,
@@ -378,8 +421,17 @@ fn const_define(name: &str, ty: Type, value: Expr) -> Stmt {
     })
 }
 
-fn var_decl(name: &str, ty: Type, value: Option<Expr>) -> Stmt {
-    Stmt::VarDecl(Variable {
+fn const_define_globally(name: &str, ty: Type, value: Expr) -> GlobalStmt {
+    GlobalStmt::Const(Constant {
+        name: name.to_string(),
+        type_name: ty,
+        value,
+        span: span(),
+    })
+}
+
+fn var_decl(name: &str, ty: Type, value: Expr) -> Stmt {
+    Stmt::VarDecl(VariableDeclaration {
         name: name.to_string(),
         type_name: ty,
         value,
@@ -394,6 +446,11 @@ fn var_assign(name: &str, value: Expr) -> Stmt {
         value,
         span: span(),
     })
+}
+
+
+fn array_lit(exprs: Vec<Expr>) -> Expr {
+    Expr::ArrayLiteral { elements: exprs, span: span() }
 }
 
 fn int8_lit(n: i8) -> Expr {

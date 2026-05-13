@@ -21,13 +21,12 @@ mod fixed_array_slicing_tests {
 
                 let access = Expr::ArraySlicing {
                     array: Box::new(var_expr("arr")),
-                    start: Some(Box::new(usize_lit(0))),
-                    end: Some(Box::new(usize_lit(i))),
+                    range: ArraySliceRange::FromTo(Box::new(usize_lit(0)), Box::new(usize_lit(i))),
                     span: span(),
                 };
                 let body = vec![
-                    var_decl("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(3)), Some(arr_lit.clone())),
-                    var_decl("x", t.clone(), Some(access)),
+                    var_decl("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(3)), arr_lit.clone()),
+                    var_decl("x", t.clone(), access),
                 ];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
@@ -40,41 +39,7 @@ mod fixed_array_slicing_tests {
 
     
     #[test]
-    fn test_fixed_array_slicing_without_start_and_end_panics() {
-        let literals = get_all_literals_no_arr();
-        
-        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            for i in 1..=100 {
-                let elements = vec![l.clone(); i + 1];
-                
-                let arr_lit = Expr::ArrayLiteral {
-                    elements: elements,
-                    span: span(),
-                };
-
-                let access = Expr::ArraySlicing {
-                    array: Box::new(var_expr("arr")),
-                    start: None,
-                    end: None,
-                    span: span(),
-                };
-                let body = vec![
-                    var_decl("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), Some(arr_lit.clone())),
-                    var_decl("x", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), Some(access)),
-                ];
-                let func = void_func("foo", vec![], body);
-                let result = std::panic::catch_unwind(|| { 
-                    let mut ast = ast_one(func);
-                    let _ = check_semantics(&mut ast);
-                });
-
-                assert!(result.is_err(), "Expected panic for: {:?} {:?}", t, l);
-            }
-        }
-    }
-
-    #[test]
-    fn test_fixed_array_slicing_both_ends_passes() {
+    fn test_fixed_array_slicing_both_ends() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -89,13 +54,12 @@ mod fixed_array_slicing_tests {
                 for i2 in 0..i-1 {
                     let access = Expr::ArraySlicing {
                         array: Box::new(var_expr("arr")),
-                        start: Some(Box::new(usize_lit(1))),
-                        end: Some(Box::new(usize_lit(i2+1))),
+                        range: ArraySliceRange::FromTo(Box::new(usize_lit(1)), Box::new(usize_lit(i2+1))),
                         span: span(),
                     };
                     let body = vec![
-                        var_decl("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), Some(arr_lit.clone())),
-                        var_decl("x", Type::Array(Box::new(t.clone())), Some(access)),
+                        var_decl("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), arr_lit.clone()),
+                        var_decl("x", Type::Array(Box::new(t.clone())), access),
                     ];
                     let func = void_func("foo", vec![], body);
                     let mut ast = ast_one(func);
@@ -123,15 +87,14 @@ mod fixed_array_slicing_tests {
                 for i2 in 0..i-1 {
                     let access = Expr::ArraySlicing {
                         array: Box::new(var_expr("arr")),
-                        start: Some(Box::new(var_expr("e"))),
-                        end: Some(Box::new(var_expr("h"))),
+                        range: ArraySliceRange::FromTo(Box::new(var_expr("e")), Box::new(var_expr("h"))),
                         span: span(),
                     };
                     let body = vec![
-                        var_decl("e", Type::Usize, Some(usize_lit(1))),
-                        var_decl("h", Type::Usize, Some(usize_lit(i2+1))),
-                        var_decl("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), Some(arr_lit.clone())),
-                        var_decl("x", Type::Array(Box::new(t.clone())), Some(access)),
+                        var_decl("e", Type::Usize, usize_lit(1)),
+                        var_decl("h", Type::Usize, usize_lit(i2+1)),
+                        var_decl("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), arr_lit.clone()),
+                        var_decl("x", Type::Array(Box::new(t.clone())), access),
                     ];
                     let func = void_func("foo", vec![], body);
                     let mut ast = ast_one(func);
@@ -160,15 +123,14 @@ mod fixed_array_slicing_tests {
                 for i2 in 0..i-1 {
                     let access = Expr::ArraySlicing {
                         array: Box::new(var_expr("arr")),
-                        start: Some(Box::new(var_expr("e"))),
-                        end: Some(Box::new(var_expr("h"))),
+                        range: ArraySliceRange::FromTo(Box::new(var_expr("e")), Box::new(var_expr("h"))),
                         span: span(),
                     };
                     let body = vec![
-                        var_decl("e", t.clone(), Some(l.clone())),
-                        var_decl("h", Type::Usize, Some(usize_lit(i2+1))),
-                        var_decl("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), Some(arr_lit.clone())),
-                        var_decl("x", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), Some(access)),
+                        var_decl("e", t.clone(), l.clone()),
+                        var_decl("h", Type::Usize, usize_lit(i2+1)),
+                        var_decl("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), arr_lit.clone()),
+                        var_decl("x", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), access),
                     ];
                     let func = void_func("foo", vec![], body);
                     let mut ast = ast_one(func);
@@ -193,15 +155,14 @@ mod fixed_array_slicing_tests {
 
                 let access = Expr::ArraySlicing {
                     array: Box::new(var_expr("arr")),
-                    start: Some(Box::new(var_expr("e"))),
-                    end: Some(Box::new(var_expr("h"))),
+                    range: ArraySliceRange::FromTo(Box::new(var_expr("e")), Box::new(var_expr("h"))),
                     span: span(),
                 };
                 let body = vec![
-                    var_decl("e", Type::Usize, Some(usize_lit(1))),
-                    var_decl("h", t.clone(), Some(l.clone())),
-                    var_decl("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), Some(arr_lit.clone())),
-                    var_decl("x", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), Some(access)),
+                    var_decl("e", Type::Usize, usize_lit(1)),
+                    var_decl("h", t.clone(), l.clone()),
+                    var_decl("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), arr_lit.clone()),
+                    var_decl("x", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), access),
                 ];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);

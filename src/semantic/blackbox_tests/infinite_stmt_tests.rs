@@ -5,14 +5,16 @@ mod infinite_stmt_tests {
     use super::*;
 
     #[test]
-    fn test_infinite_statements_pass() {
-        for t in ALL_TYPES_NO_ARR {
+    fn test_infinite_statements() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![ 
                 Stmt::Infinite(InfiniteStmt{
                     branch: vec![
                         // Just dummy declaration, so we don't get flagged by dead code because
                         // of empty branch.
-                        var_decl("z", t.clone(), None),
+                        var_decl("z", t.clone(), l.clone()),
                     ],
                     span: span(),
                 }),

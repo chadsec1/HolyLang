@@ -21,13 +21,12 @@ mod dyn_arrays_slicing_tests {
 
                 let access = Expr::ArraySlicing {
                     array: Box::new(var_expr("arr")),
-                    start: Some(Box::new(usize_lit(0))),
-                    end: Some(Box::new(usize_lit(i))),
+                    range: ArraySliceRange::FromTo(Box::new(usize_lit(0)), Box::new(usize_lit(i))),
                     span: span(),
                 };
                 let body = vec![
-                    var_decl("arr", Type::Array(Box::new(t.clone())), Some(arr_lit)),
-                    var_decl("x", t.clone(), Some(access)),
+                    var_decl("arr", Type::Array(Box::new(t.clone())), arr_lit),
+                    var_decl("x", t.clone(), access),
                 ];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
@@ -38,46 +37,8 @@ mod dyn_arrays_slicing_tests {
         }
     }
 
-    // We dont use should_panic here because we test multiplecases like literals, arrays of
-    // different types, etc.
-    // This tests the invariant
-    //
     #[test]
-    fn test_dyn_array_slicing_without_start_and_end_panics() {
-        let literals = get_all_literals_no_arr();
-        
-        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            for i in 1..=100 {
-                let elements = vec![l.clone(); i + 1];
-                
-                let arr_lit = Expr::ArrayLiteral {
-                    elements: elements,
-                    span: span(),
-                };
-
-                let access = Expr::ArraySlicing {
-                    array: Box::new(var_expr("arr")),
-                    start: None,
-                    end: None,
-                    span: span(),
-                };
-                let body = vec![
-                    var_decl("arr", Type::Array(Box::new(t.clone())), Some(arr_lit.clone())),
-                    var_decl("x", Type::Array(Box::new(t.clone())), Some(access)),
-                ];
-                let func = void_func("foo", vec![], body);
-                let result = std::panic::catch_unwind(|| { 
-                    let mut ast = ast_one(func);
-                    let _ = check_semantics(&mut ast);
-                });
-
-                assert!(result.is_err(), "Expected panic for: {:?} {:?}", t, l);
-            }
-        }
-    }
-
-    #[test]
-    fn test_dyn_array_slicing_both_ends_passes() {
+    fn test_dyn_array_slicing_both_ends() {
         // This is no black magic voodooo.. not too much of it at least.. idk..
         // This is just creating an array of dynamic sizes, and testing slicing it aka multiple
         // access
@@ -95,13 +56,12 @@ mod dyn_arrays_slicing_tests {
                 for i2 in 0..i-1 {
                     let access = Expr::ArraySlicing {
                         array: Box::new(var_expr("arr")),
-                        start: Some(Box::new(usize_lit(1))),
-                        end: Some(Box::new(usize_lit(i2+1))),
+                        range: ArraySliceRange::FromTo(Box::new(usize_lit(0)), Box::new(usize_lit(i2+1))),
                         span: span(),
                     };
                     let body = vec![
-                        var_decl("arr", Type::Array(Box::new(t.clone())), Some(arr_lit.clone())),
-                        var_decl("x", Type::Array(Box::new(t.clone())), Some(access)),
+                        var_decl("arr", Type::Array(Box::new(t.clone())), arr_lit.clone()),
+                        var_decl("x", Type::Array(Box::new(t.clone())), access),
                     ];
                     let func = void_func("foo", vec![], body);
                     let mut ast = ast_one(func);
@@ -114,7 +74,7 @@ mod dyn_arrays_slicing_tests {
 
     // Same as above test, but this makes start and end variables instead of literals
     #[test]
-    fn test_dyn_array_valid_slicing_both_ends_vars_passes() {
+    fn valid_slicing_both_ends_vars() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -129,15 +89,14 @@ mod dyn_arrays_slicing_tests {
                 for i2 in 0..i-1 {
                     let access = Expr::ArraySlicing {
                         array: Box::new(var_expr("arr")),
-                        start: Some(Box::new(var_expr("e"))),
-                        end: Some(Box::new(var_expr("h"))),
+                        range: ArraySliceRange::FromTo(Box::new(var_expr("e")), Box::new(var_expr("h"))),
                         span: span(),
                     };
                     let body = vec![
-                        var_decl("e", Type::Usize, Some(usize_lit(1))),
-                        var_decl("h", Type::Usize, Some(usize_lit(i2+1))),
-                        var_decl("arr", Type::Array(Box::new(t.clone())), Some(arr_lit.clone())),
-                        var_decl("x", Type::Array(Box::new(t.clone())), Some(access)),
+                        var_decl("e", Type::Usize, usize_lit(1)),
+                        var_decl("h", Type::Usize, usize_lit(i2+1)),
+                        var_decl("arr", Type::Array(Box::new(t.clone())), arr_lit.clone()),
+                        var_decl("x", Type::Array(Box::new(t.clone())), access),
                     ];
                     let func = void_func("foo", vec![], body);
                     let mut ast = ast_one(func);
@@ -166,15 +125,14 @@ mod dyn_arrays_slicing_tests {
                 for i2 in 0..i-1 {
                     let access = Expr::ArraySlicing {
                         array: Box::new(var_expr("arr")),
-                        start: Some(Box::new(var_expr("e"))),
-                        end: Some(Box::new(var_expr("h"))),
+                        range: ArraySliceRange::FromTo(Box::new(var_expr("e")), Box::new(var_expr("h"))),
                         span: span(),
                     };
                     let body = vec![
-                        var_decl("e", t.clone(), Some(l.clone())),
-                        var_decl("h", Type::Usize, Some(usize_lit(i2+1))),
-                        var_decl("arr", Type::Array(Box::new(t.clone())), Some(arr_lit.clone())),
-                        var_decl("x", Type::Array(Box::new(t.clone())), Some(access)),
+                        var_decl("e", t.clone(), l.clone()),
+                        var_decl("h", Type::Usize, usize_lit(i2+1)),
+                        var_decl("arr", Type::Array(Box::new(t.clone())), arr_lit.clone()),
+                        var_decl("x", Type::Array(Box::new(t.clone())), access),
                     ];
                     let func = void_func("foo", vec![], body);
                     let mut ast = ast_one(func);
@@ -199,15 +157,14 @@ mod dyn_arrays_slicing_tests {
 
                 let access = Expr::ArraySlicing {
                     array: Box::new(var_expr("arr")),
-                    start: Some(Box::new(var_expr("e"))),
-                    end: Some(Box::new(var_expr("h"))),
+                    range: ArraySliceRange::FromTo(Box::new(var_expr("e")), Box::new(var_expr("h"))),
                     span: span(),
                 };
                 let body = vec![
-                    var_decl("e", Type::Usize, Some(usize_lit(1))),
-                    var_decl("h", t.clone(), Some(l.clone())),
-                    var_decl("arr", Type::Array(Box::new(t.clone())), Some(arr_lit.clone())),
-                    var_decl("x", Type::Array(Box::new(t.clone())), Some(access)),
+                    var_decl("e", Type::Usize, usize_lit(1)),
+                    var_decl("h", t.clone(), l.clone()),
+                    var_decl("arr", Type::Array(Box::new(t.clone())), arr_lit.clone()),
+                    var_decl("x", Type::Array(Box::new(t.clone())), access),
                 ];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
@@ -231,13 +188,12 @@ mod dyn_arrays_slicing_tests {
             };
             let access = Expr::ArraySlicing {
                 array: Box::new(var_expr("arr")),
-                start: Some(Box::new(usize_lit(1))),
-                end: None,
+                range: ArraySliceRange::From(Box::new(usize_lit(1))),
                 span: span(),
             };
             let body = vec![
-                var_decl("arr", Type::Array(Box::new(t.clone())), Some(arr_lit)),
-                var_decl("x", Type::Array(Box::new(t.clone())), Some(access)),
+                var_decl("arr", Type::Array(Box::new(t.clone())), arr_lit),
+                var_decl("x", Type::Array(Box::new(t.clone())), access),
             ];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
@@ -256,13 +212,12 @@ mod dyn_arrays_slicing_tests {
             };
             let access = Expr::ArraySlicing {
                 array: Box::new(var_expr("arr")),
-                start: None,
-                end: Some(Box::new(usize_lit(1))),
+                range: ArraySliceRange::To(Box::new(usize_lit(1))),
                 span: span(),
             };
             let body = vec![
-                var_decl("arr", Type::Array(Box::new(t.clone())), Some(arr_lit)),
-                var_decl("x", Type::Array(Box::new(t.clone())), Some(access)),
+                var_decl("arr", Type::Array(Box::new(t.clone())), arr_lit),
+                var_decl("x", Type::Array(Box::new(t.clone())), access),
             ];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
@@ -283,13 +238,12 @@ mod dyn_arrays_slicing_tests {
             };
             let slice = Expr::ArraySlicing {
                 array: Box::new(var_expr("arr")),
-                start: Some(Box::new(usize_lit(3))),
-                end: Some(Box::new(usize_lit(1))),
+                range: ArraySliceRange::FromTo(Box::new(usize_lit(3)), Box::new(usize_lit(1))),
                 span: span(),
             };
             let body = vec![
-                var_decl("arr", Type::Array(Box::new(t.clone())), Some(arr_lit)),
-                var_decl("s", Type::Array(Box::new(t.clone())), Some(slice)),
+                var_decl("arr", Type::Array(Box::new(t.clone())), arr_lit),
+                var_decl("s", Type::Array(Box::new(t.clone())), slice),
             ];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);

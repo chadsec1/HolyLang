@@ -4,9 +4,8 @@ use super::*;
 mod fixed_array_tests {
     use super::*;
 
-    // Same test, but for fixed size arrays with literal size
     #[test]
-    fn test_fixed_array_with_literal_size_element_type_mismatch_errors() {
+    fn with_literal_size_element_type_mismatch_errors() {
         let literals_no_ints = get_all_literals_no_arr_no_ints();
         let literals_scattered = get_all_literals_no_arr_scattered_order();
 
@@ -35,8 +34,8 @@ mod fixed_array_tests {
                         span: span(),
                     };
                     let body = vec![
-                        var_decl("x", Type::FixedArray(Box::new(t1.clone()), FixedArraySize::Literal(i)), Some(arr_lit.clone())),
-                        var_decl("y", t1.clone(), Some(access)),
+                        var_decl("x", Type::FixedArray(Box::new(t1.clone()), FixedArraySize::Literal(i)), arr_lit.clone()),
+                        var_decl("y", t1.clone(), access),
                     ];
                     let func = void_func("foo", vec![], body);
                     let mut ast = ast_one(func);
@@ -78,9 +77,9 @@ mod fixed_array_tests {
                         span: span(),
                     };
                     let body = vec![
-                        var_decl("e", t2.clone(), Some(l2.clone())),
-                        var_decl("x", Type::FixedArray(Box::new(t1.clone()), FixedArraySize::Literal(i)), Some(arr_lit.clone())),
-                        var_decl("y", t1.clone(), Some(access)),
+                        var_decl("e", t2.clone(), l2.clone()),
+                        var_decl("x", Type::FixedArray(Box::new(t1.clone()), FixedArraySize::Literal(i)), arr_lit.clone()),
+                        var_decl("y", t1.clone(), access),
                     ];
                     let func = void_func("foo", vec![], body);
                     let mut ast = ast_one(func);

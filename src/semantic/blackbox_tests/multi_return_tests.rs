@@ -28,8 +28,8 @@ mod multi_return_tests {
             let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
 
             let body = vec![
-                var_decl("a", t1.clone(), None),
-                var_decl("b", t2.clone(), None),
+                var_decl("a", t1.clone(), l1.clone()),
+                var_decl("b", t2.clone(), l2.clone()),
 
                 Stmt::VarAssignMulti(MultiAssignment{
                     names: vec!["a".to_string(), "b".to_string()],
@@ -45,14 +45,14 @@ mod multi_return_tests {
             if let Stmt::VarDecl(v) = &ast.functions[1].body[0] {
                 assert_eq!(v.name, "a");
                 assert_eq!(v.type_name, t1.clone());
-                assert_ne!(v.value, None);
+                assert_eq!(v.value, l1.clone());
             } else { panic!("Expected VarDecl") }
 
 
             if let Stmt::VarDecl(v) = &ast.functions[1].body[1] {
                 assert_eq!(v.name, "b");
                 assert_eq!(v.type_name, t2.clone());
-                assert_ne!(v.value, None);
+                assert_eq!(v.value, l2.clone());
             } else { panic!("Expected VarDecl") }
 
             if let Stmt::VarAssignMulti(ma) = &ast.functions[1].body[2] {
@@ -72,19 +72,20 @@ mod multi_return_tests {
     #[test]
     fn test_multi_return_assign_type_mismatch_errors() {
         let literals = get_all_literals_no_arr();
-
+        let literals_scattered = get_all_literals_no_arr_scattered_order();
 
         // a is mismatch, b is correct
-        for ((l1, t1), t2) in literals.iter()
+        for (((l1, t1), l2), t2) in literals.iter()
             .zip(ALL_TYPES_NO_ARR.iter())
+            .zip(literals_scattered.iter())
             .zip(ALL_TYPES_NO_ARR_SCATTERED)
         {
             let pair_body = vec![return_stmt(vec![l1.clone(), l1.clone()])];
             let pair = returning_func("pair", vec![], vec![t1.clone(), t1.clone()], pair_body);
 
             let body = vec![
-                var_decl("a", t2.clone(), None),
-                var_decl("b", t1.clone(), None),
+                var_decl("a", t2.clone(), l2.clone()),
+                var_decl("b", t1.clone(), l1.clone()),
 
                 Stmt::VarAssignMulti(MultiAssignment{
                     names: vec!["a".to_string(), "b".to_string()],
@@ -104,16 +105,17 @@ mod multi_return_tests {
 
         // now b is mismatched while a is correct
 
-        for ((l1, t1), t2) in literals.iter()
+        for (((l1, t1), l2), t2) in literals.iter()
             .zip(ALL_TYPES_NO_ARR.iter())
+            .zip(literals_scattered.iter())
             .zip(ALL_TYPES_NO_ARR_SCATTERED)
         {
             let pair_body = vec![return_stmt(vec![l1.clone(), l1.clone()])];
             let pair = returning_func("pair", vec![], vec![t1.clone(), t1.clone()], pair_body);
 
             let body = vec![
-                var_decl("a", t1.clone(), None),
-                var_decl("b", t2.clone(), None),
+                var_decl("a", t1.clone(), l1.clone()),
+                var_decl("b", t2.clone(), l2.clone()),
 
                 Stmt::VarAssignMulti(MultiAssignment{
                     names: vec!["a".to_string(), "b".to_string()],
@@ -134,17 +136,17 @@ mod multi_return_tests {
 
 
         // Both mismatched
-    
-        for ((l1, t1), t2) in literals.iter()
+        for (((l1, t1), l2), t2) in literals.iter()
             .zip(ALL_TYPES_NO_ARR.iter())
+            .zip(literals_scattered.iter())
             .zip(ALL_TYPES_NO_ARR_SCATTERED)
         {
             let pair_body = vec![return_stmt(vec![l1.clone(), l1.clone()])];
             let pair = returning_func("pair", vec![], vec![t1.clone(), t1.clone()], pair_body);
 
             let body = vec![
-                var_decl("a", t2.clone(), None),
-                var_decl("b", t2.clone(), None),
+                var_decl("a", t2.clone(), l2.clone()),
+                var_decl("b", t2.clone(), l2.clone()),
 
                 Stmt::VarAssignMulti(MultiAssignment{
                     names: vec!["a".to_string(), "b".to_string()],
@@ -168,13 +170,20 @@ mod multi_return_tests {
 
     #[test]
     fn test_multi_assign_func_not_return_errors() {
-        for (t1, t2) in ALL_TYPES_NO_ARR.iter().zip(ALL_TYPES_NO_ARR_SCATTERED)
+        let literals = get_all_literals_no_arr();
+        let literals_scattered = get_all_literals_no_arr_scattered_order();
+
+        
+        for (((l1, t1), l2), t2) in literals.iter()
+            .zip(ALL_TYPES_NO_ARR.iter())
+            .zip(literals_scattered.iter())
+            .zip(ALL_TYPES_NO_ARR_SCATTERED)
         {
             let pair = void_func("pair", vec![], vec![]);
 
             let body = vec![
-                var_decl("a", t1.clone(), None),
-                var_decl("b", t2.clone(), None),
+                var_decl("a", t1.clone(), l1.clone()),
+                var_decl("b", t2.clone(), l2.clone()),
 
                 Stmt::VarAssignMulti(MultiAssignment{
                     names: vec!["a".to_string()],
@@ -209,7 +218,7 @@ mod multi_return_tests {
             let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
 
             let body = vec![
-                var_decl("a", t1.clone(), None),
+                var_decl("a", t1.clone(), l1.clone()),
 
                 Stmt::VarAssignMulti(MultiAssignment{
                     names: vec!["a".to_string(), "b".to_string()],
@@ -237,7 +246,7 @@ mod multi_return_tests {
             let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
 
             let body = vec![
-                var_decl("b", t1.clone(), None),
+                var_decl("b", t1.clone(), l1.clone()),
 
                 Stmt::VarAssignMulti(MultiAssignment{
                     names: vec!["a".to_string(), "b".to_string()],
@@ -298,8 +307,8 @@ mod multi_return_tests {
             let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
 
             let body = vec![
-                var_decl("a", t1.clone(), None),
-                var_decl("b", t2.clone(), None),
+                var_decl("a", t1.clone(), l1.clone()),
+                var_decl("b", t2.clone(), l2.clone()),
 
                 Stmt::Lock(vec![var_expr("a")]),
 
@@ -337,7 +346,7 @@ mod multi_return_tests {
             let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
 
             let body = vec![
-                var_decl("a", t1.clone(), None),
+                var_decl("a", t1.clone(), l1.clone()),
 
                 Stmt::VarAssignMulti(MultiAssignment{
                     names: vec!["a".to_string()],
@@ -367,9 +376,9 @@ mod multi_return_tests {
             let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
 
             let body = vec![
-                var_decl("a", t1.clone(), None),
-                var_decl("b", t2.clone(), None),
-                var_decl("c", t2.clone(), None),
+                var_decl("a", t1.clone(), l1.clone()),
+                var_decl("b", t2.clone(), l2.clone()),
+                var_decl("c", t2.clone(), l2.clone()),
 
                 Stmt::VarAssignMulti(MultiAssignment{
                     names: vec!["a".to_string(), "b".to_string(), "c".to_string()],
@@ -408,8 +417,8 @@ mod multi_return_tests {
             let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
 
             let vars = vec![
-                Variable { name: "a".to_string(), type_name: t1.clone(), value: None, span: span() },
-                Variable { name: "b".to_string(), type_name: t2.clone(), value: None, span: span() },
+                MultiVariableDeclaration { name: "a".to_string(), type_name: t1.clone(), span: span() },
+                MultiVariableDeclaration { name: "b".to_string(), type_name: t2.clone(), span: span() },
             ];
             let body = vec![Stmt::VarDeclMulti(vars, call_expr("pair", vec![]))];
             let main = void_func("main", vec![], body);
@@ -452,8 +461,8 @@ mod multi_return_tests {
             let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
 
             let body = vec![
-                var_decl("a", t1.clone(), None),
-                var_decl("b", t2.clone(), None),
+                var_decl("a", t1.clone(), l1.clone()),
+                var_decl("b", t2.clone(), l2.clone()),
                 Stmt::Lock(vec![var_expr("a")]),
 
                 Stmt::VarAssignMulti(MultiAssignment{
@@ -483,8 +492,8 @@ mod multi_return_tests {
             let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
 
             let body = vec![
-                var_decl("a", t1.clone(), None),
-                var_decl("b", t2.clone(), None),
+                var_decl("a", t1.clone(), l1.clone()),
+                var_decl("b", t2.clone(), l2.clone()),
                 Stmt::Lock(vec![var_expr("b")]),
 
                 Stmt::VarAssignMulti(MultiAssignment{
@@ -519,8 +528,8 @@ mod multi_return_tests {
             let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
 
             let body = vec![
-                var_decl("a", t1.clone(), None),
-                var_decl("b", t1.clone(), None),
+                var_decl("a", t1.clone(), l1.clone()),
+                var_decl("b", t1.clone(), l1.clone()),
                 Stmt::Lock(vec![var_expr("a"), var_expr("b")]),
 
                 Stmt::VarAssignMulti(MultiAssignment{
@@ -557,8 +566,8 @@ mod multi_return_tests {
             let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
 
             let vars = vec![
-                Variable { name: "a".to_string(), type_name: t1.clone(), value: None, span: span() },
-                Variable { name: "b".to_string(), type_name: t2.clone(), value: None, span: span() },
+                MultiVariableDeclaration { name: "a".to_string(), type_name: t1.clone(), span: span() },
+                MultiVariableDeclaration { name: "b".to_string(), type_name: t2.clone(), span: span() },
             ];
             let body = vec![
                 Stmt::VarDeclMulti(vars, call_expr("pair", vec![]))
@@ -583,8 +592,8 @@ mod multi_return_tests {
             let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
 
             let vars = vec![
-                Variable { name: "a".to_string(), type_name: t1.clone(), value: None, span: span() },
-                Variable { name: "b".to_string(), type_name: t2.clone(), value: None, span: span() },
+                MultiVariableDeclaration { name: "a".to_string(), type_name: t1.clone(), span: span() },
+                MultiVariableDeclaration { name: "b".to_string(), type_name: t2.clone(), span: span() },
             ];
             let body = vec![
                 Stmt::VarDeclMulti(vars, call_expr("pair", vec![]))
@@ -615,8 +624,8 @@ mod multi_return_tests {
             let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
 
             let vars = vec![
-                Variable { name: "a".to_string(), type_name: t1.clone(), value: None, span: span() },
-                Variable { name: "b".to_string(), type_name: t2.clone(), value: None, span: span() },
+                MultiVariableDeclaration { name: "a".to_string(), type_name: t1.clone(), span: span() },
+                MultiVariableDeclaration { name: "b".to_string(), type_name: t2.clone(), span: span() },
             ];
             let body = vec![
                 Stmt::VarDeclMulti(vars, call_expr("pair", vec![]))
@@ -646,8 +655,8 @@ mod multi_return_tests {
             let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
 
             let vars = vec![
-                Variable { name: "a".to_string(), type_name: t1.clone(), value: None, span: span() },
-                Variable { name: "b".to_string(), type_name: t2.clone(), value: None, span: span() },
+                MultiVariableDeclaration { name: "a".to_string(), type_name: t1.clone(), span: span() },
+                MultiVariableDeclaration { name: "b".to_string(), type_name: t2.clone(), span: span() },
             ];
             let body = vec![
                 Stmt::VarDeclMulti(vars, l1.clone())
@@ -676,8 +685,8 @@ mod multi_return_tests {
             let pair = returning_func("pair", vec![], vec![t1.clone(), t1.clone()], pair_body);
 
             let vars = vec![
-                Variable { name: "a".to_string(), type_name: t1.clone(), value: None, span: span() },
-                Variable { name: "b".to_string(), type_name: t2.clone(), value: None, span: span() },
+                MultiVariableDeclaration { name: "a".to_string(), type_name: t1.clone(), span: span() },
+                MultiVariableDeclaration { name: "b".to_string(), type_name: t2.clone(), span: span() },
             ];
             let body = vec![Stmt::VarDeclMulti(vars, call_expr("pair", vec![]))];
             let main = void_func("main", vec![], body);
@@ -699,8 +708,8 @@ mod multi_return_tests {
             let pair = returning_func("pair", vec![], vec![t2.clone(), t2.clone()], pair_body);
 
             let vars = vec![
-                Variable { name: "a".to_string(), type_name: t1.clone(), value: None, span: span() },
-                Variable { name: "b".to_string(), type_name: t2.clone(), value: None, span: span() },
+                MultiVariableDeclaration { name: "a".to_string(), type_name: t1.clone(), span: span() },
+                MultiVariableDeclaration { name: "b".to_string(), type_name: t2.clone(), span: span() },
             ];
             let body = vec![Stmt::VarDeclMulti(vars, call_expr("pair", vec![]))];
             let main = void_func("main", vec![], body);
@@ -722,8 +731,8 @@ mod multi_return_tests {
             let pair = returning_func("pair", vec![], vec![t1.clone(), t1.clone()], pair_body);
 
             let vars = vec![
-                Variable { name: "a".to_string(), type_name: t2.clone(), value: None, span: span() },
-                Variable { name: "b".to_string(), type_name: t2.clone(), value: None, span: span() },
+                MultiVariableDeclaration { name: "a".to_string(), type_name: t2.clone(), span: span() },
+                MultiVariableDeclaration { name: "b".to_string(), type_name: t2.clone(), span: span() },
             ];
             let body = vec![Stmt::VarDeclMulti(vars, call_expr("pair", vec![]))];
             let main = void_func("main", vec![], body);
@@ -754,7 +763,7 @@ mod multi_return_tests {
             let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
 
             let vars = vec![
-                Variable { name: "a".to_string(), type_name: t1.clone(), value: None, span: span() },
+                MultiVariableDeclaration { name: "a".to_string(), type_name: t1.clone(), span: span() },
             ];
             let body = vec![Stmt::VarDeclMulti(vars, call_expr("pair", vec![]))];
             let main = void_func("main", vec![], body);

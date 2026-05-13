@@ -136,7 +136,7 @@ mod break_stmt_tests {
                         branch: vec![
                             // Just dummy declaration, so we don't get flagged by dead code because
                             // of empty branch.
-                            var_decl("z", t.clone(), None),
+                            var_decl("z", t.clone(), l.clone()),
 
                         ],
                         span: span(),
@@ -168,7 +168,7 @@ mod break_stmt_tests {
                         branch: vec![
                             // Just dummy declaration, so we don't get flagged by dead code because
                             // of empty branch.
-                            var_decl("z", t.clone(), None),
+                            var_decl("z", t.clone(), l.clone()),
 
                         ],
                         span: span(),
@@ -268,14 +268,11 @@ mod break_stmt_tests {
         }
     }
 
-
-
-
-
     #[test]
     fn test_break_statement_outside_infinite_statements_errors() {
+        let literals = get_all_literals_no_arr();
 
-        for t in ALL_TYPES_NO_ARR {
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![ 
                 Stmt::Break(BreakStmt{
                     span: span()
@@ -285,7 +282,7 @@ mod break_stmt_tests {
                     branch: vec![
                         // Just dummy declaration, so we don't get flagged by dead code because
                         // of empty branch.
-                        var_decl("z", t.clone(), None),
+                        var_decl("z", t.clone(), l.clone()),
 
                     ],
                     span: span(),
@@ -301,13 +298,15 @@ mod break_stmt_tests {
         }
 
         // Same test, but the `break` is after the infinite loop
-        for t in ALL_TYPES_NO_ARR {
+        let literals = get_all_literals_no_arr();
+
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![ 
                 Stmt::Infinite(InfiniteStmt{
                     branch: vec![
                         // Just dummy declaration, so we don't get flagged by dead code because
                         // of empty branch.
-                        var_decl("z", t.clone(), None),
+                        var_decl("z", t.clone(), l.clone()),
 
                     ],
                     span: span(),
@@ -338,7 +337,7 @@ mod break_stmt_tests {
             };
 
             let body = vec![
-                var_decl("a", Type::Array(Box::new(t.clone())), Some(arr_lit.clone())),
+                var_decl("a", Type::Array(Box::new(t.clone())), arr_lit.clone()),
                 Stmt::For(ForStmt{
                         holder_name: "x".to_string(),
                         value: var_expr("a"),
@@ -360,7 +359,7 @@ mod break_stmt_tests {
             if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
                 assert_eq!(v.name, "a");
                 assert_eq!(v.type_name, Type::Array(Box::new(t.clone())) );
-                assert_eq!(v.value, Some(arr_lit));
+                assert_eq!(v.value, arr_lit);
 
             } else { panic!("Expected VarDecl statement") }
 
@@ -384,7 +383,7 @@ mod break_stmt_tests {
             };
 
             let body = vec![
-                var_decl("a", Type::Array(Box::new(t.clone())), Some(arr_lit.clone())),
+                var_decl("a", Type::Array(Box::new(t.clone())), arr_lit.clone()),
                 Stmt::For(ForStmt{
                         holder_name: "x".to_string(),
                         value: var_expr("a"),
@@ -413,7 +412,7 @@ mod break_stmt_tests {
             if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
                 assert_eq!(v.name, "a");
                 assert_eq!(v.type_name, Type::Array(Box::new(t.clone())) );
-                assert_eq!(v.value, Some(arr_lit));
+                assert_eq!(v.value, arr_lit);
 
             } else { panic!("Expected VarDecl statement") }
 
@@ -435,14 +434,11 @@ mod break_stmt_tests {
         }
     }
 
-
-
-
-
-
     #[test]
     fn test_break_statement_outside_for_statements_with_arr_errors() {
-        for t in ALL_TYPES_NO_ARR {
+        let literals = get_all_literals_no_arr();
+
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let arr_lit = Expr::ArrayLiteral {
                 elements: vec![],
                 span: span(),
@@ -453,14 +449,14 @@ mod break_stmt_tests {
                     span: span()
                 }),
 
-                var_decl("a", Type::Array(Box::new(t.clone())), Some(arr_lit)),
+                var_decl("a", Type::Array(Box::new(t.clone())), arr_lit),
                 Stmt::For(ForStmt{
                         holder_name: "x".to_string(),
                         value: var_expr("a"),
                         branch: vec![
                             // Just dummy declaration, so we don't get flagged by dead code because
                             // of empty branch.
-                            var_decl("z", t.clone(), None),
+                            var_decl("z", t.clone(), l.clone()),
                         ],
                         span: span(),
                     }),
@@ -476,21 +472,22 @@ mod break_stmt_tests {
         }
 
         // Same test, but the `break` is after the infinite loop
-        for t in ALL_TYPES_NO_ARR {
+
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let arr_lit = Expr::ArrayLiteral {
                 elements: vec![],
                 span: span(),
             };
 
             let body = vec![
-                var_decl("a", Type::Array(Box::new(t.clone())), Some(arr_lit)),
+                var_decl("a", Type::Array(Box::new(t.clone())), arr_lit),
                 Stmt::For(ForStmt{
                     holder_name: "x".to_string(),
                     value: var_expr("a"),
                     branch: vec![
                         // Just dummy declaration, so we don't get flagged by dead code because
                         // of empty branch.
-                        var_decl("z", t.clone(), None),
+                        var_decl("z", t.clone(), l.clone()),
                     ],
                     span: span(),
                 }),
@@ -640,7 +637,7 @@ mod break_stmt_tests {
                     branch: vec![
                         // Just dummy declaration, so we don't get flagged by dead code because
                         // of empty branch.
-                        var_decl("z", t.clone(), None),
+                        var_decl("z", t.clone(), l.clone()),
                     ],
                     span: span(),
                 }),
@@ -669,7 +666,7 @@ mod break_stmt_tests {
                     branch: vec![
                         // Just dummy declaration, so we don't get flagged by dead code because
                         // of empty branch.
-                        var_decl("z", t.clone(), None),
+                        var_decl("z", t.clone(), l.clone()),
                     ],
                     span: span(),
                 }),

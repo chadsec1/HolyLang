@@ -15,7 +15,7 @@ mod return_tests {
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
                 return_stmt(vec![l.clone()]),
-                var_decl("x", t.clone(), None),
+                var_decl("x", t.clone(), l.clone()),
             ];
             let func = returning_func("foo", vec![], vec![t.clone()], body);
             let mut ast = ast_one(func);
@@ -35,7 +35,7 @@ mod return_tests {
         let literals = get_all_literals_no_arr();
 
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            let body = vec![var_decl("x", t.clone(), Some(l.clone()))];
+            let body = vec![var_decl("x", t.clone(), l.clone())];
             let func = returning_func("foo", vec![], vec![t.clone()], body);
             let mut ast = ast_one(func);
             let result = check_semantics(&mut ast);
@@ -67,7 +67,7 @@ mod return_tests {
         for t in ALL_TYPES_NO_ARR {
             let callee = void_func("bar", vec![], vec![]);
             let body = vec![
-                var_decl("x", t.clone(), Some(call_expr("bar", vec![])))
+                var_decl("x", t.clone(), call_expr("bar", vec![]))
             ];
             let caller = void_func("main", vec![], body);
             let mut ast = AST { functions: vec![callee, caller], globals: vec![] };

@@ -30,7 +30,7 @@ mod happy_path_tests {
                 );
 
                 let main_body = vec![
-                    var_decl("r", t.clone(), Some(call_expr("add", vec![l.clone(), l.clone()]))),
+                    var_decl("r", t.clone(), call_expr("add", vec![l.clone(), l.clone()])),
                 ];
                 let main = void_func("main", vec![], main_body);
 

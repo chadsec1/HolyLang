@@ -11,7 +11,7 @@ mod var_assign_tests {
         for l in literals_ints {
             for t in ALL_TYPES_NO_INTS_NO_ARR {
                 let body = vec![
-                    var_decl("x", t.clone(), None),
+                    var_decl("x", t.clone(), l.clone()),
                     var_assign("x", l.clone())
                 ];
                 let func = void_func("foo", vec![], body);
@@ -26,12 +26,13 @@ mod var_assign_tests {
     }
 
 
-
     #[test]
     fn test_varassign_uses_non_declared_var_errors() {
-        for t in ALL_TYPES_NO_ARR {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
-                var_decl("x", t.clone(), None), 
+                var_decl("x", t.clone(), l.clone()), 
                 var_assign("x", var_expr("y"))
             ];
             let func = void_func("foo", vec![], body);
@@ -62,7 +63,7 @@ mod var_assign_tests {
     fn test_assignment_of_undeclared_variable_other_errors() {
         for t in ALL_TYPES_NO_ARR {
             let body = vec![
-                var_decl("x", t.clone(), Some(var_expr("y"))),
+                var_decl("x", t.clone(), var_expr("y")),
             ]; 
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
