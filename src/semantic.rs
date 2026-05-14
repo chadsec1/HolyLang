@@ -500,12 +500,9 @@ fn check_stmts(
                     },
                     BindingKind::Const { .. } => panic!("(Compiler bug) Variable is const, despite our supposed earlier checks that its not. Wtf ?: {:?}", varinfo)
                  }
-
-            }
-
+            },
 
             Stmt::VarAssignMulti(expr) => {
-                
                 if let Expr::Call { name, args, span } = &mut expr.value {
                     // check_call with require_ret = true -> Option<Vec<Type>>
                     let ret_vec = check_call(name, args, locals, fun_sigs, true, *span)?.unwrap();
@@ -550,8 +547,6 @@ fn check_stmts(
                                 )))
                             }
                         }
-
-
                         
                         if &varinfo.ty != ret_ty {
                             return Err(HolyError::Semantic(format!(
@@ -559,10 +554,7 @@ fn check_stmts(
                                 var_name, varinfo.ty, ret_ty, expr.span.line, expr.span.column
                             )));
                         }
-
                     }
-
-
                 } else {
                     return Err(HolyError::Semantic(format!(
                         "Multi-assignment requires only a single function call on the right-hand side (line {} column {})",
