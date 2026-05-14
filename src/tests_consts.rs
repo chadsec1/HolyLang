@@ -2,7 +2,6 @@ use crate::ast::{
     BinOpKind, Type
 };
 
-use std::sync::LazyLock;
 
 // Order of these consts matters for tests.
 
@@ -240,42 +239,6 @@ pub const ALL_TYPES_NO_ARR_NO_BOOL_NO_STRING_SCATTERED: &[Type] = &[
 ];
 
 
-// With dynamic array types 
-pub static ALL_TYPES_WITH_DYN_ARR: LazyLock<Vec<Type>> = LazyLock::new(|| {
-    vec![
-        Type::Int8,
-        Type::Int16,
-        Type::Int32,
-        Type::Int64,
-        Type::Int128,
-        Type::Byte,
-        Type::Uint16,
-        Type::Uint32,
-        Type::Uint64,
-        Type::Uint128,
-        Type::Usize,
-        Type::Float64,
-        Type::Bool,
-        Type::String,
-
-        Type::Array(Box::new(Type::Int8)),
-        Type::Array(Box::new(Type::Int16)),
-        Type::Array(Box::new(Type::Int32)),
-        Type::Array(Box::new(Type::Int64)),
-        Type::Array(Box::new(Type::Int128)),
-
-        Type::Array(Box::new(Type::Byte)),
-        Type::Array(Box::new(Type::Uint16)),
-        Type::Array(Box::new(Type::Uint32)),
-        Type::Array(Box::new(Type::Uint64)),
-        Type::Array(Box::new(Type::Uint128)),
-        Type::Array(Box::new(Type::Usize)),
-
-        Type::Array(Box::new(Type::Float64)),
-        Type::Array(Box::new(Type::Bool)),
-        Type::Array(Box::new(Type::String)),
-    ]
-});
 
 // No array type
 pub const ALL_TYPES_NO_ARR: &[Type] = &[

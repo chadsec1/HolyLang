@@ -7,8 +7,6 @@ use crate::ast::{
 };
 
 use crate::tests_consts::{
-    ALL_TYPES_WITH_DYN_ARR,
-
     ALL_TYPES_NO_ARR, ALL_TYPES_NO_ARR_SCATTERED, ALL_TYPES_NO_ARR_NO_USIZE, ALL_TYPES_NO_INTS_NO_ARR,
  
     ALL_TYPES_NO_ARR_NO_BOOL,
@@ -24,6 +22,8 @@ use crate::tests_consts::{
     ALL_BIN_OP_KIND_LOGIC,
     ALL_BIN_OP_KIND_COMP_ARTH
 };
+
+use std::sync::LazyLock;
 
 mod const_tests;
 mod var_decl_tests;
@@ -71,6 +71,43 @@ mod happy_path_tests;
 
 // Helper functions for all the test submodules
 //
+
+// With dynamic array types 
+static ALL_TYPES_WITH_DYN_ARR: LazyLock<Vec<Type>> = LazyLock::new(|| {
+    vec![
+        Type::Int8,
+        Type::Int16,
+        Type::Int32,
+        Type::Int64,
+        Type::Int128,
+        Type::Byte,
+        Type::Uint16,
+        Type::Uint32,
+        Type::Uint64,
+        Type::Uint128,
+        Type::Usize,
+        Type::Float64,
+        Type::Bool,
+        Type::String,
+
+        Type::Array(Box::new(Type::Int8)),
+        Type::Array(Box::new(Type::Int16)),
+        Type::Array(Box::new(Type::Int32)),
+        Type::Array(Box::new(Type::Int64)),
+        Type::Array(Box::new(Type::Int128)),
+
+        Type::Array(Box::new(Type::Byte)),
+        Type::Array(Box::new(Type::Uint16)),
+        Type::Array(Box::new(Type::Uint32)),
+        Type::Array(Box::new(Type::Uint64)),
+        Type::Array(Box::new(Type::Uint128)),
+        Type::Array(Box::new(Type::Usize)),
+
+        Type::Array(Box::new(Type::Float64)),
+        Type::Array(Box::new(Type::Bool)),
+        Type::Array(Box::new(Type::String)),
+    ]
+});
 
 fn get_many_boolean_conditions() -> Vec<Expr> {
     let literals = get_all_literals_no_arr();
