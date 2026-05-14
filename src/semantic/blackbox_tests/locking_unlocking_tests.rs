@@ -7,6 +7,89 @@ mod locking_unlocking_tests {
     use super::*;
 
     #[test]
+    fn lock_var() {
+        let literals = get_all_literals();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
+            let body = vec![
+                var_decl("x", t.clone(), l.clone()),
+                Stmt::Lock(vec![var_expr("x")]),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            check_semantics(&mut ast).unwrap();
+        }
+    }
+
+    #[test]
+    fn lock_local_const_errors() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                const_define_locally("x", t.clone(), l.clone()),
+                Stmt::Lock(vec![var_expr("x")])
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Expected variable name, instead got a constant name"));
+        }
+    }
+
+    #[test]
+    fn lock_global_const_errors() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                Stmt::Lock(vec![var_expr("x")])
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = AST { functions: vec![func] , globals: vec![ const_define_globally("x", t.clone(), l.clone()) ] };
+
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Expected variable name, instead got a constant name"));
+        }
+    }
+
+    #[test]
+    fn unlock_local_const_errors() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                const_define_locally("x", t.clone(), l.clone()),
+                Stmt::Unlock(vec![var_expr("x")])
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Expected variable name, instead got a constant name"));
+        }
+    }
+
+    #[test]
+    fn unlock_global_const_errors() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                Stmt::Unlock(vec![var_expr("x")])
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = AST { functions: vec![func] , globals: vec![ const_define_globally("x", t.clone(), l.clone()) ] };
+
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Expected variable name, instead got a constant name"));
+        }
+    }
+
+    #[test]
     fn lock_literal_errors() {
         let literals = get_all_literals();
         
@@ -39,6 +122,78 @@ mod locking_unlocking_tests {
                 assert!(result.is_err());
                 assert!(result.unwrap_err().to_string().contains("Expected variable name"));
             }
+        }
+    }
+
+    #[test]
+    fn lock_repeated_var_errors() {
+        let literals = get_all_literals_no_arr();
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for i in 2..=100 {
+                let body = vec![
+                    var_decl("x", t.clone(), l.clone()),
+                    Stmt::Lock(vec![var_expr("x"); i]),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("Lock arguments have duplicated variable"));
+            }
+        }
+    }
+
+
+    #[test]
+    fn double_lock_errors() {
+        let literals = get_all_literals_no_arr();
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                var_decl("x", t.clone(), l.clone()),
+                Stmt::Lock(vec![var_expr("x")]),
+                Stmt::Lock(vec![var_expr("x")]),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("already locked"));
+        }
+    }
+
+    #[test]
+    fn unlock_repeated_var_errors() {
+        let literals = get_all_literals_no_arr();
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for i in 2..=100 {
+                let body = vec![
+                    var_decl("x", t.clone(), l.clone()),
+                    Stmt::Unlock(vec![var_expr("x"); i]),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("Unlock arguments have duplicated variable"));
+            }
+        }
+    }
+
+
+    #[test]
+    fn double_unlock_errors() {
+        let literals = get_all_literals_no_arr();
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                var_decl("x", t.clone(), l.clone()),
+                Stmt::Unlock(vec![var_expr("x")]),
+                Stmt::Unlock(vec![var_expr("x")]),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("already unlocked"));
         }
     }
 
@@ -294,42 +449,6 @@ mod locking_unlocking_tests {
         }
     }
 
-
-
-    #[test]
-    fn lock_repeated_var_errors() {
-        let literals = get_all_literals_no_arr();
-        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            let body = vec![
-                var_decl("x", t.clone(), l.clone()),
-                Stmt::Lock(vec![var_expr("x"), var_expr("x")]),
-            ];
-            let func = void_func("foo", vec![], body);
-            let mut ast = ast_one(func);
-            let result = check_semantics(&mut ast);
-            assert!(result.is_err());
-            assert!(result.unwrap_err().to_string().contains("Lock arguments have duplicated variable"));
-        }
-    }
-
-
-    #[test]
-    fn double_lock_errors() {
-        let literals = get_all_literals_no_arr();
-        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            let body = vec![
-                var_decl("x", t.clone(), l.clone()),
-                Stmt::Lock(vec![var_expr("x")]),
-                Stmt::Lock(vec![var_expr("x")]),
-            ];
-            let func = void_func("foo", vec![], body);
-            let mut ast = ast_one(func);
-            let result = check_semantics(&mut ast);
-            assert!(result.is_err());
-            assert!(result.unwrap_err().to_string().contains("already locked"));
-        }
-    }
-
     #[test]
     fn unlock_unlocked_variable_errors() {
         let literals = get_all_literals_no_arr();
@@ -348,7 +467,7 @@ mod locking_unlocking_tests {
 
     // overshadowing is not allowed at all in holylang
     #[test]
-    fn shadowing_variable_lockek_errors() {
+    fn shadowing_variable_locked_errors() {
         let literals = get_all_literals_no_arr();
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
