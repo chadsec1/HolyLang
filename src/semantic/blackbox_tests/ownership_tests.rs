@@ -146,6 +146,46 @@ mod ownership_tests {
         
         }
     }
+    
+    #[test]
+    fn vardecl_does_not_move_global_const() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                var_decl("y", t.clone(), var_expr("x")),
+                var_decl("z", t.clone(), var_expr("x"))
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = AST { functions: vec![func], globals: vec![  const_define_globally("x", t.clone(), l.clone()) ]};
+            check_semantics(&mut ast).unwrap();
+
+            assert_eq!(ast.globals.len(), 1);
+            assert_eq!(ast.functions.len(), 1);
+            assert_eq!(ast.functions[0].body.len(), 2);
+
+            if let GlobalStmt::Const(c) = &ast.globals[0] {
+                assert_eq!(c.name, "x");
+                assert_eq!(c.type_name, t.clone());
+                assert_eq!(c.value, l.clone());
+            } else { panic!("expected Const, got {:?}", ast); }
+
+            if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+                assert_eq!(v.name, "y");
+                assert_eq!(v.type_name, t.clone());
+                assert_eq!(v.value, var_expr("x"));
+            } else { panic!("expected VarDecl, got {:?}", ast); }
+        
+            if let Stmt::VarDecl(v) = &ast.functions[0].body[1] {
+                assert_eq!(v.name, "z");
+                assert_eq!(v.type_name, t.clone());
+                assert_eq!(v.value, var_expr("x"));
+            } else { panic!("expected VarDecl, got {:?}", ast); }
+        
+        }
+    }
+
+
 
 
 
@@ -278,6 +318,51 @@ mod ownership_tests {
     }
 
 
+    #[test]
+    fn varassign_does_not_move_global_const() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                var_decl("y", t.clone(), l.clone()),
+                var_assign("y", var_expr("x")),
+                var_decl("z", t.clone(), var_expr("x"))
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = AST { functions: vec![func], globals: vec![  const_define_globally("x", t.clone(), l.clone()) ]};
+            check_semantics(&mut ast).unwrap();
+
+            assert_eq!(ast.globals.len(), 1);
+            assert_eq!(ast.functions.len(), 1);
+            assert_eq!(ast.functions[0].body.len(), 3);
+
+            if let GlobalStmt::Const(c) = &ast.globals[0] {
+                assert_eq!(c.name, "x");
+                assert_eq!(c.type_name, t.clone());
+                assert_eq!(c.value, l.clone());
+            } else { panic!("expected Const, got {:?}", ast); }
+
+            if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+                assert_eq!(v.name, "y");
+                assert_eq!(v.type_name, t.clone());
+                assert_eq!(v.value, l.clone());
+            } else { panic!("expected VarDecl, got {:?}", ast); }
+
+            if let Stmt::VarAssign(va) = &ast.functions[0].body[1] {
+                assert_eq!(va.name, "y");
+                assert_eq!(va.value, var_expr("x"));
+            } else { panic!("expected VarAssign, got {:?}", ast); }
+
+        
+            if let Stmt::VarDecl(v) = &ast.functions[0].body[2] {
+                assert_eq!(v.name, "z");
+                assert_eq!(v.type_name, t.clone());
+                assert_eq!(v.value, var_expr("x"));
+            } else { panic!("expected VarDecl, got {:?}", ast); }
+        
+        }
+
+    }
 
 
 
@@ -325,6 +410,182 @@ mod ownership_tests {
             
         }
     }
+
+
+    #[test]
+    fn test_vardecl_moving_local_var_in_while_loop() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                Stmt::While(WhileStmt{
+                        condition: bool_lit(false),
+                        branch: vec![
+                            var_decl("x", t.clone(), l.clone()),
+                            var_decl("y", t.clone(), var_expr("x"))
+                        ],
+                        span: span(),
+                    }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            check_semantics(&mut ast).unwrap();
+
+            assert_eq!(ast.functions.len(), 1);
+            assert_eq!(ast.functions[0].body.len(), 1);
+            assert_eq!(ast.globals.len(), 0);
+
+            
+            if let Stmt::While(w) = &ast.functions[0].body[0] {
+                assert_eq!(w.condition, bool_lit(false));
+                assert_eq!(w.branch.len(), 2);
+                if let Stmt::VarDecl(v) = &w.branch[0] {
+                    assert_eq!(v.name, "x");
+                    assert_eq!(v.type_name, t.clone());
+                    assert_eq!(v.value, l.clone());
+                } else { panic!("expected VarDecl, got {:?}", ast); }
+                
+                if let Stmt::VarDecl(v) = &w.branch[1] {
+                    assert_eq!(v.name, "y");
+                    assert_eq!(v.type_name, t.clone());
+                    assert_eq!(v.value, var_expr("x"));
+                } else { panic!("expected VarDecl, got {:?}", ast); }
+            } else { panic!("expected While loop statement, got {:?}", ast); }
+        }
+    }
+
+    #[test]
+    fn test_vardecl_moving_local_var_in_infinite_loop() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                Stmt::Infinite(InfiniteStmt{
+                        branch: vec![
+                            var_decl("x", t.clone(), l.clone()),
+                            var_decl("y", t.clone(), var_expr("x"))
+                        ],
+                        span: span(),
+                    }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            check_semantics(&mut ast).unwrap();
+
+            assert_eq!(ast.functions.len(), 1);
+            assert_eq!(ast.functions[0].body.len(), 1);
+            assert_eq!(ast.globals.len(), 0);
+
+            
+            if let Stmt::Infinite(i) = &ast.functions[0].body[0] {
+                assert_eq!(i.branch.len(), 2);
+                if let Stmt::VarDecl(v) = &i.branch[0] {
+                    assert_eq!(v.name, "x");
+                    assert_eq!(v.type_name, t.clone());
+                    assert_eq!(v.value, l.clone());
+                } else { panic!("expected VarDecl, got {:?}", ast); }
+                
+                if let Stmt::VarDecl(v) = &i.branch[1] {
+                    assert_eq!(v.name, "y");
+                    assert_eq!(v.type_name, t.clone());
+                    assert_eq!(v.value, var_expr("x"));
+                } else { panic!("expected VarDecl, got {:?}", ast); }
+            } else { panic!("expected Infinite loop statement, got {:?}", ast); }
+        }
+    }
+
+    #[test]
+    fn test_vardecl_moving_local_var_in_for_loop() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let arr_lit = Expr::ArrayLiteral {
+                elements: vec![],
+                span: span(),
+            };
+
+            let body = vec![
+                var_decl("a", Type::Array(Box::new(t.clone())), arr_lit.clone()),
+                Stmt::For(ForStmt{
+                        holder_name: "e".to_string(),
+                        value: var_expr("a"),
+                        branch: vec![
+                            var_decl("x", t.clone(), l.clone()),
+                            var_decl("y", t.clone(), var_expr("x"))
+                        ],
+                        span: span(),
+                    }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            check_semantics(&mut ast).unwrap();
+
+            assert_eq!(ast.functions.len(), 1);
+            assert_eq!(ast.functions[0].body.len(), 2);
+            assert_eq!(ast.globals.len(), 0);
+
+            if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+                assert_eq!(v.name, "a");
+                assert_eq!(v.type_name, Type::Array(Box::new(t.clone())));
+                assert_eq!(v.value, arr_lit);
+            } else { panic!("expected VarDecl, got {:?}", ast); }
+        
+            if let Stmt::For(i) = &ast.functions[0].body[1] {
+                assert_eq!(i.holder_name, "e");
+                assert_eq!(i.value, var_expr("a"));
+
+                assert_eq!(i.branch.len(), 2);
+                if let Stmt::VarDecl(v) = &i.branch[0] {
+                    assert_eq!(v.name, "x");
+                    assert_eq!(v.type_name, t.clone());
+                    assert_eq!(v.value, l.clone());
+                } else { panic!("expected VarDecl, got {:?}", ast); }
+                
+                if let Stmt::VarDecl(v) = &i.branch[1] {
+                    assert_eq!(v.name, "y");
+                    assert_eq!(v.type_name, t.clone());
+                    assert_eq!(v.value, var_expr("x"));
+                } else { panic!("expected VarDecl, got {:?}", ast); }
+            } else { panic!("expected For loop statement, got {:?}", ast); }
+        }
+    }
+
+    #[test]
+    fn test_vardecl_moving_local_var_in_for_range_loop() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let arr_lit = Expr::ArrayLiteral {
+                elements: vec![],
+                span: span(),
+            };
+
+            for i in 0usize..=1000usize {
+                let body = vec![
+                    var_decl("x", t.clone(), l.clone()),
+                    var_decl("a", Type::Array(Box::new(t.clone())), arr_lit.clone()),
+                    Stmt::For(ForStmt{
+                            holder_name: "e".to_string(),
+                            value: Expr::RangeCall{ start: Box::new(usize_lit(0)), end: Box::new(usize_lit(i)), span: span()},
+                            branch: vec![
+                                var_decl("y", t.clone(), var_expr("x"))
+                            ],
+                            span: span(),
+                        }),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+
+                let result = check_semantics(&mut ast);
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("variable `x` is potentially moved multiple times"));
+            }
+        }
+    }
+
+
+
+
 
 
     // Tests the rule:
@@ -407,6 +668,39 @@ mod ownership_tests {
             let result = check_semantics(&mut ast);
             assert!(result.is_err());
             assert!(result.unwrap_err().to_string().contains("variable `x` is potentially moved multiple times"));
+        }
+    }
+
+    #[test]
+    fn test_vardecl_moving_upstream_var_in_for_range_loop_errors() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let arr_lit = Expr::ArrayLiteral {
+                elements: vec![],
+                span: span(),
+            };
+
+            for i in 0usize..=1000usize {
+                let body = vec![
+                    var_decl("x", t.clone(), l.clone()),
+                    var_decl("a", Type::Array(Box::new(t.clone())), arr_lit.clone()),
+                    Stmt::For(ForStmt{
+                            holder_name: "e".to_string(),
+                            value: Expr::RangeCall{ start: Box::new(usize_lit(0)), end: Box::new(usize_lit(i)), span: span()},
+                            branch: vec![
+                                var_decl("y", t.clone(), var_expr("x"))
+                            ],
+                            span: span(),
+                        }),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+
+                let result = check_semantics(&mut ast);
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("variable `x` is potentially moved multiple times"));
+            }
         }
     }
 
