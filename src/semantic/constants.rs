@@ -21,15 +21,12 @@ pub fn eval_const_expr_and_fold_it(
         )));
     }
 
-
     // Dynamic arrays cannot be evaluated at compile-time.
     if expr_ty.is_array_type() && (!expr_ty.is_fully_fixed_array_type()) {
         return Err(HolyError::Semantic(format!(
             "Dynamic arrays cannot be evaluated at compile time, therefore you cannot assign them to constant `{}` of type `{}` (line {} column {})",
             &cons.name, expr_ty, cons.span.line, cons.span.column
         )));
-
-
     }
 
     // Validate the constant value expression to ensure it is known at compile-time, and
@@ -41,7 +38,7 @@ pub fn eval_const_expr_and_fold_it(
 
 /// Evaluate a constant expression and fold it into a literal
 ///
-/// NOTE: This is an internal function and assumes you already called infer_expr_type BEFORE
+/// NOTE: This is an **internal** function and assumes you already called infer_expr_type BEFORE
 ///       calling it on an expression.
 /// 
 ///
@@ -567,7 +564,6 @@ fn eval_const_expr_and_fold_it_hazmat(
                         expr, expr_span.line, expr_span.column
                     )))
     }
-
 }
 
 

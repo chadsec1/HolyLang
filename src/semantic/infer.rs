@@ -22,8 +22,6 @@ pub fn advanced_infer_2_types(
 
     let mut rty = infer_expr_type(right, locals, fun_sigs, infer_hint.clone())?;
     
-    
-
     // Integer literal inferrence
     if matches!(*left, Expr::IntLiteral {..}) && !matches!(*right, Expr::IntLiteral {..}) {
         lty = infer_expr_type(left, locals, fun_sigs, Some(rty.clone()))?;
@@ -414,6 +412,8 @@ pub fn infer_expr_type(
 
                 // TODO: Maybe also recursively check value type ?
                 // not sure.
+                //
+                // Like info's value if it even exists..
                 //
 
                 
