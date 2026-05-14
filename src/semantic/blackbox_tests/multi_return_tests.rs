@@ -7,7 +7,7 @@ mod multi_return_tests {
     // return statement with multiple values (aka multi-return)
     // with multi-assignments
     #[test]
-    fn test_multi_return_assign_correct() {
+    fn multi_return_assign() {
         // func pair() (t1, t2,) { return l1, l2 }
         // func main() { 
         //  own a t1
@@ -68,6 +68,108 @@ mod multi_return_tests {
         }
     }
 
+    #[test]
+    fn multi_return_assign_first_var_is_const_errors() {
+        let literals = get_all_literals_no_arr();
+        let literals_scattered = get_all_literals_no_arr_scattered_order();
+
+        for (((l1, t1), l2), t2) in literals.iter()
+            .zip(ALL_TYPES_NO_ARR.iter())
+            .zip(literals_scattered.iter())
+            .zip(ALL_TYPES_NO_ARR_SCATTERED)
+        {
+            let pair_body = vec![return_stmt(vec![l1.clone(), l2.clone()])];
+            let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
+
+            let body = vec![
+                const_define_locally("a", t1.clone(), l1.clone()),
+                var_decl("b", t2.clone(), l2.clone()),
+
+                Stmt::VarAssignMulti(MultiAssignment{
+                    names: vec!["a".to_string(), "b".to_string()],
+                    value: call_expr("pair", vec![]),
+                    span: span()
+                })
+            ];
+            let main = void_func("main", vec![], body);
+
+            let mut ast = AST { functions: vec![pair, main] , globals: vec![] };
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("You cannot assign to constant "));
+        }
+    }
+
+    #[test]
+    fn multi_return_assign_second_var_is_const_errors() {
+        let literals = get_all_literals_no_arr();
+        let literals_scattered = get_all_literals_no_arr_scattered_order();
+
+        for (((l1, t1), l2), t2) in literals.iter()
+            .zip(ALL_TYPES_NO_ARR.iter())
+            .zip(literals_scattered.iter())
+            .zip(ALL_TYPES_NO_ARR_SCATTERED)
+        {
+            let pair_body = vec![return_stmt(vec![l1.clone(), l2.clone()])];
+            let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
+
+            let body = vec![
+                var_decl("a", t1.clone(), l1.clone()),
+                const_define_locally("b", t2.clone(), l2.clone()),
+
+                Stmt::VarAssignMulti(MultiAssignment{
+                    names: vec!["a".to_string(), "b".to_string()],
+                    value: call_expr("pair", vec![]),
+                    span: span()
+                })
+            ];
+            let main = void_func("main", vec![], body);
+
+            let mut ast = AST { functions: vec![pair, main] , globals: vec![] };
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("You cannot assign to constant "));
+        }
+    }
+
+    #[test]
+    fn multi_return_assign_both_vars_are_consts_errors() {
+        let literals = get_all_literals_no_arr();
+        let literals_scattered = get_all_literals_no_arr_scattered_order();
+
+        for (((l1, t1), l2), t2) in literals.iter()
+            .zip(ALL_TYPES_NO_ARR.iter())
+            .zip(literals_scattered.iter())
+            .zip(ALL_TYPES_NO_ARR_SCATTERED)
+        {
+            let pair_body = vec![return_stmt(vec![l1.clone(), l2.clone()])];
+            let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
+
+            let body = vec![
+                const_define_locally("a", t1.clone(), l1.clone()),
+                const_define_locally("b", t2.clone(), l2.clone()),
+
+                Stmt::VarAssignMulti(MultiAssignment{
+                    names: vec!["a".to_string(), "b".to_string()],
+                    value: call_expr("pair", vec![]),
+                    span: span()
+                })
+            ];
+            let main = void_func("main", vec![], body);
+
+            let mut ast = AST { functions: vec![pair, main] , globals: vec![] };
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("You cannot assign to constant "));
+        }
+    }
+
+
+
+
 
     #[test]
     fn test_multi_return_assign_type_mismatch_errors() {
@@ -100,7 +202,6 @@ mod multi_return_tests {
 
             assert!(result.is_err());
             assert!(result.unwrap_err().to_string().contains("Type mismatch for variable `a`"));
-
         }
 
         // now b is mismatched while a is correct

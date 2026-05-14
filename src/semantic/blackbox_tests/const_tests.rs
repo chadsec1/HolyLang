@@ -5,7 +5,7 @@ mod const_tests {
     use super::*;
 
     #[test]
-    fn test_define_const_literals() {
+    fn const_literals() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -78,7 +78,6 @@ mod const_tests {
         let literals_no_ints = get_all_literals_no_arr_no_ints();
         let literals_scattered = get_all_literals_no_arr_scattered_order();
 
-        
         // We use no_ints here because if we included int literals, they would get inferred to
         // correct type if they fit, and since functions return 1 for all ints, they would always
         // fit.

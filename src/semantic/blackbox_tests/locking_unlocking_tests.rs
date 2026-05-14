@@ -1,14 +1,49 @@
+/// Locking and unlocking variables semantics tests
+///
 use super::*;
 
 #[cfg(test)]
 mod locking_unlocking_tests {
     use super::*;
 
-    // locking / unlocking variables
-    //
+    #[test]
+    fn lock_literal_errors() {
+        let literals = get_all_literals();
+        
+        for l in literals {
+            for i in 1..150 {
+                let body = vec![
+                    Stmt::Lock(vec![l.clone(); i])
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("Expected variable name"));
+            }
+        }
+    }
 
     #[test]
-    fn test_assign_to_locked_variable_errors() {
+    fn unlock_literal_errors() {
+        let literals = get_all_literals();
+        
+        for l in literals {
+            for i in 1..150 {
+                let body = vec![
+                    Stmt::Unlock(vec![l.clone(); i])
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("Expected variable name"));
+            }
+        }
+    }
+
+    #[test]
+    fn assign_to_locked_variable_errors() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -21,12 +56,12 @@ mod locking_unlocking_tests {
             let mut ast = ast_one(func);
             let result = check_semantics(&mut ast);
             assert!(result.is_err());
-            assert!(result.unwrap_err().to_string().contains("locked"));
+            assert!(result.unwrap_err().to_string().contains("is locked"));
         }
     }
 
     #[test]
-    fn test_assign_locked_variable_same_literal_errors() {
+    fn assign_locked_variable_same_literal_errors() {
         let literals = get_all_literals_no_arr();
        
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -45,7 +80,7 @@ mod locking_unlocking_tests {
 
     // Same test as above, but re-declartion use a different literal
     #[test]
-    fn test_assign_locked_variable_different_literal_errors() {
+    fn assign_locked_variable_different_literal_errors() {
         let literals = get_all_literals_no_arr();
         let literals_scattered = get_all_literals_no_arr_scattered_order();
 
@@ -74,7 +109,7 @@ mod locking_unlocking_tests {
 
 
     #[test]
-    fn test_unlock_non_var_expr_errors() {
+    fn unlock_non_var_expr_errors() {
         let literals = get_all_literals_no_arr();
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
@@ -89,10 +124,8 @@ mod locking_unlocking_tests {
         }
     }
 
-
-
     #[test]
-    fn test_unlock_allows_assignment_same_literal() {
+    fn unlock_allows_assignment_same_literal() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -110,7 +143,7 @@ mod locking_unlocking_tests {
 
     // Same test as above, but re-declartion use a different litral of a different type
     #[test]
-    fn test_unlock_allows_assigment_but_different_literal_type_errors() {
+    fn unlock_allows_assigment_but_different_literal_type_errors() {
         let literals = get_all_literals_no_arr_few_ints();
         let literals_scattered = get_all_literals_no_arr_few_ints_scattered();
 
@@ -135,7 +168,7 @@ mod locking_unlocking_tests {
 
 
     #[test]
-    fn test_unlock_allows_reassign() {
+    fn unlock_allows_reassign() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -152,7 +185,7 @@ mod locking_unlocking_tests {
     }
 
     #[test]
-    fn test_unlock_upstream_variable_in_while_loop_errors() {
+    fn unlock_upstream_variable_in_while_loop_errors() {
         let literals = get_all_literals_no_arr();
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
@@ -175,7 +208,7 @@ mod locking_unlocking_tests {
 
 
     #[test]
-    fn test_unlock_upstream_variable_in_infinite_loop_errors() {
+    fn unlock_upstream_variable_in_infinite_loop_errors() {
         let literals = get_all_literals_no_arr();
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
@@ -197,7 +230,7 @@ mod locking_unlocking_tests {
 
 
     #[test]
-    fn test_unlock_upstream_variable_in_for_loop_errors() {
+    fn unlock_upstream_variable_in_for_loop_errors() {
         let literals = get_all_literals_no_arr();
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let arr_lit = Expr::ArrayLiteral {
@@ -227,14 +260,8 @@ mod locking_unlocking_tests {
         }
     }
 
-
-
-
-
-
-
     #[test]
-    fn test_lock_unlock_lock_unlock_variable() {
+    fn lock_unlock_lock_unlock_variable() {
         let literals = get_all_literals_no_arr();
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
@@ -252,7 +279,7 @@ mod locking_unlocking_tests {
     }
 
     #[test]
-    fn test_lock_non_var_expr_errors() {
+    fn lock_non_var_expr_errors() {
         let literals = get_all_literals_no_arr();
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
@@ -270,7 +297,7 @@ mod locking_unlocking_tests {
 
 
     #[test]
-    fn test_lock_repeated_var_errors() {
+    fn lock_repeated_var_errors() {
         let literals = get_all_literals_no_arr();
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
@@ -287,7 +314,7 @@ mod locking_unlocking_tests {
 
 
     #[test]
-    fn test_double_lock_errors() {
+    fn double_lock_errors() {
         let literals = get_all_literals_no_arr();
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
@@ -304,7 +331,7 @@ mod locking_unlocking_tests {
     }
 
     #[test]
-    fn test_unlock_unlocked_variable_errors() {
+    fn unlock_unlocked_variable_errors() {
         let literals = get_all_literals_no_arr();
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
@@ -321,7 +348,7 @@ mod locking_unlocking_tests {
 
     // overshadowing is not allowed at all in holylang
     #[test]
-    fn test_shadowing_variable_lockek_errors() {
+    fn shadowing_variable_lockek_errors() {
         let literals = get_all_literals_no_arr();
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
@@ -340,7 +367,7 @@ mod locking_unlocking_tests {
 
 
     #[test]
-    fn test_lock_upstream_variable_in_while_loop_errors() {
+    fn lock_upstream_variable_in_while_loop_errors() {
         let literals = get_all_literals_no_arr();
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
@@ -363,7 +390,7 @@ mod locking_unlocking_tests {
 
 
     #[test]
-    fn test_lock_upstream_variable_in_infinite_loop_errors() {
+    fn lock_upstream_variable_in_infinite_loop_errors() {
         let literals = get_all_literals_no_arr();
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
@@ -385,7 +412,7 @@ mod locking_unlocking_tests {
 
 
     #[test]
-    fn test_lock_upstream_variable_in_for_loop_errors() {
+    fn lock_upstream_variable_in_for_loop_errors() {
         let literals = get_all_literals_no_arr();
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let arr_lit = Expr::ArrayLiteral {
@@ -416,7 +443,7 @@ mod locking_unlocking_tests {
     }
  
     #[test]
-    fn test_multi_assign_locked_vars_errors() {
+    fn multi_assign_locked_vars_errors() {
         let literals = get_all_literals_no_arr();
         let literals_scattered = get_all_literals_no_arr_scattered_order();
 

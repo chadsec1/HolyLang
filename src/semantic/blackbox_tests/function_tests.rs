@@ -22,7 +22,7 @@ mod function_tests {
     fn function_name_taken_by_global_const_errors() {
         let literals = get_all_literals();
 
-        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+        for (l, t) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
             let c = const_define_globally("foo", t.clone(), l.clone());
             let f = void_func("foo", vec![], vec![]);
             let mut ast = AST { functions: vec![f], globals: vec![c] };
@@ -39,22 +39,6 @@ mod function_tests {
                 }
 
                 let c = const_define_globally("foo", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(1)), l.clone());
-                let f = void_func("foo", vec![], vec![]);
-                let mut ast = AST { functions: vec![f], globals: vec![c] };
-                let result = check_semantics(&mut ast);
-                assert!(result.is_err());
-                assert!(result.unwrap_err().to_string().contains("is already taken by a function"));
-            }
-        }
-        
-        // Same test, but t is now a dynamic array type
-        for t in ALL_TYPES_NO_ARR {
-            for l in &literals {
-                if !matches!(l, Expr::ArrayLiteral{ .. }) { // skip non array t's
-                    continue
-                }
-
-                let c = const_define_globally("foo", Type::Array(Box::new(t.clone())), l.clone());
                 let f = void_func("foo", vec![], vec![]);
                 let mut ast = AST { functions: vec![f], globals: vec![c] };
                 let result = check_semantics(&mut ast);

@@ -7,6 +7,8 @@ use crate::ast::{
 };
 
 use crate::tests_consts::{
+    ALL_TYPES_WITH_DYN_ARR,
+
     ALL_TYPES_NO_ARR, ALL_TYPES_NO_ARR_SCATTERED, ALL_TYPES_NO_ARR_NO_USIZE, ALL_TYPES_NO_INTS_NO_ARR,
  
     ALL_TYPES_NO_ARR_NO_BOOL,
@@ -67,13 +69,46 @@ mod continue_stmt_tests;
 mod happy_path_tests;
 
 
-
-
 // Helper functions for all the test submodules
+//
+
+fn get_many_boolean_conditions() -> Vec<Expr> {
+    let literals = get_all_literals_no_arr();
+    
+    let mut boolean_conds = vec![
+        bool_lit(true),
+        bool_lit(false),
+    ];
+
+    for l in literals {
+        for b in ALL_BIN_OP_KIND_COMP {
+            // So that >= > <= < doesnt get performed on non integer/floats.
+            if !ALL_BIN_OP_KIND_COMP_EQ.contains(&b) {
+                match l {
+                    Expr::StringLiteral { .. } | Expr::BoolLiteral { .. } => {
+                        continue
+                    },
+                    _ => {}
+                }
+
+            }
+            let bin = Expr::BinOp {
+                left: Box::new(l.clone()),
+                right: Box::new(l.clone()),
+                op: b,
+                span: span(),
+            };
+
+            boolean_conds.push(bin);
+        }
+    }
+
+    return boolean_conds;
+}
 
 
 fn get_all_literals_no_arr_bool() -> [Expr; 13] {
-    let literals = [
+    return [
         int8_lit(1),
         int16_lit(1),
         int32_lit(1),
@@ -91,9 +126,7 @@ fn get_all_literals_no_arr_bool() -> [Expr; 13] {
         float64_lit(1.0),
 
         str_lit("Hi")
-    ];
-
-    return literals;
+    ]
 }
 
 
@@ -346,25 +379,23 @@ fn get_all_literals() -> [Expr; 28] {
         bool_lit(false),
         str_lit("Hi"),
 
+        array_lit(vec![int8_lit(1), int8_lit(i8::MIN), int8_lit(i8::MAX) ]),
+        array_lit(vec![int16_lit(1), int16_lit(i16::MIN), int16_lit(i16::MAX) ]),
+        array_lit(vec![int32_lit(1), int32_lit(i32::MIN), int32_lit(i32::MAX) ]),
+        array_lit(vec![int64_lit(1), int64_lit(i64::MIN), int64_lit(i64::MAX) ]),
+        array_lit(vec![int128_lit(1), int128_lit(i128::MIN), int128_lit(i128::MAX) ]),
 
-        array_lit(vec![int8_lit(1)]),
-        array_lit(vec![int16_lit(1)]),
-        array_lit(vec![int32_lit(1)]),
-        array_lit(vec![int64_lit(1)]),
-        array_lit(vec![int128_lit(1)]),
+        array_lit(vec![byte_lit(1), byte_lit(u8::MIN), byte_lit(u8::MAX) ]),
+        array_lit(vec![uint16_lit(1), uint16_lit(u16::MIN), uint16_lit(u16::MAX) ]),
+        array_lit(vec![uint32_lit(1), uint32_lit(u32::MIN), uint32_lit(u32::MAX) ]),
+        array_lit(vec![uint64_lit(1), uint64_lit(u64::MIN), uint64_lit(u64::MAX) ]),
+        array_lit(vec![uint128_lit(1), uint128_lit(u128::MIN), uint128_lit(u128::MAX) ]),
+        array_lit(vec![usize_lit(1), usize_lit(usize::MIN), usize_lit(usize::MAX) ]),
 
-        array_lit(vec![byte_lit(1)]),
-        array_lit(vec![uint16_lit(1)]),
-        array_lit(vec![uint32_lit(1)]),
-        array_lit(vec![uint64_lit(1)]),
-        array_lit(vec![uint128_lit(1)]),
+        array_lit(vec![float64_lit(1.0), float64_lit(f64::MIN), float64_lit(f64::MAX) ]),
 
-        array_lit(vec![usize_lit(1)]),
-
-        array_lit(vec![float64_lit(1.0)]),
-
-        array_lit(vec![bool_lit(false)]),
-        array_lit(vec![str_lit("Hi")])
+        array_lit(vec![bool_lit(false), bool_lit(true)]),
+        array_lit(vec![str_lit(""), str_lit("Hi"), str_lit(" !")])
     ];
 }
 
