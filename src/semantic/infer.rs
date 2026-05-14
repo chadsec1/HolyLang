@@ -9,6 +9,8 @@ use crate::ast::{
 /// 
 /// This is used for binary operations where at least one side is an integer literal.
 ///
+/// If left nor right are neither integer literals, no ceorcion is attempted.
+///
 pub fn advanced_infer_2_types(
     left: &mut Expr, 
     right: &mut Expr,
