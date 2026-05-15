@@ -4,6 +4,33 @@ use super::*;
 mod if_stmt_tests {
     use super::*;
 
+    // Test if statements with non-boolean literals, with no else, no elif
+    #[test]
+    fn if_branch_non_bool_literals_errors() {
+        let literals = get_all_literals();
+
+        for (l, t) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
+            if matches!(l, Expr::BoolLiteral { .. }) {
+                continue
+            }
+            let body = vec![ 
+                Stmt::If(IfStmt{
+                    condition: l.clone(),
+                    if_branch: vec![ var_decl("z", t.clone(), l.clone()) ],
+                    elif_branches: vec![],
+                    else_branch: None,
+                    span: span(),
+                }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("evaulatable to type `bool`"));
+        }
+    }
+
+
     // Test if statements with only boolean literals and boolean evaluated binops, with no else, no elif
     //
     #[test]
