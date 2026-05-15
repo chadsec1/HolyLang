@@ -6,9 +6,9 @@ mod var_assign_tests {
 
     #[test]
     fn test_varassign() {
-        let literals = get_all_literals_no_arr();
+        let literals = get_all_literals();
         
-        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+        for (l, t) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
             let body = vec![
                 var_decl("x", t.clone(), l.clone()), 
                 var_assign("x", l.clone())

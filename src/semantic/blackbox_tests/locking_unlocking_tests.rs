@@ -340,6 +340,78 @@ mod locking_unlocking_tests {
     }
 
     #[test]
+    fn unlock_func_arg_in_while_loop_errors() {
+        let boolean_conds = get_many_boolean_conditions();
+
+        for t in ALL_TYPES_WITH_DYN_ARR.iter() {
+            for bl in &boolean_conds {
+                let body = vec![
+                    Stmt::While(WhileStmt{
+                            condition: bl.clone(),
+                            branch: vec![
+                                Stmt::Unlock(vec![var_expr("x")]),
+                            ],
+                            span: span(),
+                        }),
+                ];
+                let func = void_func("foo", vec![param("x", t.clone())], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("You cannot unlock variable `x` because it is declared upstream"));
+            }
+        }
+    }
+
+    #[test]
+    fn unlock_func_arg_in_infinite_loop_errors() {
+        for t in ALL_TYPES_WITH_DYN_ARR.iter() {
+            let body = vec![
+                Stmt::Infinite(InfiniteStmt{
+                        branch: vec![
+                            Stmt::Unlock(vec![var_expr("x")]),
+                        ],
+                        span: span(),
+                    }),
+            ];
+            let func = void_func("foo", vec![param("x", t.clone())], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("You cannot unlock variable `x` because it is declared upstream"));
+        }
+    }
+
+    #[test]
+    fn unlock_func_arg_in_for_loop_errors() {
+        for t in ALL_TYPES_WITH_DYN_ARR.iter() {
+            let arr_lit = Expr::ArrayLiteral {
+                elements: vec![],
+                span: span(),
+            };
+
+            let body = vec![
+                var_decl("a", Type::Array(Box::new(t.clone())), arr_lit),
+
+                Stmt::For(ForStmt{
+                    holder_name: "i".to_string(),
+                    value: var_expr("a"),
+                    branch: vec![
+                        Stmt::Unlock(vec![var_expr("x")]),
+                    ],
+                    span: span(),
+                }),
+            ];
+            let func = void_func("foo", vec![param("x", t.clone())], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("You cannot unlock variable `x` because it is declared upstream"));
+        }
+    }
+
+
+    #[test]
     fn unlock_upstream_variable_in_while_loop_errors() {
         let literals = get_all_literals_no_arr();
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -483,6 +555,76 @@ mod locking_unlocking_tests {
         }
     }
 
+    #[test]
+    fn lock_func_arg_in_while_loop_errors() {
+        let boolean_conds = get_many_boolean_conditions();
+
+        for t in ALL_TYPES_WITH_DYN_ARR.iter() {
+            for bl in &boolean_conds {
+                let body = vec![
+                    Stmt::While(WhileStmt{
+                            condition: bl.clone(),
+                            branch: vec![
+                                Stmt::Lock(vec![var_expr("x")]),
+                            ],
+                            span: span(),
+                        }),
+                ];
+                let func = void_func("foo", vec![param("x", t.clone())], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("You cannot lock variable `x` because it is declared upstream"));
+            }
+        }
+    }
+
+    #[test]
+    fn lock_func_arg_in_infinite_loop_errors() {
+        for t in ALL_TYPES_WITH_DYN_ARR.iter() {
+            let body = vec![
+                Stmt::Infinite(InfiniteStmt{
+                        branch: vec![
+                            Stmt::Lock(vec![var_expr("x")]),
+                        ],
+                        span: span(),
+                    }),
+            ];
+            let func = void_func("foo", vec![param("x", t.clone())], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("You cannot lock variable `x` because it is declared upstream"));
+        }
+    }
+
+    #[test]
+    fn lock_func_arg_in_for_loop_errors() {
+        for t in ALL_TYPES_WITH_DYN_ARR.iter() {
+            let arr_lit = Expr::ArrayLiteral {
+                elements: vec![],
+                span: span(),
+            };
+
+            let body = vec![
+                var_decl("a", Type::Array(Box::new(t.clone())), arr_lit),
+
+                Stmt::For(ForStmt{
+                    holder_name: "i".to_string(),
+                    value: var_expr("a"),
+                    branch: vec![
+                        Stmt::Lock(vec![var_expr("x")]),
+                    ],
+                    span: span(),
+                }),
+            ];
+            let func = void_func("foo", vec![param("x", t.clone())], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("You cannot lock variable `x` because it is declared upstream"));
+        }
+    }
 
 
     #[test]
