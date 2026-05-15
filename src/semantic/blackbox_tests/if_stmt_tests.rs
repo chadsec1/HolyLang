@@ -8,25 +8,57 @@ mod if_stmt_tests {
     #[test]
     fn if_branch_non_bool_literals_errors() {
         let literals = get_all_literals();
+        let non_boolean_conds = get_non_boolean_conditions();
 
         for (l, t) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
-            if matches!(l, Expr::BoolLiteral { .. }) {
-                continue
+            for nbl in &non_boolean_conds {
+                let body = vec![ 
+                    Stmt::If(IfStmt{
+                        condition: nbl.clone(),
+                        if_branch: vec![ var_decl("z", t.clone(), l.clone()) ],
+                        elif_branches: vec![],
+                        else_branch: None,
+                        span: span(),
+                    }),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("evaulatable to type `bool`"));
             }
-            let body = vec![ 
-                Stmt::If(IfStmt{
-                    condition: l.clone(),
-                    if_branch: vec![ var_decl("z", t.clone(), l.clone()) ],
-                    elif_branches: vec![],
-                    else_branch: None,
-                    span: span(),
-                }),
-            ];
-            let func = void_func("foo", vec![], body);
-            let mut ast = ast_one(func);
-            let result = check_semantics(&mut ast);
-            assert!(result.is_err());
-            assert!(result.unwrap_err().to_string().contains("evaulatable to type `bool`"));
+        }
+    }
+
+    // Test if statements with non-boolean literals, with no else
+    #[test]
+    fn if_elif_branch_non_bool_literals_errors() {
+        let literals = get_all_literals();
+        let non_boolean_conds = get_non_boolean_conditions();
+        let boolean_conds = get_many_boolean_conditions();
+
+        for (l, t) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
+            for bl in &boolean_conds {
+                for nbl in &non_boolean_conds {
+                    let body = vec![ 
+                        Stmt::If(IfStmt{
+                            condition: bl.clone(),
+                            if_branch: vec![ var_decl("z", t.clone(), l.clone()) ],
+                            elif_branches: vec![(nbl.clone(), vec![
+                                // For above reason
+                                var_decl("e", t.clone(), l.clone()),
+                            ])],
+                            else_branch: None,
+                            span: span(),
+                        }),
+                    ];
+                    let func = void_func("foo", vec![], body);
+                    let mut ast = ast_one(func);
+                    let result = check_semantics(&mut ast);
+                    assert!(result.is_err());
+                    assert!(result.unwrap_err().to_string().contains("evaulatable to type `bool`"));
+                }
+            }
         }
     }
 

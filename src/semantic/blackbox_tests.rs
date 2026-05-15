@@ -144,6 +144,35 @@ fn get_many_boolean_conditions() -> Vec<Expr> {
 }
 
 
+fn get_non_boolean_conditions() -> Vec<Expr> {
+    let literals = get_all_literals();
+    
+    let mut non_boolean_conds = vec![];
+
+    for l in literals {
+        if matches!(l, Expr::BoolLiteral { .. }) {
+            continue
+        }
+        non_boolean_conds.push(l.clone());
+
+        for b in ALL_BIN_OP_KIND_BIT_ARTH {
+            if !matches!(l, Expr::IntLiteral { .. }) {
+                continue
+            }
+            let bin = Expr::BinOp {
+                left: Box::new(l.clone()),
+                right: Box::new(l.clone()),
+                op: b,
+                span: span(),
+            };
+            non_boolean_conds.push(bin);
+        }
+    }
+
+    return non_boolean_conds;
+}
+
+
 fn get_all_literals_no_arr_bool() -> [Expr; 13] {
     return [
         int8_lit(1),
