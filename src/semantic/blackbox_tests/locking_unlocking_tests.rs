@@ -108,6 +108,20 @@ mod locking_unlocking_tests {
     }
 
     #[test]
+    fn lock_locked_func_arg_errors() {
+        for t in ALL_TYPES_WITH_DYN_ARR.iter() {
+            let body = vec![
+                Stmt::Lock(vec![var_expr("x")])
+            ];
+            let func = void_func("foo", vec![param("x", t.clone())], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("already locked"));
+        }
+    }
+
+    #[test]
     fn unlock_literal_errors() {
         let literals = get_all_literals();
         
@@ -122,6 +136,18 @@ mod locking_unlocking_tests {
                 assert!(result.is_err());
                 assert!(result.unwrap_err().to_string().contains("Expected variable name"));
             }
+        }
+    }
+
+    #[test]
+    fn unlock_locked_func_arg() {
+        for t in ALL_TYPES_WITH_DYN_ARR.iter() {
+            let body = vec![
+                Stmt::Unlock(vec![var_expr("x")])
+            ];
+            let func = void_func("foo", vec![param("x", t.clone())], body);
+            let mut ast = ast_one(func);
+            check_semantics(&mut ast).unwrap();
         }
     }
 
