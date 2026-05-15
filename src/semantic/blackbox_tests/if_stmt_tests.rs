@@ -4,29 +4,19 @@ use super::*;
 mod if_stmt_tests {
     use super::*;
 
-    // Test if statements with only literals, with no else, no elif, and no string/bool literals
+    // Test if statements with only boolean literals and boolean evaluated binops, with no else, no elif
+    //
     #[test]
-    fn test_if_statements_ints_floats_literals_same_type() {
-        let literals_ints_floats = get_all_literals_no_arr_str_bool();
+    fn if_branch_bool_eval_conditions() {
+        let literals = get_all_literals();
+        let boolean_conds = get_many_boolean_conditions();
 
-        for (l, t) in literals_ints_floats.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            for b in ALL_BIN_OP_KIND_COMP {
-                let condition = Expr::BinOp {
-                        left: Box::new(l.clone()),
-                        op: b,
-                        right: Box::new(l.clone()),
-                        span: span(),
-                    };
-
-
+        for (l, t) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
+            for bl in &boolean_conds {
                 let body = vec![ 
                     Stmt::If(IfStmt{
-                        condition: condition,
-                        if_branch: vec![
-                            // Just dummy declaration, so we don't get flagged by dead code because
-                            // of empty branch.
-                            var_decl("z", t.clone(), l.clone()),
-                        ],
+                        condition: bl.clone(),
+                        if_branch: vec![ var_decl("z", t.clone(), l.clone()) ],
                         elif_branches: vec![],
                         else_branch: None,
                         span: span(),
@@ -34,22 +24,29 @@ mod if_stmt_tests {
                 ];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
-                let result = check_semantics(&mut ast);
-
-                assert!(result.is_ok());
+                check_semantics(&mut ast).unwrap();
             }
         }
     }
 
 
-
-    // Test if statements with only variables with same type, with no else, no elif, and no string/bool variables
+    // Same as above, except this time with only variables, instead of literals in the binary
+    // expression.
     #[test]
-    fn test_if_statements_ints_floats_vars_same_type() {
-        let literals_ints_floats = get_all_literals_no_arr_str_bool();
+    fn if_branch_vars_bool_eval_conditions() {
+        let literals = get_all_literals();
 
-        for (l, t) in literals_ints_floats.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+        for (l, t) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
             for b in ALL_BIN_OP_KIND_COMP {
+                // So that >= > <= < doesnt get performed on non integer/floats.
+                if !ALL_BIN_OP_KIND_COMP_EQ.contains(&b) {
+                    match l {
+                        Expr::StringLiteral { .. } | Expr::BoolLiteral { .. } | Expr::ArrayLiteral { .. } => {
+                            continue
+                        },
+                        _ => {}
+                    }
+                }
                 let condition = Expr::BinOp {
                         left: Box::new(var_expr("x")),
                         op: b,
@@ -63,11 +60,7 @@ mod if_stmt_tests {
 
                     Stmt::If(IfStmt{
                         condition: condition,
-                        if_branch: vec![
-                            // Just dummy declaration, so we don't get flagged by dead code because
-                            // of empty branch.
-                            var_decl("z", t.clone(), l.clone()),
-                        ],
+                        if_branch: vec![ var_decl("z", t.clone(), l.clone()) ],
                         elif_branches: vec![],
                         else_branch: None,
                         span: span(),

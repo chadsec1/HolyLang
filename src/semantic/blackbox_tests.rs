@@ -110,7 +110,7 @@ static ALL_TYPES_WITH_DYN_ARR: LazyLock<Vec<Type>> = LazyLock::new(|| {
 });
 
 fn get_many_boolean_conditions() -> Vec<Expr> {
-    let literals = get_all_literals_no_arr();
+    let literals = get_all_literals();
     
     let mut boolean_conds = vec![
         bool_lit(true),
@@ -122,13 +122,13 @@ fn get_many_boolean_conditions() -> Vec<Expr> {
             // So that >= > <= < doesnt get performed on non integer/floats.
             if !ALL_BIN_OP_KIND_COMP_EQ.contains(&b) {
                 match l {
-                    Expr::StringLiteral { .. } | Expr::BoolLiteral { .. } => {
+                    Expr::StringLiteral { .. } | Expr::BoolLiteral { .. } | Expr::ArrayLiteral { .. } => {
                         continue
                     },
                     _ => {}
                 }
-
             }
+
             let bin = Expr::BinOp {
                 left: Box::new(l.clone()),
                 right: Box::new(l.clone()),
