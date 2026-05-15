@@ -165,6 +165,23 @@ mod locking_unlocking_tests {
     }
 
     #[test]
+    fn double_unlock_func_arg_errors() {
+        let literals = get_all_literals_no_arr();
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                var_decl("x", t.clone(), l.clone()),
+                Stmt::Unlock(vec![var_expr("x")]),
+                Stmt::Unlock(vec![var_expr("x")]),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("already unlocked"));
+        }
+    }
+
+    #[test]
     fn lock_repeated_var_errors() {
         let literals = get_all_literals_no_arr();
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
