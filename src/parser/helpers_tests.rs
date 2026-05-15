@@ -128,21 +128,21 @@ mod tests {
 
         #[test]
         fn op_inside_parens_is_skipped() {
-            // "(a+b)" — '+' is depth-1, should be ignored
+            // "(a+b)" '+' is depth-1, should be ignored
             let result = helpers::find_top_level_op_any("(a+b)");
             assert_eq!(result, None);
         }
 
         #[test]
         fn op_at_top_level_with_inner_parens() {
-            // "(a+b)+(c+d)" — only the middle '+' is top-level
+            // "(a+b)+(c+d)" only the middle '+' is top-level
             let result = helpers::find_top_level_op_any("(a+b)+(c+d)");
             assert_eq!(result, Some((5, "+")));
         }
 
         #[test]
         fn left_associativity_picks_rightmost_lowest_precedence() {
-            // "a+b+c" — both '+' have the same precedence; should get the RIGHTMOST one
+            // "a+b+c" both '+' have the same precedence; should get the RIGHTMOST one
             let result = helpers::find_top_level_op_any("a+b+c");
             assert_eq!(result, Some((3, "+")));
         }
@@ -163,14 +163,14 @@ mod tests {
 
         #[test]
         fn nested_parens_all_ops_hidden() {
-            // "((a+b)*(c-d))" — all ops are nested
+            // "((a+b)*(c-d))" all ops are nested
             let result = helpers::find_top_level_op_any("((a+b)*(c-d))");
             assert_eq!(result, None);
         }
 
         #[test]
         fn comparison_operators_have_lowest_precedence() {
-            // "a+b>c*d" — '>' has prec 1, '+' has prec 2, so '>' wins
+            // "a+b>c*d" '>' has prec 1, '+' has prec 2, so '>' wins
             let result = helpers::find_top_level_op_any("a+b>c*d");
             assert_eq!(result, Some((3, ">")));
         }
@@ -183,7 +183,7 @@ mod tests {
 
         #[test]
         fn unbalanced_close_paren_depth_saturates_at_zero() {
-            // "a)+b" — after ')' depth would go negative but is clamped, '+' at 2 is top-level
+            // "a)+b"  after ')' depth would go negative but is clamped, '+' at 2 is top-level
             let result = helpers::find_top_level_op_any("a)+b");
             assert_eq!(result, Some((2, "+")));
         }
@@ -335,7 +335,7 @@ mod tests {
 
         #[test]
         fn string_with_escaped_backslash() {
-            // "\\" is a single backslash — the quote after it should close the string
+            // "\\" is a single backslash the quote after it should close the string
             let s = r#""back\\slash", next"#;
             let result = helpers::split_char_top_level(',', s).unwrap();
             assert_eq!(result.len(), 2);
@@ -983,7 +983,7 @@ mod tests {
 
         #[test]
         fn mixed_outside_and_inside_braces() {
-            // "{ \"inside: {}\" }" — outer braces count, inner two (in string) do not
+            // "{ \"inside: {}\" }"  outer braces count, inner two (in string) do not
             let s = r#"{ "inside: {}" }"#;
             assert_eq!(helpers::count_braces_outside_strings(s), (1, 1));
         }

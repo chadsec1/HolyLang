@@ -33,7 +33,7 @@ mod helpers_tests {
         assert_eq!(get_bigger_type_of_two_integers(Type::Byte,    Type::Uint16), Type::Uint16);
     }
 
-    // Same type — result must be that type (not garbage)
+    // Same type result must be that type (not garbage)
     #[test]
     fn bigger_int_same_type_returns_that_type() {
         assert_eq!(get_bigger_type_of_two_integers(Type::Int32,   Type::Int32),   Type::Int32);
@@ -55,13 +55,11 @@ mod helpers_tests {
             "Tie behavior: when Uint64 (score=8) vs Usize (score=8), t_2 (Usize) should win due to fall-through");
     }
 
-    // FOOTGUN: this function does NOT reject signed+unsigned mixing.
+    // FOOTGUN: this function does not reject signed+unsigned mixing.
     // It will happily compare Int32 vs Uint64 and return one of them.
-    // This test documents that gap so it's a conscious decision, not an oversight.
     #[test]
     fn bigger_int_does_not_reject_signed_unsigned_mix_footgun() {
-        // Int32 scores 5, Uint64 scores 8 — so Uint64 wins.
-        // No panic, no error. The caller must ensure they only pass same-signedness.
+        // Int32 scores 5, Uint64 scores 8 so Uint64 wins.
         let result = get_bigger_type_of_two_integers(Type::Int32, Type::Uint64);
         assert_eq!(result, Type::Uint64,
             "Documents that get_bigger_type_of_two_integers does NOT guard against signed/unsigned mixing. Callers are responsible.");
