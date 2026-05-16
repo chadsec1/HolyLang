@@ -1,11 +1,10 @@
 use super::*;
 
-
-pub fn dead_code_analysis(block: &Vec<Stmt>) -> Result<(), HolyError> {
-
+pub fn dead_code_analysis(block: &Vec<Stmt>, in_loop: bool) -> Result<bool, HolyError> {
     // Instead of returning error here, we panic, because if we returned an error here
     // we would not have ability to pinpoint to the empty branch line. leaving responsiblity to
     // caller is best.
+    //
     if block.len() == 0 {
         panic!("(Compiler bug) we got called with an empty block. Always check block size before calling dead_code_analysis");
     }
@@ -24,9 +23,12 @@ pub fn dead_code_analysis(block: &Vec<Stmt>) -> Result<(), HolyError> {
         }
 
         match stmt {
-            Stmt::Break(_) | Stmt::Return(_) => {
-                end_detected = true; 
-            }
+            Stmt::Return(_) => end_detected = true,
+            Stmt::Break(_) => {
+                if in_loop {
+                    end_detected = true; 
+                }
+            },
 
             Stmt::Infinite(infinite_stmt) => {
                 let body = &infinite_stmt.branch;
@@ -38,9 +40,9 @@ pub fn dead_code_analysis(block: &Vec<Stmt>) -> Result<(), HolyError> {
 
                 }
 
-                dead_code_analysis(body)?;
+                let inner_terminates = dead_code_analysis(body, true)?;
                 
-                if block_always_terminates(&infinite_stmt.branch, true) {
+                if inner_terminates { 
                     end_detected = true;
                 }
             }
@@ -57,7 +59,7 @@ pub fn dead_code_analysis(block: &Vec<Stmt>) -> Result<(), HolyError> {
                 }
 
 
-                dead_code_analysis(body)?;
+                dead_code_analysis(body, in_loop)?;
             }
 
 
@@ -72,124 +74,63 @@ pub fn dead_code_analysis(block: &Vec<Stmt>) -> Result<(), HolyError> {
                 }
 
 
-                dead_code_analysis(body)?;
+                dead_code_analysis(body, in_loop)?;
             }
 
 
             Stmt::If(if_stmt) => {
                 if if_stmt.if_branch.len() == 0 {
                     return Err(HolyError::Semantic(format!(
-                            "Empty `if` branch are not allowed (line {} column {})",
+                            "If statement main branch has no statements. Empty branches are not allowed (line {} column {})",
                             if_stmt.span.line, if_stmt.span.column,
                         )));
                 }
 
-                dead_code_analysis(&if_stmt.if_branch)?;
+                let if_term: bool = dead_code_analysis(&if_stmt.if_branch, in_loop)?;
 
-                if if_stmt.else_branch.is_some() {
-                    if if_stmt.else_branch.as_ref().unwrap().len() == 0 {
-                        return Err(HolyError::Semantic(format!(
-                            "Empty `else` branch detected for if statement. Empty branches are not allowed (line {} column {})",
-                            if_stmt.span.line, if_stmt.span.column,
-                        )));
-                    } 
-                
-                    dead_code_analysis(&if_stmt.else_branch.as_ref().unwrap())?;
-                }
+                // Apparently this is fine because `.all` returns true if elif_branches are
+                // empty.
+                let mut elifs_term = true;
 
                 for s_vec in &if_stmt.elif_branches {
-                    let body = &s_vec.1;
-
                     let expr_span = helpers::expr_span(&s_vec.0);
 
-                    if body.len() == 0 {
+                    if s_vec.1.len() == 0 {
                         return Err(HolyError::Semantic(format!(
-                            "Empty `elif` branches are not allowed (line {} column {})",
+                            "If statement `elif` branch has no statements. Empty branches are not allowed (line {} column {})",
                             expr_span.line, expr_span.column,
                         )));
                     }
 
-                    dead_code_analysis(body)?;
+                    if !dead_code_analysis(&s_vec.1, in_loop)? {
+                        elifs_term = false;
+                    }
                 }
-
-
 
                 // Check if statements branches all terminates
                 if if_stmt.else_branch.is_some() {
-                    let if_term = block_always_terminates(&if_stmt.if_branch, false);
-                    let else_term = block_always_terminates(if_stmt.else_branch.as_ref().unwrap(), false);
-
-                    // Apparently this is fine because `.all` returns true if elif_branches are
-                    // empty.
-                    let elifs_term = if_stmt.elif_branches
-                        .iter()
-                        .all(|s_vec| block_always_terminates(&s_vec.1, false));
+                    if if_stmt.else_branch.as_ref().unwrap().len() == 0 {
+                        return Err(HolyError::Semantic(format!(
+                            "If statement `else` branch has no statements. Empty branches are not allowed (line {} column {})",
+                            if_stmt.span.line, if_stmt.span.column,
+                        )));
+                    } 
+                
+                    let else_term = dead_code_analysis(&if_stmt.else_branch.as_ref().unwrap(), in_loop)?;
 
                     if if_term && else_term && elifs_term {
                         end_detected = true;
                     }
                 }
-
-
-
-
-            }
-            
+            },
 
             _ => {}
         }
         
     }
 
-    Ok(())
+    Ok(end_detected)
 }
-
-
-/// Recursive helper that tells us if a block of code terminates or not
-/// Like if it returns or breaks, then it terminates. 
-/// is_loop MUST be `true` if you call this while you are in a loop, 
-/// to not count `break` statements inside nested loop(s) as upstream block terminations.
-///
-pub fn block_always_terminates(block: &Vec<Stmt>, is_loop: bool) -> bool {
-    for stmt in block {
-        match stmt {
-            Stmt::Return(_) => return true,
-            Stmt::Break(_) => {
-                if !is_loop {
-                    return true
-                }
-            }
-            Stmt::If(if_stmt) => {
-                // Without an else, we can't guarantee termination
-                // because the if might not execute at all
-                if if_stmt.else_branch.is_none() {
-                    continue;
-                }
-                let if_terminates = block_always_terminates(&if_stmt.if_branch, is_loop);
-                let else_terminates = block_always_terminates(
-                    if_stmt.else_branch.as_ref().unwrap(),
-                    is_loop
-                );
-                let elifs_terminate = if_stmt.elif_branches
-                    .iter()
-                    .all(|s_vec| block_always_terminates(&s_vec.1, is_loop));
-
-                if if_terminates && else_terminates && elifs_terminate {
-                    return true;
-                }
-            }
-
-            Stmt::Infinite(infinite_stmt) => {
-                return block_always_terminates(&infinite_stmt.branch, true);
-            } 
-
-
-            _ => {}
-        }
-    }
-    false
-}
-
 
 
 pub fn return_branch_analysis(
@@ -374,5 +315,4 @@ pub fn return_branch_analysis(
 
     Ok(())
 }
-
 
