@@ -135,7 +135,7 @@ fn check_function(
     // We call dead code analysis here after check_stmts, because we want checked semantics.
     // Semantics take priority more than dead code
     //
-    branch_analysis::dead_code_analysis(&func.body)?;
+    branch_analysis::dead_code_analysis(&func.body, false)?;
 
     // Return analysis only needs to check last statement which has return statements
     // because dead code analysis should not let dead code pass.
