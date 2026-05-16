@@ -88,8 +88,6 @@ pub fn dead_code_analysis(block: &Vec<Stmt>, in_loop: bool) -> Result<bool, Holy
 
                 let if_term: bool = dead_code_analysis(&if_stmt.if_branch, in_loop)?;
 
-                // Apparently this is fine because `.all` returns true if elif_branches are
-                // empty.
                 let mut elifs_term = true;
 
                 for s_vec in &if_stmt.elif_branches {

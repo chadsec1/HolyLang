@@ -58,7 +58,7 @@ mod dead_code_analysis_tests {
 
 
     #[test]
-    fn while_statement_branch_multiple_return_dead() {
+    fn while_statement_branch_multiple_return_errors() {
         let literals_with_var = get_all_literals_with_var_no_arr();
 
         for lv in literals_with_var {
@@ -91,7 +91,7 @@ mod dead_code_analysis_tests {
     }
 
     #[test]
-    fn empty_if_statement_branch() {
+    fn empty_if_statement_branch_errors() {
         let literals = get_all_literals_with_var_no_arr();
 
         for l in literals {
@@ -112,7 +112,7 @@ mod dead_code_analysis_tests {
     }
 
     #[test]
-    fn empty_if_statement_else_branch() {
+    fn empty_if_statement_else_branch_errors() {
         let literals = get_all_literals_with_var_no_arr();
 
         for l in literals {
@@ -133,7 +133,7 @@ mod dead_code_analysis_tests {
     }
 
     #[test]
-    fn empty_if_statement_elif_branch() {
+    fn empty_if_statement_elif_branch_errors() {
         let literals = get_all_literals_with_var_no_arr();
 
         for l in literals {
@@ -152,6 +152,73 @@ mod dead_code_analysis_tests {
             let result = dead_code_analysis(&stmts, false);
             assert!(result.is_err());
             assert!(result.unwrap_err().to_string().contains("If statement `elif` branch has no statements"));
+        }
+    }
+
+    #[test]
+    fn if_statement_elif_branch_returns() {
+        let literals = get_all_literals_with_var_no_arr();
+
+        for l in literals {
+            let stmts: Vec<Stmt> = vec![
+                Stmt::If(IfStmt{
+                    condition: l.clone(),
+                    if_branch: vec![ Stmt::Expr(l.clone()) ],
+                    elif_branches: vec![
+                        (l.clone(), vec![ make_return_stmt(vec![l]) ])
+                    ],
+                    else_branch: None,
+                    span: span(),
+                })
+            ];
+
+            let result = dead_code_analysis(&stmts, false);
+            assert!(result.is_ok());
+        }
+    }
+
+    #[test]
+    fn if_statement_else_elif_branches_returns() {
+        let literals = get_all_literals_with_var_no_arr();
+
+        for l in literals {
+            let stmts: Vec<Stmt> = vec![
+                Stmt::If(IfStmt{
+                    condition: l.clone(),
+                    if_branch: vec![ Stmt::Expr(l.clone()) ],
+                    elif_branches: vec![
+                        (l.clone(), vec![ make_return_stmt(vec![l.clone()]) ])
+                    ],
+                    else_branch: Some(vec![ make_return_stmt(vec![l.clone()]) ]),
+                    span: span(),
+                })
+            ];
+
+            let result = dead_code_analysis(&stmts, false);
+            assert!(result.is_ok());
+        }
+    }
+
+
+    #[test]
+    fn if_statement_main_else_elif_branches_returns() {
+        let literals = get_all_literals_with_var_no_arr();
+
+        for l in literals {
+            let stmts: Vec<Stmt> = vec![
+                Stmt::If(IfStmt{
+                    condition: l.clone(),
+                    if_branch: vec![ make_return_stmt(vec![l.clone()])],
+                    elif_branches: vec![
+                        (l.clone(), vec![ make_return_stmt(vec![l.clone()]) ])
+                    ],
+                    else_branch: Some(vec![ make_return_stmt(vec![l.clone()]) ]),
+                    span: span(),
+                })
+            ];
+
+            let result = dead_code_analysis(&stmts, false);
+            assert!(result.is_ok());
         }
     }
 
