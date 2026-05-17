@@ -163,7 +163,10 @@ pub fn return_branch_analysis(
         Stmt::Infinite(infinite_stmt) => {
             // This is weak check, but I will keep it. It can catch (some) bugs.
             if infinite_stmt.branch.len() == 0 {
-                panic!("(Compiler bug) all branches must contain at least one statement, this shouldve been caught by dead_code_analyse before calling us:\nFunc: {:?}\ninfinite_stmt: {:?}", func, infinite_stmt);
+                panic!(
+                    "(Compiler bug) infinite loop branch is empty! this shouldve been caught by dead_code_analyse before calling us:\nFunc: {:?}\ninfinite_stmt: {:?}", 
+                    func, infinite_stmt
+                    );
             }
 
             // If we are in a nested loop(s), we dont care about breaks or whatever.
@@ -244,20 +247,26 @@ pub fn return_branch_analysis(
             // If we are not in a loop, then we only care about last statement of if branches
             // bodies
             if !is_loop {
-                let main_branch_last_stmt = if_stmt.if_branch.last().unwrap();
+                let main_branch_last_stmt = if_stmt.if_branch.last().unwrap_or_else(|| { panic!(
+                        "(Compiler bug) if statement main branch is empty! this shouldve been caught by dead_code_analyse before calling us:\nFunc: {:?}\nif_stmt: {:?}", 
+                        func, if_stmt
+                    )});
 
                 return_branch_analysis(func, &main_branch_last_stmt, is_loop, forbid_break)?;
 
-                if if_stmt.else_branch.is_none() {
+                if let Some(else_branch) = &if_stmt.else_branch {
+                    let else_branch_last_stmt = else_branch.last().unwrap_or_else(|| { panic!(
+                            "(Compiler bug) if statement else branch is empty! this shouldve been caught by dead_code_analyse before calling us:\nFunc: {:?}\nif_stmt: {:?}", 
+                            func, if_stmt
+                        )});
+
+                    return_branch_analysis(func, else_branch_last_stmt, is_loop, forbid_break)?;
+                } else {
                     return Err(HolyError::Semantic(format!(
                         "Function `{}` only returns in if statement branches, which might not always execute. Add an `else` branch (line {} column {})",
                         func.name, if_stmt.span.line, if_stmt.span.column,
                     )));
                 }
-
-                let else_branch_last_stmt = if_stmt.else_branch.as_ref().unwrap().last().unwrap();
-
-                return_branch_analysis(func, else_branch_last_stmt, is_loop, forbid_break)?;
 
                 for s_vec in &if_stmt.elif_branches {
                     let body = &s_vec.1;
