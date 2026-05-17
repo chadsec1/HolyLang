@@ -63,7 +63,7 @@ mod return_branch_analysis_tests {
     // is what is guaranteed by dead_code_analysis.
     #[should_panic(expected = "Compiler bug")]
     #[test]
-    fn func_infinite_statement_empty_branch_panics() {
+    fn infinite_statement_empty_branch_panics() {
         let dummy_func = make_dummy_func("x".to_string(), Some(vec![
             Stmt::Infinite(InfiniteStmt{
                 branch: vec![],
@@ -79,7 +79,7 @@ mod return_branch_analysis_tests {
     // Same as above test, but this time nested.
     #[should_panic(expected = "Compiler bug")]
     #[test]
-    fn func_infinite_statement_nested_branch_empty_panics() {
+    fn infinite_statement_nested_branch_empty_panics() {
         // NOTE: This test unlike other tests doesn't build from inside out, because return analysis
         // doesn't care too much about deeply nested infinite loops, it only cares about 2 nested
         // loops max
@@ -108,7 +108,7 @@ mod return_branch_analysis_tests {
     // If you try to break in an infinite loop that is last statement, it must error.
     //
     #[test]
-    fn func_infinite_statement_break_errors() {
+    fn infinite_statement_break_errors() {
         let dummy_func = make_dummy_func("x".to_string(), Some(vec![
             Stmt::Infinite(InfiniteStmt{
                 branch: vec![
@@ -128,7 +128,38 @@ mod return_branch_analysis_tests {
 
     // Same as above, but this is an if statement, inside infinite statement..
     #[test]
-    fn func_if_statement_main_branch_inside_infinite_statement_break_errors() {
+    fn if_statement_main_branch_inside_infinite_stmt_break_errors() {
+        let literals_with_var = get_all_literals_with_var_no_arr();
+        for lv in literals_with_var {
+            let dummy_func = make_dummy_func("x".to_string(), Some(vec![
+                Stmt::If(IfStmt{
+                    condition: lv.clone(),
+                    if_branch: vec![
+                        Stmt::Infinite(InfiniteStmt{
+                            branch: vec![
+                                make_break_stmt()
+                            ],
+                            span: span(),
+                        })
+                    ],
+                    elif_branches: vec![],
+                    else_branch: None,
+                    span: span(),
+                })
+            ]));
+
+            let last_stmt = dummy_func.body.last().unwrap();
+
+            let result = return_branch_analysis(&dummy_func, &last_stmt, false, false);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("You cannot `break` out of a infinite loop if its the last statement in a function that returns"));
+        }
+    }
+
+    // Same as above, but this is an if statement, inside infinite statement..
+    #[test]
+    fn infinite_statement_inside_if_stmt_break_errors() {
         let literals_with_var = get_all_literals_with_var_no_arr();
         for lv in literals_with_var {
             let dummy_func = make_dummy_func("x".to_string(), Some(vec![
@@ -160,7 +191,7 @@ mod return_branch_analysis_tests {
 
     // Nested infinite loops inside infinite loops breaks shouldn't be counted as breaks upstream
     #[test]
-    fn func_infinite_statement_nested_branch_break() {
+    fn infinite_statement_nested_branch_break() {
         for i in 1..=500 {
             // Build from the inside out
             let mut stmts: Vec<Stmt> = vec![make_break_stmt()];
@@ -187,7 +218,7 @@ mod return_branch_analysis_tests {
     
     // Nested while loops inside infinite loops breaks shouldn't be counted as breaks upstream
     #[test]
-    fn func_infinite_statement_while_statement_nested_branch_break() {
+    fn infinite_statement_while_statement_nested_branch_break() {
         let literals_with_var = get_all_literals_with_var_no_arr();
 
         for lv in literals_with_var {
@@ -226,7 +257,7 @@ mod return_branch_analysis_tests {
 
     // Nested for loops inside infinite loops breaks shouldn't be counted as breaks upstream
     #[test]
-    fn func_infinite_statement_for_statement_nested_branch_break() {
+    fn infinite_statement_for_statement_nested_branch_break() {
         let literals_with_var = get_all_literals_with_var_no_arr();
 
         for lv in literals_with_var {
@@ -262,14 +293,11 @@ mod return_branch_analysis_tests {
     }
 
 
-
-
-
     // While loops may or may not execute, therefore even if they return inside their body, the
     // function its self may not return, therefore return analysis should error here
     // 
     #[test]
-    fn func_while_statement_returns_error() {
+    fn while_statement_returns_error() {
         let literals_with_var = get_all_literals_with_var_no_arr();
         for lv in literals_with_var {
             let dummy_func = make_dummy_func("x".to_string(), Some(vec![
@@ -298,7 +326,7 @@ mod return_branch_analysis_tests {
     // function its self may not return, therefore return analysis should error here
     // 
     #[test]
-    fn func_for_statement_returns_error() {
+    fn for_statement_returns_error() {
         let literals_with_var = get_all_literals_with_var_no_arr();
         for lv in literals_with_var {
             let dummy_func = make_dummy_func("x".to_string(), Some(vec![
@@ -328,7 +356,7 @@ mod return_branch_analysis_tests {
     // function its self may not always return, therefore return analysis should error here
     // 
     #[test]
-    fn func_if_statement_returns_error() {
+    fn if_statement_returns_error() {
         let literals_with_var = get_all_literals_with_var_no_arr();
         for lv in literals_with_var {
             let dummy_func = make_dummy_func("x".to_string(), Some(vec![
@@ -357,7 +385,7 @@ mod return_branch_analysis_tests {
     // Same as above test, but since main if branch is empty, this should always panic.
     #[should_panic(expected = "Compiler bug")]
     #[test]
-    fn func_if_statement_empty_panics() {
+    fn if_statement_empty_panics() {
         let dummy_func = make_dummy_func("x".to_string(), Some(vec![
                 Stmt::If(IfStmt{
                     condition: int32_lit(2),
@@ -380,7 +408,7 @@ mod return_branch_analysis_tests {
     // is what is guaranteed by dead_code_analysis.)
     #[should_panic(expected = "Compiler bug")]
     #[test]
-    fn func_if_statement_returns_else_branch_empty_panics() {
+    fn if_statement_returns_else_branch_empty_panics() {
         let dummy_func = make_dummy_func("x".to_string(), Some(vec![
             Stmt::If(IfStmt{
                 condition: int32_lit(1),
@@ -403,7 +431,7 @@ mod return_branch_analysis_tests {
     // is what is guaranteed by dead_code_analysis.)
     #[should_panic]
     #[test]
-    fn func_empty_if_statement_else_branch_returns_panics() {
+    fn empty_if_statement_else_branch_returns_panics() {
         let dummy_func = make_dummy_func("x".to_string(), Some(vec![
             Stmt::If(IfStmt{
                 condition: int32_lit(1),
@@ -425,7 +453,7 @@ mod return_branch_analysis_tests {
     // If statement with an else branch will always have one branch execute, but main branch does not return, meaning it can't always return,
     // 
     #[test]
-    fn func_if_statement_not_return_with_else_branch_return_errors() {
+    fn if_statement_not_return_with_else_branch_return_errors() {
         let literals_with_var = get_all_literals_with_var_no_arr();
         for lv in literals_with_var {
             let dummy_func = make_dummy_func("x".to_string(), Some(vec![
@@ -455,7 +483,7 @@ mod return_branch_analysis_tests {
     // If statement with an else branch will always have one branch execute, but else branch does not return, meaning it can't always return,
     // 
     #[test]
-    fn func_if_statement_return_with_else_branch_not_returns_errors() {
+    fn if_statement_return_with_else_branch_not_returns_errors() {
         let literals_with_var = get_all_literals_with_var_no_arr();
         for lv in literals_with_var {
             let dummy_func = make_dummy_func("x".to_string(), Some(vec![
@@ -486,7 +514,7 @@ mod return_branch_analysis_tests {
     // If statement with an else branch will always have one branch execute, and if both branches return, it can always return,
     // 
     #[test]
-    fn func_if_statement_with_else_branch_both_return() {
+    fn if_statement_with_else_branch_both_return() {
         let literals_with_var = get_all_literals_with_var_no_arr();
         for lv in literals_with_var {
             let dummy_func = make_dummy_func("x".to_string(), Some(vec![
@@ -515,7 +543,7 @@ mod return_branch_analysis_tests {
     // If statement with elif branch, and an else branch will always have one branch execute, and if even one branch not returns, 
     // it cant gurantee that it will always return.
     #[test]
-    fn func_if_statement_with_else_branch_return_elif_branch_not_return_error() {
+    fn if_statement_with_else_branch_return_elif_branch_not_return_error() {
         let literals_with_var = get_all_literals_with_var_no_arr();
         for lv in literals_with_var {
             let dummy_func = make_dummy_func("x".to_string(), Some(vec![
@@ -548,7 +576,7 @@ mod return_branch_analysis_tests {
     // it cant gurantee that it will always return.
     // 
     #[test]
-    fn func_if_statement_with_elif_branch_return_else_branch_not_return_error() {
+    fn if_statement_with_elif_branch_return_else_branch_not_return_error() {
         let literals_with_var = get_all_literals_with_var_no_arr();
         for lv in literals_with_var {
             let dummy_func = make_dummy_func("x".to_string(), Some(vec![
@@ -582,7 +610,7 @@ mod return_branch_analysis_tests {
     // it cant gurantee that it will always return.
     // 
     #[test]
-    fn func_if_statement_not_return_with_elif_branch_and_else_branch_return_error() {
+    fn if_statement_not_return_with_elif_branch_and_else_branch_return_error() {
         let literals_with_var = get_all_literals_with_var_no_arr();
         for lv in literals_with_var {
             let dummy_func = make_dummy_func("x".to_string(), Some(vec![
@@ -619,7 +647,7 @@ mod return_branch_analysis_tests {
     // is not the last statement of function, the infinite loop is.
     // 
     #[test]
-    fn func_infinite_if_statement_returns() {
+    fn infinite_if_statement_returns() {
         let literals_with_var = get_all_literals_with_var_no_arr();
         for lv in literals_with_var {
             let dummy_func = make_dummy_func("x".to_string(), Some(vec![
@@ -647,7 +675,7 @@ mod return_branch_analysis_tests {
     }
 
     #[test]
-    fn func_infinite_if_statement_returns_with_else_branch_returns() {
+    fn infinite_if_statement_returns_with_else_branch_returns() {
         let literals_with_var = get_all_literals_with_var_no_arr();
         for lv in literals_with_var {
             let dummy_func = make_dummy_func("x".to_string(), Some(vec![
@@ -678,7 +706,7 @@ mod return_branch_analysis_tests {
 
 
     #[test]
-    fn func_infinite_if_statement_returns_with_elif_branch_returns() {
+    fn infinite_if_statement_returns_with_elif_branch_returns() {
         let literals_with_var = get_all_literals_with_var_no_arr();
         for lv in literals_with_var {
             let dummy_func = make_dummy_func("x".to_string(), Some(vec![
@@ -710,7 +738,7 @@ mod return_branch_analysis_tests {
 
 
     #[test]
-    fn func_infinite_if_statement_returns_with_elif_branch_returns_else_branch_retirns() {
+    fn infinite_if_statement_returns_with_elif_branch_returns_else_branch_retirns() {
         let literals_with_var = get_all_literals_with_var_no_arr();
         for lv in literals_with_var {
             let dummy_func = make_dummy_func("x".to_string(), Some(vec![
