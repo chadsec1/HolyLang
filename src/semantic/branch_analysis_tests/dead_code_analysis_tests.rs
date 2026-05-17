@@ -189,6 +189,121 @@ mod dead_code_analysis_tests {
         }
     }
 
+
+    #[test]
+    fn if_statement_main_branch_multiple_return_errors() {
+        let literals_with_var = get_all_literals_with_var_no_arr();
+
+        for lv in literals_with_var {
+            let stmt = Stmt::Expr(lv.clone());
+            for i in 0..=1000 {
+                let mut dummy_branch = vec![stmt.clone(); i + 1];
+            
+                // Insert return statement at `i`
+                let rstmt = make_return_stmt(vec![lv.clone()]);
+                dummy_branch.insert(i, rstmt);
+
+                let stmts: Vec<Stmt> = vec![
+                    Stmt::If(IfStmt{
+                        condition: lv.clone(),
+                        if_branch: dummy_branch,
+                        elif_branches: vec![],
+                        else_branch: None,
+                        span: span(),
+                    })
+                ];
+
+                let result = dead_code_analysis(&stmts, false);
+
+                // Block has no dead code (because if statement may or may not execute).
+                // But inside the if statement main branch its self, there are statements after the return
+                // statement, so those are dead.
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("Dead code detected starting from line"));
+
+            }       
+        }
+    }
+
+
+    #[test]
+    fn if_statement_else_branch_multiple_return_errors() {
+        let literals_with_var = get_all_literals_with_var_no_arr();
+
+        for lv in literals_with_var {
+            let stmt = Stmt::Expr(lv.clone());
+            for i in 0..=1000 {
+                let mut dummy_branch = vec![stmt.clone(); i + 1];
+            
+                // Insert return statement at `i`
+                let rstmt = make_return_stmt(vec![lv.clone()]);
+                dummy_branch.insert(i, rstmt);
+
+                let stmts: Vec<Stmt> = vec![
+                    Stmt::If(IfStmt{
+                        condition: lv.clone(),
+                        if_branch: vec![ Stmt::Expr(lv.clone()) ],
+                        elif_branches: vec![],
+                        else_branch: Some(dummy_branch),
+                        span: span(),
+                    })
+                ];
+
+                let result = dead_code_analysis(&stmts, false);
+
+                // Block has no dead code (because if statement else branch may or may not execute).
+                // But inside the if statement else branch its self, there are statements after the return
+                // statement, so those are dead.
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("Dead code detected starting from line"));
+
+            }       
+        }
+    }
+
+
+
+    #[test]
+    fn if_statement_elif_branch_multiple_return_errors() {
+        let literals_with_var = get_all_literals_with_var_no_arr();
+
+        for lv in literals_with_var {
+            let stmt = Stmt::Expr(lv.clone());
+            for i in 0..=1000 {
+                let mut dummy_branch = vec![stmt.clone(); i + 1];
+            
+                // Insert return statement at `i`
+                let rstmt = make_return_stmt(vec![lv.clone()]);
+                dummy_branch.insert(i, rstmt);
+
+                let stmts: Vec<Stmt> = vec![
+                    Stmt::If(IfStmt{
+                        condition: lv.clone(),
+                        if_branch: vec![ Stmt::Expr(lv.clone()) ],
+                        elif_branches: vec![ (lv.clone(), dummy_branch) ],
+                        else_branch: None,
+                        span: span(),
+                    })
+                ];
+
+                let result = dead_code_analysis(&stmts, false);
+
+                // Block has no dead code (because if statement elif branch may or may not execute).
+                // But inside the if statement elif branch its self, there are statements after the return
+                // statement, so those are dead.
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("Dead code detected starting from line"));
+
+            }       
+        }
+    }
+
+
+
+
+
+
+
     #[test]
     fn if_statement_elif_branch_returns() {
         let literals = get_all_literals_with_var_no_arr();
