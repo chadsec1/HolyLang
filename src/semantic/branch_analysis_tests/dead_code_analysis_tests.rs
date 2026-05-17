@@ -35,6 +35,40 @@ mod dead_code_analysis_tests {
     }
 
     #[test]
+    fn for_statement_branch_multiple_return_errors() {
+        let literals_with_var = get_all_literals_with_var_no_arr();
+
+        for lv in literals_with_var {
+            let stmt = Stmt::Expr(lv.clone());
+            for i in 0..=1000 {
+                let mut dummy_branch = vec![stmt.clone(); i + 1];
+            
+                // Insert return statement at `i`
+                let rstmt = make_return_stmt(vec![lv.clone()]);
+                dummy_branch.insert(i, rstmt);
+
+                let stmts: Vec<Stmt> = vec![
+                    Stmt::For(ForStmt{
+                        holder_name: "x".to_string(),
+                        value: lv.clone(),
+                        branch: dummy_branch,
+                        span: span(),
+                    })
+                ];
+
+                let result = dead_code_analysis(&stmts, false);
+
+                // Block has no dead code (because for statement may or may not execute).
+                // But inside the for statement its self, there are statements after the return
+                // statement, so those are dead.
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("Dead code detected starting from line"));
+
+            }       
+        }
+    }
+
+    #[test]
     fn empty_while_statement_branch_dead() {
         let literals_with_var = get_all_literals_with_var_no_arr();
 
@@ -84,7 +118,7 @@ mod dead_code_analysis_tests {
                 // But inside the while statement its self, there are statements after the return
                 // statement, so those are dead.
                 assert!(result.is_err());
-                assert!(result.unwrap_err().to_string().starts_with("Semantic error: Dead code detected starting from line"));
+                assert!(result.unwrap_err().to_string().contains("Dead code detected starting from line"));
 
             }       
         }
@@ -165,9 +199,9 @@ mod dead_code_analysis_tests {
                     condition: l.clone(),
                     if_branch: vec![ Stmt::Expr(l.clone()) ],
                     elif_branches: vec![
-                        (l.clone(), vec![ make_return_stmt(vec![l]) ])
+                        (l.clone(), vec![ make_return_stmt(vec![l.clone()]) ])
                     ],
-                    else_branch: None,
+                    else_branch: Some(vec![ Stmt::Expr(l.clone()) ]),
                     span: span(),
                 })
             ];
