@@ -262,7 +262,6 @@ mod dead_code_analysis_tests {
     }
 
 
-
     #[test]
     fn if_statement_elif_branch_multiple_return_errors() {
         let literals_with_var = get_all_literals_with_var_no_arr();
@@ -293,15 +292,9 @@ mod dead_code_analysis_tests {
                 // statement, so those are dead.
                 assert!(result.is_err());
                 assert!(result.unwrap_err().to_string().contains("Dead code detected starting from line"));
-
-            }       
+            }
         }
     }
-
-
-
-
-
 
 
     #[test]
@@ -317,6 +310,50 @@ mod dead_code_analysis_tests {
                         (l.clone(), vec![ make_return_stmt(vec![l.clone()]) ])
                     ],
                     else_branch: Some(vec![ Stmt::Expr(l.clone()) ]),
+                    span: span(),
+                })
+            ];
+
+            let result = dead_code_analysis(&stmts, false);
+            assert!(result.is_ok());
+        }
+    }
+
+    #[test]
+    fn if_statement_main_elif_branch_returns() {
+        let literals = get_all_literals_with_var_no_arr();
+
+        for l in literals {
+            let stmts: Vec<Stmt> = vec![
+                Stmt::If(IfStmt{
+                    condition: l.clone(),
+                    if_branch: vec![ make_return_stmt(vec![l.clone()]) ],
+                    elif_branches: vec![
+                        (l.clone(), vec![ make_return_stmt(vec![l.clone()]) ])
+                    ],
+                    else_branch: Some(vec![ Stmt::Expr(l.clone()) ]),
+                    span: span(),
+                })
+            ];
+
+            let result = dead_code_analysis(&stmts, false);
+            assert!(result.is_ok());
+        }
+    }
+
+    #[test]
+    fn if_statement_main_else_branch_returns() {
+        let literals = get_all_literals_with_var_no_arr();
+
+        for l in literals {
+            let stmts: Vec<Stmt> = vec![
+                Stmt::If(IfStmt{
+                    condition: l.clone(),
+                    if_branch: vec![ make_return_stmt(vec![l.clone()]) ],
+                    elif_branches: vec![
+                        (l.clone(), vec![ Stmt::Expr(l.clone()) ]),
+                    ],
+                    else_branch: Some(vec![ make_return_stmt(vec![l.clone()]) ]),
                     span: span(),
                 })
             ];
