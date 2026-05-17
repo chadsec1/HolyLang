@@ -133,7 +133,7 @@ pub fn dead_code_analysis(block: &Vec<Stmt>, in_loop: bool) -> Result<bool, Holy
 
 pub fn return_branch_analysis(
     func: &Function,
-    last_stmt: Option<Stmt>,
+    last_stmt: &Stmt,
     is_loop: bool,
     forbid_break: bool
 ) -> Result<(), HolyError> {
@@ -145,9 +145,7 @@ pub fn return_branch_analysis(
 
 
     match last_stmt {
-
-        Some(Stmt::Break(break_stmt)) => {
-
+        Stmt::Break(break_stmt) => {
             // Just a compiler bug guard.
             if !is_loop {
                 panic!("(Compiler bug) check_stmts shouldve errored before we even got called. We got a break statement when we arent even in a loop!");
@@ -160,12 +158,9 @@ pub fn return_branch_analysis(
                     )));
             }
 
-        }
-
-        Some(Stmt::Return(_)) => {}
-
-        Some(Stmt::Infinite(infinite_stmt)) => {
-
+        },
+        Stmt::Return(_) => {},
+        Stmt::Infinite(infinite_stmt) => {
             // This is weak check, but I will keep it. It can catch (some) bugs.
             if infinite_stmt.branch.len() == 0 {
                 panic!("(Compiler bug) all branches must contain at least one statement, this shouldve been caught by dead_code_analyse before calling us:\nFunc: {:?}\ninfinite_stmt: {:?}", func, infinite_stmt);
@@ -194,12 +189,12 @@ pub fn return_branch_analysis(
                         }
 
                         Stmt::If(_) => {
-                            return_branch_analysis(func, Some(s.clone()), true, true)?;
+                            return_branch_analysis(func, &s, true, true)?;
                         }
 
 
                         Stmt::While(_) | Stmt::For(_) | Stmt::Infinite(_) => {
-                            return_branch_analysis(func, Some(s.clone()), true, false)?;
+                            return_branch_analysis(func, &s, true, false)?;
                         }
 
 
@@ -211,7 +206,7 @@ pub fn return_branch_analysis(
             }
         }
 
-        Some(Stmt::While(while_stmt)) => {
+        Stmt::While(while_stmt) => {
             // If this is a nested loop, like a while loop inside a `infinite` loop, we let you do
             // that. if in_loop is true, it might not be last statement after all.
             //
@@ -229,7 +224,7 @@ pub fn return_branch_analysis(
             }
         }
         
-        Some(Stmt::For(for_stmt)) => {
+        Stmt::For(for_stmt) => {
             if for_stmt.branch.len() == 0 {
                 panic!("(Compiler bug) all branches must contain at least one statement, this shouldve been caught by dead_code_analyse before calling us:\nFunc: {:?}\nfor_stmt: {:?}", func, for_stmt);
             }
@@ -244,13 +239,14 @@ pub fn return_branch_analysis(
         },
         
 
-        Some(Stmt::If(if_stmt)) => {
+        Stmt::If(if_stmt) => {
 
             // If we are not in a loop, then we only care about last statement of if branches
             // bodies
             if !is_loop {
-                let stmt = if_stmt.if_branch.last();
-                return_branch_analysis(func, stmt.cloned(), is_loop, forbid_break)?;
+                let main_branch_last_stmt = if_stmt.if_branch.last().unwrap();
+
+                return_branch_analysis(func, &main_branch_last_stmt, is_loop, forbid_break)?;
 
                 if if_stmt.else_branch.is_none() {
                     return Err(HolyError::Semantic(format!(
@@ -259,43 +255,41 @@ pub fn return_branch_analysis(
                     )));
                 }
 
-                let stmt = if_stmt.else_branch.as_ref().unwrap().last();
+                let else_branch_last_stmt = if_stmt.else_branch.as_ref().unwrap().last().unwrap();
 
-                return_branch_analysis(func, stmt.cloned(), is_loop, forbid_break)?;
-
+                return_branch_analysis(func, else_branch_last_stmt, is_loop, forbid_break)?;
 
                 for s_vec in &if_stmt.elif_branches {
                     let body = &s_vec.1;
 
-                    let stmt = body.last();
-                    return_branch_analysis(func, stmt.cloned(), is_loop, forbid_break)?;
+                    let elif_branch_last_stmt = body.last().unwrap();
+                    return_branch_analysis(func, elif_branch_last_stmt, is_loop, forbid_break)?;
                 }
 
             } else {
                 for stmt in &if_stmt.if_branch {
-                    return_branch_analysis(func, Some(stmt).cloned(), is_loop, forbid_break)?;
+                    return_branch_analysis(func, &stmt, is_loop, forbid_break)?;
                 }
                 
                 // We dont care if else branch is none, we in a loop. 
-                if if_stmt.else_branch.is_some() {
-                    for stmt in &if_stmt.else_branch.unwrap() {
-                        return_branch_analysis(func, Some(stmt).cloned(), is_loop, forbid_break)?;
+                if let Some(else_branch) = &if_stmt.else_branch {
+                    for stmt in else_branch {
+                        return_branch_analysis(func, &stmt, is_loop, forbid_break)?;
                     }
                 }
 
                 for s_vec in &if_stmt.elif_branches {
                     let body = &s_vec.1;
 
-
                     for stmt in body {
-                        return_branch_analysis(func, Some(stmt).cloned(), is_loop, forbid_break)?;
+                        return_branch_analysis(func, &stmt, is_loop, forbid_break)?;
                     }
                 }
 
 
             }
         },
-        Some(other) => {
+        other => {
             if !is_loop {
                 let branch_span = helpers::stmt_span(&other);
 
@@ -305,11 +299,7 @@ pub fn return_branch_analysis(
                 ))) 
             }
         },
-
-
-        _ => panic!("(Compiler bug) dead code analysis should've errored when it encounterd an empty block, but it didn't:\nFunc: {:?}\nlast_stmt: {:?}", func, last_stmt)
     }
-
 
     Ok(())
 }
