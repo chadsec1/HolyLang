@@ -355,7 +355,7 @@ mod return_branch_analysis_tests {
 
 
     // Same as above test, but since main if branch is empty, this should always panic.
-    #[should_panic]
+    #[should_panic(expected = "Compiler bug")]
     #[test]
     fn func_if_statement_empty_panics() {
         let dummy_func = make_dummy_func("x".to_string(), Some(vec![
@@ -378,7 +378,7 @@ mod return_branch_analysis_tests {
     // Same as above, but this time main branch contains return, but else branch is Some, but empty. (this should panic because
     // return_branch_analysis assumes all function branches contain at least 1 statement, which
     // is what is guaranteed by dead_code_analysis.)
-    #[should_panic]
+    #[should_panic(expected = "Compiler bug")]
     #[test]
     fn func_if_statement_returns_else_branch_empty_panics() {
         let dummy_func = make_dummy_func("x".to_string(), Some(vec![
