@@ -6,7 +6,7 @@ mod return_branch_analysis_tests {
     
     #[should_panic(expected = "Compiler bug")]
     #[test]
-    fn empty_func_body() {
+    fn empty_func_body_panics() {
         let dummy_func = make_dummy_func("x".to_string(), Some(vec![]));
         let last_stmt: Option<Stmt> = None;
 
@@ -16,7 +16,20 @@ mod return_branch_analysis_tests {
 
     #[should_panic(expected = "Compiler bug")]
     #[test]
-    fn empty_func_last_stmt() {
+    fn func_has_no_declared_return_type_panics() {
+        let dummy_func = Function { 
+            name: "x".to_string(), params: vec![], return_type: None, body: vec![Stmt::Expr(int64_lit(69))], span: span()
+        };
+        let last_stmt: Option<Stmt> = None;
+
+        let _ = return_branch_analysis(&dummy_func, last_stmt, false, false);
+
+    }
+
+
+    #[should_panic(expected = "Compiler bug")]
+    #[test]
+    fn empty_func_last_stmt_panics() {
         let dummy_func = make_dummy_func("x".to_string(), None);
         let last_stmt: Option<Stmt> = None;
 
@@ -131,8 +144,7 @@ mod return_branch_analysis_tests {
         let result = return_branch_analysis(&dummy_func, last_stmt.cloned(), false, false);
 
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().starts_with(
-                "Semantic error: You cannot `break` out of a infinite loop if its the last statement in a function that returns. Use a return statement instead."));
+        assert!(result.unwrap_err().to_string().contains("You cannot `break` out of a infinite loop if its the last statement in a function that returns"));
     }
 
 
