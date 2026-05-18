@@ -27,7 +27,9 @@ It still lacks: structs, enums, unsafe blocks, char type, and actual binary gene
 #
 const hi int32 = 123
 
-# A constant can have expressions in it, as long as it consists of literals and or other constants
+# A constant can have complex expressions in it, as long as it consists of literals 
+# .. and or other constants.
+#
 const hey int32 = hi + 1 # That would be 124
 
 
