@@ -153,7 +153,7 @@ pub fn return_branch_analysis(
 
             if forbid_break {
                 return Err(HolyError::Semantic(format!(
-                        "You cannot `break` out of an infinite loop if its the last statement in a function that returns. Use a return statement instead. (line {} column {})",
+                        "You cannot `break` out of a infinite loop if its the last statement in a function that returns. Use a return statement instead. (line {} column {})",
                         break_stmt.span.line, break_stmt.span.column,
                     )));
             }
