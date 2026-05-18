@@ -24,6 +24,34 @@ mod const_tests {
         }
     }
 
+    #[test]
+    fn const_as_arg_to_fun() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                const_define_locally("x", t.clone(), l.clone()),
+
+                Stmt::Expr(call_expr("foo", vec![ var_expr("x") ]))
+            ];
+            let main = void_func("main", vec![], body);
+            let foo = void_func("foo", vec![param("h", t.clone())], vec![]);
+
+            let mut ast = AST { functions: vec![main, foo], globals: vec![] };
+            check_semantics(&mut ast).unwrap();
+            assert_eq!(ast.functions.len(), 2);
+            assert_eq!(ast.globals.len(), 0);
+
+            if let Stmt::Const(c) = &ast.functions[0].body[0] {
+                assert_eq!(c.name, "x");
+                assert_eq!(c.type_name, t.clone());
+                assert_eq!(c.value, l.clone());
+            } else { panic!("expected Const, got {:?}", ast); }
+        }
+    }
+
+
+
 
     #[test]
     fn type_mismatch_literals_errors() {

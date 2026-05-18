@@ -36,6 +36,37 @@ mod ownership_tests {
         }
     }
 
+
+    #[test]
+    fn function_call_arg_does_not_move_const() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let callee = void_func("bar", vec![param("a", t.clone())], vec![]);
+            let body = vec![
+                const_define_locally("x", t.clone(), l.clone()),
+                Stmt::Expr(call_expr("bar", vec![var_expr("x")])),
+                Stmt::Expr(call_expr("bar", vec![var_expr("x")]))
+            ];
+            let caller = void_func("main", vec![], body);
+            let mut ast = AST { functions: vec![callee, caller] , globals: vec![] };
+            check_semantics(&mut ast).unwrap();
+
+            assert_eq!(ast.functions.len(), 2);
+            assert_eq!(ast.functions[0].body.len(), 1);
+            assert_eq!(ast.functions[1].body.len(), 3);
+            assert_eq!(ast.globals.len(), 0);
+
+            if let Stmt::Const(c) = &ast.functions[1].body[0] {
+                assert_eq!(c.name, "x");
+                assert_eq!(c.type_name, t.clone());
+                assert_eq!(c.value, l.clone());
+            } else { panic!("expected constant, got {:?}", ast); }
+        }
+    }
+
+
+
     #[test]
     fn vardecl_uses_moved_var_to_func_errors() {
         let literals = get_all_literals_no_arr();
