@@ -1035,6 +1035,40 @@ mod ownership_tests {
     }
 
     #[test]
+    fn use_of_moved_upstream_var_in_one_if_stmt_branch_reflects_even_if_other_branches_dont_move_errors() {
+        let literals = get_all_literals_no_arr();
+        let boolean_conditions = get_many_boolean_conditions();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for bl in &boolean_conditions {
+                let body = vec![
+                    var_decl("x", t.clone(), l.clone()),
+                    Stmt::If(IfStmt{
+                        condition: bl.clone(),
+                        if_branch: vec![
+                            var_decl("y", t.clone(), var_expr("x"))
+                        ],
+                        elif_branches: vec![],
+                        else_branch: Some(vec![
+                            var_decl("h", t.clone(), l.clone())
+                        ]),
+                        span: span(),
+                    }),
+
+                    var_decl("q", t.clone(), var_expr("x"))
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("Use of moved variable"));
+            }
+        }
+    }
+
+
+
+    #[test]
     fn vardecl_moving_local_var_in_if_stmt_main_branch() {
         let literals = get_all_literals_no_arr();
         let boolean_conditions = get_many_boolean_conditions();
