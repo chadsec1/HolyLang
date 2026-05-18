@@ -52,8 +52,18 @@ func main() {
     # Variable overshadowing is not allowed.
     # own x int64 = 2 # This would've been a compile-time error if I uncomment it.
 
-    # Array literals example
+    # Dynamic heap-allocated arrays example
     own arr []int32 = [1, 2, 3, 4, 5]
+
+    # Fixed-size stack-allocated arrays example
+    own fixed_arr [5]int32 = [1, 2, 3, 4, 5]
+
+    # Nested dynamic arrays example
+    own nested_arr [][]int32 = [[1,2], [3,4], [5,6]]
+
+
+    # Nested fixed arrays example
+    own nested_fixed [3][2]int32 = [[1,2], [3,4], [5,6]]
 
 
     # Array access example (array accessing is always a copy)
@@ -61,10 +71,6 @@ func main() {
 
     # Array slicing example (array slicing is always a copy)
     own arr_slice []int32 = arr[1:3] # this creates new array starting from `arr`s 2nd element up to 4th element
-
-
-    # Nested arrays example
-    own nested_arr [][]int32 = [ [1,2], [3,4], [5,6]]
 
 
     # Example of the move-or-copy safety model, where there is only one owner of a variable,
@@ -83,9 +89,11 @@ func main() {
     b = 3
 
 
-
-    # All basic primitive types have a default value
-    # (0 for integers, 0.0 for floats, false for booleans, empty arrays for arrays, "" for string)
+    # All basic primitive types have a default value:
+    # 0 for integers, 0.0 for floats, false for booleans, 
+    # empty arrays for arrays, "" for strings.
+    #
+    # The only exception to this rule are constants and fixed arrays.
     #
     own h int32
     # h has value of 0
@@ -93,7 +101,6 @@ func main() {
 
     # Function calls example
     own res int32 = add(1, 2)
-
 
 
     # This is multi declaration
