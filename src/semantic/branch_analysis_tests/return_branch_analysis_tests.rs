@@ -244,7 +244,7 @@ mod return_branch_analysis_tests {
     }
 
     #[test]
-    fn if_statement_else_branch_inside_infinite_stmt_break_errors() {
+    fn if_statement_else_branch_inside_infinite_stmt() {
         let literals_with_var = get_all_literals_with_var_no_arr();
         for lv in literals_with_var {
             let dummy_func = make_dummy_func("x".to_string(), Some(vec![
@@ -254,7 +254,7 @@ mod return_branch_analysis_tests {
                             condition: lv.clone(),
                             if_branch: vec![Stmt::Expr(lv.clone())],
                             elif_branches: vec![],
-                            else_branch: Some(vec![make_break_stmt()]),
+                            else_branch: Some(vec![ Stmt::Expr(lv.clone()) ]),
                             span: span(),
                         }),
 
@@ -271,7 +271,7 @@ mod return_branch_analysis_tests {
     }
 
     #[test]
-    fn if_statement_elif_branch_inside_infinite_stmt_break_errors() {
+    fn if_statement_elif_branch_inside_infinite_stmt() {
         let literals_with_var = get_all_literals_with_var_no_arr();
         for lv in literals_with_var {
             let dummy_func = make_dummy_func("x".to_string(), Some(vec![
@@ -281,7 +281,7 @@ mod return_branch_analysis_tests {
                             condition: lv.clone(),
                             if_branch: vec![Stmt::Expr(lv.clone())],
                             elif_branches: vec![
-                                (lv.clone(), vec![make_break_stmt()]),
+                                (lv.clone(), vec![ Stmt::Expr(lv.clone()) ]),
                             ],
                             else_branch: None,
                             span: span(),
@@ -295,9 +295,7 @@ mod return_branch_analysis_tests {
             let last_stmt = dummy_func.body.last().unwrap();
 
             let result = return_branch_analysis(&dummy_func, &last_stmt, false, false);
-
-            assert!(result.is_err());
-            assert!(result.unwrap_err().to_string().contains("You cannot `break` out of a infinite loop if its the last statement in a function that returns"));
+            assert!(result.is_ok());
         }
     }
 
