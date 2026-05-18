@@ -89,6 +89,264 @@ mod ownership_tests {
     }
 
     #[test]
+    fn vardecl_in_if_main_branch_moves_upstream_var() {
+        let literals = get_all_literals_no_arr();
+        let boolean_conditions = get_many_boolean_conditions();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for bl in &boolean_conditions {
+                let body = vec![
+                    var_decl("x", t.clone(), l.clone()),
+
+                    Stmt::If(IfStmt{
+                        condition: bl.clone(),
+                        if_branch: vec![
+                            var_decl("y", t.clone(), var_expr("x"))
+                        ],
+                        elif_branches: vec![],
+                        else_branch: None,
+                        span: span(),
+                    })
+                ];
+
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                check_semantics(&mut ast).unwrap();
+
+                assert_eq!(ast.functions.len(), 1);
+                assert_eq!(ast.functions[0].body.len(), 2);
+                assert_eq!(ast.globals.len(), 0);
+
+                if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+                    assert_eq!(v.name, "x");
+                    assert_eq!(v.type_name, t.clone());
+                    assert_eq!(v.value, l.clone());
+                } else { panic!("expected VarDecl, got {:?}", ast); }
+
+                if let Stmt::If(i) = &ast.functions[0].body[1] {
+                    assert_eq!(i.condition, bl.clone());
+                    assert_eq!(i.if_branch.len(), 1);
+                    assert_eq!(i.elif_branches.len(), 0);
+                    assert!(i.else_branch.is_none());
+
+                    if let Stmt::VarDecl(v) = &i.if_branch[0] {
+                        assert_eq!(v.name, "y");
+                        assert_eq!(v.type_name, t.clone());
+                        assert_eq!(v.value, var_expr("x"));
+                    } else { panic!("expected VarDecl, got {:?}", i); }
+                } else { panic!("expected if statement, got {:?}", ast); }
+            }
+        }
+    }
+
+
+    #[test]
+    fn vardecl_in_if_main_branch_moves_upstream_var_use_of_var_inside_branch_errors() {
+        let literals = get_all_literals_no_arr();
+        let boolean_conditions = get_many_boolean_conditions();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for bl in &boolean_conditions {
+                let body = vec![
+                    var_decl("x", t.clone(), l.clone()),
+
+                    Stmt::If(IfStmt{
+                        condition: bl.clone(),
+                        if_branch: vec![
+                            var_decl("y", t.clone(), var_expr("x")),
+                            var_decl("h", t.clone(), var_expr("x"))
+                        ],
+                        elif_branches: vec![],
+                        else_branch: None,
+                        span: span(),
+                    }),
+                ];
+
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+
+                let result = check_semantics(&mut ast);
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("Use of moved variable `x`"));
+            }
+        }
+    }
+
+    #[test]
+    fn vardecl_in_if_main_branch_moves_upstream_var_use_of_var_outside_branch_errors() {
+        let literals = get_all_literals_no_arr();
+        let boolean_conditions = get_many_boolean_conditions();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for bl in &boolean_conditions {
+                let body = vec![
+                    var_decl("x", t.clone(), l.clone()),
+
+                    Stmt::If(IfStmt{
+                        condition: bl.clone(),
+                        if_branch: vec![
+                            var_decl("y", t.clone(), var_expr("x"))
+                        ],
+                        elif_branches: vec![],
+                        else_branch: None,
+                        span: span(),
+                    }),
+
+                    var_decl("h", t.clone(), var_expr("x"))
+                ];
+
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+
+                let result = check_semantics(&mut ast);
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("Use of moved variable `x`"));
+            }
+        }
+    }
+
+
+
+    #[test]
+    fn vardecl_in_if_else_branch_moves_upstream_var() {
+        let literals = get_all_literals_no_arr();
+        let boolean_conditions = get_many_boolean_conditions();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for bl in &boolean_conditions {
+                let body = vec![
+                    var_decl("x", t.clone(), l.clone()),
+
+                    Stmt::If(IfStmt{
+                        condition: bl.clone(),
+                        if_branch: vec![
+                            // dummy
+                            var_decl("z", t.clone(), l.clone())
+                        ],
+                        elif_branches: vec![],
+                        else_branch: Some(vec![
+                            var_decl("y", t.clone(), var_expr("x"))
+                        ]),
+                        span: span(),
+                    })
+                ];
+
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                check_semantics(&mut ast).unwrap();
+
+                assert_eq!(ast.functions.len(), 1);
+                assert_eq!(ast.functions[0].body.len(), 2);
+                assert_eq!(ast.globals.len(), 0);
+
+                if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+                    assert_eq!(v.name, "x");
+                    assert_eq!(v.type_name, t.clone());
+                    assert_eq!(v.value, l.clone());
+                } else { panic!("expected VarDecl, got {:?}", ast); }
+
+                if let Stmt::If(i) = &ast.functions[0].body[1] {
+                    assert_eq!(i.condition, bl.clone());
+                    assert_eq!(i.if_branch.len(), 1);
+                    assert_eq!(i.elif_branches.len(), 0);
+                    assert!(i.else_branch.is_some());
+                    assert_eq!(i.else_branch.clone().unwrap().len(), 1);
+
+                    if let Stmt::VarDecl(v) = &i.if_branch[0] {
+                        assert_eq!(v.name, "z");
+                        assert_eq!(v.type_name, t.clone());
+                        assert_eq!(v.value, l.clone());
+                    } else { panic!("expected VarDecl, got {:?}", i); }
+
+                    if let Stmt::VarDecl(v) = &i.else_branch.clone().unwrap()[0] {
+                        assert_eq!(v.name, "y");
+                        assert_eq!(v.type_name, t.clone());
+                        assert_eq!(v.value, var_expr("x"));
+                    } else { panic!("expected VarDecl, got {:?}", i); }
+                } else { panic!("expected if statement, got {:?}", ast); }
+            }
+        }
+    }
+
+
+    #[test]
+    fn vardecl_in_if_else_branch_moves_upstream_var_use_of_var_inside_branch_errors() {
+        let literals = get_all_literals_no_arr();
+        let boolean_conditions = get_many_boolean_conditions();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for bl in &boolean_conditions {
+                let body = vec![
+                    var_decl("x", t.clone(), l.clone()),
+
+                    Stmt::If(IfStmt{
+                        condition: bl.clone(),
+                        if_branch: vec![
+                            // dummy
+                            var_decl("z", t.clone(), l.clone())
+                        ],
+                        elif_branches: vec![],
+                        else_branch: Some(vec![
+                            var_decl("y", t.clone(), var_expr("x")),
+                            var_decl("h", t.clone(), var_expr("x"))
+                        ]),
+                        span: span(),
+                    }),
+                ];
+
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+
+                let result = check_semantics(&mut ast);
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("Use of moved variable `x`"));
+            }
+        }
+    }
+
+    #[test]
+    fn vardecl_in_if_else_branch_moves_upstream_var_use_of_var_outside_branch_errors() {
+        let literals = get_all_literals_no_arr();
+        let boolean_conditions = get_many_boolean_conditions();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for bl in &boolean_conditions {
+                let body = vec![
+                    var_decl("x", t.clone(), l.clone()),
+
+                    Stmt::If(IfStmt{
+                        condition: bl.clone(),
+                        if_branch: vec![
+                            var_decl("z", t.clone(), l.clone())
+                        ],
+                        elif_branches: vec![],
+                        else_branch: Some(vec![
+                            var_decl("y", t.clone(), var_expr("x"))
+                        ]),
+                        span: span(),
+                    }),
+
+                    var_decl("h", t.clone(), var_expr("x"))
+                ];
+
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+
+                let result = check_semantics(&mut ast);
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("Use of moved variable `x`"));
+            }
+        }
+    }
+
+
+
+
+
+
+
+
+    #[test]
     fn vardecl_uses_moved_var_errors() {
         let literals = get_all_literals_no_arr();
         
@@ -624,7 +882,7 @@ mod ownership_tests {
                         assert_eq!(v.type_name, t.clone());
                         assert_eq!(v.value, var_expr("x"));
                     } else { panic!("expected VarDecl, got {:?}", ast); }
-                } else { panic!("expected While loop statement, got {:?}", ast); }
+                } else { panic!("expected if statement, got {:?}", ast); }
             }
         }
     }
@@ -677,7 +935,7 @@ mod ownership_tests {
                         assert_eq!(v.type_name, t.clone());
                         assert_eq!(v.value, var_expr("x"));
                     } else { panic!("expected VarDecl, got {:?}", ast); }
-                } else { panic!("expected While loop statement, got {:?}", ast); }
+                } else { panic!("expected if tatement, got {:?}", ast); }
             }
         }
     }
@@ -734,7 +992,7 @@ mod ownership_tests {
                         assert_eq!(v.type_name, t.clone());
                         assert_eq!(v.value, var_expr("x"));
                     } else { panic!("expected VarDecl, got {:?}", ast); }
-                } else { panic!("expected While loop statement, got {:?}", ast); }
+                } else { panic!("expected if tatement, got {:?}", ast); }
             }
         }
     }
