@@ -22,6 +22,32 @@ mod locking_unlocking_tests {
     }
 
     #[test]
+    fn lock_unknown_binding_errors() {
+        let body = vec![
+            Stmt::Lock(vec![var_expr("x")]),
+        ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Use of undeclared binding"));
+    }
+
+    #[test]
+    fn unlock_unknown_binding_errors() {
+        let body = vec![
+            Stmt::Unlock(vec![var_expr("x")]),
+        ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Use of undeclared binding"));
+    }
+
+
+
+    #[test]
     fn lock_local_const_errors() {
         let literals = get_all_literals_no_arr();
         
