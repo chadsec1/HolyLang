@@ -88,6 +88,67 @@ mod ownership_tests {
         }
     }
 
+
+    #[test]
+    fn vardecl_in_if_main_branch_does_not_move_upstream_const() {
+        let literals = get_all_literals_no_arr();
+        let boolean_conditions = get_many_boolean_conditions();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for bl in &boolean_conditions {
+                let body = vec![
+                    const_define_locally("x", t.clone(), l.clone()),
+
+                    Stmt::If(IfStmt{
+                        condition: bl.clone(),
+                        if_branch: vec![
+                            var_decl("y", t.clone(), var_expr("x")),
+                            var_decl("h", t.clone(), var_expr("x"))
+                        ],
+                        elif_branches: vec![],
+                        else_branch: None,
+                        span: span(),
+                    })
+                ];
+
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                check_semantics(&mut ast).unwrap();
+
+                assert_eq!(ast.functions.len(), 1);
+                assert_eq!(ast.functions[0].body.len(), 2);
+                assert_eq!(ast.globals.len(), 0);
+
+                if let Stmt::Const(c) = &ast.functions[0].body[0] {
+                    assert_eq!(c.name, "x");
+                    assert_eq!(c.type_name, t.clone());
+                    assert_eq!(c.value, l.clone());
+                } else { panic!("expected Constant, got {:?}", ast); }
+
+                if let Stmt::If(i) = &ast.functions[0].body[1] {
+                    assert_eq!(i.condition, bl.clone());
+                    assert_eq!(i.if_branch.len(), 2);
+                    assert_eq!(i.elif_branches.len(), 0);
+                    assert!(i.else_branch.is_none());
+
+                    if let Stmt::VarDecl(v) = &i.if_branch[0] {
+                        assert_eq!(v.name, "y");
+                        assert_eq!(v.type_name, t.clone());
+                        assert_eq!(v.value, var_expr("x"));
+                    } else { panic!("expected VarDecl, got {:?}", i); }
+
+                    if let Stmt::VarDecl(v) = &i.if_branch[1] {
+                        assert_eq!(v.name, "h");
+                        assert_eq!(v.type_name, t.clone());
+                        assert_eq!(v.value, var_expr("x"));
+                    } else { panic!("expected VarDecl, got {:?}", i); }
+
+                } else { panic!("expected if statement, got {:?}", ast); }
+            }
+        }
+    }
+
+
     #[test]
     fn vardecl_in_if_main_branch_moves_upstream_var() {
         let literals = get_all_literals_no_arr();
