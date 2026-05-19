@@ -52,7 +52,8 @@ pub fn advanced_infer_2_types(
 /// NOTE: Unfortuntely I couldn't decouple the coerion logic, from getting type from expression,
 /// from enforcing the expression's legality. This is not a design limitation, but a limitations on
 /// all compilers pretty much. We have to both get type and try to coerce, AND enforce legality in
-/// the same function.
+/// the same function. I could hide this uglyness behind layers of abstraction, but the uglyness
+/// will always boil down to one function responsible for all three.
 ///
 pub fn infer_expr_type(
     expr: &mut Expr,
@@ -62,22 +63,24 @@ pub fn infer_expr_type(
 ) -> Result<Type, HolyError> {
     match expr {
         // NOTE: If `infer_hint` is set, we **TRY** to coerce the expression value into infer_hint (if
-        // possible), and error if we can't (BUT we do NOT error if we didnt attempt coercion (i.e.
-        // if its impossible to coerce, like its impossible to coerce a string to a different type., so infer_hint is ignored there, etc). ).
+        // possible), and error if we can't (BUT we do NOT error if we didnt attempt coercion)
+        // So far, infer_hint is only used with IntLiterals. It does not coerece variables, only
+        // integer literals.
         //
         // This function is NOT meant to type validating, it's a function that does 3 things:
         // 1. Resolve expression type(s) and ensure they are compatiable in complex expressions
-        //    (like `range`, etc.)
+        //    (like `range(expr1, expr2)`, expr1 + expr2, etc.)
         //
         // 2. Get expression "final" type. 
-        // 3. **Attempt** to "soft" coerce an expression type to a hint. (only possible SOMETIME,
-        //                                                                  and this is NOT full type validating)
+        // 3. **Attempt** to "soft" coerce an expression type to a hint. (only possible on integer
+        //    literals. and this is NOT full type validating)
+        //    It's still completely the caller's responsiblity to check if the returned type matches
+        //    what he expects.
         //
-        //  It's still completely the caller's responsiblity to check if the returned type matches
-        //  what he expects.
+        //  4. Ensure bindings exist and are not moved.
         //
         //  This function only does type validating on complex expressions like BinOp, Range, etc.
-        //  to ensure Left and Right are same type, both integer/same types, etc. and error if not.
+        //  to ensure Left and Right are the same exact type, etc. and error if not.
         //
 
 
