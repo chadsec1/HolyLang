@@ -113,7 +113,7 @@ pub fn eval_const_expr_and_fold_it(
                 }
 
             },
-            Expr::UnaryOp{ op, expr, ..} => {
+            Expr::UnaryOp { op, expr, ..} => {
                 let expr_evaled = eval_const_expr_and_fold_it_hazmat(expr, storage)?;
 
                 match expr_evaled {
@@ -134,8 +134,10 @@ pub fn eval_const_expr_and_fold_it(
                                         ))
                                     })?;
                             },
-
-                            _ => todo!()
+                            UnaryOpKind::BitwiseNot => {
+                                result = !result;
+                            },
+                            _ => panic!("(Compiler bug) Illegal unary operation detected. this shouldve errored when the wrapper called infer_expr_type")
                         }
                         
 
