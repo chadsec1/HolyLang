@@ -111,11 +111,9 @@ mod for_stmt_tests {
         let literals_no_ints = get_all_literals_no_arr_no_ints();
         let literals = get_all_literals_no_arr();
 
-
-
         for ((l, t), l2) in literals_no_ints.iter()
             .zip(ALL_TYPES_NO_INTS_NO_ARR.iter())
-            .zip(literals)
+            .zip(literals.iter())
         {
             let body = vec![ 
                 Stmt::For(ForStmt{
@@ -141,6 +139,36 @@ mod for_stmt_tests {
             assert!(result.is_err());
             assert!(result.unwrap_err().to_string().contains("Expected range arguments to be of the same type"));
         }
+
+        for ((l, t), l2) in literals_no_ints.iter()
+            .zip(ALL_TYPES_NO_INTS_NO_ARR.iter())
+            .zip(literals.iter())
+        {
+            let body = vec![ 
+                Stmt::For(ForStmt{
+                    holder_name: "x".to_string(),
+                    value: Expr::RangeCall{
+                        start: Box::new(l2.clone()),
+                        end: Box::new(l.clone()),
+                        span: span()
+                    },
+                    
+                    branch: vec![
+                        // Just dummy declaration, so we don't get flagged by dead code because
+                        // of empty branch.
+                        var_decl("z", t.clone(), l.clone()),
+                    ],
+                    span: span(),
+                }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Expected range arguments to be of the same type"));
+        }
+
     }
 
 
