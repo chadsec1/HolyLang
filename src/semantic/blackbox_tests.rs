@@ -1,7 +1,7 @@
 use super::*;
 use crate::ast::{
     FixedArraySize, IntLiteralValue, ArraySliceRange,
-    UnaryOpKind,
+    UnaryOpKind, BinOpKind,
     Param, VariableDeclaration, MultiVariableDeclaration, VariableAssignment, MultiAssignment, 
     IfStmt, WhileStmt, ForStmt, InfiniteStmt, BreakStmt, ContinueStmt, Constant
 };

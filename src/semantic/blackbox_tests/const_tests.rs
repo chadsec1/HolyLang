@@ -25,6 +25,57 @@ mod const_tests {
     }
 
     #[test]
+    fn const_binop_int8_addition_overflow_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(int8_lit(125)),
+            right: Box::new(int8_lit(3)),
+            op: BinOpKind::Add,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Int8, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("out of range for type `int8`"));
+    }
+
+    #[test]
+    fn const_binop_int8_subtract_underflow_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(int8_lit(-125)),
+            right: Box::new(int8_lit(10)),
+            op: BinOpKind::Subtract,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Int8, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("out of range for type `int8`"));
+    }
+
+    #[test]
+    fn const_binop_int8_multiplication_overflow_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(int8_lit(125)),
+            right: Box::new(int8_lit(2)),
+            op: BinOpKind::Multiply,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Int8, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("out of range for type `int8`"));
+    }
+
+    #[test]
     fn const_has_copy_call_errors() {
         let literals = get_all_literals_no_arr();
 
