@@ -114,10 +114,14 @@ pub fn infer_expr_type(
 
             // TODO: Add semantics blackbox tests to cover nested arrays.
             if !elements.is_empty() {
+                
+                // IMPORTANT TODO NOTE:: I think block is buggy, or at very least, very ugly to
+                // look at..
+                //
                 let elem_ih = match infer_hint.clone() {
                     Some(Type::FixedArray(t, _)) => {
                         let fixed_inner = if t.is_array_type() {
-                            // NOTE:: I think this is a bug... 
+                            // NOTE: I believe this part specifically is buggy.
                             t.get_array_inner_most_type()
                         } else {
                             &*t
@@ -534,10 +538,7 @@ pub fn infer_expr_type(
         }
 
         Expr::RangeCall { start: start_expr, end: end_expr, span } => {
-            
-            let end_ty = infer_expr_type(end_expr, locals, fun_sigs, None)?;
-            let start_ty = infer_expr_type(start_expr, locals, fun_sigs, Some(end_ty.clone()))?;
-
+            let (start_ty, end_ty) = advanced_infer_2_types(start_expr, end_expr, locals, fun_sigs, infer_hint.clone())?;
 
             if start_ty != end_ty {
                 return Err(HolyError::Semantic(format!(
@@ -545,17 +546,14 @@ pub fn infer_expr_type(
                         start_ty, end_ty, span.line, span.column)))
             }
 
-
-            if (!start_ty.is_integer_type()) || (!end_ty.is_integer_type()) {
-                return Err(HolyError::Semantic(format!(
-                        "Expected range arguments to be any Integer type, instead we got: `{}` and `{}` (line {} column {})", 
-                        start_ty, end_ty, span.line, span.column)))
-            }
-
-
-
+            // NOTE: Starting from here, start_ty is end_ty
+            //
             
-            // start_ty is same as end_ty
+            if !start_ty.is_integer_type() {
+                return Err(HolyError::Semantic(format!(
+                        "Expected range arguments to be any Integer type, instead we got: `{}` (line {} column {})", 
+                        start_ty, span.line, span.column)))
+            }
             Ok(start_ty)
         }
 
