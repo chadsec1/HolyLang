@@ -687,9 +687,101 @@ mod const_tests {
 }
 
 
+
+//
+//
+//
+//
+//
+//
+
+
 #[cfg(test)]
 mod const_integer_overflow_tests {
     use super::*;
+
+    #[test]
+    fn const_unaryop_int8_negate_min_literal_overflow_errors() {
+        let unary = Expr::UnaryOp {
+            expr: Box::new(int8_lit(i8::MIN)),
+            op: UnaryOpKind::Negate,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Int8, unary) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("out of range for type `int8`"));
+    }
+
+    #[test]
+    fn const_unaryop_int16_negate_min_literal_overflow_errors() {
+        let unary = Expr::UnaryOp {
+            expr: Box::new(int16_lit(i16::MIN)),
+            op: UnaryOpKind::Negate,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Int16, unary) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("out of range for type `int16`"));
+    }
+
+    #[test]
+    fn const_unaryop_int32_negate_min_literal_overflow_errors() {
+        let unary = Expr::UnaryOp {
+            expr: Box::new(int32_lit(i32::MIN)),
+            op: UnaryOpKind::Negate,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Int32, unary) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("out of range for type `int32`"));
+    }
+
+    #[test]
+    fn const_unaryop_int64_negate_min_literal_overflow_errors() {
+        let unary = Expr::UnaryOp {
+            expr: Box::new(int64_lit(i64::MIN)),
+            op: UnaryOpKind::Negate,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Int64, unary) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("out of range for type `int64`"));
+    }
+
+    #[test]
+    fn const_unaryop_int128_negate_min_literal_overflow_errors() {
+        let unary = Expr::UnaryOp {
+            expr: Box::new(int128_lit(i128::MIN)),
+            op: UnaryOpKind::Negate,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Int128, unary) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Constant unary negate result would cause an integer overflow"));
+    }
+
+
+
 
     #[test]
     fn const_binop_int8_addition_overflow_errors() {
