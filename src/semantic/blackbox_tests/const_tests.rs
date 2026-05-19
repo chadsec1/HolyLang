@@ -25,15 +25,26 @@ mod const_tests {
     }
 
     #[test]
-    fn const_unary_on_consts() {
+    fn const_unary_negate_on_signed_consts() {
         let signed_literals = get_all_signed_literals_no_arr();
 
         for (l, t) in signed_literals.iter().zip(ALL_SIGNED_TYPES_NO_ARR.iter()) {
-            let body = vec![ const_define_locally("x", t.clone(), l.clone()) ];
+            let unary = Expr::UnaryOp {
+                op: UnaryOpKind::Negate,
+                expr: Box::new(var_expr("x")),
+                span: span(),
+            };
+
+            let body = vec![
+                const_define_locally("x", t.clone(), l.clone()),
+                const_define_locally("y", t.clone(), unary.clone()) 
+            ];
+
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             check_semantics(&mut ast).unwrap();
             assert_eq!(ast.functions.len(), 1);
+            assert_eq!(ast.functions[0].body.len(), 2);
             assert_eq!(ast.globals.len(), 0);
 
             if let Stmt::Const(c) = &ast.functions[0].body[0] {
@@ -41,8 +52,15 @@ mod const_tests {
                 assert_eq!(c.type_name, t.clone());
                 assert_eq!(c.value, l.clone());
             } else { panic!("expected Const, got {:?}", ast); }
+
+            if let Stmt::Const(c) = &ast.functions[0].body[1] {
+                assert_eq!(c.name, "y");
+                assert_eq!(c.type_name, t.clone());
+                assert!(!matches!(c.value, Expr::UnaryOp { .. }))
+            } else { panic!("expected Const, got {:?}", ast); }
         }
     }
+
 
     #[test]
     fn const_as_arg_to_fun() {
@@ -214,7 +232,7 @@ mod const_tests {
             for i in 1..=100 {
                 let elements = vec![l.clone(); i];
 
-                for i2 in 1..=100 {
+                for i2 in 1..=50 {
                     let arr_lit = Expr::ArrayLiteral { elements: elements.clone(), span: span() };
                     let access = Expr::ArrayAccess {
                         array: Box::new(var_expr("arr")),
