@@ -191,6 +191,62 @@ mod const_tests {
     }
 
     #[test]
+    fn const_unary_negate_on_specific_float64_causes_nan_errors() {
+        let unary = Expr::UnaryOp {
+            op: UnaryOpKind::Negate,
+            expr: Box::new(float64_lit(1.0)),
+            span: span(),
+        };
+
+        let bin1 = Expr::BinOp {
+            left: Box::new(float64_lit(1.0)),
+            right: Box::new(unary),
+            op: BinOpKind::Add,
+            span: span(),
+        };
+
+        let bin2 = Expr::BinOp {
+            left: Box::new(float64_lit(0.0)),
+            right: Box::new(bin1),
+            op: BinOpKind::Divide,
+            span: span(),
+        };
+
+
+        let body = vec![
+            const_define_locally("x", Type::Float64, bin2),
+        ];
+
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Constant floating arithemtic result would cause floating point to produce non-finite result "));
+    }
+
+    #[test]
+    fn const_specific_float64_causes_inf_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(float64_lit(1.0)),
+            right: Box::new(float64_lit(0.0)),
+            op: BinOpKind::Divide,
+            span: span(),
+        };
+
+
+        let body = vec![
+            const_define_locally("x", Type::Float64, bin),
+        ];
+
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Constant floating arithemtic result would cause floating point to produce non-finite result "));
+    }
+
+
+    #[test]
     fn const_unary_negate_on_signed_consts() {
         let signed_literals = get_all_signed_literals_no_arr();
 
