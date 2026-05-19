@@ -25,6 +25,52 @@ mod const_tests {
     }
 
     #[test]
+    fn const_has_copy_call_errors() {
+        let literals = get_all_literals_no_arr();
+
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let copy_lit = Expr::CopyCall { expr: Box::new(var_expr("x")), span: span() };
+
+            let body = vec![
+                const_define_locally("x", t.clone(), l.clone()),
+                const_define_locally("y", t.clone(), copy_lit)
+            ];
+
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("expression cannot be evaluated at compile-time"));
+        }
+    }
+
+    #[test]
+    fn const_has_format_call_errors() {
+        let literals = get_all_literals_no_arr();
+
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let fmt = Expr::FormatCall {
+                template: "value: {}".to_string(),
+                expressions: vec![var_expr("x")],
+                span: span(),
+            };
+
+
+            let body = vec![
+                const_define_locally("x", t.clone(), l.clone()),
+                const_define_locally("y", Type::String, fmt)
+            ];
+
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            println!("nig {result:?}");
+            assert!(result.unwrap_err().to_string().contains("expression cannot be evaluated at compile-time"));
+        }
+    }
+
+    #[test]
     fn const_unary_negate_on_signed_consts() {
         let signed_literals = get_all_signed_literals_no_arr();
 
