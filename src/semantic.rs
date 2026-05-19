@@ -10,15 +10,16 @@ mod constants;
 mod infer;
 mod helpers;
 
+
+#[cfg(test)]
+mod branch_analysis_tests; 
+
 #[cfg(test)]
 mod helpers_tests;
 
 #[cfg(test)]
 mod blackbox_tests;
 
-#[cfg(test)]
-mod branch_analysis_tests;
- 
 
 #[derive(Clone, Debug)]
 enum BindingKind {
