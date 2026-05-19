@@ -427,10 +427,25 @@ pub fn infer_expr_type(
         Expr::UnaryOp{ op, expr, span } => {
             let expr_ty = infer_expr_type(expr, locals, fun_sigs, infer_hint.clone())?;
             
-            // Ensure that negate unary operations is only allowed on floating points, and signed integers.
-            if *op == UnaryOpKind::Negate {
-                if !matches!(expr_ty, Type::Int8 | Type::Int16 | Type::Int32 | Type::Int64 | Type::Int128 | Type::Float64) {
-                    return Err(HolyError::Semantic(format!("type `{}` cannot have negate unary operation. (line {} column {})", expr_ty, span.line, span.column)))
+            match *op {
+                UnaryOpKind::Not => {
+                    if !matches!(expr_ty, Type::Bool) {
+                        return Err(HolyError::Semantic(format!("Expression of type `{}` cannot have unary `not` operation. (line {} column {})", expr_ty, span.line, span.column)))
+                    }
+                },
+                UnaryOpKind::Negate => {
+                    // Ensure that negate unary operations is only allowed on floating points, and signed integers.
+                    //
+                    if !matches!(expr_ty, Type::Int8 | Type::Int16 | Type::Int32 | Type::Int64 | Type::Int128 | Type::Float64) {
+                        return Err(HolyError::Semantic(format!("Expression of type `{}` cannot have unary `negate` operation. (line {} column {})", expr_ty, span.line, span.column)))
+                    }
+                },
+
+                UnaryOpKind::BitwiseNot => {
+                    if !expr_ty.is_integer_type() {
+                        return Err(HolyError::Semantic(format!("Expression of type `{}` cannot have unary `bitwise not` operation. (line {} column {})", expr_ty, span.line, span.column)))
+                    }
+
                 }
             }
 
