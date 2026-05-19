@@ -61,6 +61,108 @@ mod const_tests {
         }
     }
 
+    #[test]
+    fn const_unary_negate_on_signed_non_const_errors() {
+        let signed_literals = get_all_signed_literals_no_arr();
+
+        for (l, t) in signed_literals.iter().zip(ALL_SIGNED_TYPES_NO_ARR.iter()) {
+            let unary = Expr::UnaryOp {
+                op: UnaryOpKind::Negate,
+                expr: Box::new(var_expr("x")),
+                span: span(),
+            };
+
+            let body = vec![
+                var_decl("x", t.clone(), l.clone()),
+                const_define_locally("y", t.clone(), unary.clone()) 
+            ];
+
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("You cannot use variable `x` in a constant value expression"));
+        }
+    }
+    
+    #[test]
+    fn const_unary_bitwise_not_on_int_consts() {
+        let int_literals = get_all_literals_no_arr_str_bool_float();
+
+        for (l, t) in int_literals.iter().zip(ALL_INT_TYPES_NO_ARR.iter()) {
+            let unary = Expr::UnaryOp {
+                op: UnaryOpKind::BitwiseNot,
+                expr: Box::new(var_expr("x")),
+                span: span(),
+            };
+
+            let body = vec![
+                const_define_locally("x", t.clone(), l.clone()),
+                const_define_locally("y", t.clone(), unary.clone()) 
+            ];
+
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            check_semantics(&mut ast).unwrap();
+            assert_eq!(ast.functions.len(), 1);
+            assert_eq!(ast.functions[0].body.len(), 2);
+            assert_eq!(ast.globals.len(), 0);
+
+            if let Stmt::Const(c) = &ast.functions[0].body[0] {
+                assert_eq!(c.name, "x");
+                assert_eq!(c.type_name, t.clone());
+                assert_eq!(c.value, l.clone());
+            } else { panic!("expected Const, got {:?}", ast); }
+
+            if let Stmt::Const(c) = &ast.functions[0].body[1] {
+                assert_eq!(c.name, "y");
+                assert_eq!(c.type_name, t.clone());
+                assert!(!matches!(c.value, Expr::UnaryOp { .. }))
+            } else { panic!("expected Const, got {:?}", ast); }
+        }
+    }
+
+
+    #[test]
+    fn const_unary_logical_not_on_binop_consts() {
+        let boolean_conditions = get_many_boolean_conditions_no_dyn_arr();
+
+        for bl in boolean_conditions {
+            let unary = Expr::UnaryOp {
+                op: UnaryOpKind::Not,
+                expr: Box::new(var_expr("x")),
+                span: span(),
+            };
+
+            let body = vec![
+                const_define_locally("x", Type::Bool, bl.clone()),
+                const_define_locally("y", Type::Bool, unary) 
+            ];
+
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            check_semantics(&mut ast).unwrap();
+            assert_eq!(ast.functions.len(), 1);
+            assert_eq!(ast.functions[0].body.len(), 2);
+            assert_eq!(ast.globals.len(), 0);
+
+            if let Stmt::Const(c) = &ast.functions[0].body[0] {
+                assert_eq!(c.name, "x");
+                assert_eq!(c.type_name, Type::Bool);
+                assert!(matches!(c.value, Expr::BoolLiteral { .. }))
+            } else { panic!("expected Const, got {:?}", ast); }
+
+            if let Stmt::Const(c) = &ast.functions[0].body[1] {
+                assert_eq!(c.name, "y");
+                assert_eq!(c.type_name, Type::Bool);
+                assert!(!matches!(c.value, Expr::UnaryOp { .. }))
+            } else { panic!("expected Const, got {:?}", ast); }
+        }
+    }
+
+
+
+
 
     #[test]
     fn const_as_arg_to_fun() {

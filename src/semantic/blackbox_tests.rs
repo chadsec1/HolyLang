@@ -143,6 +143,40 @@ fn get_many_boolean_conditions() -> Vec<Expr> {
     return boolean_conds;
 }
 
+fn get_many_boolean_conditions_no_dyn_arr() -> Vec<Expr> {
+    let literals = get_all_literals_no_arr();
+    
+    let mut boolean_conds = vec![
+        bool_lit(true),
+        bool_lit(false),
+    ];
+
+    for l in literals {
+        for b in ALL_BIN_OP_KIND_COMP {
+            // So that >= > <= < doesnt get performed on non integer/floats.
+            if !ALL_BIN_OP_KIND_COMP_EQ.contains(&b) {
+                match l {
+                    Expr::StringLiteral { .. } | Expr::BoolLiteral { .. } | Expr::ArrayLiteral { .. } => {
+                        continue
+                    },
+                    _ => {}
+                }
+            }
+
+            let bin = Expr::BinOp {
+                left: Box::new(l.clone()),
+                right: Box::new(l.clone()),
+                op: b,
+                span: span(),
+            };
+
+            boolean_conds.push(bin);
+        }
+    }
+
+    return boolean_conds;
+}
+
 
 fn get_non_boolean_conditions() -> Vec<Expr> {
     let literals = get_all_literals();
