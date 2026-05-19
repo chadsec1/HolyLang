@@ -23,76 +23,7 @@ mod const_tests {
             } else { panic!("expected Const, got {:?}", ast); }
         }
     }
-
-    #[test]
-    fn const_binop_int8_addition_overflow_errors() {
-        let bin = Expr::BinOp {
-            left: Box::new(int8_lit(125)),
-            right: Box::new(int8_lit(3)),
-            op: BinOpKind::Add,
-            span: span(),
-        };
-
-        let body = vec![ const_define_locally("x", Type::Int8, bin) ];
-        let func = void_func("foo", vec![], body);
-        let mut ast = ast_one(func);
-        let result = check_semantics(&mut ast);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("out of range for type `int8`"));
-    }
-
-    #[test]
-    fn const_binop_int8_subtract_underflow_errors() {
-        let bin = Expr::BinOp {
-            left: Box::new(int8_lit(-125)),
-            right: Box::new(int8_lit(10)),
-            op: BinOpKind::Subtract,
-            span: span(),
-        };
-
-        let body = vec![ const_define_locally("x", Type::Int8, bin) ];
-        let func = void_func("foo", vec![], body);
-        let mut ast = ast_one(func);
-        let result = check_semantics(&mut ast);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("out of range for type `int8`"));
-    }
-
-    #[test]
-    fn const_binop_int8_multiplication_overflow_errors() {
-        let bin = Expr::BinOp {
-            left: Box::new(int8_lit(125)),
-            right: Box::new(int8_lit(2)),
-            op: BinOpKind::Multiply,
-            span: span(),
-        };
-
-        let body = vec![ const_define_locally("x", Type::Int8, bin) ];
-        let func = void_func("foo", vec![], body);
-        let mut ast = ast_one(func);
-        let result = check_semantics(&mut ast);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("out of range for type `int8`"));
-    }
-
-    #[test]
-    fn const_binop_int8_divide_underflow_errors() {
-        let bin = Expr::BinOp {
-            left: Box::new(int8_lit(i8::MIN)),
-            right: Box::new(int8_lit(-1)),
-            op: BinOpKind::Divide,
-            span: span(),
-        };
-
-        let body = vec![ const_define_locally("x", Type::Int8, bin) ];
-        let func = void_func("foo", vec![], body);
-        let mut ast = ast_one(func);
-        let result = check_semantics(&mut ast);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("out of range for type `int8`"));
-    }
-
-
+   
     #[test]
     fn const_has_copy_call_errors() {
         let literals = get_all_literals_no_arr();
@@ -632,6 +563,324 @@ mod const_tests {
             assert!(result.unwrap_err().to_string().contains("You cannot assign to constant"));
         }
     }
+}
+
+
+#[cfg(test)]
+mod const_integer_overflow_tests {
+    use super::*;
+
+    #[test]
+    fn const_binop_int8_addition_overflow_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(int8_lit(125)),
+            right: Box::new(int8_lit(3)),
+            op: BinOpKind::Add,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Int8, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("out of range for type `int8`"));
+    }
+
+    #[test]
+    fn const_binop_int8_subtract_underflow_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(int8_lit(-125)),
+            right: Box::new(int8_lit(10)),
+            op: BinOpKind::Subtract,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Int8, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("out of range for type `int8`"));
+    }
+
+    #[test]
+    fn const_binop_int8_multiplication_overflow_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(int8_lit(125)),
+            right: Box::new(int8_lit(2)),
+            op: BinOpKind::Multiply,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Int8, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("out of range for type `int8`"));
+    }
+
+    #[test]
+    fn const_binop_int8_divide_underflow_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(int8_lit(i8::MIN)),
+            right: Box::new(int8_lit(-1)),
+            op: BinOpKind::Divide,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Int8, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("out of range for type `int8`"));
+    }
+
+    #[test]
+    fn const_binop_int8_divide_by_zero_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(int8_lit(1)),
+            right: Box::new(int8_lit(0)),
+            op: BinOpKind::Divide,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Int8, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Constant arithemtic division result would cause an integer overflow"));
+    }
+
+    #[test]
+    fn const_binop_int8_bitshift_left_negative_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(int8_lit(1)),
+            right: Box::new(int8_lit(-1)),
+            op: BinOpKind::BitwiseShiftLeft,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Int8, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Constant bitwise shift to the left's right-side value cannot be negative"));
+    }
+
+    #[test]
+    fn const_binop_int8_bitshift_left_exceeds_bit_width_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(int8_lit(1)),
+            right: Box::new(int8_lit(i8::BITS as i8)),
+            op: BinOpKind::BitwiseShiftLeft,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Int8, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Constant bitwise shift to the left's right-side value cannot exceed "));
+    }
+
+    #[test]
+    fn const_binop_int8_bitshift_right_negative_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(int8_lit(1)),
+            right: Box::new(int8_lit(-1)),
+            op: BinOpKind::BitwiseShiftRight,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Int8, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Constant bitwise shift to the right's right-side value cannot be negative"));
+    }
+
+    #[test]
+    fn const_binop_int8_bitshift_right_exceeds_bit_width_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(int8_lit(1)),
+            right: Box::new(int8_lit(i8::BITS as i8)),
+            op: BinOpKind::BitwiseShiftRight,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Int8, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Constant bitwise shift to the right's right-side value cannot exceed "));
+    }
+
+
+    // int16
+    //
+    #[test]
+    fn const_binop_int16_addition_overflow_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(int16_lit(i16::MAX - 2)),
+            right: Box::new(int16_lit(3)),
+            op: BinOpKind::Add,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Int16, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("out of range for type `int16`"));
+    }
+
+    #[test]
+    fn const_binop_int16_subtract_underflow_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(int16_lit(i16::MIN + 2)),
+            right: Box::new(int16_lit(10)),
+            op: BinOpKind::Subtract,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Int16, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("out of range for type `int16`"));
+    }
+
+    #[test]
+    fn const_binop_int16_multiplication_overflow_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(int16_lit(i16::MAX - 2)),
+            right: Box::new(int16_lit(2)),
+            op: BinOpKind::Multiply,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Int16, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("out of range for type `int16`"));
+    }
+
+    #[test]
+    fn const_binop_int16_divide_underflow_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(int16_lit(i16::MIN)),
+            right: Box::new(int16_lit(-1)),
+            op: BinOpKind::Divide,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Int16, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("out of range for type `int16`"));
+    }
+
+    #[test]
+    fn const_binop_int16_divide_by_zero_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(int16_lit(1)),
+            right: Box::new(int16_lit(0)),
+            op: BinOpKind::Divide,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Int16, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Constant arithemtic division result would cause an integer overflow"));
+    }
+
+    #[test]
+    fn const_binop_int16_bitshift_left_negative_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(int16_lit(1)),
+            right: Box::new(int16_lit(-1)),
+            op: BinOpKind::BitwiseShiftLeft,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Int16, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Constant bitwise shift to the left's right-side value cannot be negative"));
+    }
+
+    #[test]
+    fn const_binop_int16_bitshift_left_exceeds_bit_width_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(int16_lit(1)),
+            right: Box::new(int16_lit(i16::BITS as i16)),
+            op: BinOpKind::BitwiseShiftLeft,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Int16, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Constant bitwise shift to the left's right-side value cannot exceed "));
+    }
+
+    #[test]
+    fn const_binop_int16_bitshift_right_negative_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(int16_lit(1)),
+            right: Box::new(int16_lit(-1)),
+            op: BinOpKind::BitwiseShiftRight,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Int16, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Constant bitwise shift to the right's right-side value cannot be negative"));
+    }
+
+    #[test]
+    fn const_binop_int16_bitshift_right_exceeds_bit_width_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(int16_lit(1)),
+            right: Box::new(int16_lit(i16::BITS as i16)),
+            op: BinOpKind::BitwiseShiftRight,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Int16, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Constant bitwise shift to the right's right-side value cannot exceed "));
+    }
+
+
+
 
 
 }
