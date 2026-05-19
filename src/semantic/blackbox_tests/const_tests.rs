@@ -1352,6 +1352,643 @@ mod const_integer_overflow_tests {
 
 
 
+    // unsigned
+
+
+    #[test]
+    fn const_binop_byte_addition_overflow_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(byte_lit(u8::MAX - 2)),
+            right: Box::new(byte_lit(3)),
+            op: BinOpKind::Add,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Byte, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("out of range for type `byte`"));
+    }
+
+    #[test]
+    fn const_binop_byte_subtract_underflow_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(byte_lit(u8::MIN + 2)),
+            right: Box::new(byte_lit(10)),
+            op: BinOpKind::Subtract,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Byte, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Constant arithemtic subtraction result would cause an integer overflow"));
+    }
+
+    #[test]
+    fn const_binop_byte_multiplication_overflow_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(byte_lit(u8::MAX - 2)),
+            right: Box::new(byte_lit(2)),
+            op: BinOpKind::Multiply,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Byte, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("out of range for type `byte`"));
+    }
+
+    #[test]
+    fn const_binop_byte_divide_by_zero_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(byte_lit(1)),
+            right: Box::new(byte_lit(0)),
+            op: BinOpKind::Divide,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Byte, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Constant arithemtic division result would cause an integer overflow"));
+    }
+
+    #[test]
+    fn const_binop_byte_bitshift_left_exceeds_bit_width_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(byte_lit(1)),
+            right: Box::new(byte_lit(u8::BITS as u8)),
+            op: BinOpKind::BitwiseShiftLeft,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Byte, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Constant bitwise shift to the left's right-side value cannot exceed "));
+    }
+
+    #[test]
+    fn const_binop_byte_bitshift_right_exceeds_bit_width_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(byte_lit(1)),
+            right: Box::new(byte_lit(u8::BITS as u8)),
+            op: BinOpKind::BitwiseShiftRight,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Byte, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Constant bitwise shift to the right's right-side value cannot exceed "));
+    }
+
+
+    // uint16
+    //
+    #[test]
+    fn const_binop_uint16_addition_overflow_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(uint16_lit(u16::MAX - 2)),
+            right: Box::new(uint16_lit(3)),
+            op: BinOpKind::Add,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Uint16, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("out of range for type `uint16`"));
+    }
+
+    #[test]
+    fn const_binop_uint16_subtract_underflow_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(uint16_lit(u16::MIN + 2)),
+            right: Box::new(uint16_lit(10)),
+            op: BinOpKind::Subtract,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Uint16, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Constant arithemtic subtraction result would cause an integer overflow"));
+    }
+
+    #[test]
+    fn const_binop_uint16_multiplication_overflow_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(uint16_lit(u16::MAX - 2)),
+            right: Box::new(uint16_lit(2)),
+            op: BinOpKind::Multiply,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Uint16, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("out of range for type `uint16`"));
+    }
+
+    #[test]
+    fn const_binop_uint16_divide_by_zero_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(uint16_lit(1)),
+            right: Box::new(uint16_lit(0)),
+            op: BinOpKind::Divide,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Uint16, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Constant arithemtic division result would cause an integer overflow"));
+    }
+
+    #[test]
+    fn const_binop_uint16_bitshift_left_exceeds_bit_width_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(uint16_lit(1)),
+            right: Box::new(uint16_lit(u16::BITS as u16)),
+            op: BinOpKind::BitwiseShiftLeft,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Uint16, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Constant bitwise shift to the left's right-side value cannot exceed "));
+    }
+
+    #[test]
+    fn const_binop_uint16_bitshift_right_exceeds_bit_width_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(uint16_lit(1)),
+            right: Box::new(uint16_lit(u16::BITS as u16)),
+            op: BinOpKind::BitwiseShiftRight,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Uint16, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Constant bitwise shift to the right's right-side value cannot exceed "));
+    }
+
+    // uint32
+    //
+    #[test]
+    fn const_binop_uint32_addition_overflow_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(uint32_lit(u32::MAX - 2)),
+            right: Box::new(uint32_lit(3)),
+            op: BinOpKind::Add,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Uint32, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("out of range for type `uint32`"));
+    }
+
+    #[test]
+    fn const_binop_uint32_subtract_underflow_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(uint32_lit(u32::MIN + 2)),
+            right: Box::new(uint32_lit(10)),
+            op: BinOpKind::Subtract,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Uint32, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Constant arithemtic subtraction result would cause an integer overflow"));
+    }
+
+    #[test]
+    fn const_binop_uint32_multiplication_overflow_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(uint32_lit(u32::MAX - 2)),
+            right: Box::new(uint32_lit(2)),
+            op: BinOpKind::Multiply,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Uint32, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("out of range for type `uint32`"));
+    }
+
+
+    #[test]
+    fn const_binop_uint32_divide_by_zero_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(uint32_lit(1)),
+            right: Box::new(uint32_lit(0)),
+            op: BinOpKind::Divide,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Uint32, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Constant arithemtic division result would cause an integer overflow"));
+    }
+
+
+    #[test]
+    fn const_binop_uint32_bitshift_left_exceeds_bit_width_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(uint32_lit(1)),
+            right: Box::new(uint32_lit(u32::BITS as u32)),
+            op: BinOpKind::BitwiseShiftLeft,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Uint32, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Constant bitwise shift to the left's right-side value cannot exceed "));
+    }
+
+    #[test]
+    fn const_binop_uint32_bitshift_right_exceeds_bit_width_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(uint32_lit(1)),
+            right: Box::new(uint32_lit(u32::BITS as u32)),
+            op: BinOpKind::BitwiseShiftRight,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Uint32, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Constant bitwise shift to the right's right-side value cannot exceed "));
+    }
+
+
+
+    // uint64
+    //
+    #[test]
+    fn const_binop_uint64_addition_overflow_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(uint64_lit(u64::MAX - 2)),
+            right: Box::new(uint64_lit(3)),
+            op: BinOpKind::Add,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Uint64, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("out of range for type `uint64`"));
+    }
+
+    #[test]
+    fn const_binop_uint64_subtract_underflow_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(uint64_lit(u64::MIN + 2)),
+            right: Box::new(uint64_lit(10)),
+            op: BinOpKind::Subtract,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Uint64, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Constant arithemtic subtraction result would cause an integer overflow"));
+    }
+
+    #[test]
+    fn const_binop_uint64_multiplication_overflow_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(uint64_lit(u64::MAX - 2)),
+            right: Box::new(uint64_lit(2)),
+            op: BinOpKind::Multiply,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Uint64, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("out of range for type `uint64`"));
+    }
+
+
+    #[test]
+    fn const_binop_uint64_divide_by_zero_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(uint64_lit(1)),
+            right: Box::new(uint64_lit(0)),
+            op: BinOpKind::Divide,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Uint64, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Constant arithemtic division result would cause an integer overflow"));
+    }
+
+
+    #[test]
+    fn const_binop_uint64_bitshift_left_exceeds_bit_width_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(uint64_lit(1)),
+            right: Box::new(uint64_lit(u64::BITS as u64)),
+            op: BinOpKind::BitwiseShiftLeft,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Uint64, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Constant bitwise shift to the left's right-side value cannot exceed "));
+    }
+
+
+    #[test]
+    fn const_binop_uint64_bitshift_right_exceeds_bit_width_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(uint64_lit(1)),
+            right: Box::new(uint64_lit(u64::BITS as u64)),
+            op: BinOpKind::BitwiseShiftRight,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Uint64, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Constant bitwise shift to the right's right-side value cannot exceed "));
+    }
+
+
+    // uint128
+    //
+    #[test]
+    fn const_binop_uint128_addition_overflow_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(uint128_lit(u128::MAX - 2)),
+            right: Box::new(uint128_lit(3)),
+            op: BinOpKind::Add,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Uint128, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Constant arithemtic addition result would cause an integer overflow."));
+    }
+
+    #[test]
+    fn const_binop_uint128_subtract_underflow_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(uint128_lit(u128::MIN + 2)),
+            right: Box::new(uint128_lit(10)),
+            op: BinOpKind::Subtract,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Uint128, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Constant arithemtic subtraction result would cause an integer overflow"));
+    }
+
+    #[test]
+    fn const_binop_uint128_multiplication_overflow_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(uint128_lit(u128::MAX - 2)),
+            right: Box::new(uint128_lit(2)),
+            op: BinOpKind::Multiply,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Uint128, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Constant arithemtic multiplication result would cause an integer overflow"));
+    }
+
+
+    #[test]
+    fn const_binop_uint128_divide_by_zero_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(uint128_lit(1)),
+            right: Box::new(uint128_lit(0)),
+            op: BinOpKind::Divide,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Uint128, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Constant arithemtic division result would cause an integer overflow"));
+    }
+
+    #[test]
+    fn const_binop_uint128_bitshift_left_exceeds_bit_width_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(uint128_lit(1)),
+            right: Box::new(uint128_lit(u128::BITS as u128)),
+            op: BinOpKind::BitwiseShiftLeft,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Uint128, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Constant bitwise shift to the left's right-side value cannot exceed "));
+    }
+
+    #[test]
+    fn const_binop_uint128_bitshift_right_exceeds_bit_width_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(uint128_lit(1)),
+            right: Box::new(uint128_lit(u128::BITS as u128)),
+            op: BinOpKind::BitwiseShiftRight,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Uint128, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Constant bitwise shift to the right's right-side value cannot exceed "));
+    }
+
+
+
+    // usize
+    //
+    #[test]
+    fn const_binop_usize_addition_overflow_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(usize_lit(usize::MAX - 2)),
+            right: Box::new(usize_lit(3)),
+            op: BinOpKind::Add,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Usize, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("out of range for type `usize`"));
+    }
+
+    #[test]
+    fn const_binop_usize_subtract_underflow_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(usize_lit(usize::MIN + 2)),
+            right: Box::new(usize_lit(10)),
+            op: BinOpKind::Subtract,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Usize, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Constant arithemtic subtraction result would cause an integer overflow"));
+    }
+
+    #[test]
+    fn const_binop_usize_multiplication_overflow_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(usize_lit(usize::MAX - 2)),
+            right: Box::new(usize_lit(2)),
+            op: BinOpKind::Multiply,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Usize, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("out of range for type `usize`"));
+    }
+
+
+    #[test]
+    fn const_binop_usize_divide_by_zero_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(usize_lit(1)),
+            right: Box::new(usize_lit(0)),
+            op: BinOpKind::Divide,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Usize, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Constant arithemtic division result would cause an integer overflow"));
+    }
+
+    #[test]
+    fn const_binop_usize_bitshift_left_exceeds_bit_width_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(usize_lit(1)),
+            right: Box::new(usize_lit(usize::BITS as usize)),
+            op: BinOpKind::BitwiseShiftLeft,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Usize, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Constant bitwise shift to the left's right-side value cannot exceed "));
+    }
+
+    #[test]
+    fn const_binop_usize_bitshift_right_exceeds_bit_width_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(usize_lit(1)),
+            right: Box::new(usize_lit(usize::BITS as usize)),
+            op: BinOpKind::BitwiseShiftRight,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Usize, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Constant bitwise shift to the right's right-side value cannot exceed "));
+    }
 
 
 
