@@ -25,7 +25,7 @@ mod const_tests {
     }
 
     #[test]
-    fn const_evaluated_comparison_always_true() {
+    fn const_evaluated_equal_comparison() {
         let literals = get_all_literals_no_arr();
         
         for l in literals {
@@ -52,6 +52,93 @@ mod const_tests {
                         assert!(matches!(c.value, Expr::BoolLiteral { value: true, ..}));
                     } else if b == BinOpKind::NotEqual {
                         assert!(matches!(c.value, Expr::BoolLiteral { value: false, ..}));
+                    } else { panic!(); }
+                } else { panic!("expected Const, got {:?}", ast); }
+            }
+        }
+    }
+
+    #[test]
+    fn const_evaluated_logical_and_with_equal_comparison() {
+        let literals = get_all_literals_no_arr();
+        
+        for l in literals {
+            for b1 in ALL_BIN_OP_KIND_LOGIC {
+                for b2 in ALL_BIN_OP_KIND_COMP_EQ {
+                    let bin1 = Expr::BinOp {
+                        left: Box::new(l.clone()),
+                        right: Box::new(l.clone()),
+                        op: b2.clone(),
+                        span: span(),
+                    };
+
+                    let bin2 = Expr::BinOp {
+                        left: Box::new(l.clone()),
+                        right: Box::new(l.clone()),
+                        op: b2.clone(),
+                        span: span(),
+                    };
+
+
+                    let bin3 = Expr::BinOp {
+                        left: Box::new(bin1.clone()),
+                        right: Box::new(bin2.clone()),
+                        op: b1.clone(),
+                        span: span(),
+                    };
+
+
+                    let body = vec![ const_define_locally("x", Type::Bool, bin3) ];
+                    let func = void_func("foo", vec![], body);
+                    let mut ast = ast_one(func);
+                    check_semantics(&mut ast).unwrap();
+                    assert_eq!(ast.functions.len(), 1);
+                    assert_eq!(ast.globals.len(), 0);
+
+                    if let Stmt::Const(c) = &ast.functions[0].body[0] {
+                        assert_eq!(c.name, "x");
+                        assert_eq!(c.type_name, Type::Bool);
+
+                        if b2 == BinOpKind::Equal {
+                            assert!(matches!(c.value, Expr::BoolLiteral { value: true, ..}));
+                        } else if b2 == BinOpKind::NotEqual {
+                            assert!(matches!(c.value, Expr::BoolLiteral { value: false, ..}));
+                        } else { panic!(); }
+                    } else { panic!("expected Const, got {:?}", ast); }
+                }
+            }
+        }
+    }
+
+    // This includes greater than/ less than
+    #[test]
+    fn const_evaluated_numeric_comparison() {
+        let numeric_literals = get_all_literals_no_arr_str_bool();
+        
+        for l in numeric_literals {
+            for b in ALL_BIN_OP_KIND_COMP_ARTH {
+                let bin = Expr::BinOp {
+                    left: Box::new(l.clone()),
+                    right: Box::new(l.clone()),
+                    op: b.clone(),
+                    span: span(),
+                };
+
+
+                let body = vec![ const_define_locally("x", Type::Bool, bin) ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                check_semantics(&mut ast).unwrap();
+                assert_eq!(ast.functions.len(), 1);
+                assert_eq!(ast.globals.len(), 0);
+
+                if let Stmt::Const(c) = &ast.functions[0].body[0] {
+                    assert_eq!(c.name, "x");
+                    assert_eq!(c.type_name, Type::Bool);
+                    if b == BinOpKind::Greater || b == BinOpKind::Less {
+                        assert!(matches!(c.value, Expr::BoolLiteral { value: false, ..}));
+                    } else if b == BinOpKind::GreaterEqual || b == BinOpKind::LessEqual {
+                        assert!(matches!(c.value, Expr::BoolLiteral { value: true, ..}));
                     } else { panic!(); }
                 } else { panic!("expected Const, got {:?}", ast); }
             }
