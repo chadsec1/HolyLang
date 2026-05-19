@@ -239,7 +239,6 @@ fn get_all_literals_no_arr_few_ints_scattered() -> [Expr; 5] {
 }
 
 
-
 fn get_all_signed_literals_no_arr() -> [Expr; 6] {
     let literals = [
         int8_lit(1),
@@ -266,8 +265,6 @@ fn get_all_signed_literals_no_arr_no_float() -> [Expr; 5] {
 
     return literals;
 }
-
-
 
 
 
