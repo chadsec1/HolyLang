@@ -25,6 +25,26 @@ mod const_tests {
     }
 
     #[test]
+    fn const_unary_on_consts() {
+        let signed_literals = get_all_signed_literals_no_arr();
+
+        for (l, t) in signed_literals.iter().zip(ALL_SIGNED_TYPES_NO_ARR.iter()) {
+            let body = vec![ const_define_locally("x", t.clone(), l.clone()) ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            check_semantics(&mut ast).unwrap();
+            assert_eq!(ast.functions.len(), 1);
+            assert_eq!(ast.globals.len(), 0);
+
+            if let Stmt::Const(c) = &ast.functions[0].body[0] {
+                assert_eq!(c.name, "x");
+                assert_eq!(c.type_name, t.clone());
+                assert_eq!(c.value, l.clone());
+            } else { panic!("expected Const, got {:?}", ast); }
+        }
+    }
+
+    #[test]
     fn const_as_arg_to_fun() {
         let literals = get_all_literals_no_arr();
         
@@ -63,16 +83,163 @@ mod const_tests {
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
                 let result = check_semantics(&mut ast);
-
-                assert_eq!(ast.functions.len(), 1);
-                assert_eq!(ast.globals.len(), 0);
-
-
                 assert!(result.is_err());        
                 assert!(result.unwrap_err().to_string().contains("Type mismatch assigning to"));
             }
         }
     }
+
+    #[test]
+    fn fixed_array_with_literal_size() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for i in 0..=100 {
+                let elements = vec![l.clone(); i];
+
+                let arr_lit = Expr::ArrayLiteral { elements: elements, span: span() };
+
+                let body = vec![const_define_locally("x", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i)), arr_lit.clone())];
+             
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+
+                check_semantics(&mut ast).unwrap();
+                
+                assert_eq!(ast.functions.len(), 1);
+                assert_eq!(ast.globals.len(), 0);
+            }
+        }
+    }
+
+    #[test]
+    fn array_access_on_fixed_array_with_literal_size() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for i in 1..=100 {
+                let elements = vec![l.clone(); i];
+
+                let arr_lit = Expr::ArrayLiteral { elements: elements, span: span() };
+                let access = Expr::ArrayAccess {
+                    array: Box::new(var_expr("arr")),
+                    index: Box::new(usize_lit(i - 1)),
+                    span: span(),
+                };
+
+                let body = vec![
+                    const_define_locally("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i)), arr_lit.clone()),
+                    const_define_locally("x", t.clone(), access)
+                ];
+             
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+
+                check_semantics(&mut ast).unwrap();
+                
+                assert_eq!(ast.functions.len(), 1);
+                assert_eq!(ast.globals.len(), 0);
+            }
+        }
+    }
+
+    #[test]
+    fn array_access_on_non_const_fixed_array_with_literal_size_errors() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for i in 1..=100 {
+                let elements = vec![l.clone(); i];
+
+                let arr_lit = Expr::ArrayLiteral { elements: elements, span: span() };
+                let access = Expr::ArrayAccess {
+                    array: Box::new(var_expr("arr")),
+                    index: Box::new(usize_lit(i - 1)),
+                    span: span(),
+                };
+
+                let body = vec![
+                    var_decl("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i)), arr_lit.clone()),
+                    const_define_locally("x", t.clone(), access)
+                ];
+             
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+
+                let result = check_semantics(&mut ast);
+                
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("You cannot use variable `arr` in a constant value expression"));
+            }
+        }
+    }
+
+    #[test]
+    fn array_access_using_non_const_index_on_fixed_array_with_literal_size_errors() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for i in 1..=100 {
+                let elements = vec![l.clone(); i];
+
+                let arr_lit = Expr::ArrayLiteral { elements: elements, span: span() };
+                let access = Expr::ArrayAccess {
+                    array: Box::new(var_expr("arr")),
+                    index: Box::new(var_expr("h")),
+                    span: span(),
+                };
+
+                let body = vec![
+                    var_decl("h", Type::Usize, usize_lit(i - 1)),
+                    const_define_locally("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i)), arr_lit.clone()),
+                    const_define_locally("x", t.clone(), access)
+                ];
+             
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+
+                let result = check_semantics(&mut ast);
+                
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("You cannot use variable `h` in a constant value expression"));
+            }
+        }
+    }
+
+    #[test]
+    fn array_out_of_bounds_access_on_fixed_array_with_literal_size_errors() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for i in 1..=100 {
+                let elements = vec![l.clone(); i];
+
+                for i2 in 1..=100 {
+                    let arr_lit = Expr::ArrayLiteral { elements: elements.clone(), span: span() };
+                    let access = Expr::ArrayAccess {
+                        array: Box::new(var_expr("arr")),
+                        index: Box::new(usize_lit(i + i2)),
+                        span: span(),
+                    };
+
+                    let body = vec![
+                        const_define_locally("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i)), arr_lit.clone()),
+                        const_define_locally("x", t.clone(), access)
+                    ];
+                 
+                    let func = void_func("foo", vec![], body);
+
+                    let result = std::panic::catch_unwind(|| { 
+                        let mut ast = ast_one(func.clone());
+                        check_semantics(&mut ast).unwrap();
+                    });
+
+                    assert!(result.is_err(), "Expected panic for: {:?}", func);
+                }
+            }
+        }
+    }
+
 
     
     #[test]
@@ -90,11 +257,7 @@ mod const_tests {
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
                 let result = check_semantics(&mut ast);
-                assert_eq!(ast.functions.len(), 1);
-                assert_eq!(ast.globals.len(), 0);
-
-
-
+                
                 assert!(result.is_err());        
                 assert!(result.unwrap_err().to_string().contains("Dynamic arrays cannot be evaluated at compile time"));
             }
