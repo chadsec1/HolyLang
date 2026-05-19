@@ -134,7 +134,6 @@ mod const_tests {
             let mut ast = ast_one(func);
             let result = check_semantics(&mut ast);
             assert!(result.is_err());
-            println!("nig {result:?}");
             assert!(result.unwrap_err().to_string().contains("expression cannot be evaluated at compile-time"));
         }
     }
