@@ -76,6 +76,24 @@ mod const_tests {
     }
 
     #[test]
+    fn const_binop_int8_divide_underflow_errors() {
+        let bin = Expr::BinOp {
+            left: Box::new(int8_lit(i8::MIN)),
+            right: Box::new(int8_lit(-1)),
+            op: BinOpKind::Divide,
+            span: span(),
+        };
+
+        let body = vec![ const_define_locally("x", Type::Int8, bin) ];
+        let func = void_func("foo", vec![], body);
+        let mut ast = ast_one(func);
+        let result = check_semantics(&mut ast);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("out of range for type `int8`"));
+    }
+
+
+    #[test]
     fn const_has_copy_call_errors() {
         let literals = get_all_literals_no_arr();
 
