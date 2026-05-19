@@ -23,6 +23,40 @@ mod const_tests {
             } else { panic!("expected Const, got {:?}", ast); }
         }
     }
+
+    #[test]
+    fn const_evaluated_comparison_always_true() {
+        let literals = get_all_literals_no_arr();
+        
+        for l in literals {
+            for b in ALL_BIN_OP_KIND_COMP_EQ {
+                let bin = Expr::BinOp {
+                    left: Box::new(l.clone()),
+                    right: Box::new(l.clone()),
+                    op: b.clone(),
+                    span: span(),
+                };
+
+
+                let body = vec![ const_define_locally("x", Type::Bool, bin) ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                check_semantics(&mut ast).unwrap();
+                assert_eq!(ast.functions.len(), 1);
+                assert_eq!(ast.globals.len(), 0);
+
+                if let Stmt::Const(c) = &ast.functions[0].body[0] {
+                    assert_eq!(c.name, "x");
+                    assert_eq!(c.type_name, Type::Bool);
+                    if b == BinOpKind::Equal {
+                        assert!(matches!(c.value, Expr::BoolLiteral { value: true, ..}));
+                    } else if b == BinOpKind::NotEqual {
+                        assert!(matches!(c.value, Expr::BoolLiteral { value: false, ..}));
+                    } else { panic!(); }
+                } else { panic!("expected Const, got {:?}", ast); }
+            }
+        }
+    }
    
     #[test]
     fn const_has_copy_call_errors() {
