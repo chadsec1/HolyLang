@@ -118,35 +118,47 @@ pub fn eval_const_expr_and_fold_it(
 
                 match expr_evaled {
                     Expr::IntLiteral { value, span} => {
-                        if !value.is_signed() {
-                            panic!(
-                                "(Compiler bug) Unary operation on an unsigned integer.. This should've errored when the wrapper guard called infer_expr_type. Op: {:?}\nExpr: {:?}", 
-                                op, expr
-                            );
-                        }
-                        let mut result: i128 = value.as_i128();
-                        match op {
-                            UnaryOpKind::Negate => {
-                                result = result.checked_neg().ok_or_else(|| {
-                                        HolyError::Semantic(format!(
-                                            "Constant unary negate result would cause an integer overflow. Integer: {}  (line {} column {})",
-                                            result, span.line, span.column
-                                        ))
-                                    })?;
-                            },
-                            UnaryOpKind::BitwiseNot => {
-                                result = !result;
-                            },
-                            _ => panic!("(Compiler bug) Illegal unary operation detected. this shouldve errored when the wrapper called infer_expr_type")
-                        }
-                        
+                        if value.is_signed() {
+                            let mut result: i128 = value.as_i128();
+                            match op {
+                                UnaryOpKind::Negate => {
+                                    result = result.checked_neg().ok_or_else(|| {
+                                            HolyError::Semantic(format!(
+                                                "Constant unary negate result would cause an integer overflow. Integer: {}  (line {} column {})",
+                                                result, span.line, span.column
+                                            ))
+                                        })?;
+                                },
+                                UnaryOpKind::BitwiseNot => {
+                                    result = !result;
+                                },
+                                _ => panic!("(Compiler bug) Illegal unary operation detected. this shouldve errored when the wrapper called infer_expr_type")
+                            }
+                            
 
-                        // Ensures unary result fits in original value type
-                        let folded_result = helpers::coerce_integer_literal_to_type_helper(value.get_type(), IntLiteralValue::Int128(result), span)?;
-                        return Ok(Expr::IntLiteral { value: folded_result, span });
+                            // Ensures unary result fits in original value type
+                            let folded_result = helpers::coerce_integer_literal_to_type_helper(value.get_type(), IntLiteralValue::Int128(result), span)?;
+                            return Ok(Expr::IntLiteral { value: folded_result, span });
+                        
+                        // unsigned
+                        } else {
+                            let mut result: u128 = value.as_u128();
+                            match op {
+                                UnaryOpKind::BitwiseNot => {
+                                    result = !result;
+                                },
+                                _ => panic!("(Compiler bug) Illegal unary operation detected. this shouldve errored when the wrapper called infer_expr_type")
+                            }
+
+                            // We truncate via the hazmat helper instead of trying to coerce, because otherwise, the result of
+                            // bitwise not is huge on unsigned.
+                            // So truncating helps fix that.
+                            //
+                            return Ok(truncate_to_uint_type_hazmat(result, value.get_type(), span))
+                        }
                     },
 
-                    Expr::Float64Literal { value, span} => {
+                    Expr::Float64Literal { value, span } => {
                         let mut result: f64 = value;
                         match op {
                             UnaryOpKind::Negate => {
@@ -165,11 +177,15 @@ pub fn eval_const_expr_and_fold_it(
 
                         return Ok(Expr::Float64Literal { value: result, span });
                     },
-
-
-
-                    // TODO: Add NOT support for Bool literals.
-                    _ => todo!()
+                    Expr::BoolLiteral{ value, span } => {
+                        match op {
+                            UnaryOpKind::Not => {
+                                return Ok(Expr::BoolLiteral { value: !value, span });
+                            },
+                            other => panic!("(Compiler bug) Illegal unary operation detected `{:?}`. this shouldve errored when the wrapper called infer_expr_type", other)
+                        }
+                    },
+                    other => panic!("(Compiler bug) Illegal unary operation. This shouldve been caught by infer_expr_type.\nother: {:?}", other)
                 }
             },
             Expr::BinOp{ left, right, op, ..} => {
@@ -177,6 +193,37 @@ pub fn eval_const_expr_and_fold_it(
                 let right_lit_expr = eval_const_expr_and_fold_it_hazmat(right, storage)?;
 
                 match left_lit_expr {
+                    Expr::StringLiteral { value: left_value, span, ..} => {
+                        let right_value: String = match right_lit_expr {
+                            Expr::StringLiteral { value: right_value, .. } => right_value,
+                            _ => panic!(
+                                "(Compiler bug) eval_const_expr_and_fold_hazmat, infer_expr_type should've been called and verified both left and right binary operations are same type, but apparently not.\nLeft: {:?}\nRight: {:?}",
+                                left, right)
+                        };
+
+
+                        match op {
+                            BinOpKind::Equal => {
+                                let result: bool = left_value == right_value;
+
+                                return Ok(Expr::BoolLiteral { value: result, span });
+                            },
+
+                            BinOpKind::NotEqual => {
+                                let result: bool = left_value != right_value;
+
+                                return Ok(Expr::BoolLiteral { value: result, span });
+                            },
+
+                            other => panic!(
+                                "(Compiler bug) infer_expr_type should've caught illegal BinOpKind on string.\nLeft: {:?}\nRight: {:?}\nBinOpKind: {:?}", 
+                                        left, right, other)
+                        }
+
+                    },
+
+
+
                     Expr::BoolLiteral { value: left_value, span, ..} => {
                         let right_value: bool = match right_lit_expr {
                             Expr::BoolLiteral { value: right_value, .. } => right_value,
@@ -210,7 +257,9 @@ pub fn eval_const_expr_and_fold_it(
                                 return Ok(Expr::BoolLiteral { value: result, span });
                             },
 
-                            _ => todo!()
+                            other => panic!(
+                                "(Compiler bug) infer_expr_type should've caught illegal BinOpKind on string.\nLeft: {:?}\nRight: {:?}\nBinOpKind: {:?}", 
+                                        left, right, other)
                         }
 
                     },
@@ -549,6 +598,46 @@ pub fn eval_const_expr_and_fold_it(
                                 BinOpKind::BitwiseOr => {
                                     result = left_val | right_val
                                 },
+
+                                BinOpKind::Equal => {
+                                    let result: bool = left_val == right_val;
+
+                                    return Ok(Expr::BoolLiteral { value: result, span });
+                                },
+
+                                BinOpKind::NotEqual => {
+                                    let result: bool = left_val != right_val;
+
+                                    return Ok(Expr::BoolLiteral { value: result, span });
+                                },
+
+                                BinOpKind::Greater => {
+                                    let result: bool = left_val > right_val;
+
+                                    return Ok(Expr::BoolLiteral { value: result, span });
+                                },
+
+                                BinOpKind::GreaterEqual => {
+                                    let result: bool = left_val >= right_val;
+
+                                    return Ok(Expr::BoolLiteral { value: result, span });
+                                },
+
+
+                                BinOpKind::Less => {
+                                    let result: bool = left_val < right_val;
+
+                                    return Ok(Expr::BoolLiteral { value: result, span });
+                                },
+
+                                BinOpKind::LessEqual => {
+                                    let result: bool = left_val <= right_val;
+
+                                    return Ok(Expr::BoolLiteral { value: result, span });
+                                },
+
+
+
 
                                 other => panic!(
                                     "(Compiler bug) infer_expr_type should've caught illegal BinOpKind on integer.\nLeft: {:?}\nRight: {:?}\nBinOpKind: {:?}", 
