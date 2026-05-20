@@ -5,3 +5,9 @@ edition = "2024"
 
 [lints.rust]
 warnings = "deny"
+
+[profile.dev]
+opt-level = 0
+
+[profile.release]
+opt-level = 0
