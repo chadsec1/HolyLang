@@ -14,7 +14,6 @@ pub enum CompileInfo {
 }
 
 pub fn compile(source: &str, compile: CompileInfo) -> String {
-
     // Parse source code
     let mut ast = parser::parse(&source).expect("Parsing failed");
 
