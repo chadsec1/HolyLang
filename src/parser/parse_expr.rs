@@ -461,7 +461,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
             //
             match name.as_ref() {
                 "range" => return Err(HolyError::Parse(format!(
-                            "range() can only be used in for loop statements! (line {} column {})",
+                            "range() can only be used in for loop statements construction! (line {} column {})",
                             span.line, span.column
                         ))),
 
