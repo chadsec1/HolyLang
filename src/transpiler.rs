@@ -109,6 +109,10 @@ fn expr_to_rust_expr(expr: &Expr) -> String {
         Expr::BoolLiteral { value, .. } => {
             return value.to_string();
         }
+
+        Expr::StringLiteral { value, .. } => {
+            return format!("\"{}\"", value.to_string());
+        }
         _ => todo!()
     }
 
@@ -134,6 +138,7 @@ fn holy_type_to_rust_type_str(holy_type: &Type) -> String {
         
         Type::Float64 => "f64".to_string(),
         Type::Bool => "bool".to_string(),
+        Type::String => "&str".to_string(),
 
         _ => todo!()
     }
