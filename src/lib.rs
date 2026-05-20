@@ -1,5 +1,7 @@
 pub mod parser;
 pub mod semantic;
+pub mod transpiler;
+pub mod compile;
 pub mod error;
 pub mod consts;
 pub mod ast;
@@ -18,7 +20,12 @@ pub fn compile(source: &str) {
     println!("Checked AST: {:#?}\n\n\n", ast);
 
 
-    // TODO: Transpile to Rust code
-    // let rust_code = transpile(&ast);
+    // Transpile to Rust code
+    let rust_code = transpiler::transpile(&ast);
+    println!("Transpiled Rust code: {:#?}\n", rust_code);
+
+
+    // Compile the transpiled Rust code.
+    compile::compile(&rust_code).expect("Compile errors");
 }
 
