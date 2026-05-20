@@ -50,12 +50,10 @@ edition = "2024"
 
     if compile_status.success() {
         fs::rename(binary_path, target_dir).expect(&format!("Compile clean-up error: Couldnt move binary from `{}` to `{}`", main_dir.display(), target_dir));
+        fs::remove_dir_all(&main_dir).expect(&format!("Compile clean-up error: Couldnt delete directory `{}`, please check your permissions", main_dir.display()));
     } else {
-        println!("failed");
+        panic!("This is likely a compiler bug in the transpiler, which is expected because the transpiler is still very experimental.\nBut please open an issue on Github with the following:\nmain_file: {:#?}", main_file)
     }
-
-
-    // fs::remove_dir_all(&main_dir).expect(&format!("Compile clean-up error: Couldnt delete directory `{}`, please check your permissions", main_dir.display()));
 
 
     Ok(())
