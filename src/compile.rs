@@ -29,32 +29,33 @@ edition = "2024"
 
     cargo_file.write_all(cargo_content.as_bytes()).expect(&format!("Compile error: Couldnt write to file `{}`, please check your permissions", cargo_file_path.display()));
     
-
     let main_file_path = src_dir.join("main.rs");
     let mut main_file = File::create(&main_file_path).expect(&format!("Compile error: Couldnt create file `{}`, please check your permissions", main_file_path.display()));
 
     main_file.write_all(rcode.as_bytes()).expect(&format!("Compile error: Couldnt write to file `{}`, please check your permissions", main_file_path.display()));
 
-    let compile_status = Command::new("cargo")
+    let compile_proc_output = Command::new("cargo")
         .arg("build")
         .stdout(Stdio::null())
-        .stderr(Stdio::null())
+        .stderr(Stdio::piped())
         .current_dir(&main_dir)
-        .status().expect("Compile error: Failed to compile transpiled code! Ensure Rust is correctly installed and try again");
+        .output().expect("Compile error: Failed to compile transpiled code! Ensure Rust is correctly installed and try again");
 
+    let stderr = String::from_utf8_lossy(&compile_proc_output.stderr);
 
     let mut binary_path = main_dir.clone();
     binary_path.push("target");
     binary_path.push("debug");
     binary_path.push("holyprogram");
 
-    if compile_status.success() {
-        fs::rename(binary_path, target_dir).expect(&format!("Compile clean-up error: Couldnt move binary from `{}` to `{}`", main_dir.display(), target_dir));
-        fs::remove_dir_all(&main_dir).expect(&format!("Compile clean-up error: Couldnt delete directory `{}`, please check your permissions", main_dir.display()));
-    } else {
-        panic!("This is likely a compiler bug in the transpiler, which is expected because the transpiler is still very experimental.\nBut please open an issue on Github with the following:\nmain_file: {:#?}", main_file)
+    if !compile_proc_output.status.success() {
+        panic!(
+            "This is likely a compiler bug in the transpiler, which is expected because the transpiler is still very experimental.\nBut please open an issue on Github with the following:\nmain_file: {:#?}\nrcode: {:#}\nstderr: {:#}",
+            main_file, rcode, stderr
+        )
     }
 
-
+    fs::rename(binary_path, target_dir).expect(&format!("Compile clean-up error: Couldnt move binary from `{}` to `{}`", main_dir.display(), target_dir));
+    fs::remove_dir_all(&main_dir).expect(&format!("Compile clean-up error: Couldnt delete directory `{}`, please check your permissions", main_dir.display()));
     Ok(())
 }
