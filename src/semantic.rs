@@ -391,6 +391,9 @@ fn check_stmts(
             }
 
             Stmt::VarAssign(assign) => {
+                // NOTE: If any weird ass bugs arise, its this fucking clone.
+                // we need it to satisify rust borrow checker
+                //
                 let varinfo = locals.get(&assign.name).ok_or_else(|| {
                     HolyError::Semantic(format!(
                         "Use of undeclared variable `{}` (line {} column {})",
@@ -398,11 +401,8 @@ fn check_stmts(
                     ))
                 })?.clone();
 
-                // Its fine to clone and pass it to infer_expr_type in this specific scenario
-                // because we don't give it any infer type hint and therefore no need for it to be
-                // reflected back in locals. I think.
 
-                let expr_ty = infer::infer_expr_type(&mut assign.value.clone(), locals, fun_sigs, Some(varinfo.ty.clone()))?;
+                let expr_ty = infer::infer_expr_type(&mut assign.value, locals, fun_sigs, Some(varinfo.ty.clone()))?;
                 if expr_ty != varinfo.ty {
                     return Err(HolyError::Semantic(format!(
                             "Type mismatch assigning to `{}`: got `{}`, expected `{}` (line {} column {})",
