@@ -116,6 +116,8 @@ fn expr_to_rust_expr(expr: &Expr) -> String {
             let right_str = expr_to_rust_expr(&right);
 
             match op {
+                // Arithemtic
+                //
                 BinOpKind::Add => {
                     return format!("{}.checked_add({}).unwrap_or_else(|| panic!(\"arithemtic addition overflow\"))", left_str, right_str);
                 },
@@ -128,6 +130,36 @@ fn expr_to_rust_expr(expr: &Expr) -> String {
                 BinOpKind::Divide => {
                     return format!("{}.checked_div({}).unwrap_or_else(|| panic!(\"arithemtic divison overflow\"))", left_str, right_str);
                 },
+
+                // Logical
+                //
+                BinOpKind::Equal => {
+                    return format!("({} == {})", left_str, right_str);
+                },
+                BinOpKind::NotEqual => {
+                    return format!("({} != {})", left_str, right_str);
+                },
+
+                BinOpKind::Greater => {
+                    return format!("({} > {})", left_str, right_str);
+                },
+                BinOpKind::GreaterEqual => {
+                    return format!("({} >= {})", left_str, right_str);
+                },
+
+                BinOpKind::Less => {
+                    return format!("({} > {})", left_str, right_str);
+                },
+                BinOpKind::LessEqual => {
+                    return format!("({} <= {})", left_str, right_str);
+                },
+
+                BinOpKind::And => {
+                    return format!("({} && {})", left_str, right_str);
+                },
+                BinOpKind::Or => {
+                    return format!("({} || {})", left_str, right_str);
+                }
                 _ => todo!()
 
             }
