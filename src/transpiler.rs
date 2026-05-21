@@ -94,22 +94,21 @@ fn expr_to_rust_expr(expr: &Expr) -> String {
 
             if value.is_signed() {
                 let value_raw: i128 = value.as_i128();
-                return format!("{}{}", value_raw, value_ty);
+                return format!("{}{}", value_raw, value_ty)
             
             } else {
                 let value_raw: u128 = value.as_u128();
-                return format!("{}{}", value_raw, value_ty);
+                return format!("{}{}", value_raw, value_ty)
             }
         },
-        Expr::Float64Literal { value, .. } => {
-            return format!("{}f64", value);
-        },
-        Expr::BoolLiteral { value, .. } => {
-            return value.to_string();
-        },
-        Expr::StringLiteral { value, .. } => {
-            return format!("\"{}\"", value.to_string());
-        },
+
+        Expr::Float64Literal { value, .. } => format!("{}f64", value),
+
+        Expr::BoolLiteral { value, .. } => value.to_string(),
+
+        Expr::StringLiteral { value, .. } => format!("\"{}\"", value.to_string()),
+        
+        Expr::Var { name, .. } => name.to_string(),
 
         Expr::BinOp { op, left, right, .. } => {
             let left_str = expr_to_rust_expr(&left);
@@ -118,48 +117,24 @@ fn expr_to_rust_expr(expr: &Expr) -> String {
             match op {
                 // Arithemtic
                 //
-                BinOpKind::Add => {
-                    return format!("{}.checked_add({}).unwrap_or_else(|| panic!(\"arithemtic addition overflow\"))", left_str, right_str);
-                },
-                BinOpKind::Subtract => {
-                    return format!("{}.checked_sub({}).unwrap_or_else(|| panic!(\"arithemtic subtraction overflow\"))", left_str, right_str);
-                },
-                BinOpKind::Multiply => {
-                    return format!("{}.checked_mul({}).unwrap_or_else(|| panic!(\"arithemtic multiplication overflow\"))", left_str, right_str);
-                },
-                BinOpKind::Divide => {
-                    return format!("{}.checked_div({}).unwrap_or_else(|| panic!(\"arithemtic divison overflow\"))", left_str, right_str);
-                },
+                BinOpKind::Add      => format!("{}.checked_add({}).unwrap_or_else(|| panic!(\"arithemtic addition overflow\"))", left_str, right_str),
+                BinOpKind::Subtract => format!("{}.checked_sub({}).unwrap_or_else(|| panic!(\"arithemtic subtraction overflow\"))", left_str, right_str),
+                BinOpKind::Multiply => format!("{}.checked_mul({}).unwrap_or_else(|| panic!(\"arithemtic multiplication overflow\"))", left_str, right_str),
+                BinOpKind::Divide   => format!("{}.checked_div({}).unwrap_or_else(|| panic!(\"arithemtic divison overflow\"))", left_str, right_str),
 
                 // Logical
                 //
-                BinOpKind::Equal => {
-                    return format!("({} == {})", left_str, right_str);
-                },
-                BinOpKind::NotEqual => {
-                    return format!("({} != {})", left_str, right_str);
-                },
+                BinOpKind::Equal    => format!("({} == {})", left_str, right_str),
+                BinOpKind::NotEqual => format!("({} != {})", left_str, right_str),
+                BinOpKind::Greater  => format!("({} > {})", left_str, right_str),
+                BinOpKind::Less     => format!("({} > {})", left_str, right_str),
+                
+                BinOpKind::GreaterEqual => format!("({} >= {})", left_str, right_str),
+                BinOpKind::LessEqual    => format!("({} <= {})", left_str, right_str),
 
-                BinOpKind::Greater => {
-                    return format!("({} > {})", left_str, right_str);
-                },
-                BinOpKind::GreaterEqual => {
-                    return format!("({} >= {})", left_str, right_str);
-                },
+                BinOpKind::And => format!("({} && {})", left_str, right_str),
+                BinOpKind::Or  => format!("({} || {})", left_str, right_str),
 
-                BinOpKind::Less => {
-                    return format!("({} > {})", left_str, right_str);
-                },
-                BinOpKind::LessEqual => {
-                    return format!("({} <= {})", left_str, right_str);
-                },
-
-                BinOpKind::And => {
-                    return format!("({} && {})", left_str, right_str);
-                },
-                BinOpKind::Or => {
-                    return format!("({} || {})", left_str, right_str);
-                }
                 _ => todo!()
 
             }
@@ -177,18 +152,18 @@ fn expr_to_rust_expr(expr: &Expr) -> String {
 ///
 fn holy_type_to_rust_type_str(holy_type: &Type) -> String {
     match holy_type {
-        Type::Int8 => "i8".to_string(),
-        Type::Int16 => "i16".to_string(),
-        Type::Int32 => "i32".to_string(),
-        Type::Int64 => "i64".to_string(),
+        Type::Int8   => "i8".to_string(),
+        Type::Int16  => "i16".to_string(),
+        Type::Int32  => "i32".to_string(),
+        Type::Int64  => "i64".to_string(),
         Type::Int128 => "i128".to_string(),
 
-        Type::Byte => "u8".to_string(),
-        Type::Uint16 => "u16".to_string(),
-        Type::Uint32 => "u32".to_string(),
-        Type::Uint64 => "u64".to_string(),
+        Type::Byte    => "u8".to_string(),
+        Type::Uint16  => "u16".to_string(),
+        Type::Uint32  => "u32".to_string(),
+        Type::Uint64  => "u64".to_string(),
         Type::Uint128 => "u128".to_string(),
-        Type::Usize => "usize".to_string(),
+        Type::Usize   => "usize".to_string(),
         
         Type::Float64 => "f64".to_string(),
         Type::Bool => "bool".to_string(),
