@@ -1,5 +1,5 @@
 use crate::ast::{
-    AST, Function, Stmt, GlobalStmt, Type, Expr
+    AST, Function, Stmt, GlobalStmt, Type, Expr, BinOpKind
 };
 
 /// Takes a reference to a Abstract Syntax Tree, and returns equvilent code in Rust as a string
@@ -101,18 +101,40 @@ fn expr_to_rust_expr(expr: &Expr) -> String {
                 return format!("{}{}", value_raw, value_ty);
             }
         },
-        
         Expr::Float64Literal { value, .. } => {
             return format!("{}f64", value);
-        }
-
+        },
         Expr::BoolLiteral { value, .. } => {
             return value.to_string();
-        }
-
+        },
         Expr::StringLiteral { value, .. } => {
             return format!("\"{}\"", value.to_string());
+        },
+
+        Expr::BinOp { op, left, right, .. } => {
+            let left_str = expr_to_rust_expr(&left);
+            let right_str = expr_to_rust_expr(&right);
+
+            match op {
+                BinOpKind::Add => {
+                    return format!("{}.checked_add({}).unwrap_or_else(|| panic!(\"arithemtic addition overflow\"))", left_str, right_str);
+                },
+                BinOpKind::Subtract => {
+                    return format!("{}.checked_sub({}).unwrap_or_else(|| panic!(\"arithemtic subtraction overflow\"))", left_str, right_str);
+                },
+                BinOpKind::Multiply => {
+                    return format!("{}.checked_mul({}).unwrap_or_else(|| panic!(\"arithemtic multiplication overflow\"))", left_str, right_str);
+                },
+                BinOpKind::Divide => {
+                    return format!("{}.checked_div({}).unwrap_or_else(|| panic!(\"arithemtic divison overflow\"))", left_str, right_str);
+                },
+                _ => todo!()
+
+            }
+
         }
+
+
         _ => todo!()
     }
 
