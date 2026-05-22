@@ -167,10 +167,42 @@ pub fn infer_expr_type(
 
                 match infer_hint.clone() {
                     Some(Type::FixedArray(t, size)) => {
-                        let size_usize = match size {
-                            FixedArraySize::Literal(n) => n,
-                            FixedArraySize::Const(_) => panic!("(WORK-IN-PROGRESS) Consts are still unimplemented"),
-                        };
+                        let size_usize: usize = (|| -> Result<usize, HolyError> {
+                            match size.clone() {
+                                FixedArraySize::Literal(n) => Ok(n),
+                                FixedArraySize::Const(const_name) => {
+                                    if let Some(info) = locals.get(&const_name) {
+                                        match &info.kind {
+                                            BindingKind::Var { .. } => return Err(HolyError::Semantic(format!(
+                                                        "Expected a Usize literal or a const binding, found variable name `{}` instead. (line {} column {})", 
+                                                                                                              const_name, span.line, span.column))),
+                                            BindingKind::Const { value } => {
+                                                let const_value_evaled = constants::eval_const_expr_and_fold_it_hazmat(value, locals)?;
+                                                match const_value_evaled {
+                                                    Expr::IntLiteral { value, .. } => {
+                                                        if let IntLiteralValue::Usize(n) = value {
+                                                            return Ok(n)
+                                                        } else {
+                                                            return Err(HolyError::Semantic(format!(
+                                                                "Expected array index constant `{}` to be of type `usize`, instead we got `{}` (line {} column {})", 
+                                                                const_name, value.get_type(), span.line, span.column
+                                                            )))
+                                                        }
+                                                    },
+                                                    other => return Err(HolyError::Semantic(format!(
+                                                            "Expected array index constant `{}` to be an int literal, instead we got `{}` (line {} column {})", 
+                                                            const_name, other, span.line, span.column
+                                                        )))
+                                                }
+                                            }
+                                        }
+                                    
+                                    } else {
+                                        return Err(HolyError::Semantic(format!("Use of undeclared binding `{}` (line {} column {})", const_name, span.line, span.column)))
+                                    }
+                                }
+                            }
+                        })()?;
 
                         if elements.len() != size_usize {
                             return Err(HolyError::Semantic(format!(
