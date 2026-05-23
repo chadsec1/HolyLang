@@ -4,9 +4,9 @@ use super::*;
 mod for_stmt_tests {
     use super::*;
 
-    // Test for statements with array variables, no literals.
+    // Test for statements with array dynamic variables, no literals.
     #[test]
-    fn test_for_statements_with_arrays() {
+    fn test_for_statements_with_dyn_arrays() {
         let literals = get_all_literals_no_arr();
 
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -17,6 +17,38 @@ mod for_stmt_tests {
 
                 let body = vec![ 
                     var_decl("a", Type::Array(Box::new(t.clone())), arr_lit),
+                    Stmt::For(ForStmt{
+                        holder_name: "x".to_string(),
+                        value: var_expr("a"),
+                        branch: vec![
+                            // Just dummy declaration, so we don't get flagged by dead code because
+                            // of empty branch.
+                            var_decl("z", t.clone(), l.clone()),
+                        ],
+                        span: span(),
+                    }),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+
+                assert!(result.is_ok())
+            }
+        }
+    }
+
+    #[test]
+    fn test_for_statements_with_fixed_arrays() {
+        let literals = get_all_literals_no_arr();
+
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for i in 0..=100 {
+                let elements = vec![l.clone(); i];
+
+                let arr_lit = array_lit(elements.clone(), Some(t.clone()));
+
+                let body = vec![ 
+                    var_decl("a", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i)), arr_lit),
                     Stmt::For(ForStmt{
                         holder_name: "x".to_string(),
                         value: var_expr("a"),
@@ -204,7 +236,42 @@ mod for_stmt_tests {
 
 
     #[test]
-    fn test_for_statements_with_array_holder_name_is_already_taken_errors() {
+    fn test_for_statements_with_fixed_array_holder_name_is_already_taken_errors() {
+        let literals = get_all_literals_no_arr();
+
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for i in 0..=100 {
+                let elements = vec![l.clone(); i];
+
+                let arr_lit = array_lit(elements.clone(), Some(t.clone()));
+
+                let body = vec![ 
+                    var_decl("a", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i)), arr_lit),
+                    var_decl("x", t.clone(), l.clone()),
+                    Stmt::For(ForStmt{
+                        holder_name: "x".to_string(),
+                        value: var_expr("a"),
+
+                        branch: vec![
+                            // Just dummy declaration, so we don't get flagged by dead code because
+                            // of empty branch.
+                            var_decl("z", t.clone(), l.clone()),
+                        ],
+                        span: span(),
+                    }),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("Cannot use variable name `x` in for loop statement as it is already declared"));
+            }
+        }
+    }
+
+    #[test]
+    fn test_for_statements_with_dyn_array_holder_name_is_already_taken_errors() {
         let literals = get_all_literals_no_arr();
 
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -268,7 +335,37 @@ mod for_stmt_tests {
 
 
     #[test]
-    fn test_for_statements_empty_branch_errors() {
+    fn test_for_statements_fixed_arr_empty_branch_errors() {
+        let literals = get_all_literals_no_arr();
+
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for i in 0..=100 {
+                let elements = vec![l.clone(); i];
+
+                let arr_lit = array_lit(elements.clone(), Some(t.clone()));
+
+                let body = vec![ 
+                    var_decl("a", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i)), arr_lit),
+                    Stmt::For(ForStmt{
+                        holder_name: "x".to_string(),
+                        value: var_expr("a"),
+
+                        branch: vec![],
+                        span: span(),
+                    }),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("For loop branch has no statements"));
+            }
+        }
+    }
+
+    #[test]
+    fn test_for_statements_dyn_arr_empty_branch_errors() {
         let literals = get_all_literals_no_arr();
 
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -296,7 +393,6 @@ mod for_stmt_tests {
             }
         }
     }
-
 
 
 }
