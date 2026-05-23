@@ -1,5 +1,5 @@
 use crate::ast::{
-    AST, Function, Stmt, GlobalStmt, Type, Expr, BinOpKind, FixedArraySize
+    AST, Function, Stmt, GlobalStmt, Type, Expr, BinOpKind, UnaryOpKind, Constant, FixedArraySize
 };
 
 /// Takes a reference to a Abstract Syntax Tree, and returns equvilent code in Rust as a string
@@ -45,18 +45,21 @@ fn transpile_function(func: &Function) -> String {
 ///
 fn transpile_stmt(stmt: &Stmt) -> String {
     match stmt {
+        Stmt::Const(cons) => parse_const(cons),
         Stmt::VarDecl(var) => {
-            let mut var_stmt_rcode: String = "let".to_string();
-
             let var_type = holy_type_to_rust_type_str(&var.type_name);
-            let var_value = expr_to_rust_expr(&var.value);
+            let var_value = holy_expr_to_rust_expr(&var.value);
 
-            var_stmt_rcode = format!("{} {}", var_stmt_rcode, var.name.clone());
-            var_stmt_rcode = format!("{}: {} =", var_stmt_rcode, var_type);
-            var_stmt_rcode = format!("{} {};", var_stmt_rcode, var_value);
-
-            return var_stmt_rcode;
+            return format!("let mut {}: {} = {};", var.name, var_type, var_value);
         },
+
+        Stmt::VarAssign(va) => {
+            let va_value = holy_expr_to_rust_expr(&va.value);
+
+            return format!("{} = {};", va.name, va_value)
+        },
+
+
 
         _ => todo!()
     }
@@ -67,27 +70,28 @@ fn transpile_stmt(stmt: &Stmt) -> String {
 ///
 fn transpile_global_stmt(global_stmt: &GlobalStmt) -> String {
     match global_stmt {
-        GlobalStmt::Const(cons) => {
-            let mut const_stmt_rcode: String = "const".to_string();
-
-            let const_type = holy_type_to_rust_type_str(&cons.type_name);
-            let const_value = expr_to_rust_expr(&cons.value);
-
-            const_stmt_rcode = format!("{} {}", const_stmt_rcode, cons.name.clone());
-            const_stmt_rcode = format!("{}: {} =", const_stmt_rcode, const_type);
-            const_stmt_rcode = format!("{} {};", const_stmt_rcode, const_value);
-
-            return const_stmt_rcode;
-        }
+        GlobalStmt::Const(cons) => parse_const(cons),
 
         _ => todo!()
     }
 }
 
+fn parse_const(cons: &Constant) -> String {
+    let mut const_stmt_rcode: String = "const".to_string();
+
+    let const_type = holy_type_to_rust_type_str(&cons.type_name);
+    let const_value = holy_expr_to_rust_expr(&cons.value);
+
+    const_stmt_rcode = format!("{} {}", const_stmt_rcode, cons.name.clone());
+    const_stmt_rcode = format!("{}: {} =", const_stmt_rcode, const_type);
+    const_stmt_rcode = format!("{} {};", const_stmt_rcode, const_value);
+
+    return const_stmt_rcode;
+}
 
 /// Turns a HolyLang expression, into equvilent Rust expression
 ///
-fn expr_to_rust_expr(expr: &Expr) -> String {
+fn holy_expr_to_rust_expr(expr: &Expr) -> String {
     match expr {
         Expr::IntLiteral { value, .. } => {
             let value_ty = holy_type_to_rust_type_str(&value.get_type());
@@ -118,7 +122,7 @@ fn expr_to_rust_expr(expr: &Expr) -> String {
             }
 
             for e in elements {
-                let elem_expr = expr_to_rust_expr(e);
+                let elem_expr = holy_expr_to_rust_expr(e);
                 elems.push_str(&elem_expr);
                 elems.push(',');
             }
@@ -133,9 +137,19 @@ fn expr_to_rust_expr(expr: &Expr) -> String {
 
         Expr::Var { name, .. } => name.to_string(),
 
+        Expr::UnaryOp { op, expr, .. } => {
+            let expr_str = holy_expr_to_rust_expr(&expr);
+
+            match op {
+                UnaryOpKind::Negate => format!("{}.checked_neg().unwrap_or_else(|| panic!(\"unary negate integer overflow\"))", expr_str),
+                UnaryOpKind::Not => format!("!{}", expr_str),
+                UnaryOpKind::BitwiseNot => format!("!{}", expr_str),
+            }
+        },
+
         Expr::BinOp { op, left, right, .. } => {
-            let left_str = expr_to_rust_expr(&left);
-            let right_str = expr_to_rust_expr(&right);
+            let left_str = holy_expr_to_rust_expr(&left);
+            let right_str = holy_expr_to_rust_expr(&right);
 
             match op {
                 // Arithemtic
