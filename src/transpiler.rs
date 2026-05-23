@@ -149,7 +149,55 @@ fn transpile_stmt(stmt: &Stmt) -> String {
             }
 
             return format!("while {} {{\n{}}}", holy_expr_to_rust_expr(&w.condition), w_branch_stmts_str)
-        }
+        },
+
+        Stmt::For(f) => {
+            let mut f_branch_stmts_str = String::new();
+
+            for s in &f.branch {
+                f_branch_stmts_str.push_str(&transpile_stmt(&s));
+                f_branch_stmts_str.push('\n');
+            }
+
+            return format!("for {} in {} {{\n{}}}", f.holder_name, holy_expr_to_rust_expr(&f.value), f_branch_stmts_str)
+        },
+
+        Stmt::If(i) => {
+            let mut if_branch_stmts_str = String::new();
+
+            for s in &i.if_branch {
+                if_branch_stmts_str.push_str(&transpile_stmt(&s));
+                if_branch_stmts_str.push('\n');
+            }
+
+            let mut if_stmt = format!("if {} {{\n{}}}", holy_expr_to_rust_expr(&i.condition), if_branch_stmts_str);
+
+            for elif_branch in &i.elif_branches {
+                let mut elif_branch_stmts_str = String::new();
+
+                for s in &elif_branch.1 {
+                    elif_branch_stmts_str.push_str(&transpile_stmt(&s));
+                    elif_branch_stmts_str.push('\n');
+                }
+
+                if_stmt = format!("{} else if {} {{\n{}}}", if_stmt, holy_expr_to_rust_expr(&elif_branch.0), elif_branch_stmts_str);
+            }
+
+            if let Some(else_branch) = &i.else_branch {
+                let mut else_branch_stmts_str = String::new();
+
+                for s in else_branch {
+                    else_branch_stmts_str.push_str(&transpile_stmt(&s));
+                    else_branch_stmts_str.push('\n');
+                }
+
+                if_stmt = format!("{} else {{\n{}}}", if_stmt, else_branch_stmts_str);
+            }
+
+            return if_stmt
+        },
+
+
 
         _ => todo!()
     }
@@ -261,16 +309,17 @@ fn holy_expr_to_rust_expr(expr: &Expr) -> String {
                 BinOpKind::BitwiseAnd => format!("({} & {})", left_str, right_str),
                 BinOpKind::BitwiseOr  => format!("({} | {})", left_str, right_str),
 
-                // NOTE to self: It's safe to cast as u32 here, becasue the semantics phase checked it.
-                // but its important to keep this in mind... weird bitwise bugs may arise, and if it does,
-                // this is culprit
-                //
-                BinOpKind::BitwiseShiftLeft => format!("({}.checked_shl({} as u32)).unwrap_or_else(|| panic!(\"bitwise shift left overflow\"))", left_str, right_str),
-                BinOpKind::BitwiseShiftRight => format!("({}.checked_shr({} as u32)).unwrap_or_else(|| panic!(\"bitwise shift right overflow\"))", left_str, right_str),
+                BinOpKind::BitwiseShiftLeft => format!("({}.checked_shl({}.try_into().unwrap_or_else(|_| panic!(\"bitwise shift left count `{{}}` does not fit in u32\", {})) )).unwrap_or_else(|| panic!(\"bitwise shift left overflow\"))", left_str, right_str, right_str),
+
+                BinOpKind::BitwiseShiftRight => format!("({}.checked_shr({}.try_into().unwrap_or_else(|_| panic!(\"bitwise shift right count `{{}}` does not fit in u32\", {})) )).unwrap_or_else(|| panic!(\"bitwise shift right overflow\"))", left_str, right_str, right_str),
+
             }
 
-        }
+        },
 
+        Expr::RangeCall { start, end, ..} => format!("{}..{}", holy_expr_to_rust_expr(start), holy_expr_to_rust_expr(end)),
+
+        Expr::CopyCall { expr, .. } => format!("{}.clone()", holy_expr_to_rust_expr(expr)),
 
         _ => todo!()
     }
