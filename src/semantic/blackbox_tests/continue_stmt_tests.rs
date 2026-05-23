@@ -335,10 +335,7 @@ mod continue_stmt_tests {
     #[test]
     fn test_continue_statement_in_for_statement_with_arr() {
         for t in ALL_TYPES_NO_ARR {
-            let arr_lit = Expr::ArrayLiteral {
-                elements: vec![],
-                span: span(),
-            };
+            let arr_lit = array_lit(vec![], Some(Type::Array(Box::new(t.clone()))));
 
             let body = vec![
                 var_decl("a", Type::Array(Box::new(t.clone())), arr_lit.clone()),
@@ -356,9 +353,12 @@ mod continue_stmt_tests {
 
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
-            let result = check_semantics(&mut ast);
+            check_semantics(&mut ast).unwrap();
 
-            assert!(result.is_ok());
+            assert_eq!(ast.functions.len(), 1);
+            assert_eq!(ast.functions[0].body.len(), 2);
+            assert_eq!(ast.globals.len(), 0);
+
 
             if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
                 assert_eq!(v.name, "a");
@@ -382,10 +382,7 @@ mod continue_stmt_tests {
     #[test]
     fn test_continue_statement_in_if_statement_in_for_statements_with_arr() {
         for t in ALL_TYPES_NO_ARR {
-            let arr_lit = Expr::ArrayLiteral {
-                elements: vec![],
-                span: span(),
-            };
+            let arr_lit = array_lit(vec![], Some(Type::Array(Box::new(t.clone()))));
 
             let body = vec![
                 var_decl("a", Type::Array(Box::new(t.clone())), arr_lit.clone()),
@@ -449,10 +446,7 @@ mod continue_stmt_tests {
         let literals = get_all_literals_no_arr();
 
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            let arr_lit = Expr::ArrayLiteral {
-                elements: vec![],
-                span: span(),
-            };
+            let arr_lit = array_lit(vec![], Some(t.clone()));
 
             let body = vec![
                 Stmt::Continue(ContinueStmt{
@@ -483,10 +477,7 @@ mod continue_stmt_tests {
 
         // Same test, but the `continue` is after the infinite loop
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            let arr_lit = Expr::ArrayLiteral {
-                elements: vec![],
-                span: span(),
-            };
+            let arr_lit = array_lit(vec![], Some(t.clone()));
 
             let body = vec![
                 var_decl("a", Type::Array(Box::new(t.clone())), arr_lit),

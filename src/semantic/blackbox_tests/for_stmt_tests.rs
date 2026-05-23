@@ -13,10 +13,7 @@ mod for_stmt_tests {
             for i in 0..=100 {
                 let elements = vec![l.clone(); i];
 
-                let arr_lit = Expr::ArrayLiteral {
-                    elements: elements.clone(),
-                    span: span(),
-                };
+                let arr_lit = array_lit(elements.clone(), Some(t.clone()));
 
                 let body = vec![ 
                     var_decl("a", Type::Array(Box::new(t.clone())), arr_lit),
@@ -214,10 +211,7 @@ mod for_stmt_tests {
             for i in 0..=100 {
                 let elements = vec![l.clone(); i];
 
-                let arr_lit = Expr::ArrayLiteral {
-                    elements: elements.clone(),
-                    span: span(),
-                };
+                let arr_lit = array_lit(elements.clone(), Some(t.clone()));
 
                 let body = vec![ 
                     var_decl("a", Type::Array(Box::new(t.clone())), arr_lit),
@@ -281,10 +275,7 @@ mod for_stmt_tests {
             for i in 0..=100 {
                 let elements = vec![l.clone(); i];
 
-                let arr_lit = Expr::ArrayLiteral {
-                    elements: elements.clone(),
-                    span: span(),
-                };
+                let arr_lit = array_lit(elements.clone(), Some(t.clone()));
 
                 let body = vec![ 
                     var_decl("a", Type::Array(Box::new(t.clone())), arr_lit),

@@ -476,23 +476,22 @@ fn get_all_literals() -> [Expr; 28] {
         bool_lit(false),
         str_lit("Hi"),
 
-        array_lit(vec![int8_lit(1), int8_lit(i8::MIN), int8_lit(i8::MAX) ]),
-        array_lit(vec![int16_lit(1), int16_lit(i16::MIN), int16_lit(i16::MAX) ]),
-        array_lit(vec![int32_lit(1), int32_lit(i32::MIN), int32_lit(i32::MAX) ]),
-        array_lit(vec![int64_lit(1), int64_lit(i64::MIN), int64_lit(i64::MAX) ]),
-        array_lit(vec![int128_lit(1), int128_lit(i128::MIN), int128_lit(i128::MAX) ]),
+        array_lit(vec![int8_lit(1), int8_lit(i8::MIN), int8_lit(i8::MAX) ], Some(Type::Array(Box::new(Type::Int8)))),
+        array_lit(vec![int16_lit(1), int16_lit(i16::MIN), int16_lit(i16::MAX) ], Some(Type::Array(Box::new(Type::Int16)))),
+        array_lit(vec![int32_lit(1), int32_lit(i32::MIN), int32_lit(i32::MAX) ], Some(Type::Array(Box::new(Type::Int32)))),
+        array_lit(vec![int64_lit(1), int64_lit(i64::MIN), int64_lit(i64::MAX) ], Some(Type::Array(Box::new(Type::Int64)))),
+        array_lit(vec![int128_lit(1), int128_lit(i128::MIN), int128_lit(i128::MAX) ], Some(Type::Array(Box::new(Type::Int128)))),
 
-        array_lit(vec![byte_lit(1), byte_lit(u8::MIN), byte_lit(u8::MAX) ]),
-        array_lit(vec![uint16_lit(1), uint16_lit(u16::MIN), uint16_lit(u16::MAX) ]),
-        array_lit(vec![uint32_lit(1), uint32_lit(u32::MIN), uint32_lit(u32::MAX) ]),
-        array_lit(vec![uint64_lit(1), uint64_lit(u64::MIN), uint64_lit(u64::MAX) ]),
-        array_lit(vec![uint128_lit(1), uint128_lit(u128::MIN), uint128_lit(u128::MAX) ]),
-        array_lit(vec![usize_lit(1), usize_lit(usize::MIN), usize_lit(usize::MAX) ]),
+        array_lit(vec![byte_lit(1), byte_lit(u8::MIN), byte_lit(u8::MAX) ], Some(Type::Array(Box::new(Type::Byte)))),
+        array_lit(vec![uint16_lit(1), uint16_lit(u16::MIN), uint16_lit(u16::MAX) ], Some(Type::Array(Box::new(Type::Uint16)))),
+        array_lit(vec![uint32_lit(1), uint32_lit(u32::MIN), uint32_lit(u32::MAX) ], Some(Type::Array(Box::new(Type::Uint32)))),
+        array_lit(vec![uint64_lit(1), uint64_lit(u64::MIN), uint64_lit(u64::MAX) ], Some(Type::Array(Box::new(Type::Uint64)))),
+        array_lit(vec![uint128_lit(1), uint128_lit(u128::MIN), uint128_lit(u128::MAX) ], Some(Type::Array(Box::new(Type::Uint128)))),
+        array_lit(vec![usize_lit(1), usize_lit(usize::MIN), usize_lit(usize::MAX) ], Some(Type::Array(Box::new(Type::Usize)))),
 
-        array_lit(vec![float64_lit(1.0), float64_lit(f64::MIN), float64_lit(f64::MAX) ]),
-
-        array_lit(vec![bool_lit(false), bool_lit(true)]),
-        array_lit(vec![str_lit(""), str_lit("Hi"), str_lit(" !")])
+        array_lit(vec![float64_lit(1.0), float64_lit(f64::MIN), float64_lit(f64::MAX) ], Some(Type::Array(Box::new(Type::Float64)))),
+        array_lit(vec![bool_lit(false), bool_lit(true)], Some(Type::Array(Box::new(Type::Bool)))),
+        array_lit(vec![str_lit(""), str_lit("Hi"), str_lit(" !")], Some(Type::Array(Box::new(Type::String))))
     ];
 }
 
@@ -577,9 +576,19 @@ fn var_assign(name: &str, value: Expr) -> Stmt {
     })
 }
 
+fn contains_array_literal(expr: &Expr) -> bool {
+    match expr {
+        Expr::ArrayLiteral { .. } => true,
+        Expr::BinOp { left, right, .. } => {
+            contains_array_literal(left) || contains_array_literal(right)
+        }
+        _ => false,
+    }
+}
 
-fn array_lit(exprs: Vec<Expr>) -> Expr {
-    Expr::ArrayLiteral { elements: exprs, span: span() }
+
+fn array_lit(exprs: Vec<Expr>, type_name: Option<Type>) -> Expr {
+    Expr::ArrayLiteral { elements: exprs, type_name, span: span() }
 }
 
 fn int8_lit(n: i8) -> Expr {

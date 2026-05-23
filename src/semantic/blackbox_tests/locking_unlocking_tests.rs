@@ -467,10 +467,7 @@ mod locking_unlocking_tests {
     #[test]
     fn unlock_func_arg_in_for_loop_errors() {
         for t in ALL_TYPES_WITH_DYN_ARR.iter() {
-            let arr_lit = Expr::ArrayLiteral {
-                elements: vec![],
-                span: span(),
-            };
+            let arr_lit = array_lit(vec![], Some(t.clone()));
 
             let body = vec![
                 var_decl("a", Type::Array(Box::new(t.clone())), arr_lit),
@@ -542,11 +539,7 @@ mod locking_unlocking_tests {
     fn unlock_upstream_variable_in_for_loop_errors() {
         let literals = get_all_literals_no_arr();
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            let arr_lit = Expr::ArrayLiteral {
-                elements: vec![],
-                span: span(),
-            };
-
+            let arr_lit = array_lit(vec![], Some(t.clone()));
 
             let body = vec![
                 var_decl("x", t.clone(), l.clone()),
@@ -683,10 +676,7 @@ mod locking_unlocking_tests {
     #[test]
     fn lock_func_arg_in_for_loop_errors() {
         for t in ALL_TYPES_WITH_DYN_ARR.iter() {
-            let arr_lit = Expr::ArrayLiteral {
-                elements: vec![],
-                span: span(),
-            };
+            let arr_lit = array_lit(vec![], Some(t.clone()));
 
             let body = vec![
                 var_decl("a", Type::Array(Box::new(t.clone())), arr_lit),
@@ -758,11 +748,7 @@ mod locking_unlocking_tests {
     fn lock_upstream_variable_in_for_loop_errors() {
         let literals = get_all_literals_no_arr();
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            let arr_lit = Expr::ArrayLiteral {
-                elements: vec![],
-                span: span(),
-            };
-
+            let arr_lit = array_lit(vec![], Some(t.clone()));
 
             let body = vec![
                 var_decl("x", t.clone(), l.clone()),

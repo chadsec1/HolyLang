@@ -127,10 +127,7 @@ mod copy_tests {
             for i in 0..=100 {
                 let elements = vec![l.clone(); i + 1];
                 
-                let arr_lit = Expr::ArrayLiteral {
-                    elements: elements,
-                    span: span(),
-                };
+                let arr_lit = array_lit(elements, Some(t.clone()));
 
                 for i2 in 0..i+1 {
                     let copy_var = Expr::CopyCall { expr: Box::new(var_expr("e")), span: span() };
@@ -165,15 +162,9 @@ mod copy_tests {
             for i in 0..=100 {
                 let elements = vec![l.clone(); i + 1];
                 
-            
-                
-                let arr_lit = Expr::ArrayLiteral {
-                    elements: elements,
-                    span: span(),
-                };
+                let arr_lit = array_lit(elements, Some(t.clone()));
 
                 for i2 in 0..i+1 {
-                
                     let copy_var = Expr::CopyCall { expr: Box::new(var_expr("e")), span: span() };
                     let access = Expr::ArrayAccess {
                         array: Box::new(var_expr("arr")),

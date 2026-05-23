@@ -14,10 +14,7 @@ mod fixed_array_slicing_tests {
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             for i in 3..=10000 {
-                let arr_lit = Expr::ArrayLiteral {
-                    elements: vec![l.clone(), l.clone(), l.clone()],
-                    span: span(),
-                };
+                let arr_lit = array_lit(vec![l.clone(), l.clone(), l.clone()], Some(t.clone()));
 
                 let access = Expr::ArraySlicing {
                     array: Box::new(var_expr("arr")),
@@ -46,10 +43,7 @@ mod fixed_array_slicing_tests {
             for i in 2..100 {
                 let elements = vec![l.clone(); i + 1];
                 
-                let arr_lit = Expr::ArrayLiteral {
-                    elements: elements,
-                    span: span(),
-                };
+                let arr_lit = array_lit(elements, Some(t.clone()));
 
                 for i2 in 0..i-1 {
                     let access = Expr::ArraySlicing {
@@ -79,10 +73,7 @@ mod fixed_array_slicing_tests {
             for i in 2..100 {
                 let elements = vec![l.clone(); i + 1];
                 
-                let arr_lit = Expr::ArrayLiteral {
-                    elements: elements,
-                    span: span(),
-                };
+                let arr_lit = array_lit(elements, Some(t.clone()));
 
                 for i2 in 0..i-1 {
                     let access = Expr::ArraySlicing {
@@ -115,10 +106,7 @@ mod fixed_array_slicing_tests {
             for i in 2..100 {
                 let elements = vec![l.clone(); i + 1];
                 
-                let arr_lit = Expr::ArrayLiteral {
-                    elements: elements,
-                    span: span(),
-                };
+                let arr_lit = array_lit(elements, Some(t.clone()));
 
                 for i2 in 0..i-1 {
                     let access = Expr::ArraySlicing {
@@ -148,10 +136,7 @@ mod fixed_array_slicing_tests {
             for i in 2..100 {
                 let elements = vec![l.clone(); i + 1];
                 
-                let arr_lit = Expr::ArrayLiteral {
-                    elements: elements,
-                    span: span(),
-                };
+                let arr_lit = array_lit(elements, Some(t.clone()));
 
                 let access = Expr::ArraySlicing {
                     array: Box::new(var_expr("arr")),

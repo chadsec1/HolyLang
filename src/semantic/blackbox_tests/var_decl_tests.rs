@@ -100,10 +100,7 @@ mod var_decl_tests {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            let arr_lit = Expr::ArrayLiteral {
-                elements: vec![],
-                span: span(),
-            };
+            let arr_lit = array_lit(vec![], Some(t.clone()));
 
             let body = vec![
                 var_decl("x", t.clone(), l.clone()),
@@ -135,10 +132,7 @@ mod var_decl_tests {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            let arr_lit = Expr::ArrayLiteral {
-                elements: vec![],
-                span: span(),
-            };
+            let arr_lit = array_lit(vec![], Some(t.clone()));
 
             let body = vec![
                 var_decl("x", t.clone(), l.clone()),

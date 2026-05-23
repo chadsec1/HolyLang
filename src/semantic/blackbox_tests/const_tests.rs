@@ -483,7 +483,7 @@ mod const_tests {
             for i in 0..=100 {
                 let elements = vec![l.clone(); i];
 
-                let arr_lit = Expr::ArrayLiteral { elements: elements, span: span() };
+                let arr_lit = array_lit(elements, Some(t.clone()));
 
                 let body = vec![const_define_locally("x", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i)), arr_lit.clone())];
              
@@ -506,7 +506,8 @@ mod const_tests {
             for i in 1..=100 {
                 let elements = vec![l.clone(); i];
 
-                let arr_lit = Expr::ArrayLiteral { elements: elements, span: span() };
+                let arr_lit = array_lit(elements, Some(t.clone()));
+
                 let access = Expr::ArrayAccess {
                     array: Box::new(var_expr("arr")),
                     index: Box::new(usize_lit(i - 1)),
@@ -537,7 +538,8 @@ mod const_tests {
             for i in 1..=100 {
                 let elements = vec![l.clone(); i];
 
-                let arr_lit = Expr::ArrayLiteral { elements: elements, span: span() };
+                let arr_lit = array_lit(elements, Some(t.clone()));
+
                 let access = Expr::ArrayAccess {
                     array: Box::new(var_expr("arr")),
                     index: Box::new(usize_lit(i - 1)),
@@ -568,7 +570,8 @@ mod const_tests {
             for i in 1..=100 {
                 let elements = vec![l.clone(); i];
 
-                let arr_lit = Expr::ArrayLiteral { elements: elements, span: span() };
+                let arr_lit = array_lit(elements, Some(t.clone()));
+
                 let access = Expr::ArrayAccess {
                     array: Box::new(var_expr("arr")),
                     index: Box::new(var_expr("h")),
@@ -601,7 +604,8 @@ mod const_tests {
                 let elements = vec![l.clone(); i];
 
                 for i2 in 1..=50 {
-                    let arr_lit = Expr::ArrayLiteral { elements: elements.clone(), span: span() };
+                    let arr_lit = array_lit(elements.clone(), Some(t.clone()));
+
                     let access = Expr::ArrayAccess {
                         array: Box::new(var_expr("arr")),
                         index: Box::new(usize_lit(i + i2)),
@@ -636,7 +640,7 @@ mod const_tests {
             for i in 0..=100 {
                 let elements = vec![l.clone(); i];
 
-                let arr_lit = Expr::ArrayLiteral { elements: elements, span: span() };
+                let arr_lit = array_lit(elements, Some(t.clone()));
 
                 let body = vec![const_define_locally("x", Type::Array(Box::new(t.clone())), arr_lit.clone())];
              
@@ -667,7 +671,7 @@ mod const_tests {
 
                 elements.push(l2.clone());
                 
-                let arr_lit = Expr::ArrayLiteral { elements: elements.clone(), span: span(), };
+                let arr_lit = array_lit(elements.clone(), Some(t1.clone()));
 
                 let body = vec![const_define_locally("x", Type::Array(Box::new(t1.clone())), arr_lit.clone())];
                 let func = void_func("foo", vec![], body);

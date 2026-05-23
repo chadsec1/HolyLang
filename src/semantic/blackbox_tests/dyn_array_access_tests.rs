@@ -15,10 +15,8 @@ mod dyn_arrays_access_tests {
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             for i in 3..=10000 {
-                let arr_lit = Expr::ArrayLiteral {
-                    elements: vec![l.clone(), l.clone(), l.clone()],
-                    span: span(),
-                };
+                let arr_lit = array_lit(vec![l.clone(), l.clone(), l.clone()], Some(t.clone()));
+
                 let access = Expr::ArrayAccess {
                     array: Box::new(var_expr("arr")),
                     index: Box::new(usize_lit(i)),
@@ -43,15 +41,14 @@ mod dyn_arrays_access_tests {
         let literals = get_all_literals_no_arr_no_usize();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR_NO_USIZE.iter()) {
-            let arr_lit = Expr::ArrayLiteral {
-                elements: vec![l.clone(), l.clone(), l.clone()],
-                span: span(),
-            };
+            let arr_lit = array_lit(vec![l.clone(), l.clone(), l.clone()], Some(t.clone()));
+
             let access = Expr::ArrayAccess {
                 array: Box::new(var_expr("arr")),
                 index: Box::new(var_expr("e")),
                 span: span(),
             };
+
             let body = vec![
                 var_decl("e", t.clone(), l.clone()),
                 var_decl("arr", Type::Array(Box::new(t.clone())), arr_lit),
@@ -75,10 +72,7 @@ mod dyn_arrays_access_tests {
             for i in 0..=100 {
                 let elements = vec![l.clone(); i + 1];
                 
-                let arr_lit = Expr::ArrayLiteral {
-                    elements: elements,
-                    span: span(),
-                };
+                let arr_lit = array_lit(elements, Some(t.clone()));
 
                 for i2 in 0..i+1 {
                     let access = Expr::ArrayAccess {

@@ -22,10 +22,7 @@ mod fixed_array_tests {
 
                 elements.push(l2.clone());
                 
-                let arr_lit = Expr::ArrayLiteral {
-                    elements: elements.clone(),
-                    span: span(),
-                };
+                let arr_lit = array_lit(elements.clone(), Some(t1.clone()));
 
                 for i2 in 0..i+1 {
                     let access = Expr::ArrayAccess {
@@ -65,10 +62,7 @@ mod fixed_array_tests {
 
                 elements.push(var_expr("e"));
                 
-                let arr_lit = Expr::ArrayLiteral {
-                    elements: elements.clone(),
-                    span: span(),
-                };
+                let arr_lit = array_lit(elements.clone(), Some(t1.clone()));
 
                 for i2 in 0..i+1 {
                     let access = Expr::ArrayAccess {

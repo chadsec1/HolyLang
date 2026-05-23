@@ -331,10 +331,7 @@ mod break_stmt_tests {
     #[test]
     fn test_break_statement_in_for_statement_with_arr() {
         for t in ALL_TYPES_NO_ARR {
-            let arr_lit = Expr::ArrayLiteral {
-                elements: vec![],
-                span: span(),
-            };
+            let arr_lit = array_lit(vec![], Some(Type::Array(Box::new(t.clone()))));
 
             let body = vec![
                 var_decl("a", Type::Array(Box::new(t.clone())), arr_lit.clone()),
@@ -377,10 +374,7 @@ mod break_stmt_tests {
     #[test]
     fn test_break_statement_in_if_statement_in_for_statements_with_arr() {
         for t in ALL_TYPES_NO_ARR {
-            let arr_lit = Expr::ArrayLiteral {
-                elements: vec![],
-                span: span(),
-            };
+            let arr_lit = array_lit(vec![], Some(Type::Array(Box::new(t.clone()))));
 
             let body = vec![
                 var_decl("a", Type::Array(Box::new(t.clone())), arr_lit.clone()),
@@ -439,10 +433,7 @@ mod break_stmt_tests {
         let literals = get_all_literals_no_arr();
 
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            let arr_lit = Expr::ArrayLiteral {
-                elements: vec![],
-                span: span(),
-            };
+            let arr_lit = array_lit(vec![], Some(t.clone()));
 
             let body = vec![
                 Stmt::Break(BreakStmt{
@@ -474,10 +465,7 @@ mod break_stmt_tests {
         // Same test, but the `break` is after the infinite loop
 
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            let arr_lit = Expr::ArrayLiteral {
-                elements: vec![],
-                span: span(),
-            };
+            let arr_lit = array_lit(vec![], Some(t.clone()));
 
             let body = vec![
                 var_decl("a", Type::Array(Box::new(t.clone())), arr_lit),
