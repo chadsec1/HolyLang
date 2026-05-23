@@ -41,7 +41,7 @@ mod types_tests {
             let mut arr = Type::Array(Box::new(t.clone()));
 
             for _ in 1..=1000 {
-                assert_eq!(arr.get_default_value(span()), Expr::ArrayLiteral { elements: vec![], span: span() });
+                assert_eq!(arr.get_default_value(span()), Expr::ArrayLiteral { elements: vec![], type_name: None, span: span() });
                 arr = Type::Array(Box::new(arr));
             }
         }
@@ -51,7 +51,7 @@ mod types_tests {
 
             for _ in 1..=1000 {
                 let result = std::panic::catch_unwind(|| { 
-                    assert_eq!(arr.get_default_value(span()), Expr::ArrayLiteral { elements: vec![], span: span() });
+                    assert_eq!(arr.get_default_value(span()), Expr::ArrayLiteral { elements: vec![], type_name: None, span: span() });
                 });
 
                 assert!(result.is_err(), "Expected panic for: {:?}", arr);

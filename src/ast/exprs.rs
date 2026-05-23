@@ -1,4 +1,4 @@
-use super::{ IntLiteralValue, Span };
+use super::{ IntLiteralValue, Type, Span };
 
 /// Abstract syntax tree expressions nodes
 #[derive(Debug, Clone, PartialEq)]
@@ -20,7 +20,8 @@ pub enum Expr {
     },
     ArrayLiteral {
         elements: Vec<Expr>,
-        span: Span,
+        type_name: Option<Type>, // This is just for the transpiler layer.
+        span: Span
     },
     StringLiteral {
         value: String,

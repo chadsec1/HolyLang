@@ -172,7 +172,11 @@ impl Type {
                     t.get_default_value(span);
                 }
 
-                Expr::ArrayLiteral { elements: Vec::new(), span: span }
+                // NOTE: If any weird bugs arise that trigger panicing guard statements, its this
+                // "type_name: None". I think no bugs should arise, but I am keeping this comment
+                // here just in case :).
+                //
+                Expr::ArrayLiteral { elements: Vec::new(), type_name: None, span: span }
             },
             Type::FixedArray(_, _) => panic!(),
         }
