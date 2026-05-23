@@ -776,7 +776,7 @@ fn check_stmts(
             Stmt::For(for_stmt) => {
                 let expr_ty = infer::infer_expr_type(&mut for_stmt.value, locals, fun_sigs, None)?;
 
-                if (!matches!(expr_ty, Type::Array(_))) && (!matches!(for_stmt.value, Expr::RangeCall{ .. })) {
+                if (!expr_ty.is_array_type()) && (!matches!(for_stmt.value, Expr::RangeCall{ .. })) {
                     return Err(HolyError::Semantic(format!(
                         "For loop statement require an expression to be evaulatable to any `Array` type, or `range(expr1, expr2)`, instead we got `{}` (line {} column {})",
                         expr_ty, stmt_span.line, stmt_span.column,
@@ -804,6 +804,8 @@ fn check_stmts(
                 if let Type::Array(inner_ty) = expr_ty {
                     decided_ty = *inner_ty;
 
+                } else if let Type::FixedArray(inner_ty, _) = expr_ty {
+                    decided_ty = *inner_ty;
                     
                 } else if expr_ty.is_integer_type() {
                     decided_ty = expr_ty;
