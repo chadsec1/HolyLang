@@ -135,8 +135,17 @@ fn expr_to_rust_expr(expr: &Expr) -> String {
                 BinOpKind::And => format!("({} && {})", left_str, right_str),
                 BinOpKind::Or  => format!("({} || {})", left_str, right_str),
 
-                _ => todo!()
+                // Bitwise
+                //
+                BinOpKind::BitwiseAnd => format!("({} & {})", left_str, right_str),
+                BinOpKind::BitwiseOr  => format!("({} | {})", left_str, right_str),
 
+                // NOTE to self: It's safe to cast as u32 here, becasue the semantics phase checked it.
+                // but its important to keep this in mind... weird bitwise bugs may arise, and if it does,
+                // this is culprit
+                //
+                BinOpKind::BitwiseShiftLeft => format!("({}.checked_shl({} as u32)).unwrap_or_else(|| panic!(\"bitwise shift left overflow\"))", left_str, right_str),
+                BinOpKind::BitwiseShiftRight => format!("({}.checked_shr({} as u32)).unwrap_or_else(|| panic!(\"bitwise shift right overflow\"))", left_str, right_str),
             }
 
         }
