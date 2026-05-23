@@ -309,11 +309,11 @@ fn check_stmts(
                 }
 
                 match var.value.clone() {
-                    Expr::ArrayLiteral{elements, span: _} => {
+                    Expr::ArrayLiteral {elements, .. } => {
                         value_len = Some(elements.len())
                     }
 
-                    Expr::StringLiteral{value: v, span: _} => {
+                    Expr::StringLiteral {value: v, ..} => {
                         value_len = Some(v.len())
                     }
                     // Other experessions we can't / don't need to store their length
@@ -480,11 +480,11 @@ fn check_stmts(
                 }
 
                 match assign.value.clone() {
-                    Expr::ArrayLiteral{elements, span: _} => {
+                    Expr::ArrayLiteral { elements, .. } => {
                         value_len = Some(elements.len());
                     }
 
-                    Expr::StringLiteral{value: v, span: _} => {
+                    Expr::StringLiteral { value: v, .. } => {
                         value_len = Some(v.len());
                     }
                     // Other experessions we can't / don't need to store their length

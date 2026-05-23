@@ -100,7 +100,7 @@ pub fn infer_expr_type(
 
         Expr::StringLiteral { .. } => Ok(Type::String),
         
-        Expr::ArrayLiteral { elements, span } => {
+        Expr::ArrayLiteral { elements, type_name, span } => {
             // Array literals e.g. [1,2,3]
             // Array literals type determining method differs based on array elements:
             // - If the array is not empty, the first expression element type becomes the array type,
@@ -167,6 +167,8 @@ pub fn infer_expr_type(
 
                 match infer_hint.clone() {
                     Some(Type::FixedArray(t, size)) => {
+
+                        // Get size of the array if its fixed sized array.
                         let size_usize: usize = (|| -> Result<usize, HolyError> {
                             match size.clone() {
                                 FixedArraySize::Literal(n) => Ok(n),
@@ -212,6 +214,7 @@ pub fn infer_expr_type(
                         }
 
                 
+                        *type_name = Some(Type::FixedArray(Box::new(*t.clone()), size.clone()));
                         return Ok(Type::FixedArray(Box::new(*t.clone()), size));
 
                     },
@@ -221,13 +224,19 @@ pub fn infer_expr_type(
 
 
 
+                *type_name = Some(Type::Array(Box::new(elem_expected_ty.clone())));
                 return Ok(Type::Array(Box::new(elem_expected_ty.clone())))
             }
 
             if infer_hint.is_none() {
+                // TODO NOTE: Perhaps we shoud panic here, and error at semantics phase if see a
+                // lone statement expression of array literal.
+                //
+                *type_name = Some(Type::Array(Box::new(Type::Int8)));
                 return Ok(Type::Array(Box::new(Type::Int8)))
             }
 
+            *type_name = Some(infer_hint.clone().unwrap());
             Ok(infer_hint.unwrap())
 
         }

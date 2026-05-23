@@ -329,6 +329,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
             return Ok(
                 Expr::ArrayLiteral { 
                     elements: elems, 
+                    type_name: None,
                     span,
                 });
         }
