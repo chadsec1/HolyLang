@@ -792,6 +792,29 @@ fn check_stmts(
 
                 }
 
+                // If this is a for looping over an array, move the array only if its not an array
+                // literal. i.e. its a variable that holds an array.
+                if expr_ty.is_array_type()  {
+                    if let Expr::Var { name, .. } = &for_stmt.value {
+                        let src = locals.get_mut(name).unwrap_or_else(|| panic!(
+                            "(Compiler bug) infer_expr_type should've already errored if the array variable didnt exist, but it didnt. for_stmt: {:?}", 
+                            for_stmt
+                        ));
+
+                        match &mut src.kind {
+                            BindingKind::Var { moved: src_moved, .. } => {
+                                if *src_moved {
+                                    panic!("(Compiler bug) infer_expr_type should've already errored if the array variable is moved, but it didnt. for_stmt: {:?}", for_stmt)
+                                }
+
+                                *src_moved = true;
+                            },
+                            // Ownership rules don't apply to constants.
+                            BindingKind::Const { .. } => {}
+                        }
+                    }
+                }
+
 
                 let mut locals_clone = locals.clone();
 
@@ -816,7 +839,8 @@ fn check_stmts(
                 }
 
 
-                // NOTE only specific if decided_ty is an Array: 
+
+                // NOTE only specific if decided_ty is of an array: 
                 //      Out-of-bounds access protection here is non-existent, but thats fine because Rust
                 //      will catch at transpile layer
                 //      However it would be nicer if we can do better job of catching out of bounds
