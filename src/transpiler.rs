@@ -1,5 +1,5 @@
 use crate::ast::{
-    AST, Function, Stmt, GlobalStmt, Type, Expr, BinOpKind
+    AST, Function, Stmt, GlobalStmt, Type, Expr, BinOpKind, FixedArraySize
 };
 
 /// Takes a reference to a Abstract Syntax Tree, and returns equvilent code in Rust as a string
@@ -108,6 +108,29 @@ fn expr_to_rust_expr(expr: &Expr) -> String {
 
         Expr::StringLiteral { value, .. } => format!("\"{}\"", value.to_string()),
         
+        Expr::ArrayLiteral { elements, type_name, .. } => {
+            let mut elems = String::new();
+
+            match type_name.clone().expect("(Compiler bug) Expected type_name to be Some, instead got None. theres likely a bug in semantics layer") {
+                Type::Array(_) => elems.push_str("vec!["),
+                Type::FixedArray(_, _) => elems.push('['),
+                other => panic!("(Compiler bug) got arrayl iteral with non array array type_name `{:?}`, indicating a potentinal bug in semantics layer", other)
+            }
+
+            for e in elements {
+                let elem_expr = expr_to_rust_expr(e);
+                elems.push_str(&elem_expr);
+                elems.push(',');
+            }
+
+            if elems.ends_with(',') {
+                elems.pop();
+            }
+
+            elems.push(']');
+            return elems
+        },
+
         Expr::Var { name, .. } => name.to_string(),
 
         Expr::BinOp { op, left, right, .. } => {
@@ -177,7 +200,11 @@ fn holy_type_to_rust_type_str(holy_type: &Type) -> String {
         Type::Float64 => "f64".to_string(),
         Type::Bool => "bool".to_string(),
         Type::String => "&str".to_string(),
-
-        _ => todo!()
-    }
+        
+        Type::Array(t) => format!("Vec<{}>", holy_type_to_rust_type_str(t)),
+        Type::FixedArray(t, s) => match s {
+                FixedArraySize::Literal(n) => format!("[{}; {}]", holy_type_to_rust_type_str(t), n),
+                FixedArraySize::Const(c) => format!("[{}; {}]", holy_type_to_rust_type_str(t), c)
+            }
+        }
 }
