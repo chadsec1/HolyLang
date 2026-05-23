@@ -27,15 +27,55 @@ pub fn transpile(ast: &AST) -> String {
 /// Transpiles a function and its inner statements into equvilent Rust code
 ///
 fn transpile_function(func: &Function) -> String {
-    let mut func_rcode: String = "fn".to_string();
+    let mut func_rcode = String::new();
 
-    func_rcode = format!("{} {}() {{\n", func_rcode, func.name.clone());
+    func_rcode.push_str("fn ");
+    func_rcode.push_str(&func.name);
+    func_rcode.push('(');
+
+    for param in &func.params {
+        let param_type = holy_type_to_rust_type_str(&param.type_name);
+        func_rcode.push_str(&param.name);
+        func_rcode.push_str(": ");
+        func_rcode.push_str(&param_type);
+        func_rcode.push_str(", ");
+    }
+
+    if func_rcode.ends_with(", ") {
+        func_rcode.pop().unwrap();
+        func_rcode.pop().unwrap();
+    }
+
+    func_rcode.push(')');
+
+    if let Some(ret_types) = &func.return_type {
+        func_rcode.push_str(" -> ");
+        if ret_types.len() == 1 {
+            func_rcode.push_str(&holy_type_to_rust_type_str(&ret_types[0]));
+        } else {
+            func_rcode.push('(');
+            for t in ret_types {
+                func_rcode.push_str(&holy_type_to_rust_type_str(&t));
+                func_rcode.push_str(", ");
+            }
+            
+            if func_rcode.ends_with(", ") {
+                func_rcode.pop().unwrap();
+                func_rcode.pop().unwrap();
+            }
+
+            func_rcode.push(')');
+        }
+
+    }
+    
+    func_rcode.push_str(" {\n");
     
     for stmt in &func.body {
         let stmt_rcode = transpile_stmt(stmt);
         func_rcode = format!("{} {}\n", func_rcode, stmt_rcode);
     }
-    func_rcode = format!("{}\n}}", func_rcode);
+    func_rcode.push_str("}\n");
     return func_rcode
 }
 
@@ -58,6 +98,33 @@ fn transpile_stmt(stmt: &Stmt) -> String {
 
             return format!("{} = {};", va.name, va_value)
         },
+
+        Stmt::Lock(_) | Stmt::Unlock(_) => "".to_string(),
+
+        Stmt::Return(expr_vec) => {
+            let mut ret_exprs_str = String::new();
+
+            if expr_vec.len() == 1 {
+                ret_exprs_str.push_str(&holy_expr_to_rust_expr(&expr_vec[0]));
+            } else {
+                ret_exprs_str.push('(');
+                for e in expr_vec {
+                    let expr_str = holy_expr_to_rust_expr(&e);
+                    ret_exprs_str.push_str(&expr_str);
+                    ret_exprs_str.push_str(", ");
+                }
+
+                if ret_exprs_str.ends_with(", ") {
+                    ret_exprs_str.pop().unwrap();
+                    ret_exprs_str.pop().unwrap();
+                }
+                ret_exprs_str.push(')');
+            }
+
+            return format!("return {}", ret_exprs_str)
+        },
+
+
 
 
 
@@ -128,7 +195,7 @@ fn holy_expr_to_rust_expr(expr: &Expr) -> String {
             }
 
             if elems.ends_with(',') {
-                elems.pop();
+                elems.pop().unwrap();
             }
 
             elems.push(']');
