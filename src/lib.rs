@@ -26,7 +26,7 @@ pub fn compile(source: &str, compile: CompileInfo) -> String {
 
     // Transpile to Rust code
     let rust_code = transpiler::transpile(&ast);
-    println!("Transpiled Rust code: {:#?}\n", rust_code);
+    println!("Transpiled Rust code:\n{:#}\n", rust_code);
 
     match compile {
         CompileInfo::CompileTo(target_path) => {
