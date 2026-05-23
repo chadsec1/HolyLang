@@ -99,7 +99,11 @@ fn transpile_stmt(stmt: &Stmt) -> String {
             return format!("{} = {};", va.name, va_value)
         },
 
-        Stmt::Lock(_) | Stmt::Unlock(_) => "".to_string(),
+        Stmt::Lock(_) => "// Lock statement here".to_string(),
+        Stmt::Unlock(_) => "// Unlock statement here".to_string(),
+        
+        Stmt::Break(_) => "break;".to_string(),
+        Stmt::Continue(_) => "continue;".to_string(),
 
         Stmt::Return(expr_vec) => {
             let mut ret_exprs_str = String::new();
@@ -125,8 +129,27 @@ fn transpile_stmt(stmt: &Stmt) -> String {
         },
 
 
+        Stmt::Infinite(inf) => {
+            let mut inf_branch_stmts_str = String::new();
 
+            for s in &inf.branch {
+                inf_branch_stmts_str.push_str(&transpile_stmt(&s));
+                inf_branch_stmts_str.push('\n');
+            }
 
+            return format!("loop {{\n{}}}", inf_branch_stmts_str)
+        },
+
+        Stmt::While(w) => {
+            let mut w_branch_stmts_str = String::new();
+
+            for s in &w.branch {
+                w_branch_stmts_str.push_str(&transpile_stmt(&s));
+                w_branch_stmts_str.push('\n');
+            }
+
+            return format!("while {} {{\n{}}}", holy_expr_to_rust_expr(&w.condition), w_branch_stmts_str)
+        }
 
         _ => todo!()
     }
@@ -144,16 +167,10 @@ fn transpile_global_stmt(global_stmt: &GlobalStmt) -> String {
 }
 
 fn parse_const(cons: &Constant) -> String {
-    let mut const_stmt_rcode: String = "const".to_string();
-
     let const_type = holy_type_to_rust_type_str(&cons.type_name);
     let const_value = holy_expr_to_rust_expr(&cons.value);
 
-    const_stmt_rcode = format!("{} {}", const_stmt_rcode, cons.name.clone());
-    const_stmt_rcode = format!("{}: {} =", const_stmt_rcode, const_type);
-    const_stmt_rcode = format!("{} {};", const_stmt_rcode, const_value);
-
-    return const_stmt_rcode;
+    return format!("const {}: {} = {};", cons.name, const_type, const_value);
 }
 
 /// Turns a HolyLang expression, into equvilent Rust expression
