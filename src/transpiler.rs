@@ -95,11 +95,71 @@ fn transpile_stmt(stmt: &Stmt) -> String {
             return format!("let mut {}: {} = {};", var.name, var_type, var_value);
         },
 
+        Stmt::VarDeclMulti(multi_var, expr) => {
+            let mut multi_decl_stmt_str: String = "let (".to_string();
+            
+            for var in multi_var {
+                multi_decl_stmt_str.push_str("mut ");
+                multi_decl_stmt_str.push_str(&var.name);
+                multi_decl_stmt_str.push_str(", ");
+            }
+
+            if multi_decl_stmt_str.ends_with(", ") {
+                multi_decl_stmt_str.pop().unwrap();
+                multi_decl_stmt_str.pop().unwrap();
+            }
+            
+            multi_decl_stmt_str.push_str("): (");
+
+            for var in multi_var {
+                let var_type = holy_type_to_rust_type_str(&var.type_name);
+
+                multi_decl_stmt_str.push_str(&var_type);
+                multi_decl_stmt_str.push_str(", ");
+            }
+
+            if multi_decl_stmt_str.ends_with(", ") {
+                multi_decl_stmt_str.pop().unwrap();
+                multi_decl_stmt_str.pop().unwrap();
+            }
+
+            multi_decl_stmt_str.push(')');
+            multi_decl_stmt_str.push_str(" = ");
+            multi_decl_stmt_str.push_str(&holy_expr_to_rust_expr(&expr));
+            multi_decl_stmt_str.push(';');
+
+            return multi_decl_stmt_str
+        },
+
         Stmt::VarAssign(va) => {
             let va_value = holy_expr_to_rust_expr(&va.value);
 
             return format!("{} = {};", va.name, va_value)
         },
+
+        Stmt::VarAssignMulti(multi_assignment) => {
+            let mut multi_assign_stmt_str = String::new();
+            multi_assign_stmt_str.push('(');
+            
+            for name in &multi_assignment.names {
+                multi_assign_stmt_str.push_str(&name);
+                multi_assign_stmt_str.push_str(", ");
+            }
+
+            if multi_assign_stmt_str.ends_with(", ") {
+                multi_assign_stmt_str.pop().unwrap();
+                multi_assign_stmt_str.pop().unwrap();
+            }
+            
+            multi_assign_stmt_str.push(')');
+            multi_assign_stmt_str.push_str(" = ");
+            multi_assign_stmt_str.push_str(&holy_expr_to_rust_expr(&multi_assignment.value));
+            multi_assign_stmt_str.push(';');
+
+            return multi_assign_stmt_str
+        },
+
+
 
         Stmt::Lock(var_exprs) => {
             let mut var_lock_stmts_str = "// Lock statement started\n".to_string();
@@ -122,7 +182,7 @@ fn transpile_stmt(stmt: &Stmt) -> String {
 
             for expr in var_exprs {
                 if let Expr::Var { name, .. } = expr {
-                    var_unlock_stmts_str.push_str(&format!("let {} = {};", name, name));
+                    var_unlock_stmts_str.push_str(&format!("let mut {} = {};", name, name));
                     var_unlock_stmts_str.push('\n');
                 } else {
                     panic!("(Compiler bug) Got a non-var expression in unlock statement, indicating a bug in semantics analysis layer.\nvar_exprs: {:?}", var_exprs);
@@ -229,8 +289,7 @@ fn transpile_stmt(stmt: &Stmt) -> String {
         },
 
 
-
-        _ => todo!()
+        Stmt::Expr(expr) => format!("{};", holy_expr_to_rust_expr(expr))
     }
 }
 
@@ -273,7 +332,7 @@ fn holy_expr_to_rust_expr(expr: &Expr) -> String {
 
         Expr::BoolLiteral { value, .. } => value.to_string(),
 
-        Expr::StringLiteral { value, .. } => format!("\"{}\"", value.to_string()),
+        Expr::StringLiteral { value, .. } => format!("\"{}\".to_string()", value.to_string()),
         
         Expr::ArrayLiteral { elements, type_name, .. } => {
             let mut elems = String::new();
@@ -383,7 +442,7 @@ fn holy_expr_to_rust_expr(expr: &Expr) -> String {
         Expr::CopyCall { expr, .. } => format!("{}.clone()", holy_expr_to_rust_expr(expr)),
         Expr::FormatCall { template, expressions, .. } => {
             let mut format_expr_str = String::new();
-            format_expr_str.push_str(&"&format!(");
+            format_expr_str.push_str(&"format!(");
             format_expr_str.push('"');
             format_expr_str.push_str(&template);
             format_expr_str.push('"');
@@ -421,7 +480,7 @@ fn holy_type_to_rust_type_str(holy_type: &Type) -> String {
         
         Type::Float64 => "f64".to_string(),
         Type::Bool => "bool".to_string(),
-        Type::String => "&str".to_string(),
+        Type::String => "String".to_string(),
         
         Type::Array(t) => format!("Vec<{}>", holy_type_to_rust_type_str(t)),
         Type::FixedArray(t, s) => match s {
