@@ -387,10 +387,10 @@ fn holy_expr_to_rust_expr(expr: &Expr) -> String {
             match op {
                 // Arithemtic
                 //
-                BinOpKind::Add      => format!("{}.checked_add({}).unwrap_or_else(|| panic!(\"arithemtic addition overflow\"))", left_str, right_str),
-                BinOpKind::Subtract => format!("{}.checked_sub({}).unwrap_or_else(|| panic!(\"arithemtic subtraction overflow\"))", left_str, right_str),
-                BinOpKind::Multiply => format!("{}.checked_mul({}).unwrap_or_else(|| panic!(\"arithemtic multiplication overflow\"))", left_str, right_str),
-                BinOpKind::Divide   => format!("{}.checked_div({}).unwrap_or_else(|| panic!(\"arithemtic divison overflow\"))", left_str, right_str),
+                BinOpKind::Add      => format!("{}.checked_add({}).unwrap_or_else(|| panic!(\"arithmetic addition overflow\"))", left_str, right_str),
+                BinOpKind::Subtract => format!("{}.checked_sub({}).unwrap_or_else(|| panic!(\"arithmetic subtraction overflow\"))", left_str, right_str),
+                BinOpKind::Multiply => format!("{}.checked_mul({}).unwrap_or_else(|| panic!(\"arithmetic multiplication overflow\"))", left_str, right_str),
+                BinOpKind::Divide   => format!("{}.checked_div({}).unwrap_or_else(|| panic!(\"arithmetic divison overflow\"))", left_str, right_str),
 
                 // Logical
                 //
