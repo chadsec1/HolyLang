@@ -12,8 +12,7 @@ In some specific aspects such as "logic-bug reducing features", HolyLang is supe
 
 # Work-in-progress
 This only implements parser, and semantics.
-It still lacks: structs, enums, unsafe blocks, char type, and actual binary generation phase.
-
+It still lacks: char types, structs, enums, sin (unsafe) blocks.
 
 
 # Example syntax
