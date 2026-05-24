@@ -397,7 +397,7 @@ fn holy_expr_to_rust_expr(expr: &Expr) -> String {
                 BinOpKind::Equal    => format!("({} == {})", left_str, right_str),
                 BinOpKind::NotEqual => format!("({} != {})", left_str, right_str),
                 BinOpKind::Greater  => format!("({} > {})", left_str, right_str),
-                BinOpKind::Less     => format!("({} > {})", left_str, right_str),
+                BinOpKind::Less     => format!("({} < {})", left_str, right_str),
                 
                 BinOpKind::GreaterEqual => format!("({} >= {})", left_str, right_str),
                 BinOpKind::LessEqual    => format!("({} <= {})", left_str, right_str),
