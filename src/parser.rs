@@ -194,6 +194,8 @@ fn parse_const_stmt(line: &str, span: Span) -> Result<Constant, HolyError> {
     // CONST CONST_NAME TYPE_NAME = EXPRESSION
     //
 
+    let line = helpers::strip_inline_comment(line);
+
     let rest = line["const ".len()..].trim(); // slicing is safe in rust, and would panic at
                                               // runtime if violated.
 
