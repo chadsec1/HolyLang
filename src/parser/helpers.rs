@@ -3,7 +3,6 @@ use super::*;
 use crate::consts;
 
 
-
 pub fn find_top_level_op_any(s: &str) -> Option<(usize, &str)> {
     fn precedence(op: &str) -> u8 {
         match op {
