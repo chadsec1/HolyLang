@@ -5,15 +5,45 @@
 [![Codacy Badge](https://app.codacy.com/project/badge/Coverage/73ffcbec8b7849a7a90f2003efe101af)](https://app.codacy.com/gh/chadsec1/HolyLang/coverage)
 
 
-HolyLang programming language: Rust's compile-time safety, with Golang's readability.
+**HolyLang** programming language: Rust's compile-time safety, with Golang's readability.
 
-In some specific aspects such as "logic-bug reducing features", HolyLang is superior to Rust.
+## HolyLang features:
+- **HolyLang** is more secure than Rust, but not as performant as Rust. The purpose of HolyLang is divine security, not speed.
+- **HolyLang** has readable syntax, and semantics.
+- **HolyLang** has no borrow checker, and yet is still more secure than Rust. programs can be easily reasoned about due to the simple binary safey model of "move, or copy". 
+- **HolyLang** arithmetic is always checked, including bitwise. Floating point arithmetic is also always checked.
+- **HolyLang** has no warnings, only errors. Unreachable code? Error. Unused variable? Error. Etc.
+- **HolyLang** forces documentation for functions, structs, and constants.
+- **HolyLang** has no type inference, everything must be explicilty stated.
+- **HolyLang** does not allow overshadowing at all. Making codebases look cleaner, and reducing likelyhood of logic bugs.
+- **HolyLang** `lock` and `unlock` statements allow you to declare "zones" where variables behave as constants, dynamically.
+- **HolyLang**'s bootstrap compiler transpiles down to pure Rust for a mathematical guarantee of safety: `"If Rust is safe, then HolyLang must also be at least as safe as Rust"`.
+
+.. and a lot more! This is just the bootstrap compiler, the actual compiler will have even more security features, such as static stack analyzes that guarantee (at compile-time!) a program cannot overflow the stack, allowing for even stricter security than Rust, and even other formally verified languages like Ada SPARK, whom have no stack overflow protection.
 
 
 # Work-in-progress
-This only implements parser, and semantics.
-It still lacks: structs, enums, unsafe blocks, char type, and actual binary generation phase.
+This bootstrap compiler implements parser, semantic analysis and enforcement, and the transpiler (transpiler still WIP).
+It still lacks: char types, structs, enums, sin (unsafe) blocks.
 
+# Compiling the bootstrap compiler.
+**Note**: The latest commit in main branch is always the latest stable release.
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/chadsec1/HolyLang.git
+   ```
+2. Compile the compiler:
+   ```bash
+   cargo build --release
+   ```
+
+The compiler binary will be located in `target/release/holylang`. Feel free to move it wherever you like.
+
+# Compiling a HolyLang program
+```bash
+./holylang HOLY_SOURCE_CODE_PATH.holy TARGET_BINARY_PATH
+```
+That will compile a HolyLang file, and produce a binary at `TARGET_BINARY_PATH`.
 
 
 # Example syntax
