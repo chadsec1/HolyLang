@@ -1,7 +1,7 @@
 ---
-name: Bug report
-about: Create a report to help us improve
-title: "[Bug]"
+name: General Bug report
+about: Create a general bug report
+title: "[General Bug]"
 labels: bug
 assignees: chadsec1
 
@@ -12,16 +12,24 @@ A clear and concise description of what the bug is.
 
 
 **HolyLang source code**
+```
 If applicable, add source code to help demonstrate the bug.
-
+```
 
 **Parser's AST**
+```
 If you've provided source code above, add the parser's AST tree
-
+```
 
 **Semantics checked AST**
+```
 If you've provided source code above, add the semantic AST tree
+```
 
+**Transpiled Rust code**
+```
+If you've provided source code above, add the transpiled Rust code here
+```
 
 **To Reproduce**
 Steps to reproduce the behaviour:
