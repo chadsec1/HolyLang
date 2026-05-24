@@ -1,5 +1,7 @@
 use crate::ast::{
-    AST, Function, Stmt, GlobalStmt, Type, Expr, BinOpKind, UnaryOpKind, Constant, FixedArraySize
+    AST, Function, Stmt, GlobalStmt, Type, Expr, BinOpKind, UnaryOpKind, Constant, FixedArraySize,
+
+    ArraySliceRange
 };
 
 /// Takes a reference to a Abstract Syntax Tree, and returns equvilent code in Rust as a string
@@ -99,8 +101,37 @@ fn transpile_stmt(stmt: &Stmt) -> String {
             return format!("{} = {};", va.name, va_value)
         },
 
-        Stmt::Lock(_) => "// Lock statement here".to_string(),
-        Stmt::Unlock(_) => "// Unlock statement here".to_string(),
+        Stmt::Lock(var_exprs) => {
+            let mut var_lock_stmts_str = "// Lock statement started\n".to_string();
+
+            for expr in var_exprs {
+                if let Expr::Var { name, .. } = expr {
+                    var_lock_stmts_str.push_str(&format!("let {} = {};", name, name));
+                    var_lock_stmts_str.push('\n');
+                } else {
+                    panic!("(Compiler bug) Got a non-var expression in lock statement, indicating a bug in semantics analysis layer.\nvar_exprs: {:?}", var_exprs);
+                }
+            }
+
+            var_lock_stmts_str.push_str("// Lock statement ended\n");
+            return var_lock_stmts_str
+        },
+
+        Stmt::Unlock(var_exprs) => {
+            let mut var_unlock_stmts_str = "// Unlock statement started\n".to_string();
+
+            for expr in var_exprs {
+                if let Expr::Var { name, .. } = expr {
+                    var_unlock_stmts_str.push_str(&format!("let {} = {};", name, name));
+                    var_unlock_stmts_str.push('\n');
+                } else {
+                    panic!("(Compiler bug) Got a non-var expression in unlock statement, indicating a bug in semantics analysis layer.\nvar_exprs: {:?}", var_exprs);
+                }
+            }
+
+            var_unlock_stmts_str.push_str("// Unlock statement ended");
+            return var_unlock_stmts_str
+        },
         
         Stmt::Break(_) => "break;".to_string(),
         Stmt::Continue(_) => "continue;".to_string(),
@@ -267,6 +298,17 @@ fn holy_expr_to_rust_expr(expr: &Expr) -> String {
             return elems
         },
 
+        Expr::ArrayAccess { array, index, .. } => format!("{}[{}]", holy_expr_to_rust_expr(array), holy_expr_to_rust_expr(index)),
+
+        // to_vec() safe here because HolyLang always returns a dynamic array when you slice any
+        // array regardless if its fixed sized, or dynamic.
+        //
+        Expr::ArraySlicing { array, range, .. } => match range {
+            ArraySliceRange::From(from) => format!("{}[{}..].to_vec()", holy_expr_to_rust_expr(array), holy_expr_to_rust_expr(from)),
+            ArraySliceRange::To(to) => format!("{}[{}..].to_vec()", holy_expr_to_rust_expr(array), holy_expr_to_rust_expr(to)),
+            ArraySliceRange::FromTo(from, to) => format!("{}[{}..{}].to_vec()", holy_expr_to_rust_expr(array), holy_expr_to_rust_expr(from), holy_expr_to_rust_expr(to)),
+        },
+
         Expr::Var { name, .. } => name.to_string(),
 
         Expr::UnaryOp { op, expr, .. } => {
@@ -316,12 +358,45 @@ fn holy_expr_to_rust_expr(expr: &Expr) -> String {
             }
 
         },
+        
+        Expr::Call { name, args, .. } => {
+            let mut args_str = String::new();
+            
+            args_str.push_str(&name);
+            args_str.push('(');
+
+            for arg_expr in args {
+                args_str.push_str(&holy_expr_to_rust_expr(arg_expr));
+                args_str.push(',');
+            }
+
+            if args_str.ends_with(',') {
+                args_str.pop().unwrap();
+            }
+
+            args_str.push(')');
+            return args_str
+        },
 
         Expr::RangeCall { start, end, ..} => format!("{}..{}", holy_expr_to_rust_expr(start), holy_expr_to_rust_expr(end)),
 
         Expr::CopyCall { expr, .. } => format!("{}.clone()", holy_expr_to_rust_expr(expr)),
+        Expr::FormatCall { template, expressions, .. } => {
+            let mut format_expr_str = String::new();
+            format_expr_str.push_str(&"&format!(");
+            format_expr_str.push('"');
+            format_expr_str.push_str(&template);
+            format_expr_str.push('"');
 
-        _ => todo!()
+            for expr in expressions {
+                format_expr_str.push_str(", ");
+                format_expr_str.push_str(&holy_expr_to_rust_expr(expr));
+            }
+            
+            format_expr_str.push(')');
+
+            return format_expr_str
+        }
     }
 
 }
