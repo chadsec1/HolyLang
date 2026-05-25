@@ -705,7 +705,7 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
 
             let value = parse_expr::parse_expr(right, span)?;
 
-            return Ok(Stmt::VarDecl(VariableDeclaration { name, type_name: var_type, value: value, span: span }));
+            return Ok(Stmt::VarDecl(VariableDeclaration { name, type_name: var_type, value: value, explicitly_initialized: true, span: span }));
 
 
 
@@ -722,7 +722,7 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
             let ty = parse_type(parts[1], &span)?;
             let default_value = ty.get_default_value(span);
 
-            return Ok(Stmt::VarDecl(VariableDeclaration { name, type_name: ty, value: default_value, span: span }))
+            return Ok(Stmt::VarDecl(VariableDeclaration { name, type_name: ty, value: default_value, explicitly_initialized: false, span: span }))
         }
     }
 
