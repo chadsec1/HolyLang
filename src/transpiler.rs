@@ -4,6 +4,9 @@ use crate::ast::{
     ArraySliceRange
 };
 
+#[cfg(test)]
+mod blackbox_tests;
+
 /// Takes a reference to a Abstract Syntax Tree, and returns equvilent code in Rust as a string
 ///
 pub fn transpile(ast: &AST) -> String {
