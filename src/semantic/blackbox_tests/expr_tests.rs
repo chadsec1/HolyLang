@@ -21,8 +21,8 @@ mod expr_tests {
         let literals = get_all_literals_no_arr();
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
-                var_decl("x", t.clone(), l.clone()),
-                var_decl("y", t.clone(), var_expr("x")),
+                var_decl(true, "x", t.clone(), l.clone()),
+                var_decl(true, "y", t.clone(), var_expr("x")),
                 Stmt::Expr(var_expr("x"))
             ]; // x not declared
             let func = void_func("foo", vec![], body);

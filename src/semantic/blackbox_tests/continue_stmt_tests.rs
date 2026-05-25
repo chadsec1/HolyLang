@@ -140,7 +140,7 @@ mod continue_stmt_tests {
                         branch: vec![
                             // Just dummy declaration, so we don't get flagged by dead code because
                             // of empty branch.
-                            var_decl("z", t.clone(), l.clone()),
+                            var_decl(true, "z", t.clone(), l.clone()),
 
                         ],
                         span: span(),
@@ -172,7 +172,7 @@ mod continue_stmt_tests {
                         branch: vec![
                             // Just dummy declaration, so we don't get flagged by dead code because
                             // of empty branch.
-                            var_decl("z", t.clone(), l.clone()),
+                            var_decl(true, "z", t.clone(), l.clone()),
 
                         ],
                         span: span(),
@@ -289,7 +289,7 @@ mod continue_stmt_tests {
                     branch: vec![
                         // Just dummy declaration, so we don't get flagged by dead code because
                         // of empty branch.
-                        var_decl("z", t.clone(), l.clone()),
+                        var_decl(true, "z", t.clone(), l.clone()),
 
                     ],
                     span: span(),
@@ -311,7 +311,7 @@ mod continue_stmt_tests {
                     branch: vec![
                         // Just dummy declaration, so we don't get flagged by dead code because
                         // of empty branch.
-                        var_decl("z", t.clone(), l.clone()),
+                        var_decl(true, "z", t.clone(), l.clone()),
 
                     ],
                     span: span(),
@@ -338,7 +338,7 @@ mod continue_stmt_tests {
             let arr_lit = array_lit(vec![], Some(Type::Array(Box::new(t.clone()))));
 
             let body = vec![
-                var_decl("a", Type::Array(Box::new(t.clone())), arr_lit.clone()),
+                var_decl(true, "a", Type::Array(Box::new(t.clone())), arr_lit.clone()),
                 Stmt::For(ForStmt{
                         holder_name: "x".to_string(),
                         value: var_expr("a"),
@@ -385,7 +385,7 @@ mod continue_stmt_tests {
             let arr_lit = array_lit(vec![], Some(Type::Array(Box::new(t.clone()))));
 
             let body = vec![
-                var_decl("a", Type::Array(Box::new(t.clone())), arr_lit.clone()),
+                var_decl(true, "a", Type::Array(Box::new(t.clone())), arr_lit.clone()),
                 Stmt::For(ForStmt{
                         holder_name: "x".to_string(),
                         value: var_expr("a"),
@@ -453,14 +453,14 @@ mod continue_stmt_tests {
                     span: span()
                 }),
 
-                var_decl("a", Type::Array(Box::new(t.clone())), arr_lit),
+                var_decl(true, "a", Type::Array(Box::new(t.clone())), arr_lit),
                 Stmt::For(ForStmt{
                         holder_name: "x".to_string(),
                         value: var_expr("a"),
                         branch: vec![
                             // Just dummy declaration, so we don't get flagged by dead code because
                             // of empty branch.
-                            var_decl("z", t.clone(), l.clone()),
+                            var_decl(true, "z", t.clone(), l.clone()),
                         ],
                         span: span(),
                     }),
@@ -480,14 +480,14 @@ mod continue_stmt_tests {
             let arr_lit = array_lit(vec![], Some(t.clone()));
 
             let body = vec![
-                var_decl("a", Type::Array(Box::new(t.clone())), arr_lit),
+                var_decl(true, "a", Type::Array(Box::new(t.clone())), arr_lit),
                 Stmt::For(ForStmt{
                     holder_name: "x".to_string(),
                     value: var_expr("a"),
                     branch: vec![
                         // Just dummy declaration, so we don't get flagged by dead code because
                         // of empty branch.
-                        var_decl("z", t.clone(), l.clone()),
+                        var_decl(true, "z", t.clone(), l.clone()),
                     ],
                     span: span(),
                 }),
@@ -632,7 +632,7 @@ mod continue_stmt_tests {
                     branch: vec![
                         // Just dummy declaration, so we don't get flagged by dead code because
                         // of empty branch.
-                        var_decl("z", t.clone(), l.clone()),
+                        var_decl(true, "z", t.clone(), l.clone()),
                     ],
                     span: span(),
                 }),
@@ -661,7 +661,7 @@ mod continue_stmt_tests {
                     branch: vec![
                         // Just dummy declaration, so we don't get flagged by dead code because
                         // of empty branch.
-                        var_decl("z", t.clone(), l.clone()),
+                        var_decl(true, "z", t.clone(), l.clone()),
                     ],
                     span: span(),
                 }),

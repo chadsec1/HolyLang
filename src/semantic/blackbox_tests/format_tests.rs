@@ -15,7 +15,7 @@ mod format_tests {
                 expressions: vec![l.clone()], // plain literals not allowed
                 span: span(),
             };
-            let body = vec![var_decl("s", Type::String, fmt)];
+            let body = vec![var_decl(true, "s", Type::String, fmt)];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             let result = check_semantics(&mut ast);
@@ -37,7 +37,7 @@ mod format_tests {
                 expressions: vec![l.clone()], 
                 span: span(),
             };
-            let body = vec![var_decl("s", Type::String, fmt)];
+            let body = vec![var_decl(true, "s", Type::String, fmt)];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             let _ = check_semantics(&mut ast);
@@ -55,8 +55,8 @@ mod format_tests {
                 span: span(),
             };
             let body = vec![
-                var_decl("n", t.clone(), l.clone()),
-                var_decl("s", Type::String, fmt),
+                var_decl(true, "n", t.clone(), l.clone()),
+                var_decl(true, "s", Type::String, fmt),
             ];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
@@ -79,8 +79,8 @@ mod format_tests {
                 span: span(),
             };
             let body = vec![
-                var_decl("n", t.clone(), l.clone()),
-                var_decl("s", Type::String, fmt),
+                var_decl(true, "n", t.clone(), l.clone()),
+                var_decl(true, "s", Type::String, fmt),
             ];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
@@ -109,8 +109,8 @@ mod format_tests {
 
 
             let body = vec![
-                var_decl("n", t.clone(), l.clone()),
-                var_decl("s", Type::String, fmt),
+                var_decl(true, "n", t.clone(), l.clone()),
+                var_decl(true, "s", Type::String, fmt),
             ];
             
             let func = void_func("foo", vec![], body);

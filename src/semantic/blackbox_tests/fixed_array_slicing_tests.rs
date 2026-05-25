@@ -22,8 +22,8 @@ mod fixed_array_slicing_tests {
                     span: span(),
                 };
                 let body = vec![
-                    var_decl("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(3)), arr_lit.clone()),
-                    var_decl("x", t.clone(), access),
+                    var_decl(true, "arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(3)), arr_lit.clone()),
+                    var_decl(true, "x", t.clone(), access),
                 ];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
@@ -52,8 +52,8 @@ mod fixed_array_slicing_tests {
                         span: span(),
                     };
                     let body = vec![
-                        var_decl("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), arr_lit.clone()),
-                        var_decl("x", Type::Array(Box::new(t.clone())), access),
+                        var_decl(true, "arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), arr_lit.clone()),
+                        var_decl(true, "x", Type::Array(Box::new(t.clone())), access),
                     ];
                     let func = void_func("foo", vec![], body);
                     let mut ast = ast_one(func);
@@ -82,10 +82,10 @@ mod fixed_array_slicing_tests {
                         span: span(),
                     };
                     let body = vec![
-                        var_decl("e", Type::Usize, usize_lit(1)),
-                        var_decl("h", Type::Usize, usize_lit(i2+1)),
-                        var_decl("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), arr_lit.clone()),
-                        var_decl("x", Type::Array(Box::new(t.clone())), access),
+                        var_decl(true, "e", Type::Usize, usize_lit(1)),
+                        var_decl(true, "h", Type::Usize, usize_lit(i2+1)),
+                        var_decl(true, "arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), arr_lit.clone()),
+                        var_decl(true, "x", Type::Array(Box::new(t.clone())), access),
                     ];
                     let func = void_func("foo", vec![], body);
                     let mut ast = ast_one(func);
@@ -115,10 +115,10 @@ mod fixed_array_slicing_tests {
                         span: span(),
                     };
                     let body = vec![
-                        var_decl("e", t.clone(), l.clone()),
-                        var_decl("h", Type::Usize, usize_lit(i2+1)),
-                        var_decl("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), arr_lit.clone()),
-                        var_decl("x", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), access),
+                        var_decl(true, "e", t.clone(), l.clone()),
+                        var_decl(true, "h", Type::Usize, usize_lit(i2+1)),
+                        var_decl(true, "arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), arr_lit.clone()),
+                        var_decl(true, "x", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), access),
                     ];
                     let func = void_func("foo", vec![], body);
                     let mut ast = ast_one(func);
@@ -144,10 +144,10 @@ mod fixed_array_slicing_tests {
                     span: span(),
                 };
                 let body = vec![
-                    var_decl("e", Type::Usize, usize_lit(1)),
-                    var_decl("h", t.clone(), l.clone()),
-                    var_decl("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), arr_lit.clone()),
-                    var_decl("x", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), access),
+                    var_decl(true, "e", Type::Usize, usize_lit(1)),
+                    var_decl(true, "h", t.clone(), l.clone()),
+                    var_decl(true, "arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), arr_lit.clone()),
+                    var_decl(true, "x", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), access),
                 ];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);

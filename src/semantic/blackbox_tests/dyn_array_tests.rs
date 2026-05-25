@@ -32,8 +32,8 @@ mod dyn_arrays_tests {
                         span: span(),
                     };
                     let body = vec![
-                        var_decl("x", Type::Array(Box::new(t1.clone())), arr_lit.clone()),
-                        var_decl("y", t1.clone(), access),
+                        var_decl(true, "x", Type::Array(Box::new(t1.clone())), arr_lit.clone()),
+                        var_decl(true, "y", t1.clone(), access),
                     ];
                     let func = void_func("foo", vec![], body);
                     let mut ast = ast_one(func);
@@ -71,9 +71,9 @@ mod dyn_arrays_tests {
                         span: span(),
                     };
                     let body = vec![
-                        var_decl("e", t2.clone(), l2.clone()),
-                        var_decl("x", Type::Array(Box::new(t1.clone())), arr_lit.clone()),
-                        var_decl("y", t1.clone(), access),
+                        var_decl(true, "e", t2.clone(), l2.clone()),
+                        var_decl(true, "x", Type::Array(Box::new(t1.clone())), arr_lit.clone()),
+                        var_decl(true, "y", t1.clone(), access),
                     ];
                     let func = void_func("foo", vec![], body);
                     let mut ast = ast_one(func);
@@ -104,7 +104,7 @@ mod dyn_arrays_tests {
                     span: span(),
                 };
                 let body = vec![
-                    var_decl("x", Type::Array(Box::new(t.clone())), access),
+                    var_decl(true, "x", Type::Array(Box::new(t.clone())), access),
                 ];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
@@ -127,7 +127,7 @@ mod dyn_arrays_tests {
                     span: span(),
                 };
                 let body = vec![
-                    var_decl("x", Type::Array(Box::new(t.clone())), access),
+                    var_decl(true, "x", Type::Array(Box::new(t.clone())), access),
                 ];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);

@@ -15,7 +15,7 @@ mod if_stmt_tests {
                 let body = vec![ 
                     Stmt::If(IfStmt{
                         condition: nbl.clone(),
-                        if_branch: vec![ var_decl("z", t.clone(), l.clone()) ],
+                        if_branch: vec![ var_decl(true, "z", t.clone(), l.clone()) ],
                         elif_branches: vec![],
                         else_branch: None,
                         span: span(),
@@ -43,10 +43,10 @@ mod if_stmt_tests {
                     let body = vec![ 
                         Stmt::If(IfStmt{
                             condition: bl.clone(),
-                            if_branch: vec![ var_decl("z", t.clone(), l.clone()) ],
+                            if_branch: vec![ var_decl(true, "z", t.clone(), l.clone()) ],
                             elif_branches: vec![(nbl.clone(), vec![
                                 // For above reason
-                                var_decl("e", t.clone(), l.clone()),
+                                var_decl(true, "e", t.clone(), l.clone()),
                             ])],
                             else_branch: None,
                             span: span(),
@@ -75,7 +75,7 @@ mod if_stmt_tests {
                 let body = vec![ 
                     Stmt::If(IfStmt{
                         condition: bl.clone(),
-                        if_branch: vec![ var_decl("z", t.clone(), l.clone()) ],
+                        if_branch: vec![ var_decl(true, "z", t.clone(), l.clone()) ],
                         elif_branches: vec![],
                         else_branch: None,
                         span: span(),
@@ -114,12 +114,12 @@ mod if_stmt_tests {
                     };
 
                 let body = vec![ 
-                    var_decl("x", t.clone(), l.clone()),
-                    var_decl("y", t.clone(), l.clone()),
+                    var_decl(true, "x", t.clone(), l.clone()),
+                    var_decl(true, "y", t.clone(), l.clone()),
 
                     Stmt::If(IfStmt{
                         condition: condition,
-                        if_branch: vec![ var_decl("z", t.clone(), l.clone()) ],
+                        if_branch: vec![ var_decl(true, "z", t.clone(), l.clone()) ],
                         elif_branches: vec![],
                         else_branch: None,
                         span: span(),
@@ -149,13 +149,13 @@ mod if_stmt_tests {
                     };
 
                 let body = vec![ 
-                    var_decl("x", t.clone(), l.clone()),
+                    var_decl(true, "x", t.clone(), l.clone()),
                     Stmt::If(IfStmt{
                         condition: condition,
                         if_branch: vec![
                             // Just dummy declaration, so we don't get flagged by dead code because
                             // of empty branch.
-                            var_decl("z", t.clone(), l.clone()),
+                            var_decl(true, "z", t.clone(), l.clone()),
                         ],
                         elif_branches: vec![],
                         else_branch: None,
@@ -179,13 +179,13 @@ mod if_stmt_tests {
                     };
 
                 let body = vec![ 
-                    var_decl("y", t.clone(), l.clone()),
+                    var_decl(true, "y", t.clone(), l.clone()),
                     Stmt::If(IfStmt{
                         condition: condition,
                         if_branch: vec![
                             // Just dummy declaration, so we don't get flagged by dead code because
                             // of empty branch.
-                            var_decl("z", t.clone(), l.clone()),
+                            var_decl(true, "z", t.clone(), l.clone()),
                         ],
                         elif_branches: vec![],
                         else_branch: None,
@@ -223,11 +223,11 @@ mod if_stmt_tests {
                         if_branch: vec![
                             // Just dummy declaration, so we don't get flagged by dead code because
                             // of empty branch.
-                            var_decl("z", t.clone(), l.clone()),
+                            var_decl(true, "z", t.clone(), l.clone()),
                         ],
                         elif_branches: vec![(elif_condition, vec![
                             // For above reason
-                            var_decl("e", t.clone(), l.clone()),
+                            var_decl(true, "e", t.clone(), l.clone()),
                         ])],
                         else_branch: None,
                         span: span(),
@@ -259,19 +259,19 @@ mod if_stmt_tests {
                 let elif_condition = condition.clone();
 
                 let body = vec![ 
-                    var_decl("x", t.clone(), l.clone()),
-                    var_decl("y", t.clone(), l.clone()),
+                    var_decl(true, "x", t.clone(), l.clone()),
+                    var_decl(true, "y", t.clone(), l.clone()),
 
                     Stmt::If(IfStmt{
                         condition: condition,
                         if_branch: vec![
                             // Just dummy declaration, so we don't get flagged by dead code because
                             // of empty branch.
-                            var_decl("z", t.clone(), l.clone()),
+                            var_decl(true, "z", t.clone(), l.clone()),
                         ],
                         elif_branches: vec![(elif_condition, vec![
                             // For above reason
-                            var_decl("e", t.clone(), l.clone()),
+                            var_decl(true, "e", t.clone(), l.clone()),
                         ])],
                         else_branch: None,
                         span: span(),
@@ -305,18 +305,18 @@ mod if_stmt_tests {
                 let elif_condition = condition.clone();
 
                 let body = vec![ 
-                    var_decl("x", t.clone(), l.clone()),
+                    var_decl(true, "x", t.clone(), l.clone()),
 
                     Stmt::If(IfStmt{
                         condition: condition,
                         if_branch: vec![
                             // Just dummy declaration, so we don't get flagged by dead code because
                             // of empty branch.
-                            var_decl("z", t.clone(), l.clone()),
+                            var_decl(true, "z", t.clone(), l.clone()),
                         ],
                         elif_branches: vec![(elif_condition, vec![
                             // For above reason
-                            var_decl("e", t.clone(), l.clone()),
+                            var_decl(true, "e", t.clone(), l.clone()),
                         ])],
                         else_branch: None,
                         span: span(),
@@ -343,18 +343,18 @@ mod if_stmt_tests {
                 let elif_condition = condition.clone();
 
                 let body = vec![ 
-                    var_decl("y", t.clone(), l.clone()),
+                    var_decl(true, "y", t.clone(), l.clone()),
 
                     Stmt::If(IfStmt{
                         condition: condition,
                         if_branch: vec![
                             // Just dummy declaration, so we don't get flagged by dead code because
                             // of empty branch.
-                            var_decl("z", t.clone(), l.clone()),
+                            var_decl(true, "z", t.clone(), l.clone()),
                         ],
                         elif_branches: vec![(elif_condition, vec![
                             // For above reason
-                            var_decl("e", t.clone(), l.clone()),
+                            var_decl(true, "e", t.clone(), l.clone()),
                         ])],
                         else_branch: None,
                         span: span(),
@@ -399,12 +399,12 @@ mod if_stmt_tests {
                         if_branch: vec![
                             // Just dummy declaration, so we don't get flagged by dead code because
                             // of empty branch.
-                            var_decl("z", t.clone(), l.clone()),
+                            var_decl(true, "z", t.clone(), l.clone()),
                         ],
                         elif_branches: vec![],
                         else_branch: Some(vec![
                             // For above reason
-                            var_decl("q", t.clone(), l.clone())
+                            var_decl(true, "q", t.clone(), l.clone())
                         ]),
                         span: span(),
                     }),
@@ -432,20 +432,20 @@ mod if_stmt_tests {
                     };
 
                 let body = vec![ 
-                    var_decl("x", t.clone(), l.clone()),
-                    var_decl("y", t.clone(), l.clone()),
+                    var_decl(true, "x", t.clone(), l.clone()),
+                    var_decl(true, "y", t.clone(), l.clone()),
 
                     Stmt::If(IfStmt{
                         condition: condition,
                         if_branch: vec![
                             // Just dummy declaration, so we don't get flagged by dead code because
                             // of empty branch.
-                            var_decl("z", t.clone(), l.clone()),
+                            var_decl(true, "z", t.clone(), l.clone()),
                         ],
                         elif_branches: vec![],
                         else_branch: Some(vec![
                             // For above reason
-                            var_decl("q", t.clone(), l.clone())
+                            var_decl(true, "q", t.clone(), l.clone())
                         ]),
                         span: span(),
                     }),
@@ -474,18 +474,18 @@ mod if_stmt_tests {
                     };
 
                 let body = vec![ 
-                    var_decl("x", t.clone(), l.clone()),
+                    var_decl(true, "x", t.clone(), l.clone()),
                     Stmt::If(IfStmt{
                         condition: condition,
                         if_branch: vec![
                             // Just dummy declaration, so we don't get flagged by dead code because
                             // of empty branch.
-                            var_decl("z", t.clone(), l.clone()),
+                            var_decl(true, "z", t.clone(), l.clone()),
                         ],
                         elif_branches: vec![],
                         else_branch: Some(vec![
                             // For above reason
-                            var_decl("q", t.clone(), l.clone())
+                            var_decl(true, "q", t.clone(), l.clone())
                         ]),
                         span: span(),
                     }),
@@ -507,19 +507,19 @@ mod if_stmt_tests {
                     };
 
                 let body = vec![ 
-                    var_decl("y", t.clone(), l.clone()),
+                    var_decl(true, "y", t.clone(), l.clone()),
                     Stmt::If(IfStmt{
                         condition: condition,
                         if_branch: vec![
                             // Just dummy declaration, so we don't get flagged by dead code because
                             // of empty branch.
-                            var_decl("z", t.clone(), l.clone()),
+                            var_decl(true, "z", t.clone(), l.clone()),
                         ],
                         elif_branches: vec![],
 
                         else_branch: Some(vec![
                             // For above reason
-                            var_decl("q", t.clone(), l.clone())
+                            var_decl(true, "q", t.clone(), l.clone())
                         ]),
                         span: span(),
                     }),

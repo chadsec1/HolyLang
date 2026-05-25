@@ -53,7 +53,7 @@ mod while_stmt_tests {
                     branch: vec![
                         // Just dummy declaration, so we don't get flagged by dead code because
                         // of empty branch.
-                        var_decl("z", t.clone(), l.clone()),
+                        var_decl(true, "z", t.clone(), l.clone()),
                     ],
                     span: span(),
                 }),
@@ -92,7 +92,7 @@ mod while_stmt_tests {
                         branch: vec![
                             // Just dummy declaration, so we don't get flagged by dead code because
                             // of empty branch.
-                            var_decl("z", t.clone(), l.clone()),
+                            var_decl(true, "z", t.clone(), l.clone()),
                         ],
                         span: span(),
                     }),
@@ -120,15 +120,15 @@ mod while_stmt_tests {
                     };
 
                 let body = vec![ 
-                    var_decl("x", t.clone(), l.clone()),
-                    var_decl("y", t.clone(), l.clone()),
+                    var_decl(true, "x", t.clone(), l.clone()),
+                    var_decl(true, "y", t.clone(), l.clone()),
 
                     Stmt::While(WhileStmt{
                         condition: condition,
                         branch: vec![
                             // Just dummy declaration, so we don't get flagged by dead code because
                             // of empty branch.
-                            var_decl("z", t.clone(), l.clone()),
+                            var_decl(true, "z", t.clone(), l.clone()),
                         ],
                         span: span(),
                     }),
@@ -157,14 +157,14 @@ mod while_stmt_tests {
                     };
 
                 let body = vec![ 
-                    var_decl("x", t.clone(), l.clone()),
+                    var_decl(true, "x", t.clone(), l.clone()),
 
                     Stmt::While(WhileStmt{
                         condition: condition,
                         branch: vec![
                             // Just dummy declaration, so we don't get flagged by dead code because
                             // of empty branch.
-                            var_decl("z", t.clone(), l.clone()),
+                            var_decl(true, "z", t.clone(), l.clone()),
                         ],
                         span: span(),
                     }),
@@ -186,14 +186,14 @@ mod while_stmt_tests {
                     };
 
                 let body = vec![ 
-                    var_decl("y", t.clone(), l.clone()),
+                    var_decl(true, "y", t.clone(), l.clone()),
 
                     Stmt::While(WhileStmt{
                         condition: condition,
                         branch: vec![
                             // Just dummy declaration, so we don't get flagged by dead code because
                             // of empty branch.
-                            var_decl("z", t.clone(), l.clone()),
+                            var_decl(true, "z", t.clone(), l.clone()),
                         ],
                         span: span(),
                     }),

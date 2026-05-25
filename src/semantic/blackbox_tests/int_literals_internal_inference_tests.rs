@@ -21,7 +21,7 @@ mod int_literal_internal_inference_tests {
 
         for l in float64_lits {
             for t in ALL_INT_TYPES_NO_ARR {
-                let body = vec![var_decl("x", t.clone(), l.clone())];
+                let body = vec![var_decl(true, "x", t.clone(), l.clone())];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
                 let result = check_semantics(&mut ast);
@@ -39,7 +39,7 @@ mod int_literal_internal_inference_tests {
         let literals_signed_ints = get_all_signed_literals_no_arr_no_float();
 
         for l in literals_signed_ints {
-            let body = vec![var_decl("x", Type::Int8, l)];
+            let body = vec![var_decl(true, "x", Type::Int8, l)];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             check_semantics(&mut ast).unwrap();
@@ -59,7 +59,7 @@ mod int_literal_internal_inference_tests {
 
         for i in edge_cases_numbers {
             let lit = int16_lit(i);
-            let body = vec![var_decl("x", Type::Int8, lit)];
+            let body = vec![var_decl(true, "x", Type::Int8, lit)];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             let result = check_semantics(&mut ast);
@@ -82,7 +82,7 @@ mod int_literal_internal_inference_tests {
         let literals_signed_ints = get_all_signed_literals_no_arr_no_float();
 
         for l in literals_signed_ints {
-            let body = vec![var_decl("x", Type::Int16, l)];
+            let body = vec![var_decl(true, "x", Type::Int16, l)];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             check_semantics(&mut ast).unwrap();
@@ -101,7 +101,7 @@ mod int_literal_internal_inference_tests {
 
         for i in edge_cases_numbers {
             let lit = int32_lit(i);
-            let body = vec![var_decl("x", Type::Int16, lit)];
+            let body = vec![var_decl(true, "x", Type::Int16, lit)];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             let result = check_semantics(&mut ast);
@@ -123,7 +123,7 @@ mod int_literal_internal_inference_tests {
         let literals_signed_ints = get_all_signed_literals_no_arr_no_float();
 
         for l in literals_signed_ints {
-            let body = vec![var_decl("x", Type::Int32, l)];
+            let body = vec![var_decl(true, "x", Type::Int32, l)];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             check_semantics(&mut ast).unwrap();
@@ -142,7 +142,7 @@ mod int_literal_internal_inference_tests {
 
         for i in edge_cases_numbers {
             let lit = int64_lit(i);
-            let body = vec![var_decl("x", Type::Int32, lit)];
+            let body = vec![var_decl(true, "x", Type::Int32, lit)];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             let result = check_semantics(&mut ast);
@@ -165,7 +165,7 @@ mod int_literal_internal_inference_tests {
         let literals_signed_ints = get_all_signed_literals_no_arr_no_float();
 
         for l in literals_signed_ints {
-            let body = vec![var_decl("x", Type::Int64, l)];
+            let body = vec![var_decl(true, "x", Type::Int64, l)];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             check_semantics(&mut ast).unwrap();
@@ -184,7 +184,7 @@ mod int_literal_internal_inference_tests {
 
         for i in edge_cases_numbers {
             let lit = int128_lit(i);
-            let body = vec![var_decl("x", Type::Int64, lit)];
+            let body = vec![var_decl(true, "x", Type::Int64, lit)];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             let result = check_semantics(&mut ast);
@@ -206,7 +206,7 @@ mod int_literal_internal_inference_tests {
         let literals_signed_ints = get_all_signed_literals_no_arr_no_float();
 
         for l in literals_signed_ints {
-            let body = vec![var_decl("x", Type::Int128, l)];
+            let body = vec![var_decl(true, "x", Type::Int128, l)];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             check_semantics(&mut ast).unwrap();
@@ -224,7 +224,7 @@ mod int_literal_internal_inference_tests {
 
         for i in edge_cases_numbers {
             let lit = uint128_lit(i);
-            let body = vec![var_decl("x", Type::Int128, lit)];
+            let body = vec![var_decl(true, "x", Type::Int128, lit)];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             let result = check_semantics(&mut ast);
@@ -246,7 +246,7 @@ mod int_literal_internal_inference_tests {
         let literals_unsigned_ints = get_all_unsigned_literals_no_arr();
 
         for l in literals_unsigned_ints {
-            let body = vec![var_decl("x", Type::Byte, l)];
+            let body = vec![var_decl(true, "x", Type::Byte, l)];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             check_semantics(&mut ast).unwrap();
@@ -266,7 +266,7 @@ mod int_literal_internal_inference_tests {
 
         for i in edge_cases_numbers {
             let lit = uint16_lit(i);
-            let body = vec![var_decl("x", Type::Byte, lit)];
+            let body = vec![var_decl(true, "x", Type::Byte, lit)];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             let result = check_semantics(&mut ast);
@@ -288,7 +288,7 @@ mod int_literal_internal_inference_tests {
         let literals_unsigned_ints = get_all_unsigned_literals_no_arr();
 
         for l in literals_unsigned_ints {
-            let body = vec![var_decl("x", Type::Uint16, l)];
+            let body = vec![var_decl(true, "x", Type::Uint16, l)];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             check_semantics(&mut ast).unwrap();
@@ -308,7 +308,7 @@ mod int_literal_internal_inference_tests {
 
         for i in edge_cases_numbers {
             let lit = uint32_lit(i);
-            let body = vec![var_decl("x", Type::Uint16, lit)];
+            let body = vec![var_decl(true, "x", Type::Uint16, lit)];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             let result = check_semantics(&mut ast);
@@ -331,7 +331,7 @@ mod int_literal_internal_inference_tests {
         let literals_unsigned_ints = get_all_unsigned_literals_no_arr();
 
         for l in literals_unsigned_ints {
-            let body = vec![var_decl("x", Type::Uint32, l)];
+            let body = vec![var_decl(true, "x", Type::Uint32, l)];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             check_semantics(&mut ast).unwrap();
@@ -351,7 +351,7 @@ mod int_literal_internal_inference_tests {
 
         for i in edge_cases_numbers {
             let lit = uint64_lit(i);
-            let body = vec![var_decl("x", Type::Uint32, lit)];
+            let body = vec![var_decl(true, "x", Type::Uint32, lit)];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             let result = check_semantics(&mut ast);
@@ -374,7 +374,7 @@ mod int_literal_internal_inference_tests {
         let literals_unsigned_ints = get_all_unsigned_literals_no_arr();
 
         for l in literals_unsigned_ints {
-            let body = vec![var_decl("x", Type::Uint64, l)];
+            let body = vec![var_decl(true, "x", Type::Uint64, l)];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             check_semantics(&mut ast).unwrap();
@@ -394,7 +394,7 @@ mod int_literal_internal_inference_tests {
 
         for i in edge_cases_numbers {
             let lit = uint128_lit(i);
-            let body = vec![var_decl("x", Type::Uint64, lit)];
+            let body = vec![var_decl(true, "x", Type::Uint64, lit)];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             let result = check_semantics(&mut ast);
@@ -415,7 +415,7 @@ mod int_literal_internal_inference_tests {
         let literals_unsigned_ints = get_all_unsigned_literals_no_arr();
 
         for l in literals_unsigned_ints {
-            let body = vec![var_decl("x", Type::Usize, l)];
+            let body = vec![var_decl(true, "x", Type::Usize, l)];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             check_semantics(&mut ast).unwrap();
@@ -435,7 +435,7 @@ mod int_literal_internal_inference_tests {
 
         for i in edge_cases_numbers {
             let lit = uint128_lit(i);
-            let body = vec![var_decl("x", Type::Usize, lit)];
+            let body = vec![var_decl(true, "x", Type::Usize, lit)];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             let result = check_semantics(&mut ast);
@@ -456,7 +456,7 @@ mod int_literal_internal_inference_tests {
         let literals_signed_ints = get_all_signed_literals_no_arr_no_float();
 
         for l in literals_signed_ints {
-            let body = vec![var_decl("x", Type::Uint128, l)];
+            let body = vec![var_decl(true, "x", Type::Uint128, l)];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             check_semantics(&mut ast).unwrap();

@@ -295,7 +295,7 @@ mod const_tests {
             };
 
             let body = vec![
-                var_decl("x", t.clone(), l.clone()),
+                var_decl(true, "x", t.clone(), l.clone()),
                 const_define_locally("y", t.clone(), unary.clone()) 
             ];
 
@@ -547,7 +547,7 @@ mod const_tests {
                 };
 
                 let body = vec![
-                    var_decl("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i)), arr_lit.clone()),
+                    var_decl(true, "arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i)), arr_lit.clone()),
                     const_define_locally("x", t.clone(), access)
                 ];
              
@@ -579,7 +579,7 @@ mod const_tests {
                 };
 
                 let body = vec![
-                    var_decl("h", Type::Usize, usize_lit(i - 1)),
+                    var_decl(true, "h", Type::Usize, usize_lit(i - 1)),
                     const_define_locally("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i)), arr_lit.clone()),
                     const_define_locally("x", t.clone(), access)
                 ];
@@ -715,7 +715,7 @@ mod const_tests {
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let main = void_func("main", vec![], vec![
-                var_decl("foo", t.clone(), l.clone()),
+                var_decl(true, "foo", t.clone(), l.clone()),
                 const_define_locally("foo", t.clone(), l.clone())
             ]);
 
