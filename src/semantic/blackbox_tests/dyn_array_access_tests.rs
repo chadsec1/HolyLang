@@ -23,8 +23,8 @@ mod dyn_arrays_access_tests {
                     span: span(),
                 };
                 let body = vec![
-                    var_decl("arr", Type::Array(Box::new(t.clone())), arr_lit),
-                    var_decl("x", t.clone(), access),
+                    var_decl(true, "arr", Type::Array(Box::new(t.clone())), arr_lit),
+                    var_decl(true, "x", t.clone(), access),
                 ];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
@@ -50,9 +50,9 @@ mod dyn_arrays_access_tests {
             };
 
             let body = vec![
-                var_decl("e", t.clone(), l.clone()),
-                var_decl("arr", Type::Array(Box::new(t.clone())), arr_lit),
-                var_decl("x", t.clone(), access),
+                var_decl(true, "e", t.clone(), l.clone()),
+                var_decl(true, "arr", Type::Array(Box::new(t.clone())), arr_lit),
+                var_decl(true, "x", t.clone(), access),
             ];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
@@ -81,8 +81,8 @@ mod dyn_arrays_access_tests {
                         span: span(),
                     };
                     let body = vec![
-                        var_decl("arr", Type::Array(Box::new(t.clone())), arr_lit.clone()),
-                        var_decl("x", t.clone(), access),
+                        var_decl(true, "arr", Type::Array(Box::new(t.clone())), arr_lit.clone()),
+                        var_decl(true, "x", t.clone(), access),
                     ];
                     let func = void_func("foo", vec![], body);
                     let mut ast = ast_one(func);

@@ -66,7 +66,7 @@ mod function_calls_tests {
             let callee = void_func("bar", vec![param("a", t2.clone())], vec![]);
 
             let body = vec![
-                var_decl("x", t1.clone(), l.clone()),
+                var_decl(true, "x", t1.clone(), l.clone()),
 
                 Stmt::Expr(call_expr("bar", vec![var_expr("x")]))
             ];
@@ -88,7 +88,7 @@ mod function_calls_tests {
                 return_stmt(vec![l.clone(), l.clone()])
             ]);
             let body = vec![
-                var_decl("x", t.clone(), call_expr("bar", vec![]))
+                var_decl(true, "x", t.clone(), call_expr("bar", vec![]))
             ];
             let caller = void_func("main", vec![], body);
             let mut ast = AST { functions: vec![callee, caller], globals: vec![] };
@@ -106,7 +106,7 @@ mod function_calls_tests {
         for t in ALL_TYPES_NO_ARR {
             let callee = void_func("bar", vec![], vec![]);
             let body = vec![
-                var_decl("x", t.clone(), call_expr("bar", vec![]))
+                var_decl(true, "x", t.clone(), call_expr("bar", vec![]))
             ];
             let caller = void_func("main", vec![], body);
             let mut ast = AST { functions: vec![callee, caller], globals: vec![]  };
@@ -148,7 +148,7 @@ mod function_calls_tests {
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let callee = void_func("bar", vec![param("a", t.clone())], vec![]);
             let body = vec![
-                var_decl("x", t.clone(), l.clone()),
+                var_decl(true, "x", t.clone(), l.clone()),
                 Stmt::Expr(call_expr("bar", vec![var_expr("x")]))
             ];
             let caller = void_func("main", vec![], body);

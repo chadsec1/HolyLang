@@ -16,7 +16,7 @@ mod ownership_tests {
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let callee = void_func("bar", vec![param("a", t.clone())], vec![]);
             let body = vec![
-                var_decl("x", t.clone(), l.clone()),
+                var_decl(true, "x", t.clone(), l.clone()),
                 Stmt::Expr(call_expr("bar", vec![var_expr("x")]))
             ];
             let caller = void_func("main", vec![], body);
@@ -74,9 +74,9 @@ mod ownership_tests {
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let callee = void_func("bar", vec![param("a", t.clone())], vec![]);
             let body = vec![
-                var_decl("x", t.clone(), l.clone()),
+                var_decl(true, "x", t.clone(), l.clone()),
                 Stmt::Expr(call_expr("bar", vec![var_expr("x")])),
-                var_decl("y", t.clone(), var_expr("x")),
+                var_decl(true, "y", t.clone(), var_expr("x")),
             ];
             let caller = void_func("main", vec![], body);
             let mut ast = AST { functions: vec![callee, caller] , globals: vec![] };
@@ -94,8 +94,8 @@ mod ownership_tests {
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
-                var_decl("x", t.clone(), l.clone()),
-                var_decl("y", t.clone(), var_expr("x"))
+                var_decl(true, "x", t.clone(), l.clone()),
+                var_decl(true, "y", t.clone(), var_expr("x"))
             ];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
@@ -133,8 +133,8 @@ mod ownership_tests {
                     Stmt::If(IfStmt{
                         condition: bl.clone(),
                         if_branch: vec![
-                            var_decl("y", t.clone(), var_expr("x")),
-                            var_decl("h", t.clone(), var_expr("x"))
+                            var_decl(true, "y", t.clone(), var_expr("x")),
+                            var_decl(true, "h", t.clone(), var_expr("x"))
                         ],
                         elif_branches: vec![],
                         else_branch: None,
@@ -190,12 +190,12 @@ mod ownership_tests {
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             for bl in &boolean_conditions {
                 let body = vec![
-                    var_decl("x", t.clone(), l.clone()),
+                    var_decl(true, "x", t.clone(), l.clone()),
 
                     Stmt::If(IfStmt{
                         condition: bl.clone(),
                         if_branch: vec![
-                            var_decl("y", t.clone(), var_expr("x"))
+                            var_decl(true, "y", t.clone(), var_expr("x"))
                         ],
                         elif_branches: vec![],
                         else_branch: None,
@@ -244,13 +244,13 @@ mod ownership_tests {
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             for bl in &boolean_conditions {
                 let body = vec![
-                    var_decl("x", t.clone(), l.clone()),
+                    var_decl(true, "x", t.clone(), l.clone()),
 
                     Stmt::If(IfStmt{
                         condition: bl.clone(),
                         if_branch: vec![
-                            var_decl("y", t.clone(), var_expr("x")),
-                            var_decl("h", t.clone(), var_expr("x"))
+                            var_decl(true, "y", t.clone(), var_expr("x")),
+                            var_decl(true, "h", t.clone(), var_expr("x"))
                         ],
                         elif_branches: vec![],
                         else_branch: None,
@@ -276,19 +276,19 @@ mod ownership_tests {
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             for bl in &boolean_conditions {
                 let body = vec![
-                    var_decl("x", t.clone(), l.clone()),
+                    var_decl(true, "x", t.clone(), l.clone()),
 
                     Stmt::If(IfStmt{
                         condition: bl.clone(),
                         if_branch: vec![
-                            var_decl("y", t.clone(), var_expr("x"))
+                            var_decl(true, "y", t.clone(), var_expr("x"))
                         ],
                         elif_branches: vec![],
                         else_branch: None,
                         span: span(),
                     }),
 
-                    var_decl("h", t.clone(), var_expr("x"))
+                    var_decl(true, "h", t.clone(), var_expr("x"))
                 ];
 
                 let func = void_func("foo", vec![], body);
@@ -311,17 +311,17 @@ mod ownership_tests {
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             for bl in &boolean_conditions {
                 let body = vec![
-                    var_decl("x", t.clone(), l.clone()),
+                    var_decl(true, "x", t.clone(), l.clone()),
 
                     Stmt::If(IfStmt{
                         condition: bl.clone(),
                         if_branch: vec![
                             // dummy
-                            var_decl("z", t.clone(), l.clone())
+                            var_decl(true, "z", t.clone(), l.clone())
                         ],
                         elif_branches: vec![],
                         else_branch: Some(vec![
-                            var_decl("y", t.clone(), var_expr("x"))
+                            var_decl(true, "y", t.clone(), var_expr("x"))
                         ]),
                         span: span(),
                     })
@@ -375,18 +375,18 @@ mod ownership_tests {
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             for bl in &boolean_conditions {
                 let body = vec![
-                    var_decl("x", t.clone(), l.clone()),
+                    var_decl(true, "x", t.clone(), l.clone()),
 
                     Stmt::If(IfStmt{
                         condition: bl.clone(),
                         if_branch: vec![
                             // dummy
-                            var_decl("z", t.clone(), l.clone())
+                            var_decl(true, "z", t.clone(), l.clone())
                         ],
                         elif_branches: vec![],
                         else_branch: Some(vec![
-                            var_decl("y", t.clone(), var_expr("x")),
-                            var_decl("h", t.clone(), var_expr("x"))
+                            var_decl(true, "y", t.clone(), var_expr("x")),
+                            var_decl(true, "h", t.clone(), var_expr("x"))
                         ]),
                         span: span(),
                     }),
@@ -410,22 +410,22 @@ mod ownership_tests {
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             for bl in &boolean_conditions {
                 let body = vec![
-                    var_decl("x", t.clone(), l.clone()),
+                    var_decl(true, "x", t.clone(), l.clone()),
 
                     Stmt::If(IfStmt{
                         condition: bl.clone(),
                         if_branch: vec![
                             // dummy
-                            var_decl("z", t.clone(), l.clone())
+                            var_decl(true, "z", t.clone(), l.clone())
                         ],
                         elif_branches: vec![],
                         else_branch: Some(vec![
-                            var_decl("y", t.clone(), var_expr("x"))
+                            var_decl(true, "y", t.clone(), var_expr("x"))
                         ]),
                         span: span(),
                     }),
 
-                    var_decl("h", t.clone(), var_expr("x"))
+                    var_decl(true, "h", t.clone(), var_expr("x"))
                 ];
 
                 let func = void_func("foo", vec![], body);
@@ -449,16 +449,16 @@ mod ownership_tests {
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             for bl in &boolean_conditions {
                 let body = vec![
-                    var_decl("x", t.clone(), l.clone()),
+                    var_decl(true, "x", t.clone(), l.clone()),
 
                     Stmt::If(IfStmt{
                         condition: bl.clone(),
                         if_branch: vec![
                             // dummy
-                            var_decl("z", t.clone(), l.clone())
+                            var_decl(true, "z", t.clone(), l.clone())
                         ],
                         elif_branches: vec![ (bl.clone(), vec![
-                            var_decl("y", t.clone(), var_expr("x"))
+                            var_decl(true, "y", t.clone(), var_expr("x"))
                         ]) ],
                         else_branch: None,
                         span: span(),
@@ -512,17 +512,17 @@ mod ownership_tests {
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             for bl in &boolean_conditions {
                 let body = vec![
-                    var_decl("x", t.clone(), l.clone()),
+                    var_decl(true, "x", t.clone(), l.clone()),
 
                     Stmt::If(IfStmt{
                         condition: bl.clone(),
                         if_branch: vec![
                             // dummy
-                            var_decl("z", t.clone(), l.clone())
+                            var_decl(true, "z", t.clone(), l.clone())
                         ],
                         elif_branches: vec![ (bl.clone(), vec![
-                            var_decl("y", t.clone(), var_expr("x")),
-                            var_decl("h", t.clone(), var_expr("x"))
+                            var_decl(true, "y", t.clone(), var_expr("x")),
+                            var_decl(true, "h", t.clone(), var_expr("x"))
                         ]) ],
                         else_branch: None,
                         span: span(),
@@ -547,22 +547,22 @@ mod ownership_tests {
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             for bl in &boolean_conditions {
                 let body = vec![
-                    var_decl("x", t.clone(), l.clone()),
+                    var_decl(true, "x", t.clone(), l.clone()),
 
                     Stmt::If(IfStmt{
                         condition: bl.clone(),
                         if_branch: vec![
                             // dummy
-                            var_decl("z", t.clone(), l.clone())
+                            var_decl(true, "z", t.clone(), l.clone())
                         ],
                         elif_branches: vec![ (bl.clone(), vec![
-                            var_decl("y", t.clone(), var_expr("x")),
+                            var_decl(true, "y", t.clone(), var_expr("x")),
                         ]) ],
                         else_branch: None,
                         span: span(),
                     }),
 
-                    var_decl("h", t.clone(), var_expr("x"))
+                    var_decl(true, "h", t.clone(), var_expr("x"))
                 ];
 
                 let func = void_func("foo", vec![], body);
@@ -587,9 +587,9 @@ mod ownership_tests {
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
-                var_decl("x", t.clone(), l.clone()),
-                var_decl("y", t.clone(), var_expr("x")),
-                var_decl("z", t.clone(), var_expr("x"))
+                var_decl(true, "x", t.clone(), l.clone()),
+                var_decl(true, "y", t.clone(), var_expr("x")),
+                var_decl(true, "z", t.clone(), var_expr("x"))
             ];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
@@ -608,8 +608,8 @@ mod ownership_tests {
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
                 const_define_locally("x", t.clone(), l.clone()),
-                var_decl("y", t.clone(), var_expr("x")),
-                var_decl("z", t.clone(), var_expr("x"))
+                var_decl(true, "y", t.clone(), var_expr("x")),
+                var_decl(true, "z", t.clone(), var_expr("x"))
             ];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
@@ -646,8 +646,8 @@ mod ownership_tests {
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
-                var_decl("y", t.clone(), var_expr("x")),
-                var_decl("z", t.clone(), var_expr("x"))
+                var_decl(true, "y", t.clone(), var_expr("x")),
+                var_decl(true, "z", t.clone(), var_expr("x"))
             ];
             let func = void_func("foo", vec![], body);
             let mut ast = AST { functions: vec![func], globals: vec![  const_define_globally("x", t.clone(), l.clone()) ]};
@@ -692,9 +692,9 @@ mod ownership_tests {
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
-                var_decl("a", t.clone(), l.clone()),
-                var_decl("b", t.clone(), var_expr("a")),
-                var_decl("c", t.clone(), var_expr("a")),
+                var_decl(true, "a", t.clone(), l.clone()),
+                var_decl(true, "b", t.clone(), var_expr("a")),
+                var_decl(true, "c", t.clone(), var_expr("a")),
             ];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
@@ -714,9 +714,9 @@ mod ownership_tests {
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) { 
             let body = vec![
-                var_decl("a", t.clone(), l.clone()),
-                var_decl("b", t.clone(), var_expr("a")),
-                var_decl("c", t.clone(), var_expr("a")),
+                var_decl(true, "a", t.clone(), l.clone()),
+                var_decl(true, "b", t.clone(), var_expr("a")),
+                var_decl(true, "c", t.clone(), var_expr("a")),
             ];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
@@ -727,13 +727,56 @@ mod ownership_tests {
     }
 
     #[test]
-    fn varassign_moves_var() {
+    fn inited_vars_assign_moves_var() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
-                var_decl("x", t.clone(), l.clone()),
-                var_decl("y", t.clone(), l.clone()),
+                var_decl(true, "x", t.clone(), l.clone()),
+                var_decl(true, "y", t.clone(), l.clone()),
+                Stmt::Unlock(vec![var_expr("y")]),
+                var_assign("y", var_expr("x"))
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            check_semantics(&mut ast).unwrap();
+
+            assert_eq!(ast.functions.len(), 1);
+            assert_eq!(ast.functions[0].body.len(), 4);
+            assert_eq!(ast.globals.len(), 0);
+
+            if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+                assert_eq!(v.name, "x");
+                assert_eq!(v.type_name, t.clone());
+                assert_eq!(v.value, l.clone());
+            } else { panic!("expected VarDecl, got {:?}", ast); }
+
+            if let Stmt::VarDecl(v) = &ast.functions[0].body[1] {
+                assert_eq!(v.name, "y");
+                assert_eq!(v.type_name, t.clone());
+                assert_eq!(v.value, l.clone());
+            } else { panic!("expected VarDecl, got {:?}", ast); }
+
+            if let Stmt::Unlock(vec) = &ast.functions[0].body[2] {
+                assert_eq!(vec.len(), 1);
+            } else { panic!("expected Unlock, got {:?}", ast); }
+
+            if let Stmt::VarAssign(va) = &ast.functions[0].body[3] {
+                assert_eq!(va.name, "y");
+                assert_eq!(va.value, var_expr("x"));
+            } else { panic!("expected VarAssign, got {:?}", ast); }
+
+        }
+    }
+
+    #[test]
+    fn uninited_vars_assign_moves_var() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                var_decl(false, "x", t.clone(), l.clone()),
+                var_decl(false, "y", t.clone(), l.clone()),
                 var_assign("y", var_expr("x"))
             ];
             let func = void_func("foo", vec![], body);
@@ -765,15 +808,66 @@ mod ownership_tests {
     }
 
     #[test]
-    fn varassign_does_not_move_local_const() {
+    fn inited_var_assign_does_not_move_local_const() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
                 const_define_locally("x", t.clone(), l.clone()),
-                var_decl("y", t.clone(), l.clone()),
+                var_decl(true, "y", t.clone(), l.clone()),
+                Stmt::Unlock(vec![var_expr("y")]),
                 var_assign("y", var_expr("x")),
-                var_decl("z", t.clone(), var_expr("x"))
+                var_decl(true, "z", t.clone(), var_expr("x"))
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            check_semantics(&mut ast).unwrap();
+
+            assert_eq!(ast.globals.len(), 0);
+            assert_eq!(ast.functions.len(), 1);
+            assert_eq!(ast.functions[0].body.len(), 5);
+
+            if let Stmt::Const(c) = &ast.functions[0].body[0] {
+                assert_eq!(c.name, "x");
+                assert_eq!(c.type_name, t.clone());
+                assert_eq!(c.value, l.clone());
+            } else { panic!("expected Const, got {:?}", ast); }
+
+            if let Stmt::VarDecl(v) = &ast.functions[0].body[1] {
+                assert_eq!(v.name, "y");
+                assert_eq!(v.type_name, t.clone());
+                assert_eq!(v.value, l.clone());
+            } else { panic!("expected VarDecl, got {:?}", ast); }
+
+            if let Stmt::Unlock(vec) = &ast.functions[0].body[2] {
+                assert_eq!(vec.len(), 1);
+            } else { panic!("expected Unlock, got {:?}", ast); }
+
+            if let Stmt::VarAssign(va) = &ast.functions[0].body[3] {
+                assert_eq!(va.name, "y");
+                assert_eq!(va.value, var_expr("x"));
+            } else { panic!("expected VarAssign, got {:?}", ast); }
+
+        
+            if let Stmt::VarDecl(v) = &ast.functions[0].body[4] {
+                assert_eq!(v.name, "z");
+                assert_eq!(v.type_name, t.clone());
+                assert_eq!(v.value, var_expr("x"));
+            } else { panic!("expected VarDecl, got {:?}", ast); }
+        
+        }
+    }
+
+    #[test]
+    fn uninited_var_assign_does_not_move_local_const() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                const_define_locally("x", t.clone(), l.clone()),
+                var_decl(false, "y", t.clone(), l.clone()),
+                var_assign("y", var_expr("x")),
+                var_decl(false, "z", t.clone(), var_expr("x"))
             ];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
@@ -811,14 +905,65 @@ mod ownership_tests {
     }
 
     #[test]
-    fn varassign_does_not_move_global_const() {
+    fn inited_var_assign_does_not_move_global_const() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
-                var_decl("y", t.clone(), l.clone()),
+                var_decl(true, "y", t.clone(), l.clone()),
+                Stmt::Unlock(vec![var_expr("y")]),
                 var_assign("y", var_expr("x")),
-                var_decl("z", t.clone(), var_expr("x"))
+                var_decl(true, "z", t.clone(), var_expr("x"))
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = AST { functions: vec![func], globals: vec![  const_define_globally("x", t.clone(), l.clone()) ]};
+            check_semantics(&mut ast).unwrap();
+
+            assert_eq!(ast.globals.len(), 1);
+            assert_eq!(ast.functions.len(), 1);
+            assert_eq!(ast.functions[0].body.len(), 4);
+
+            if let GlobalStmt::Const(c) = &ast.globals[0] {
+                assert_eq!(c.name, "x");
+                assert_eq!(c.type_name, t.clone());
+                assert_eq!(c.value, l.clone());
+            } else { panic!("expected Const, got {:?}", ast); }
+
+            if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+                assert_eq!(v.name, "y");
+                assert_eq!(v.type_name, t.clone());
+                assert_eq!(v.value, l.clone());
+            } else { panic!("expected VarDecl, got {:?}", ast); }
+
+            if let Stmt::Unlock(vec) = &ast.functions[0].body[1] {
+                assert_eq!(vec.len(), 1);
+            } else { panic!("expected Unlock, got {:?}", ast); }
+
+
+
+            if let Stmt::VarAssign(va) = &ast.functions[0].body[2] {
+                assert_eq!(va.name, "y");
+                assert_eq!(va.value, var_expr("x"));
+            } else { panic!("expected VarAssign, got {:?}", ast); }
+        
+            if let Stmt::VarDecl(v) = &ast.functions[0].body[3] {
+                assert_eq!(v.name, "z");
+                assert_eq!(v.type_name, t.clone());
+                assert_eq!(v.value, var_expr("x"));
+            } else { panic!("expected VarDecl, got {:?}", ast); }
+        
+        }
+    }
+
+    #[test]
+    fn uninited_var_assign_does_not_move_global_const() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                var_decl(false, "y", t.clone(), l.clone()),
+                var_assign("y", var_expr("x")),
+                var_decl(false, "z", t.clone(), var_expr("x"))
             ];
             let func = void_func("foo", vec![], body);
             let mut ast = AST { functions: vec![func], globals: vec![  const_define_globally("x", t.clone(), l.clone()) ]};
@@ -855,6 +1000,8 @@ mod ownership_tests {
     }
 
 
+
+
     #[test]
     fn copy_call_allows_reuse() {
         // own a T = EXPRESSION
@@ -865,9 +1012,9 @@ mod ownership_tests {
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let copy_a = Expr::CopyCall { expr: Box::new(var_expr("a")), span: span() };
             let body = vec![
-                var_decl("a", t.clone(), l.clone()),
-                var_decl("b", t.clone(), copy_a),
-                var_decl("c", t.clone(), var_expr("a")),
+                var_decl(true, "a", t.clone(), l.clone()),
+                var_decl(true, "b", t.clone(), copy_a),
+                var_decl(true, "c", t.clone(), var_expr("a")),
             ];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
@@ -886,9 +1033,9 @@ mod ownership_tests {
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let bar = void_func("bar", vec![param("p", t.clone())], vec![]);
             let body = vec![
-                var_decl("a", t.clone(), l.clone()),
+                var_decl(true, "a", t.clone(), l.clone()),
                 Stmt::Expr(call_expr("bar", vec![var_expr("a")])),
-                var_decl("b", t.clone(), var_expr("a")),
+                var_decl(true, "b", t.clone(), var_expr("a")),
             ];
             let caller = void_func("main", vec![], body);
             let mut ast = AST { functions: vec![bar, caller], globals: vec![]};
@@ -911,8 +1058,8 @@ mod ownership_tests {
                     Stmt::While(WhileStmt{
                             condition: bl.clone(),
                             branch: vec![
-                                var_decl("x", t.clone(), l.clone()),
-                                var_decl("y", t.clone(), var_expr("x"))
+                                var_decl(true, "x", t.clone(), l.clone()),
+                                var_decl(true, "y", t.clone(), var_expr("x"))
                             ],
                             span: span(),
                         }),
@@ -955,8 +1102,8 @@ mod ownership_tests {
             let body = vec![
                 Stmt::Infinite(InfiniteStmt{
                         branch: vec![
-                            var_decl("x", t.clone(), l.clone()),
-                            var_decl("y", t.clone(), var_expr("x"))
+                            var_decl(true, "x", t.clone(), l.clone()),
+                            var_decl(true, "y", t.clone(), var_expr("x"))
                         ],
                         span: span(),
                     }),
@@ -995,13 +1142,13 @@ mod ownership_tests {
             let arr_lit = array_lit(vec![], Some(Type::Array(Box::new(t.clone()))));
 
             let body = vec![
-                var_decl("a", Type::Array(Box::new(t.clone())), arr_lit.clone()),
+                var_decl(true, "a", Type::Array(Box::new(t.clone())), arr_lit.clone()),
                 Stmt::For(ForStmt{
                         holder_name: "e".to_string(),
                         value: var_expr("a"),
                         branch: vec![
-                            var_decl("x", t.clone(), l.clone()),
-                            var_decl("y", t.clone(), var_expr("x"))
+                            var_decl(true, "x", t.clone(), l.clone()),
+                            var_decl(true, "y", t.clone(), var_expr("x"))
                         ],
                         span: span(),
                     }),
@@ -1049,13 +1196,13 @@ mod ownership_tests {
 
             for i in 0usize..=1000usize {
                 let body = vec![
-                    var_decl("x", t.clone(), l.clone()),
-                    var_decl("a", Type::Array(Box::new(t.clone())), arr_lit.clone()),
+                    var_decl(true, "x", t.clone(), l.clone()),
+                    var_decl(true, "a", Type::Array(Box::new(t.clone())), arr_lit.clone()),
                     Stmt::For(ForStmt{
                             holder_name: "e".to_string(),
                             value: Expr::RangeCall{ start: Box::new(usize_lit(0)), end: Box::new(usize_lit(i)), span: span()},
                             branch: vec![
-                                var_decl("y", t.clone(), var_expr("x"))
+                                var_decl(true, "y", t.clone(), var_expr("x"))
                             ],
                             span: span(),
                         }),
@@ -1078,20 +1225,20 @@ mod ownership_tests {
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             for bl in &boolean_conditions {
                 let body = vec![
-                    var_decl("x", t.clone(), l.clone()),
+                    var_decl(true, "x", t.clone(), l.clone()),
                     Stmt::If(IfStmt{
                         condition: bl.clone(),
                         if_branch: vec![
-                            var_decl("y", t.clone(), var_expr("x"))
+                            var_decl(true, "y", t.clone(), var_expr("x"))
                         ],
                         elif_branches: vec![],
                         else_branch: Some(vec![
-                            var_decl("h", t.clone(), l.clone())
+                            var_decl(true, "h", t.clone(), l.clone())
                         ]),
                         span: span(),
                     }),
 
-                    var_decl("q", t.clone(), var_expr("x"))
+                    var_decl(true, "q", t.clone(), var_expr("x"))
                 ];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
@@ -1115,8 +1262,8 @@ mod ownership_tests {
                     Stmt::If(IfStmt{
                             condition: bl.clone(),
                             if_branch: vec![
-                                var_decl("x", t.clone(), l.clone()),
-                                var_decl("y", t.clone(), var_expr("x"))
+                                var_decl(true, "x", t.clone(), l.clone()),
+                                var_decl(true, "y", t.clone(), var_expr("x"))
                             ],
                             elif_branches: vec![],
                             else_branch: None,
@@ -1167,12 +1314,12 @@ mod ownership_tests {
                             condition: bl.clone(),
                             if_branch: vec![
                                 // Dummy
-                                var_decl("z", t.clone(), l.clone()),
+                                var_decl(true, "z", t.clone(), l.clone()),
                             ],
                             elif_branches: vec![],
                             else_branch: Some(vec![
-                                var_decl("x", t.clone(), l.clone()),
-                                var_decl("y", t.clone(), var_expr("x"))
+                                var_decl(true, "x", t.clone(), l.clone()),
+                                var_decl(true, "y", t.clone(), var_expr("x"))
                             ]),
                             span: span(),
                         }),
@@ -1223,12 +1370,12 @@ mod ownership_tests {
                             condition: bl.clone(),
                             if_branch: vec![
                                 // Dummy
-                                var_decl("z", t.clone(), l.clone()),
+                                var_decl(true, "z", t.clone(), l.clone()),
                             ],
                             elif_branches: vec![
                                 (bl.clone(), vec![
-                                    var_decl("x", t.clone(), l.clone()),
-                                    var_decl("y", t.clone(), var_expr("x"))
+                                    var_decl(true, "x", t.clone(), l.clone()),
+                                    var_decl(true, "y", t.clone(), var_expr("x"))
                                 ]),
                             ],
                             else_branch: None, 
@@ -1282,11 +1429,11 @@ mod ownership_tests {
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             for bl in &boolean_conditions {
                 let body = vec![
-                    var_decl("x", t.clone(), l.clone()),
+                    var_decl(true, "x", t.clone(), l.clone()),
                     Stmt::While(WhileStmt{
                             condition: bl.clone(),
                             branch: vec![
-                                var_decl("y", t.clone(), var_expr("x"))
+                                var_decl(true, "y", t.clone(), var_expr("x"))
                             ],
                             span: span(),
                         }),
@@ -1308,10 +1455,10 @@ mod ownership_tests {
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
-                var_decl("x", t.clone(), l.clone()),
+                var_decl(true, "x", t.clone(), l.clone()),
                 Stmt::Infinite(InfiniteStmt{
                         branch: vec![
-                            var_decl("y", t.clone(), var_expr("x"))
+                            var_decl(true, "y", t.clone(), var_expr("x"))
                         ],
                         span: span(),
                     }),
@@ -1333,13 +1480,13 @@ mod ownership_tests {
             let arr_lit = array_lit(vec![], Some(t.clone()));
 
             let body = vec![
-                var_decl("x", t.clone(), l.clone()),
-                var_decl("a", Type::Array(Box::new(t.clone())), arr_lit),
+                var_decl(true, "x", t.clone(), l.clone()),
+                var_decl(true, "a", Type::Array(Box::new(t.clone())), arr_lit),
                 Stmt::For(ForStmt{
                         holder_name: "e".to_string(),
                         value: var_expr("a"),
                         branch: vec![
-                            var_decl("y", t.clone(), var_expr("x"))
+                            var_decl(true, "y", t.clone(), var_expr("x"))
                         ],
                         span: span(),
                     }),
@@ -1362,13 +1509,13 @@ mod ownership_tests {
 
             for i in 0usize..=1000usize {
                 let body = vec![
-                    var_decl("x", t.clone(), l.clone()),
-                    var_decl("a", Type::Array(Box::new(t.clone())), arr_lit.clone()),
+                    var_decl(true, "x", t.clone(), l.clone()),
+                    var_decl(true, "a", Type::Array(Box::new(t.clone())), arr_lit.clone()),
                     Stmt::For(ForStmt{
                             holder_name: "e".to_string(),
                             value: Expr::RangeCall{ start: Box::new(usize_lit(0)), end: Box::new(usize_lit(i)), span: span()},
                             branch: vec![
-                                var_decl("y", t.clone(), var_expr("x"))
+                                var_decl(true, "y", t.clone(), var_expr("x"))
                             ],
                             span: span(),
                         }),
@@ -1389,8 +1536,8 @@ mod ownership_tests {
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
-                var_decl("x", t.clone(), l.clone()),
-                var_decl("y", t.clone(), var_expr("x")),
+                var_decl(true, "x", t.clone(), l.clone()),
+                var_decl(true, "y", t.clone(), var_expr("x")),
 
                 var_assign("x", l.clone())
             ];
@@ -1405,12 +1552,36 @@ mod ownership_tests {
     }
 
     #[test]
-    fn test_varassign_assign_to_self_doesnt_move() {
+    fn test_initied_var_assign_to_self_doesnt_move() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
-                var_decl("x", t.clone(), l.clone()),
+                var_decl(true, "x", t.clone(), l.clone()),
+                
+                Stmt::Unlock(vec![var_expr("x")]),
+
+                var_assign("x", var_expr("x")),
+                var_assign("x", l.clone()),
+
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+
+            let result = check_semantics(&mut ast);
+
+            assert!(result.is_ok());
+        }
+    }
+
+    #[test]
+    fn test_uninitied_var_assign_to_self_doesnt_move() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                var_decl(false, "x", t.clone(), l.clone()),
+                
                 var_assign("x", var_expr("x")),
                 var_assign("x", l.clone()),
 
@@ -1441,10 +1612,10 @@ mod ownership_tests {
                         span: span(),
                     };
                     let body = vec![
-                        var_decl("a", Type::Array(Box::new(t.clone())), arr_lit.clone()),
+                        var_decl(true, "a", Type::Array(Box::new(t.clone())), arr_lit.clone()),
                         // move a to x
-                        var_decl("x", Type::Array(Box::new(t.clone())), var_expr("a")), 
-                        var_decl("y", t.clone(), access),
+                        var_decl(true, "x", Type::Array(Box::new(t.clone())), var_expr("a")), 
+                        var_decl(true, "y", t.clone(), access),
                     ];
                     let func = void_func("foo", vec![], body);
                     let mut ast = ast_one(func);
@@ -1473,10 +1644,10 @@ mod ownership_tests {
                         span: span(),
                     };
                     let body = vec![
-                        var_decl("a", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), arr_lit.clone()),
+                        var_decl(true, "a", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), arr_lit.clone()),
                         // move a to x
-                        var_decl("x", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), var_expr("a")),
-                        var_decl("y", t.clone(), access),
+                        var_decl(true, "x", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), var_expr("a")),
+                        var_decl(true, "y", t.clone(), access),
                     ];
                     let func = void_func("foo", vec![], body);
                     let mut ast = ast_one(func);
@@ -1498,9 +1669,9 @@ mod ownership_tests {
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
-                var_decl("x", t.clone(), l.clone()),
-                var_decl("y", t.clone(), var_expr("x")),
-                var_decl("z", t.clone(), l.clone()),
+                var_decl(true, "x", t.clone(), l.clone()),
+                var_decl(true, "y", t.clone(), var_expr("x")),
+                var_decl(true, "z", t.clone(), l.clone()),
                 var_assign("z", var_expr("x"))
             ];
             let func = void_func("foo", vec![], body);
@@ -1518,15 +1689,16 @@ mod ownership_tests {
     //
 
     #[test]
-    fn test_varassign_moving_upstream_var_in_infinite_loop_errors() {
+    fn test_initied_var_assign_moving_upstream_var_in_infinite_loop_errors() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
-                var_decl("x", t.clone(), l.clone()),
+                var_decl(true, "x", t.clone(), l.clone()),
                 Stmt::Infinite(InfiniteStmt{
                         branch: vec![
-                            var_decl("y", t.clone(), l.clone()),
+                            var_decl(true, "y", t.clone(), l.clone()),
+                            Stmt::Unlock(vec![var_expr("y")]),
                             var_assign("y", var_expr("x"))
                         ],
                         span: span(),
@@ -1542,16 +1714,66 @@ mod ownership_tests {
     }
 
     #[test]
-    fn test_varassign_moving_upstream_var_in_while_loop_errors() {
+    fn test_uninitied_var_assign_moving_upstream_var_in_infinite_loop_errors() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
-                var_decl("x", t.clone(), l.clone()),
+                var_decl(true, "x", t.clone(), l.clone()),
+                Stmt::Infinite(InfiniteStmt{
+                        branch: vec![
+                            var_decl(false, "y", t.clone(), l.clone()),
+                            var_assign("y", var_expr("x"))
+                        ],
+                        span: span(),
+                    }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("variable `x` is potentially moved multiple times"));
+        }
+    }
+
+    #[test]
+    fn test_initied_var_assign_moving_upstream_var_in_while_loop_errors() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                var_decl(true, "x", t.clone(), l.clone()),
                 Stmt::While(WhileStmt{
                         condition: bool_lit(false),
                         branch: vec![
-                            var_decl("y", t.clone(), l.clone()),
+                            var_decl(true, "y", t.clone(), l.clone()),
+                            Stmt::Unlock(vec![var_expr("y")]),
+                            var_assign("y", var_expr("x"))
+                        ],
+                        span: span(),
+                    }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("variable `x` is potentially moved multiple times"));
+        }
+    }
+
+    #[test]
+    fn test_uninitied_var_assign_moving_upstream_var_in_while_loop_errors() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                var_decl(true, "x", t.clone(), l.clone()),
+                Stmt::While(WhileStmt{
+                        condition: bool_lit(false),
+                        branch: vec![
+                            var_decl(false, "y", t.clone(), l.clone()),
                             var_assign("y", var_expr("x"))
                         ],
                         span: span(),
@@ -1568,20 +1790,21 @@ mod ownership_tests {
 
 
     #[test]
-    fn test_varassign_moving_upstream_var_in_for_loop_errors() {
+    fn test_inited_vars_assign_moving_upstream_var_in_for_loop_errors() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let arr_lit = array_lit(vec![], Some(t.clone()));
 
             let body = vec![
-                var_decl("x", t.clone(), l.clone()),
-                var_decl("a", Type::Array(Box::new(t.clone())), arr_lit),
+                var_decl(true, "x", t.clone(), l.clone()),
+                var_decl(true, "a", Type::Array(Box::new(t.clone())), arr_lit),
                 Stmt::For(ForStmt{
                         holder_name: "e".to_string(),
                         value: var_expr("a"),
                         branch: vec![
-                            var_decl("y", t.clone(), l.clone()),
+                            var_decl(true, "y", t.clone(), l.clone()),
+                            Stmt::Unlock(vec![var_expr("y")]),
                             var_assign("y", var_expr("x"))
                         ],
                         span: span(),
@@ -1597,7 +1820,36 @@ mod ownership_tests {
     }
 
     #[test]
-    fn test_multi_assign_use_of_moved_vars_errors() {
+    fn test_uninited_vars_assign_moving_upstream_var_in_for_loop_errors() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let arr_lit = array_lit(vec![], Some(t.clone()));
+
+            let body = vec![
+                var_decl(true, "x", t.clone(), l.clone()),
+                var_decl(true, "a", Type::Array(Box::new(t.clone())), arr_lit),
+                Stmt::For(ForStmt{
+                        holder_name: "e".to_string(),
+                        value: var_expr("a"),
+                        branch: vec![
+                            var_decl(false, "y", t.clone(), l.clone()),
+                            var_assign("y", var_expr("x"))
+                        ],
+                        span: span(),
+                    }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("variable `x` is potentially moved multiple times"));
+        }
+    }
+
+    #[test]
+    fn test_multi_assign_to_initied_vars_use_of_moved_vars_errors() {
         let literals = get_all_literals_no_arr();
         let literals_scattered = get_all_literals_no_arr_scattered_order();
 
@@ -1611,10 +1863,12 @@ mod ownership_tests {
             let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
 
             let body = vec![
-                var_decl("a", t1.clone(), l1.clone()),
-                var_decl("b", t2.clone(), l2.clone()),
+                var_decl(true, "a", t1.clone(), l1.clone()),
+                var_decl(true, "b", t2.clone(), l2.clone()),
+                
+                Stmt::Unlock(vec![var_expr("a"), var_expr("b")]),
 
-                var_decl("c", t1.clone(), var_expr("a")),
+                var_decl(true, "c", t1.clone(), var_expr("a")),
 
                 Stmt::VarAssignMulti(MultiAssignment{
                     names: vec!["a".to_string(), "b".to_string()],
@@ -1626,6 +1880,7 @@ mod ownership_tests {
 
             let mut ast = AST { functions: vec![pair, main] , globals: vec![] };
             let result = check_semantics(&mut ast);
+            println!("niggers {:?}", result);
 
             assert!(result.is_err());
             assert!(result.unwrap_err().to_string().contains("Value assignment to moved variable `a`"));
@@ -1642,10 +1897,11 @@ mod ownership_tests {
             let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
 
             let body = vec![
-                var_decl("a", t1.clone(), l1.clone()),
-                var_decl("b", t2.clone(), l2.clone()),
+                var_decl(true, "a", t1.clone(), l1.clone()),
+                var_decl(true, "b", t2.clone(), l2.clone()),
+                Stmt::Unlock(vec![var_expr("a"), var_expr("b")]),
 
-                var_decl("c", t2.clone(), var_expr("b")),
+                var_decl(true, "c", t2.clone(), var_expr("b")),
 
                 Stmt::VarAssignMulti(MultiAssignment{
                     names: vec!["a".to_string(), "b".to_string()],
@@ -1673,12 +1929,14 @@ mod ownership_tests {
             let pair = returning_func("pair", vec![], vec![t1.clone(), t2.clone()], pair_body);
 
             let body = vec![
-                var_decl("a", t1.clone(), l1.clone()),
-                var_decl("b", t2.clone(), l2.clone()),
+                var_decl(true, "a", t1.clone(), l1.clone()),
+                var_decl(true, "b", t2.clone(), l2.clone()),
 
-                var_decl("c", t1.clone(), var_expr("a")),
-                var_decl("d", t2.clone(), var_expr("b")),
+                Stmt::Unlock(vec![var_expr("a"), var_expr("b")]),
 
+                var_decl(true, "c", t1.clone(), var_expr("a")),
+                var_decl(true, "d", t2.clone(), var_expr("b")),
+                
                 Stmt::VarAssignMulti(MultiAssignment{
                     names: vec!["a".to_string(), "b".to_string()],
                     value: call_expr("pair", vec![]),
@@ -1714,10 +1972,10 @@ mod ownership_tests {
                         span: span(),
                     };
                     let body = vec![
-                        var_decl("arr", Type::Array(Box::new(t.clone())), arr_lit.clone()),
+                        var_decl(true, "arr", Type::Array(Box::new(t.clone())), arr_lit.clone()),
                         // move arr to x
-                        var_decl("x", Type::Array(Box::new(t.clone())), var_expr("arr")), 
-                        var_decl("y", t.clone(), access),
+                        var_decl(true, "x", Type::Array(Box::new(t.clone())), var_expr("arr")), 
+                        var_decl(true, "y", t.clone(), access),
                     ];
                     let func = void_func("foo", vec![], body);
                     let mut ast = ast_one(func);

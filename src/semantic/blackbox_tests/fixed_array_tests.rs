@@ -31,8 +31,8 @@ mod fixed_array_tests {
                         span: span(),
                     };
                     let body = vec![
-                        var_decl("x", Type::FixedArray(Box::new(t1.clone()), FixedArraySize::Literal(i)), arr_lit.clone()),
-                        var_decl("y", t1.clone(), access),
+                        var_decl(true, "x", Type::FixedArray(Box::new(t1.clone()), FixedArraySize::Literal(i)), arr_lit.clone()),
+                        var_decl(true, "y", t1.clone(), access),
                     ];
                     let func = void_func("foo", vec![], body);
                     let mut ast = ast_one(func);
@@ -71,9 +71,9 @@ mod fixed_array_tests {
                         span: span(),
                     };
                     let body = vec![
-                        var_decl("e", t2.clone(), l2.clone()),
-                        var_decl("x", Type::FixedArray(Box::new(t1.clone()), FixedArraySize::Literal(i)), arr_lit.clone()),
-                        var_decl("y", t1.clone(), access),
+                        var_decl(true, "e", t2.clone(), l2.clone()),
+                        var_decl(true, "x", Type::FixedArray(Box::new(t1.clone()), FixedArraySize::Literal(i)), arr_lit.clone()),
+                        var_decl(true, "y", t1.clone(), access),
                     ];
                     let func = void_func("foo", vec![], body);
                     let mut ast = ast_one(func);

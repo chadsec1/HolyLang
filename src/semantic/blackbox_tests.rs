@@ -512,7 +512,7 @@ fn ast_one(func: Function) -> AST {
 fn void_func(name: &str, params: Vec<Param>, mut body: Vec<Stmt>) -> Function {
     if body.len() == 0 {
         // Dummy body because empty branches are not allowed.
-        body = vec![var_decl("x", Type::Int8, int32_lit(69))];
+        body = vec![var_decl(true, "x", Type::Int8, int32_lit(69))];
     }
 
     Function {
@@ -558,11 +558,12 @@ fn const_define_globally(name: &str, ty: Type, value: Expr) -> GlobalStmt {
     })
 }
 
-fn var_decl(name: &str, ty: Type, value: Expr) -> Stmt {
+fn var_decl(explicitly_initialized: bool, name: &str, ty: Type, value: Expr) -> Stmt {
     Stmt::VarDecl(VariableDeclaration {
         name: name.to_string(),
         type_name: ty,
         value,
+        explicitly_initialized,
         span: span(),
     })
 }

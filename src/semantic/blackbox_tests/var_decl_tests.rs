@@ -13,7 +13,7 @@ mod var_decl_tests {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
-            let body = vec![var_decl("x", t.clone(), l.clone())];
+            let body = vec![var_decl(true, "x", t.clone(), l.clone())];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             check_semantics(&mut ast).unwrap();
@@ -31,7 +31,7 @@ mod var_decl_tests {
     fn var_name_taken_by_same_func_errors() {
         for t in ALL_TYPES_NO_ARR {
             let main = void_func("main", vec![], vec![
-                var_decl("main", t.clone(), call_expr("foo", vec![])),
+                var_decl(true, "main", t.clone(), call_expr("foo", vec![])),
             ]);
 
             let mut ast = AST { functions: vec![main], globals: vec![] };
@@ -46,7 +46,7 @@ mod var_decl_tests {
     fn var_name_taken_by_different_func_errors() {
         for t in ALL_TYPES_NO_ARR {
             let main = void_func("main", vec![], vec![
-                var_decl("foo", t.clone(), call_expr("foo", vec![])),
+                var_decl(true, "foo", t.clone(), call_expr("foo", vec![])),
             ]);
 
             let foo = void_func("foo", vec![], vec![]);
@@ -62,7 +62,7 @@ mod var_decl_tests {
     #[test]
     fn non_declared_var_as_value_errors() {
         for t in ALL_TYPES_NO_ARR {
-            let body = vec![var_decl("x", t.clone(), var_expr("y"))];
+            let body = vec![var_decl(true, "x", t.clone(), var_expr("y"))];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
 
@@ -79,7 +79,7 @@ mod var_decl_tests {
 
         for t in ALL_INT_TYPES_NO_ARR {
             for l in &literals_no_ints {
-                let body = vec![var_decl("x", t.clone(), l.clone())];
+                let body = vec![var_decl(true, "x", t.clone(), l.clone())];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
                 let result = check_semantics(&mut ast);
@@ -103,15 +103,15 @@ mod var_decl_tests {
             let arr_lit = array_lit(vec![], Some(t.clone()));
 
             let body = vec![
-                var_decl("x", t.clone(), l.clone()),
-                var_decl("a", Type::Array(Box::new(t.clone())), arr_lit),
+                var_decl(true, "x", t.clone(), l.clone()),
+                var_decl(true, "a", Type::Array(Box::new(t.clone())), arr_lit),
                 Stmt::For(ForStmt{
                         holder_name: "x".to_string(),
                         value: var_expr("a"),
                         branch: vec![
                             // Just dummy declaration, so we don't get flagged by dead code because
                             // of empty branch.
-                            var_decl("z", t.clone(), l.clone()),
+                            var_decl(true, "z", t.clone(), l.clone()),
                         ],
                         span: span(),
                     }),
@@ -135,13 +135,13 @@ mod var_decl_tests {
             let arr_lit = array_lit(vec![], Some(t.clone()));
 
             let body = vec![
-                var_decl("x", t.clone(), l.clone()),
-                var_decl("a", Type::Array(Box::new(t.clone())), arr_lit),
+                var_decl(true, "x", t.clone(), l.clone()),
+                var_decl(true, "a", Type::Array(Box::new(t.clone())), arr_lit),
                 Stmt::For(ForStmt{
                         holder_name: "e".to_string(),
                         value: var_expr("a"),
                         branch: vec![
-                            var_decl("x", t.clone(), l.clone())
+                            var_decl(true, "x", t.clone(), l.clone())
                         ],
                         span: span(),
                     }),
@@ -163,11 +163,11 @@ mod var_decl_tests {
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
-                var_decl("x", t.clone(), l.clone()),
+                var_decl(true, "x", t.clone(), l.clone()),
                 Stmt::While(WhileStmt{
                         condition: bool_lit(false),
                         branch: vec![
-                            var_decl("x", t.clone(), l.clone())
+                            var_decl(true, "x", t.clone(), l.clone())
                         ],
                         span: span(),
                     }),
@@ -187,10 +187,10 @@ mod var_decl_tests {
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
-                var_decl("x", t.clone(), l.clone()),
+                var_decl(true, "x", t.clone(), l.clone()),
                 Stmt::Infinite(InfiniteStmt{
                         branch: vec![
-                            var_decl("x", t.clone(), l.clone())
+                            var_decl(true, "x", t.clone(), l.clone())
                         ],
                         span: span(),
                     }),
@@ -212,11 +212,11 @@ mod var_decl_tests {
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
-                var_decl("x", t.clone(), l.clone()),
+                var_decl(true, "x", t.clone(), l.clone()),
                 Stmt::If(IfStmt{
                     condition: bool_lit(false),
                     if_branch: vec![
-                        var_decl("x", t.clone(), l.clone())
+                        var_decl(true, "x", t.clone(), l.clone())
                     ],
                     elif_branches: vec![],
                     else_branch: None,
@@ -239,18 +239,18 @@ mod var_decl_tests {
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
-                var_decl("x", t.clone(), l.clone()),
+                var_decl(true, "x", t.clone(), l.clone()),
                 Stmt::If(IfStmt{
                     condition: bool_lit(false),
                     if_branch: vec![
                         // Just dummy declaration, so we don't get flagged by dead code because
                         // of empty branch.
-                        var_decl("z", t.clone(), l.clone()),
+                        var_decl(true, "z", t.clone(), l.clone()),
 
                     ],
                     elif_branches: vec![],
                     else_branch: Some(vec![
-                        var_decl("x", t.clone(), l.clone())
+                        var_decl(true, "x", t.clone(), l.clone())
                     ]),
                     span: span(),
                 }),
@@ -271,17 +271,17 @@ mod var_decl_tests {
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
-                var_decl("x", t.clone(), l.clone()),
+                var_decl(true, "x", t.clone(), l.clone()),
                 Stmt::If(IfStmt{
                     condition: bool_lit(false),
                     if_branch: vec![
                         // Just dummy declaration, so we don't get flagged by dead code because
                         // of empty branch.
-                        var_decl("z", t.clone(), l.clone()),
+                        var_decl(true, "z", t.clone(), l.clone()),
                     ],
                     elif_branches: vec![
                         (bool_lit(false), vec![
-                            var_decl("x", t.clone(), l.clone())
+                            var_decl(true, "x", t.clone(), l.clone())
                         ])
                     ],
                     else_branch: None,
@@ -305,7 +305,7 @@ mod var_decl_tests {
 
         for l in &literals_ints_floats {
             // Variables declared with explicit type of bool, but given an non-bool literal is a type mismatch
-            let body = vec![var_decl("x", Type::Bool, l.clone())];
+            let body = vec![var_decl(true, "x", Type::Bool, l.clone())];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             let result = check_semantics(&mut ast);
@@ -316,7 +316,7 @@ mod var_decl_tests {
 
         for l in literals_ints_floats {
             // Variables declared with explicit type of string, but given an non-string literal is a type mismatch
-            let body = vec![var_decl("x", Type::String, l.clone())];
+            let body = vec![var_decl(true, "x", Type::String, l.clone())];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             let result = check_semantics(&mut ast);
@@ -331,7 +331,7 @@ mod var_decl_tests {
     fn test_use_of_undeclared_variable_other_errors() {
         // Try referencing non-existent variable "y"
         for t in ALL_TYPES_NO_ARR {
-            let body = vec![var_decl("x", t.clone(), var_expr("y"))]; // y not declared
+            let body = vec![var_decl(true, "x", t.clone(), var_expr("y"))]; // y not declared
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             let result = check_semantics(&mut ast);
@@ -344,7 +344,7 @@ mod var_decl_tests {
     fn test_use_of_undeclared_variable_ourself_errors() {
         // Try referencing non-existent variable "x" aka ourselves.
         for t in ALL_TYPES_NO_ARR {
-            let body = vec![var_decl("x", t.clone(), var_expr("x"))]; // x not declared
+            let body = vec![var_decl(true, "x", t.clone(), var_expr("x"))]; // x not declared
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             let result = check_semantics(&mut ast);

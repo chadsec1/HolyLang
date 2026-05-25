@@ -17,7 +17,7 @@ mod copy_tests {
 
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let copy_lit = Expr::CopyCall { expr: Box::new(l.clone()), span: span() };
-            let body = vec![var_decl("x", t.clone(), copy_lit)];
+            let body = vec![var_decl(true, "x", t.clone(), copy_lit)];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             let result = check_semantics(&mut ast);
@@ -37,7 +37,7 @@ mod copy_tests {
 
         for t in ALL_TYPES_NO_ARR {
             let copy_expr = Expr::CopyCall { expr: Box::new(call_expr.clone()), span: span() };
-            let body = vec![var_decl("x", t.clone(), copy_expr)];
+            let body = vec![var_decl(true, "x", t.clone(), copy_expr)];
             let func = void_func("foo", vec![], body);
             let mut ast = ast_one(func);
             let result = check_semantics(&mut ast);
@@ -59,7 +59,7 @@ mod copy_tests {
 
 
                 let copy_expr = Expr::CopyCall { expr: Box::new(array_expr), span: span() };
-                let body = vec![var_decl("x", t.clone(), copy_expr)];
+                let body = vec![var_decl(true, "x", t.clone(), copy_expr)];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
                 let result = check_semantics(&mut ast);
@@ -81,7 +81,7 @@ mod copy_tests {
                         };
 
                 let copy_expr = Expr::CopyCall { expr: Box::new(array_expr), span: span() };
-                let body = vec![var_decl("x", t.clone(), copy_expr)];
+                let body = vec![var_decl(true, "x", t.clone(), copy_expr)];
                 let func = void_func("foo", vec![], body);
                 let mut ast = ast_one(func);
                 let result = check_semantics(&mut ast);
@@ -100,8 +100,8 @@ mod copy_tests {
 
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
             let body = vec![
-                var_decl("a", t.clone(), l.clone()),
-                var_decl("b", t.clone(), Expr::CopyCall {
+                var_decl(true, "a", t.clone(), l.clone()),
+                var_decl(true, "b", t.clone(), Expr::CopyCall {
                         expr: Box::new(Expr::CopyCall { expr: Box::new(var_expr("a")), span: span() }),
                         span: span(),
                     }
@@ -138,9 +138,9 @@ mod copy_tests {
                     };
 
                     let body = vec![
-                        var_decl("e", Type::Usize, usize_lit(i2)),
-                        var_decl("arr", Type::Array(Box::new(t.clone())), arr_lit.clone()),
-                        var_decl("x", t.clone(), access),
+                        var_decl(true, "e", Type::Usize, usize_lit(i2)),
+                        var_decl(true, "arr", Type::Array(Box::new(t.clone())), arr_lit.clone()),
+                        var_decl(true, "x", t.clone(), access),
                     ];
                     let func = void_func("foo", vec![], body);
                     let mut ast = ast_one(func);
@@ -173,9 +173,9 @@ mod copy_tests {
                     };
 
                     let body = vec![
-                        var_decl("e", Type::Usize, usize_lit(i2)),
-                        var_decl("arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), arr_lit.clone()),
-                        var_decl("x", t.clone(), access),
+                        var_decl(true, "e", Type::Usize, usize_lit(i2)),
+                        var_decl(true, "arr", Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i + 1)), arr_lit.clone()),
+                        var_decl(true, "x", t.clone(), access),
                     ];
                     let func = void_func("foo", vec![], body);
                     let mut ast = ast_one(func);

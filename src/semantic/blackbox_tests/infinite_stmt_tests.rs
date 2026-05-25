@@ -14,7 +14,7 @@ mod infinite_stmt_tests {
                     branch: vec![
                         // Just dummy declaration, so we don't get flagged by dead code because
                         // of empty branch.
-                        var_decl("z", t.clone(), l.clone()),
+                        var_decl(true, "z", t.clone(), l.clone()),
                     ],
                     span: span(),
                 }),
