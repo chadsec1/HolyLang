@@ -329,7 +329,7 @@ fn check_stmts(
                         kind: BindingKind::Var {
                             value: Some(var.value.clone()),
                             moved: false,
-                            locked: false,
+                            locked: var.explicitly_initialized,
                             len: value_len
                         }
                     }

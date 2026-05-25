@@ -12,6 +12,7 @@ pub struct VariableDeclaration {
     pub name: String,
     pub type_name: Type,
     pub value: Expr,
+    pub explicitly_initialized: bool,
     pub span: Span,
 }
 
