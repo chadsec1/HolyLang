@@ -95,14 +95,18 @@ fn transpile_stmt(stmt: &Stmt) -> String {
             let var_type = holy_type_to_rust_type_str(&var.type_name);
             let var_value = holy_expr_to_rust_expr(&var.value);
 
-            return format!("let mut {}: {} = {};", var.name, var_type, var_value);
+            if var.explicitly_initialized {
+                return format!("let {}: {} = {};", var.name, var_type, var_value);
+            } else {
+                return format!("let mut {}: {} = {};", var.name, var_type, var_value);
+            }
         },
+
 
         Stmt::VarDeclMulti(multi_var, expr) => {
             let mut multi_decl_stmt_str: String = "let (".to_string();
             
             for var in multi_var {
-                multi_decl_stmt_str.push_str("mut ");
                 multi_decl_stmt_str.push_str(&var.name);
                 multi_decl_stmt_str.push_str(", ");
             }
