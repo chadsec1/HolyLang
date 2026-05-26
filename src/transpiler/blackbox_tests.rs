@@ -2,16 +2,18 @@ use super::*;
 use std::sync::LazyLock;
 use crate::tests_consts::{
     ALL_TYPES_NO_ARR, 
+    ALL_BIN_OP_KIND_COMP, ALL_BIN_OP_KIND_COMP_EQ
 };
 
 use crate::ast::{
     Type, Span, Stmt, Expr, Param,
     IntLiteralValue,
-    VariableDeclaration
+    VariableDeclaration, MultiVariableDeclaration 
 };
 
 mod const_tests;
 mod var_decl_tests;
+mod multi_return_tests;
 
 // With dynamic array types 
 static ALL_TYPES_WITH_DYN_ARR: LazyLock<Vec<Type>> = LazyLock::new(|| {
@@ -70,11 +72,28 @@ fn void_func(name: &str, params: Vec<Param>, body: Vec<Stmt>) -> Function {
     }
 }
 
+/// Build a function that returns a single type.
+fn returning_func(name: &str, params: Vec<Param>, ret: Vec<Type>, body: Vec<Stmt>) -> Function {
+    Function {
+        name: name.to_string(),
+        params,
+        return_type: Some(ret),
+        body,
+        span: span(),
+    }
+}
+
+fn call_expr(name: &str, args: Vec<Expr>) -> Expr {
+    Expr::Call { name: name.to_string(), args, span: span() }
+}
+
+fn return_stmt(exprs: Vec<Expr>) -> Stmt {
+    Stmt::Return(exprs)
+}
+
 fn param(name: &str, ty: Type) -> Param {
     Param { name: name.to_string(), type_name: ty, span: span() }
 }
-
-
 
 fn const_define_locally(name: &str, ty: Type, value: Expr) -> Stmt {
     Stmt::Const(Constant {
@@ -168,6 +187,41 @@ fn array_lit(exprs: Vec<Expr>, type_name: Option<Type>) -> Expr {
     Expr::ArrayLiteral { elements: exprs, type_name, span: span() }
 }
 
+fn get_many_boolean_conditions() -> Vec<Expr> {
+    let literals = get_all_literals();
+    
+    let mut boolean_conds = vec![
+        bool_lit(true),
+        bool_lit(false),
+    ];
+
+    for l in literals {
+        for b in ALL_BIN_OP_KIND_COMP {
+            // So that >= > <= < doesnt get performed on non integer/floats.
+            if !ALL_BIN_OP_KIND_COMP_EQ.contains(&b) {
+                match l {
+                    Expr::StringLiteral { .. } | Expr::BoolLiteral { .. } | Expr::ArrayLiteral { .. } => {
+                        continue
+                    },
+                    _ => {}
+                }
+            }
+
+            let bin = Expr::BinOp {
+                left: Box::new(l.clone()),
+                right: Box::new(l.clone()),
+                op: b,
+                span: span(),
+            };
+
+            boolean_conds.push(bin);
+        }
+    }
+
+    return boolean_conds;
+}
+
+
 fn get_all_literals_no_arr() -> [Expr; 14] {
     let literals = [
         int8_lit(1),
@@ -192,7 +246,6 @@ fn get_all_literals_no_arr() -> [Expr; 14] {
 
     return literals;
 }
-
 
 fn get_all_literals() -> [Expr; 28] {
     return [
@@ -233,3 +286,4 @@ fn get_all_literals() -> [Expr; 28] {
         array_lit(vec![str_lit(""), str_lit("Hi"), str_lit(" !")], Some(Type::Array(Box::new(Type::String))))
     ];
 }
+
