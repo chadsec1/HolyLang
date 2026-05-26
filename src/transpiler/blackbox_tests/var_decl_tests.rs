@@ -5,6 +5,62 @@ mod var_decl_in_void_func_tests {
     use super::*;
 
     #[test]
+    fn inited_var_all_bin_op() {
+        let literals = get_all_literals();
+
+        for (l, t) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
+            let t_str = holy_type_to_rust_type_str(&t);
+            
+            for b in ALL_BIN_OP_KIND {
+                let bin = Expr::BinOp {
+                    left: Box::new(l.clone()),
+                    op: b,
+                    right: Box::new(l.clone()),
+                    span: span(),
+                };
+
+                let body = vec![var_decl("x", t.clone(), bin.clone(), true)];
+                let func = void_func("foo", vec![], body);
+                let ast = &ast_one(func);
+
+                let rcode = transpile(ast).replace("\n", "");
+
+                let bin_str = holy_expr_to_rust_expr(&bin);
+
+                assert_eq!(rcode, format!("fn foo() {{ let x: {} = {};}}", t_str, bin_str));
+            }
+        }
+    }
+    
+    #[test]
+    fn uninited_var_all_bin_op() {
+        let literals = get_all_literals();
+
+        for (l, t) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
+            let t_str = holy_type_to_rust_type_str(&t);
+            
+            for b in ALL_BIN_OP_KIND {
+                let bin = Expr::BinOp {
+                    left: Box::new(l.clone()),
+                    op: b,
+                    right: Box::new(l.clone()),
+                    span: span(),
+                };
+
+                let body = vec![var_decl("x", t.clone(), bin.clone(), false)];
+                let func = void_func("foo", vec![], body);
+                let ast = &ast_one(func);
+
+                let rcode = transpile(ast).replace("\n", "");
+
+                let bin_str = holy_expr_to_rust_expr(&bin);
+
+                assert_eq!(rcode, format!("fn foo() {{ let mut x: {} = {};}}", t_str, bin_str));
+            }
+        }
+    }
+
+    #[test]
     fn inited_var_bincop_condition_bool() {
         let boolean_conds = get_many_boolean_conditions();
         
@@ -142,6 +198,74 @@ mod var_decl_in_void_func_tests {
 #[cfg(test)]
 mod var_decl_in_void_func_with_params_tests {
     use super::*;
+
+    #[test]
+    fn inited_var_all_bin_op() {
+        let literals = get_all_literals();
+
+        for (l, t1) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
+            let t1_str = holy_type_to_rust_type_str(&t1);
+            
+            for b in ALL_BIN_OP_KIND {
+                let bin = Expr::BinOp {
+                    left: Box::new(l.clone()),
+                    op: b,
+                    right: Box::new(l.clone()),
+                    span: span(),
+                };
+
+                let body = vec![
+                    var_decl("x", t1.clone(), bin.clone(), true)
+                ];
+
+                for t2 in ALL_TYPES_WITH_DYN_ARR.iter() {
+                    let func = void_func("foo", vec![param("a", t1.clone()), param("b", t2.clone())], body.clone());
+                    let ast = &ast_one(func);
+
+                    let rcode = transpile(ast).replace("\n", "");
+
+                    let t2_str = holy_type_to_rust_type_str(&t2);
+                    let bin_str = holy_expr_to_rust_expr(&bin);
+
+                    assert_eq!(rcode, format!("fn foo(a: {}, b: {}) {{ let x: {} = {};}}", t1_str, t2_str, t1_str, bin_str));
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn uninited_var_all_bin_op() {
+        let literals = get_all_literals();
+
+        for (l, t1) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
+            let t1_str = holy_type_to_rust_type_str(&t1);
+            
+            for b in ALL_BIN_OP_KIND {
+                let bin = Expr::BinOp {
+                    left: Box::new(l.clone()),
+                    op: b,
+                    right: Box::new(l.clone()),
+                    span: span(),
+                };
+
+                let body = vec![
+                    var_decl("x", t1.clone(), bin.clone(), false)
+                ];
+
+                for t2 in ALL_TYPES_WITH_DYN_ARR.iter() {
+                    let func = void_func("foo", vec![param("a", t1.clone()), param("b", t2.clone())], body.clone());
+                    let ast = &ast_one(func);
+
+                    let rcode = transpile(ast).replace("\n", "");
+
+                    let t2_str = holy_type_to_rust_type_str(&t2);
+                    let bin_str = holy_expr_to_rust_expr(&bin);
+
+                    assert_eq!(rcode, format!("fn foo(a: {}, b: {}) {{ let mut x: {} = {};}}", t1_str, t2_str, t1_str, bin_str));
+                }
+            }
+        }
+    }
 
     #[test]
     fn inited_var_bincop_condition_bool() {
@@ -308,6 +432,74 @@ mod var_decl_in_void_func_with_params_tests {
 #[cfg(test)]
 mod var_decl_in_single_returning_func_with_params_tests {
     use super::*;
+
+    #[test]
+    fn inited_var_all_bin_op() {
+        let literals = get_all_literals();
+
+        for (l, t1) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
+            let t1_str = holy_type_to_rust_type_str(&t1);
+            
+            for b in ALL_BIN_OP_KIND {
+                let bin = Expr::BinOp {
+                    left: Box::new(l.clone()),
+                    op: b,
+                    right: Box::new(l.clone()),
+                    span: span(),
+                };
+
+                let body = vec![
+                    var_decl("x", t1.clone(), bin.clone(), true)
+                ];
+
+                for t2 in ALL_TYPES_WITH_DYN_ARR.iter() {
+                    let func = returning_func("foo", vec![param("a", t2.clone()), param("b", t2.clone())], vec![t1.clone()], body.clone());
+                    let ast = &ast_one(func);
+
+                    let rcode = transpile(ast).replace("\n", "");
+
+                    let t2_str = holy_type_to_rust_type_str(&t2);
+                    let bin_str = holy_expr_to_rust_expr(&bin);
+
+                    assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ let x: {} = {};}}", t2_str, t2_str, t1_str, t1_str, bin_str));
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn uninited_var_all_bin_op() {
+        let literals = get_all_literals();
+
+        for (l, t1) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
+            let t1_str = holy_type_to_rust_type_str(&t1);
+            
+            for b in ALL_BIN_OP_KIND {
+                let bin = Expr::BinOp {
+                    left: Box::new(l.clone()),
+                    op: b,
+                    right: Box::new(l.clone()),
+                    span: span(),
+                };
+
+                let body = vec![
+                    var_decl("x", t1.clone(), bin.clone(), false)
+                ];
+
+                for t2 in ALL_TYPES_WITH_DYN_ARR.iter() {
+                    let func = returning_func("foo", vec![param("a", t2.clone()), param("b", t2.clone())], vec![t1.clone()], body.clone());
+                    let ast = &ast_one(func);
+
+                    let rcode = transpile(ast).replace("\n", "");
+
+                    let t2_str = holy_type_to_rust_type_str(&t2);
+                    let bin_str = holy_expr_to_rust_expr(&bin);
+
+                    assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ let mut x: {} = {};}}", t2_str, t2_str, t1_str, t1_str, bin_str));
+                }
+            }
+        }
+    }
 
     #[test]
     fn inited_var_bincop_condition_bool() {
@@ -480,6 +672,74 @@ mod var_decl_in_single_returning_func_with_params_tests {
 #[cfg(test)]
 mod var_decl_in_multi_returning_func_with_params_tests {
     use super::*;
+
+    #[test]
+    fn inited_var_all_bin_op() {
+        let literals = get_all_literals();
+
+        for (l, t1) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
+            let t1_str = holy_type_to_rust_type_str(&t1);
+            
+            for b in ALL_BIN_OP_KIND {
+                let bin = Expr::BinOp {
+                    left: Box::new(l.clone()),
+                    op: b,
+                    right: Box::new(l.clone()),
+                    span: span(),
+                };
+
+                let body = vec![
+                    var_decl("x", t1.clone(), bin.clone(), true)
+                ];
+
+                for t2 in ALL_TYPES_WITH_DYN_ARR.iter() {
+                    let func = returning_func("foo", vec![param("a", t2.clone()), param("b", t2.clone())], vec![t1.clone(); 3], body.clone());
+                    let ast = &ast_one(func);
+
+                    let rcode = transpile(ast).replace("\n", "");
+
+                    let t2_str = holy_type_to_rust_type_str(&t2);
+                    let bin_str = holy_expr_to_rust_expr(&bin);
+
+                    assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> ({}, {}, {}) {{ let x: {} = {};}}", t2_str, t2_str, t1_str, t1_str, t1_str, t1_str, bin_str));
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn uninited_var_all_bin_op() {
+        let literals = get_all_literals();
+
+        for (l, t1) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
+            let t1_str = holy_type_to_rust_type_str(&t1);
+            
+            for b in ALL_BIN_OP_KIND {
+                let bin = Expr::BinOp {
+                    left: Box::new(l.clone()),
+                    op: b,
+                    right: Box::new(l.clone()),
+                    span: span(),
+                };
+
+                let body = vec![
+                    var_decl("x", t1.clone(), bin.clone(), false)
+                ];
+
+                for t2 in ALL_TYPES_WITH_DYN_ARR.iter() {
+                    let func = returning_func("foo", vec![param("a", t2.clone()), param("b", t2.clone())], vec![t1.clone(); 3], body.clone());
+                    let ast = &ast_one(func);
+
+                    let rcode = transpile(ast).replace("\n", "");
+
+                    let t2_str = holy_type_to_rust_type_str(&t2);
+                    let bin_str = holy_expr_to_rust_expr(&bin);
+
+                    assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> ({}, {}, {}) {{ let mut x: {} = {};}}", t2_str, t2_str, t1_str, t1_str, t1_str, t1_str, bin_str));
+                }
+            }
+        }
+    }
 
     #[test]
     fn inited_var_bincop_condition_bool() {

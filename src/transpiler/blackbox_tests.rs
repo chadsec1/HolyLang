@@ -2,17 +2,19 @@ use super::*;
 use std::sync::LazyLock;
 use crate::tests_consts::{
     ALL_TYPES_NO_ARR, 
-    ALL_BIN_OP_KIND_COMP, ALL_BIN_OP_KIND_COMP_EQ
+    ALL_BIN_OP_KIND, ALL_BIN_OP_KIND_COMP, ALL_BIN_OP_KIND_COMP_EQ
 };
 
 use crate::ast::{
     Type, Span, Stmt, Expr, Param,
     IntLiteralValue,
-    VariableDeclaration, MultiVariableDeclaration 
+    VariableDeclaration, MultiVariableDeclaration,
+    VariableAssignment
 };
 
 mod const_tests;
 mod var_decl_tests;
+mod var_assign_tests;
 mod multi_return_tests;
 
 // With dynamic array types 
@@ -119,6 +121,14 @@ fn var_decl(name: &str, ty: Type, value: Expr, explicitly_initialized: bool) -> 
         type_name: ty,
         value,
         explicitly_initialized,
+        span: span(),
+    })
+}
+
+fn var_assign(name: &str, value: Expr) -> Stmt {
+    Stmt::VarAssign(VariableAssignment {
+        name: name.to_string(),
+        value,
         span: span(),
     })
 }
