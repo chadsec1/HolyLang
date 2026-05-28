@@ -17,6 +17,7 @@ mod var_decl_tests;
 mod var_assign_tests;
 mod multi_return_tests;
 mod lock_tests;
+mod unlock_tests;
 
 // With dynamic array types 
 static ALL_TYPES_WITH_DYN_ARR: LazyLock<Vec<Type>> = LazyLock::new(|| {
@@ -114,6 +115,10 @@ fn const_define_globally(name: &str, ty: Type, value: Expr) -> GlobalStmt {
         value,
         span: span(),
     })
+}
+
+fn var_expr(name: &str) -> Expr {
+    Expr::Var { name: name.to_string(), span: span() }
 }
 
 fn var_decl(name: &str, ty: Type, value: Expr, explicitly_initialized: bool) -> Stmt {
