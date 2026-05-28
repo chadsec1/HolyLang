@@ -59,8 +59,18 @@ pub fn check_semantics(ast: &mut AST) -> Result<(), HolyError> {
         if fun_sigs.insert(f.name.clone(), (param_tys, f.return_type.clone())).is_some() {
             return Err(HolyError::Semantic(format!("Duplicate function declaration: {}", f.name)));
         }
+
+        if f.name == "main" && f.return_type.is_some() {
+            return Err(HolyError::Semantic("function `main` must not return.".to_string()));
+        }
+
+        if f.name == "main" && f.params.len() != 0 {
+            return Err(HolyError::Semantic("function `main` must not have any parameters.".to_string()));
+        }
+
     }
-    
+
+
     // Second pass: check each global statement
     let mut globals: HashMap<String, BindingInfo> = HashMap::new();
     for global_stmt in &mut ast.globals {
@@ -88,17 +98,17 @@ fn check_function(
     // Build local symbol table starting with params
     let mut upstream_var_names: Vec<String> = vec![];
 
-    for p in &func.params {
-        if locals.contains_key(&p.name) {
+    for parameter in &func.params {
+        if locals.contains_key(&parameter.name) {
             return Err(HolyError::Semantic(format!(
-                        "Cannot use `{}` as function parameter name, because it is already declared globally", // (line {} column {})", 
-                        &p.name //, cons.span.line, cons.span.column
+                        "Cannot use `{}` as function parameter name, because it is already declared globally (line {} column {})", 
+                        &parameter.name, parameter.span.line, parameter.span.column
                     )));
         }
         locals.insert(
-            p.name.clone(), 
+            parameter.name.clone(), 
             BindingInfo {
-                ty: p.type_name.clone(),
+                ty: parameter.type_name.clone(),
                 kind: BindingKind::Var {
                     moved: false,
                     
@@ -112,7 +122,7 @@ fn check_function(
                 }
             });
 
-        upstream_var_names.push(p.name.clone());
+        upstream_var_names.push(parameter.name.clone());
     }
 
     check_stmts(func.clone(), &mut func.body, locals, upstream_var_names, fun_sigs, false)?;
