@@ -101,6 +101,52 @@ mod multi_return_tests {
                 let pair_body = vec![return_stmt(vec![bin.clone();3])];
                 let pair = returning_func("pair", vec![], vec![t.clone(); 3], pair_body);
 
+                let vars = vec![
+                    MultiVariableDeclaration { name: "a".to_string(), type_name: t.clone(), span: span() },
+                    MultiVariableDeclaration { name: "b".to_string(), type_name: t.clone(), span: span() },
+                    MultiVariableDeclaration { name: "c".to_string(), type_name: t.clone(), span: span() },
+                ];
+                let body = vec![Stmt::VarDeclMulti(vars, call_expr("pair", vec![]))];
+                let main = void_func("main", vec![], body);
+
+                let ast = &AST{ functions: vec![pair, main], globals: vec![] };
+            
+                let internals = import_internals();
+                let rcode = transpile(ast);
+                assert!(rcode.starts_with(&internals));
+                let rcode = rcode[internals.len()..].replace('\n', "");
+
+                let bin_str = holy_expr_to_rust_expr(&bin);
+
+                assert_eq!(
+                    rcode, 
+                    format!(
+                        "fn pair() -> ({}, {}, {}) {{ return ({}, {}, {})}}fn main() {{ let (a, b, c): ({}, {}, {}) = pair();}}",
+                        t_str, t_str, t_str, bin_str, bin_str, bin_str, t_str, t_str, t_str
+                    )
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn multi_assignment_all_bin_op() {
+        let literals = get_all_literals();
+
+        for (l, t) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
+            let t_str = holy_type_to_rust_type_str(&t);
+            
+            for b in ALL_BIN_OP_KIND {
+                let bin = Expr::BinOp {
+                    left: Box::new(l.clone()),
+                    op: b,
+                    right: Box::new(l.clone()),
+                    span: span(),
+                };
+
+                let pair_body = vec![return_stmt(vec![bin.clone();3])];
+                let pair = returning_func("pair", vec![], vec![t.clone(); 3], pair_body);
+
                 let body = vec![
                     Stmt::VarAssignMulti(MultiAssignment{
                         names: vec!["a".to_string(), "b".to_string(), "c".to_string()],
