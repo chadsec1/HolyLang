@@ -1880,7 +1880,6 @@ mod ownership_tests {
 
             let mut ast = AST { functions: vec![pair, main] , globals: vec![] };
             let result = check_semantics(&mut ast);
-            println!("niggers {:?}", result);
 
             assert!(result.is_err());
             assert!(result.unwrap_err().to_string().contains("Value assignment to moved variable `a`"));
