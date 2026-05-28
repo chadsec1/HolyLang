@@ -25,6 +25,14 @@ pub fn compile(rcode: &str, target_dir: &str) -> Result<(), HolyError> {
 name = "holyprogram"
 version = "0.0.1"
 edition = "2024"
+
+[profile.dev]
+opt-level = 0
+panic = "abort"
+
+[profile.release]
+opt-level = 0
+panic = "abort"
 "#;
 
     cargo_file.write_all(cargo_content.as_bytes()).expect(&format!("Compile error: Couldnt write to file `{}`, please check your permissions", cargo_file_path.display()));
