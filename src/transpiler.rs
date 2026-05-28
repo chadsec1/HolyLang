@@ -5,12 +5,14 @@ use crate::ast::{
 };
 
 #[cfg(test)]
-mod blackbox_tests;
+mod reflective_tests;
 
 /// Takes a reference to a Abstract Syntax Tree, and returns equvilent code in Rust as a string
 ///
 pub fn transpile(ast: &AST) -> String {
     let mut rcode: String = String::new();
+
+    rcode.push_str(&import_internals());
 
     for global_stmt in &ast.globals {
         let global_stmt_rcode = transpile_global_stmt(global_stmt);
@@ -27,6 +29,11 @@ pub fn transpile(ast: &AST) -> String {
     return rcode
 }
 
+
+fn import_internals() -> String {
+    let content = include_str!("transpiler/internal.rs");
+    return content.to_string()
+}
 
 
 /// Transpiles a function and its inner statements into equvilent Rust code
