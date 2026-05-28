@@ -23,7 +23,10 @@ mod var_decl_in_void_func_tests {
                 let func = void_func("foo", vec![], body);
                 let ast = &ast_one(func);
 
-                let rcode = transpile(ast).replace("\n", "");
+                let internals = import_internals();
+                let rcode = transpile(ast);
+                assert!(rcode.starts_with(&internals));
+                let rcode = rcode[internals.len()..].replace('\n', "");
 
                 let bin_str = holy_expr_to_rust_expr(&bin);
 
@@ -51,7 +54,10 @@ mod var_decl_in_void_func_tests {
                 let func = void_func("foo", vec![], body);
                 let ast = &ast_one(func);
 
-                let rcode = transpile(ast).replace("\n", "");
+                let internals = import_internals();
+                let rcode = transpile(ast);
+                assert!(rcode.starts_with(&internals));
+                let rcode = rcode[internals.len()..].replace('\n', "");
 
                 let bin_str = holy_expr_to_rust_expr(&bin);
 
@@ -74,7 +80,10 @@ mod var_decl_in_void_func_tests {
             let func = void_func("foo", vec![], body);
             let ast = &ast_one(func);
 
-            let rcode = transpile(ast).replace("\n", "");
+            let internals = import_internals();
+            let rcode = transpile(ast);
+            assert!(rcode.starts_with(&internals));
+            let rcode = rcode[internals.len()..].replace('\n', "");
 
             let bl_str = holy_expr_to_rust_expr(&bl);
 
@@ -96,7 +105,10 @@ mod var_decl_in_void_func_tests {
             let func = void_func("foo", vec![], body);
             let ast = &ast_one(func);
 
-            let rcode = transpile(ast).replace("\n", "");
+            let internals = import_internals();
+            let rcode = transpile(ast);
+            assert!(rcode.starts_with(&internals));
+            let rcode = rcode[internals.len()..].replace('\n', "");
 
             let bl_str = holy_expr_to_rust_expr(&bl);
 
@@ -115,7 +127,10 @@ mod var_decl_in_void_func_tests {
             let func = void_func("foo", vec![], body);
             let ast = &ast_one(func);
 
-            let rcode = transpile(ast).replace("\n", "");
+            let internals = import_internals();
+            let rcode = transpile(ast);
+            assert!(rcode.starts_with(&internals));
+            let rcode = rcode[internals.len()..].replace('\n', "");
 
             let t_str = holy_type_to_rust_type_str(&t);
             let l_str = holy_expr_to_rust_expr(&l);
@@ -135,7 +150,10 @@ mod var_decl_in_void_func_tests {
             let func = void_func("foo", vec![], body);
             let ast = &ast_one(func);
 
-            let rcode = transpile(ast).replace("\n", "");
+            let internals = import_internals();
+            let rcode = transpile(ast);
+            assert!(rcode.starts_with(&internals));
+            let rcode = rcode[internals.len()..].replace('\n', "");
 
             let t_str = holy_type_to_rust_type_str(&t);
             let l_str = holy_expr_to_rust_expr(&l);
@@ -145,10 +163,10 @@ mod var_decl_in_void_func_tests {
     }
 
     #[test]
-    fn inited_var_fixed_arrays() {
-        let literals = get_all_literals_no_arr();
+    fn inited_var_fixed_arrays_with_literal_size() {
+        let literals = get_all_literals();
         
-        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+        for (l, t) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
             for i in 0usize..200usize {
                 let fixed_arr_ty = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i));
 
@@ -159,7 +177,10 @@ mod var_decl_in_void_func_tests {
                 let func = void_func("foo", vec![], body);
                 let ast = &ast_one(func);
 
-                let rcode = transpile(ast).replace("\n", "");
+                let internals = import_internals();
+                let rcode = transpile(ast);
+                assert!(rcode.starts_with(&internals));
+                let rcode = rcode[internals.len()..].replace('\n', "");
 
                 let fixed_arr_ty_str = holy_type_to_rust_type_str(&fixed_arr_ty);
                 let l_arr_str = holy_expr_to_rust_expr(&l_arr);
@@ -170,10 +191,10 @@ mod var_decl_in_void_func_tests {
     }
 
     #[test]
-    fn uninited_var_fixed_arrays() {
-        let literals = get_all_literals_no_arr();
+    fn uninited_var_fixed_arrays_with_literal_size() {
+        let literals = get_all_literals();
         
-        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+        for (l, t) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
             for i in 0usize..200usize {
                 let fixed_arr_ty = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i));
 
@@ -184,7 +205,66 @@ mod var_decl_in_void_func_tests {
                 let func = void_func("foo", vec![], body);
                 let ast = &ast_one(func);
 
-                let rcode = transpile(ast).replace("\n", "");
+                let internals = import_internals();
+                let rcode = transpile(ast);
+                assert!(rcode.starts_with(&internals));
+                let rcode = rcode[internals.len()..].replace('\n', "");
+
+                let fixed_arr_ty_str = holy_type_to_rust_type_str(&fixed_arr_ty);
+                let l_arr_str = holy_expr_to_rust_expr(&l_arr);
+
+                assert_eq!(rcode, format!("fn foo() {{ let mut x: {} = {};}}", fixed_arr_ty_str,  l_arr_str));
+            }
+        }
+    }
+
+    #[test]
+    fn inited_var_fixed_arrays_with_const_size() {
+        let literals = get_all_literals();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
+            for i in 0usize..200usize {
+                let fixed_arr_ty = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Const("s".to_string()));
+
+                let l_arr = array_lit(vec![l.clone(); i], Some(fixed_arr_ty.clone()));
+                let body = vec![
+                    var_decl("x", fixed_arr_ty.clone(), l_arr.clone(), true)
+                ];
+                let func = void_func("foo", vec![], body);
+                let ast = &ast_one(func);
+
+                let internals = import_internals();
+                let rcode = transpile(ast);
+                assert!(rcode.starts_with(&internals));
+                let rcode = rcode[internals.len()..].replace('\n', "");
+
+                let fixed_arr_ty_str = holy_type_to_rust_type_str(&fixed_arr_ty);
+                let l_arr_str = holy_expr_to_rust_expr(&l_arr);
+
+                assert_eq!(rcode, format!("fn foo() {{ let x: {} = {};}}", fixed_arr_ty_str,  l_arr_str));
+            }
+        }
+    }
+
+    #[test]
+    fn uninited_var_fixed_arrays_with_const_size() {
+        let literals = get_all_literals();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
+            for i in 0usize..200usize {
+                let fixed_arr_ty = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Const("s".to_string()));
+
+                let l_arr = array_lit(vec![l.clone(); i], Some(fixed_arr_ty.clone()));
+                let body = vec![
+                    var_decl("x", fixed_arr_ty.clone(), l_arr.clone(), false)
+                ];
+                let func = void_func("foo", vec![], body);
+                let ast = &ast_one(func);
+
+                let internals = import_internals();
+                let rcode = transpile(ast);
+                assert!(rcode.starts_with(&internals));
+                let rcode = rcode[internals.len()..].replace('\n', "");
 
                 let fixed_arr_ty_str = holy_type_to_rust_type_str(&fixed_arr_ty);
                 let l_arr_str = holy_expr_to_rust_expr(&l_arr);
@@ -222,7 +302,10 @@ mod var_decl_in_void_func_with_params_tests {
                     let func = void_func("foo", vec![param("a", t1.clone()), param("b", t2.clone())], body.clone());
                     let ast = &ast_one(func);
 
-                    let rcode = transpile(ast).replace("\n", "");
+                    let internals = import_internals();
+                    let rcode = transpile(ast);
+                    assert!(rcode.starts_with(&internals));
+                    let rcode = rcode[internals.len()..].replace('\n', "");
 
                     let t2_str = holy_type_to_rust_type_str(&t2);
                     let bin_str = holy_expr_to_rust_expr(&bin);
@@ -256,7 +339,10 @@ mod var_decl_in_void_func_with_params_tests {
                     let func = void_func("foo", vec![param("a", t1.clone()), param("b", t2.clone())], body.clone());
                     let ast = &ast_one(func);
 
-                    let rcode = transpile(ast).replace("\n", "");
+                    let internals = import_internals();
+                    let rcode = transpile(ast);
+                    assert!(rcode.starts_with(&internals));
+                    let rcode = rcode[internals.len()..].replace('\n', "");
 
                     let t2_str = holy_type_to_rust_type_str(&t2);
                     let bin_str = holy_expr_to_rust_expr(&bin);
@@ -285,7 +371,10 @@ mod var_decl_in_void_func_with_params_tests {
                 let func = void_func("foo", vec![param("a", t2.clone()), param("b", t2.clone())], body.clone());
                 let ast = &ast_one(func);
 
-                let rcode = transpile(ast).replace("\n", "");
+                let internals = import_internals();
+                let rcode = transpile(ast);
+                assert!(rcode.starts_with(&internals));
+                let rcode = rcode[internals.len()..].replace('\n', "");
 
                 let t2_str = holy_type_to_rust_type_str(&t2);
 
@@ -313,7 +402,10 @@ mod var_decl_in_void_func_with_params_tests {
                 let func = void_func("foo", vec![param("a", t2.clone()), param("b", t2.clone())], body.clone());
                 let ast = &ast_one(func);
 
-                let rcode = transpile(ast).replace("\n", "");
+                let internals = import_internals();
+                let rcode = transpile(ast);
+                assert!(rcode.starts_with(&internals));
+                let rcode = rcode[internals.len()..].replace('\n', "");
 
                 let t2_str = holy_type_to_rust_type_str(&t2);
 
@@ -338,7 +430,10 @@ mod var_decl_in_void_func_with_params_tests {
                 let func = void_func("foo", vec![param("a", t2.clone()), param("b", t2.clone())], body.clone());
                 let ast = &ast_one(func);
 
-                let rcode = transpile(ast).replace("\n", "");
+                let internals = import_internals();
+                let rcode = transpile(ast);
+                assert!(rcode.starts_with(&internals));
+                let rcode = rcode[internals.len()..].replace('\n', "");
 
                 let t2_str = holy_type_to_rust_type_str(&t2);
 
@@ -363,7 +458,10 @@ mod var_decl_in_void_func_with_params_tests {
                 let func = void_func("foo", vec![param("a", t2.clone()), param("b", t2.clone())], body.clone());
                 let ast = &ast_one(func);
 
-                let rcode = transpile(ast).replace("\n", "");
+                let internals = import_internals();
+                let rcode = transpile(ast);
+                assert!(rcode.starts_with(&internals));
+                let rcode = rcode[internals.len()..].replace('\n', "");
 
                 let t2_str = holy_type_to_rust_type_str(&t2);
 
@@ -373,10 +471,10 @@ mod var_decl_in_void_func_with_params_tests {
     }
 
     #[test]
-    fn inited_var_fixed_arrays() {
-        let literals = get_all_literals_no_arr();
+    fn inited_var_fixed_arrays_with_literal_size() {
+        let literals = get_all_literals();
         
-        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+        for (l, t) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
             for i in 0usize..200usize {
                 let fixed_arr_ty = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i));
 
@@ -391,7 +489,10 @@ mod var_decl_in_void_func_with_params_tests {
                 let func = void_func("foo", vec![param("a", fixed_arr_ty.clone()), param("b", fixed_arr_ty.clone())], body);
                 let ast = &ast_one(func);
 
-                let rcode = transpile(ast).replace("\n", "");
+                let internals = import_internals();
+                let rcode = transpile(ast);
+                assert!(rcode.starts_with(&internals));
+                let rcode = rcode[internals.len()..].replace('\n', "");
 
                 assert_eq!(rcode, format!("fn foo(a: {}, b: {}) {{ let x: {} = {};}}", fixed_arr_ty_str, fixed_arr_ty_str, fixed_arr_ty_str,  l_arr_str));
             }
@@ -399,10 +500,10 @@ mod var_decl_in_void_func_with_params_tests {
     }
 
     #[test]
-    fn uninited_var_fixed_arrays() {
-        let literals = get_all_literals_no_arr();
+    fn uninited_var_fixed_arrays_with_literal_size() {
+        let literals = get_all_literals();
         
-        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+        for (l, t) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
             for i in 0usize..200usize {
                 let fixed_arr_ty = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i));
                 let l_arr = array_lit(vec![l.clone(); i], Some(fixed_arr_ty.clone()));
@@ -416,7 +517,68 @@ mod var_decl_in_void_func_with_params_tests {
                 let func = void_func("foo", vec![param("a", fixed_arr_ty.clone()), param("b", fixed_arr_ty.clone())], body);
                 let ast = &ast_one(func);
 
-                let rcode = transpile(ast).replace("\n", "");
+                let internals = import_internals();
+                let rcode = transpile(ast);
+                assert!(rcode.starts_with(&internals));
+                let rcode = rcode[internals.len()..].replace('\n', "");
+
+                
+                assert_eq!(rcode, format!("fn foo(a: {}, b: {}) {{ let mut x: {} = {};}}", fixed_arr_ty_str, fixed_arr_ty_str, fixed_arr_ty_str,  l_arr_str));
+            }
+        }
+    }
+
+    #[test]
+    fn inited_var_fixed_arrays_with_const_size() {
+        let literals = get_all_literals();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
+            for i in 0usize..200usize {
+                let fixed_arr_ty = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Const("s".to_string()));
+
+                let l_arr = array_lit(vec![l.clone(); i], Some(fixed_arr_ty.clone()));
+
+                let fixed_arr_ty_str = holy_type_to_rust_type_str(&fixed_arr_ty);
+                let l_arr_str = holy_expr_to_rust_expr(&l_arr);
+
+                let body = vec![
+                    var_decl("x", fixed_arr_ty.clone(), l_arr.clone(), true)
+                ];
+                let func = void_func("foo", vec![param("a", fixed_arr_ty.clone()), param("b", fixed_arr_ty.clone())], body);
+                let ast = &ast_one(func);
+
+                let internals = import_internals();
+                let rcode = transpile(ast);
+                assert!(rcode.starts_with(&internals));
+                let rcode = rcode[internals.len()..].replace('\n', "");
+
+                assert_eq!(rcode, format!("fn foo(a: {}, b: {}) {{ let x: {} = {};}}", fixed_arr_ty_str, fixed_arr_ty_str, fixed_arr_ty_str,  l_arr_str));
+            }
+        }
+    }
+
+    #[test]
+    fn uninited_var_fixed_arrays_with_const_size() {
+        let literals = get_all_literals();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
+            for i in 0usize..200usize {
+                let fixed_arr_ty = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Const("s".to_string()));
+                let l_arr = array_lit(vec![l.clone(); i], Some(fixed_arr_ty.clone()));
+
+                let fixed_arr_ty_str = holy_type_to_rust_type_str(&fixed_arr_ty);
+                let l_arr_str = holy_expr_to_rust_expr(&l_arr);
+
+                let body = vec![
+                    var_decl("x", fixed_arr_ty.clone(), l_arr.clone(), false)
+                ];
+                let func = void_func("foo", vec![param("a", fixed_arr_ty.clone()), param("b", fixed_arr_ty.clone())], body);
+                let ast = &ast_one(func);
+
+                let internals = import_internals();
+                let rcode = transpile(ast);
+                assert!(rcode.starts_with(&internals));
+                let rcode = rcode[internals.len()..].replace('\n', "");
 
                 
                 assert_eq!(rcode, format!("fn foo(a: {}, b: {}) {{ let mut x: {} = {};}}", fixed_arr_ty_str, fixed_arr_ty_str, fixed_arr_ty_str,  l_arr_str));
@@ -456,7 +618,10 @@ mod var_decl_in_single_returning_func_with_params_tests {
                     let func = returning_func("foo", vec![param("a", t2.clone()), param("b", t2.clone())], vec![t1.clone()], body.clone());
                     let ast = &ast_one(func);
 
-                    let rcode = transpile(ast).replace("\n", "");
+                    let internals = import_internals();
+                    let rcode = transpile(ast);
+                    assert!(rcode.starts_with(&internals));
+                    let rcode = rcode[internals.len()..].replace('\n', "");
 
                     let t2_str = holy_type_to_rust_type_str(&t2);
                     let bin_str = holy_expr_to_rust_expr(&bin);
@@ -490,7 +655,10 @@ mod var_decl_in_single_returning_func_with_params_tests {
                     let func = returning_func("foo", vec![param("a", t2.clone()), param("b", t2.clone())], vec![t1.clone()], body.clone());
                     let ast = &ast_one(func);
 
-                    let rcode = transpile(ast).replace("\n", "");
+                    let internals = import_internals();
+                    let rcode = transpile(ast);
+                    assert!(rcode.starts_with(&internals));
+                    let rcode = rcode[internals.len()..].replace('\n', "");
 
                     let t2_str = holy_type_to_rust_type_str(&t2);
                     let bin_str = holy_expr_to_rust_expr(&bin);
@@ -519,7 +687,10 @@ mod var_decl_in_single_returning_func_with_params_tests {
                 let func = returning_func("foo", vec![param("a", t2.clone()), param("b", t2.clone())], vec![t1.clone()], body.clone());
                 let ast = &ast_one(func);
 
-                let rcode = transpile(ast).replace("\n", "");
+                let internals = import_internals();
+                let rcode = transpile(ast);
+                assert!(rcode.starts_with(&internals));
+                let rcode = rcode[internals.len()..].replace('\n', "");
 
                 let t2_str = holy_type_to_rust_type_str(&t2);
 
@@ -547,7 +718,10 @@ mod var_decl_in_single_returning_func_with_params_tests {
                 let func = returning_func("foo", vec![param("a", t2.clone()), param("b", t2.clone())], vec![t1.clone()], body.clone());
                 let ast = &ast_one(func);
 
-                let rcode = transpile(ast).replace("\n", "");
+                let internals = import_internals();
+                let rcode = transpile(ast);
+                assert!(rcode.starts_with(&internals));
+                let rcode = rcode[internals.len()..].replace('\n', "");
 
                 let t2_str = holy_type_to_rust_type_str(&t2);
 
@@ -574,7 +748,10 @@ mod var_decl_in_single_returning_func_with_params_tests {
                 let func = returning_func("foo", vec![param("a", t2.clone()), param("b", t2.clone())], vec![t1.clone()], body.clone());
                 let ast = &ast_one(func);
 
-                let rcode = transpile(ast).replace("\n", "");
+                let internals = import_internals();
+                let rcode = transpile(ast);
+                assert!(rcode.starts_with(&internals));
+                let rcode = rcode[internals.len()..].replace('\n', "");
 
                 let t2_str = holy_type_to_rust_type_str(&t2);
 
@@ -599,7 +776,10 @@ mod var_decl_in_single_returning_func_with_params_tests {
                 let func = returning_func("foo", vec![param("a", t2.clone()), param("b", t2.clone())], vec![t1.clone()], body.clone());
                 let ast = &ast_one(func);
 
-                let rcode = transpile(ast).replace("\n", "");
+                let internals = import_internals();
+                let rcode = transpile(ast);
+                assert!(rcode.starts_with(&internals));
+                let rcode = rcode[internals.len()..].replace('\n', "");
 
                 let t2_str = holy_type_to_rust_type_str(&t2);
 
@@ -609,10 +789,10 @@ mod var_decl_in_single_returning_func_with_params_tests {
     }
 
     #[test]
-    fn inited_var_fixed_arrays() {
-        let literals = get_all_literals_no_arr();
+    fn inited_var_fixed_arrays_with_literal_size() {
+        let literals = get_all_literals();
         
-        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+        for (l, t) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
             for i in 0usize..200usize {
                 let fixed_arr_ty = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i));
 
@@ -627,7 +807,10 @@ mod var_decl_in_single_returning_func_with_params_tests {
                 let func = returning_func("foo", vec![param("a", fixed_arr_ty.clone()), param("b", fixed_arr_ty.clone())], vec![fixed_arr_ty.clone()], body);
                 let ast = &ast_one(func);
 
-                let rcode = transpile(ast).replace("\n", "");
+                let internals = import_internals();
+                let rcode = transpile(ast);
+                assert!(rcode.starts_with(&internals));
+                let rcode = rcode[internals.len()..].replace('\n', "");
 
                 assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ let x: {} = {};}}", fixed_arr_ty_str, fixed_arr_ty_str, fixed_arr_ty_str, fixed_arr_ty_str, l_arr_str));
             }
@@ -635,10 +818,10 @@ mod var_decl_in_single_returning_func_with_params_tests {
     }
 
     #[test]
-    fn uninited_var_fixed_arrays() {
-        let literals = get_all_literals_no_arr();
+    fn uninited_var_fixed_arrays_with_literal_size() {
+        let literals = get_all_literals();
         
-        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+        for (l, t) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
             for i in 0usize..200usize {
                 let fixed_arr_ty = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i));
                 let l_arr = array_lit(vec![l.clone(); i], Some(fixed_arr_ty.clone()));
@@ -652,7 +835,10 @@ mod var_decl_in_single_returning_func_with_params_tests {
                 let func = returning_func("foo", vec![param("a", fixed_arr_ty.clone()), param("b", fixed_arr_ty.clone())], vec![fixed_arr_ty.clone()], body);
                 let ast = &ast_one(func);
 
-                let rcode = transpile(ast).replace("\n", "");
+                let internals = import_internals();
+                let rcode = transpile(ast);
+                assert!(rcode.starts_with(&internals));
+                let rcode = rcode[internals.len()..].replace('\n', "");
                 
                 assert_eq!(
                     rcode, 
@@ -661,6 +847,68 @@ mod var_decl_in_single_returning_func_with_params_tests {
             }
         }
     }
+
+    #[test]
+    fn inited_var_fixed_arrays_with_const_size() {
+        let literals = get_all_literals();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
+            for i in 0usize..200usize {
+                let fixed_arr_ty = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Const("s".to_string()));
+
+                let l_arr = array_lit(vec![l.clone(); i], Some(fixed_arr_ty.clone()));
+
+                let fixed_arr_ty_str = holy_type_to_rust_type_str(&fixed_arr_ty);
+                let l_arr_str = holy_expr_to_rust_expr(&l_arr);
+
+                let body = vec![
+                    var_decl("x", fixed_arr_ty.clone(), l_arr.clone(), true)
+                ];
+                let func = returning_func("foo", vec![param("a", fixed_arr_ty.clone()), param("b", fixed_arr_ty.clone())], vec![fixed_arr_ty.clone()], body);
+                let ast = &ast_one(func);
+
+                let internals = import_internals();
+                let rcode = transpile(ast);
+                assert!(rcode.starts_with(&internals));
+                let rcode = rcode[internals.len()..].replace('\n', "");
+
+                assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ let x: {} = {};}}", fixed_arr_ty_str, fixed_arr_ty_str, fixed_arr_ty_str, fixed_arr_ty_str, l_arr_str));
+            }
+        }
+    }
+
+    #[test]
+    fn uninited_var_fixed_arrays_with_const_size() {
+        let literals = get_all_literals();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
+            for i in 0usize..200usize {
+                let fixed_arr_ty = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Const("s".to_string()));
+                let l_arr = array_lit(vec![l.clone(); i], Some(fixed_arr_ty.clone()));
+
+                let fixed_arr_ty_str = holy_type_to_rust_type_str(&fixed_arr_ty);
+                let l_arr_str = holy_expr_to_rust_expr(&l_arr);
+
+                let body = vec![
+                    var_decl("x", fixed_arr_ty.clone(), l_arr.clone(), false)
+                ];
+                let func = returning_func("foo", vec![param("a", fixed_arr_ty.clone()), param("b", fixed_arr_ty.clone())], vec![fixed_arr_ty.clone()], body);
+                let ast = &ast_one(func);
+
+                let internals = import_internals();
+                let rcode = transpile(ast);
+                assert!(rcode.starts_with(&internals));
+                let rcode = rcode[internals.len()..].replace('\n', "");
+                
+                assert_eq!(
+                    rcode, 
+                    format!("fn foo(a: {}, b: {}) -> {} {{ let mut x: {} = {};}}", fixed_arr_ty_str, fixed_arr_ty_str, fixed_arr_ty_str, fixed_arr_ty_str, l_arr_str)
+                );
+            }
+        }
+    }
+
+
 
 }
 
@@ -696,7 +944,10 @@ mod var_decl_in_multi_returning_func_with_params_tests {
                     let func = returning_func("foo", vec![param("a", t2.clone()), param("b", t2.clone())], vec![t1.clone(); 3], body.clone());
                     let ast = &ast_one(func);
 
-                    let rcode = transpile(ast).replace("\n", "");
+                    let internals = import_internals();
+                    let rcode = transpile(ast);
+                    assert!(rcode.starts_with(&internals));
+                    let rcode = rcode[internals.len()..].replace('\n', "");
 
                     let t2_str = holy_type_to_rust_type_str(&t2);
                     let bin_str = holy_expr_to_rust_expr(&bin);
@@ -730,7 +981,10 @@ mod var_decl_in_multi_returning_func_with_params_tests {
                     let func = returning_func("foo", vec![param("a", t2.clone()), param("b", t2.clone())], vec![t1.clone(); 3], body.clone());
                     let ast = &ast_one(func);
 
-                    let rcode = transpile(ast).replace("\n", "");
+                    let internals = import_internals();
+                    let rcode = transpile(ast);
+                    assert!(rcode.starts_with(&internals));
+                    let rcode = rcode[internals.len()..].replace('\n', "");
 
                     let t2_str = holy_type_to_rust_type_str(&t2);
                     let bin_str = holy_expr_to_rust_expr(&bin);
@@ -759,7 +1013,10 @@ mod var_decl_in_multi_returning_func_with_params_tests {
                 let func = returning_func("foo", vec![param("a", t2.clone()), param("b", t2.clone())], vec![t1.clone(); 3], body.clone());
                 let ast = &ast_one(func);
 
-                let rcode = transpile(ast).replace("\n", "");
+                let internals = import_internals();
+                let rcode = transpile(ast);
+                assert!(rcode.starts_with(&internals));
+                let rcode = rcode[internals.len()..].replace('\n', "");
 
                 let t2_str = holy_type_to_rust_type_str(&t2);
 
@@ -787,7 +1044,10 @@ mod var_decl_in_multi_returning_func_with_params_tests {
                 let func = returning_func("foo", vec![param("a", t2.clone()), param("b", t2.clone())], vec![t1.clone(); 3], body.clone());
                 let ast = &ast_one(func);
 
-                let rcode = transpile(ast).replace("\n", "");
+                let internals = import_internals();
+                let rcode = transpile(ast);
+                assert!(rcode.starts_with(&internals));
+                let rcode = rcode[internals.len()..].replace('\n', "");
 
                 let t2_str = holy_type_to_rust_type_str(&t2);
 
@@ -812,7 +1072,10 @@ mod var_decl_in_multi_returning_func_with_params_tests {
                 let func = returning_func("foo", vec![param("a", t2.clone()), param("b", t2.clone())], vec![t1.clone(); 3], body.clone());
                 let ast = &ast_one(func);
 
-                let rcode = transpile(ast).replace("\n", "");
+                let internals = import_internals();
+                let rcode = transpile(ast);
+                assert!(rcode.starts_with(&internals));
+                let rcode = rcode[internals.len()..].replace('\n', "");
 
                 let t2_str = holy_type_to_rust_type_str(&t2);
 
@@ -837,7 +1100,10 @@ mod var_decl_in_multi_returning_func_with_params_tests {
                 let func = returning_func("foo", vec![param("a", t2.clone()), param("b", t2.clone())], vec![t1.clone(); 3], body.clone());
                 let ast = &ast_one(func);
 
-                let rcode = transpile(ast).replace("\n", "");
+                let internals = import_internals();
+                let rcode = transpile(ast);
+                assert!(rcode.starts_with(&internals));
+                let rcode = rcode[internals.len()..].replace('\n', "");
 
                 let t2_str = holy_type_to_rust_type_str(&t2);
 
@@ -847,10 +1113,10 @@ mod var_decl_in_multi_returning_func_with_params_tests {
     }
 
     #[test]
-    fn inited_var_fixed_arrays() {
-        let literals = get_all_literals_no_arr();
+    fn inited_var_fixed_arrays_with_literal_size() {
+        let literals = get_all_literals();
         
-        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+        for (l, t) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
             for i in 0usize..200usize {
                 let fixed_arr_ty = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i));
 
@@ -865,7 +1131,10 @@ mod var_decl_in_multi_returning_func_with_params_tests {
                 let func = returning_func("foo", vec![param("a", fixed_arr_ty.clone()), param("b", fixed_arr_ty.clone())], vec![fixed_arr_ty.clone(); 3], body);
                 let ast = &ast_one(func);
 
-                let rcode = transpile(ast).replace("\n", "");
+                let internals = import_internals();
+                let rcode = transpile(ast);
+                assert!(rcode.starts_with(&internals));
+                let rcode = rcode[internals.len()..].replace('\n', "");
 
                 assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> ({}, {}, {}) {{ let x: {} = {};}}", fixed_arr_ty_str, fixed_arr_ty_str, fixed_arr_ty_str, fixed_arr_ty_str, fixed_arr_ty_str, fixed_arr_ty_str, l_arr_str));
             }
@@ -873,10 +1142,10 @@ mod var_decl_in_multi_returning_func_with_params_tests {
     }
 
     #[test]
-    fn uninited_var_fixed_arrays() {
-        let literals = get_all_literals_no_arr();
+    fn uninited_var_fixed_arrays_with_literal_size() {
+        let literals = get_all_literals();
         
-        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+        for (l, t) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
             for i in 0usize..200usize {
                 let fixed_arr_ty = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i));
                 let l_arr = array_lit(vec![l.clone(); i], Some(fixed_arr_ty.clone()));
@@ -890,7 +1159,70 @@ mod var_decl_in_multi_returning_func_with_params_tests {
                 let func = returning_func("foo", vec![param("a", fixed_arr_ty.clone()), param("b", fixed_arr_ty.clone())], vec![fixed_arr_ty.clone(); 3], body);
                 let ast = &ast_one(func);
 
-                let rcode = transpile(ast).replace("\n", "");
+                let internals = import_internals();
+                let rcode = transpile(ast);
+                assert!(rcode.starts_with(&internals));
+                let rcode = rcode[internals.len()..].replace('\n', "");
+                
+                assert_eq!(
+                    rcode, 
+                    format!("fn foo(a: {}, b: {}) -> ({}, {}, {}) {{ let mut x: {} = {};}}", fixed_arr_ty_str, fixed_arr_ty_str, fixed_arr_ty_str, fixed_arr_ty_str, fixed_arr_ty_str, fixed_arr_ty_str, l_arr_str)
+                );
+            }
+        }
+    }
+
+
+    #[test]
+    fn inited_var_fixed_arrays_with_const_size() {
+        let literals = get_all_literals();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
+            for i in 0usize..200usize {
+                let fixed_arr_ty = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Const("s".to_string()));
+                let l_arr = array_lit(vec![l.clone(); i], Some(fixed_arr_ty.clone()));
+
+                let fixed_arr_ty_str = holy_type_to_rust_type_str(&fixed_arr_ty);
+                let l_arr_str = holy_expr_to_rust_expr(&l_arr);
+
+                let body = vec![
+                    var_decl("x", fixed_arr_ty.clone(), l_arr.clone(), true)
+                ];
+                let func = returning_func("foo", vec![param("a", fixed_arr_ty.clone()), param("b", fixed_arr_ty.clone())], vec![fixed_arr_ty.clone(); 3], body);
+                let ast = &ast_one(func);
+
+                let internals = import_internals();
+                let rcode = transpile(ast);
+                assert!(rcode.starts_with(&internals));
+                let rcode = rcode[internals.len()..].replace('\n', "");
+
+                assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> ({}, {}, {}) {{ let x: {} = {};}}", fixed_arr_ty_str, fixed_arr_ty_str, fixed_arr_ty_str, fixed_arr_ty_str, fixed_arr_ty_str, fixed_arr_ty_str, l_arr_str));
+            }
+        }
+    }
+
+    #[test]
+    fn uninited_var_fixed_arrays_with_const_size() {
+        let literals = get_all_literals();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
+            for i in 0usize..200usize {
+                let fixed_arr_ty = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Const("s".to_string()));
+                let l_arr = array_lit(vec![l.clone(); i], Some(fixed_arr_ty.clone()));
+
+                let fixed_arr_ty_str = holy_type_to_rust_type_str(&fixed_arr_ty);
+                let l_arr_str = holy_expr_to_rust_expr(&l_arr);
+
+                let body = vec![
+                    var_decl("x", fixed_arr_ty.clone(), l_arr.clone(), false)
+                ];
+                let func = returning_func("foo", vec![param("a", fixed_arr_ty.clone()), param("b", fixed_arr_ty.clone())], vec![fixed_arr_ty.clone(); 3], body);
+                let ast = &ast_one(func);
+
+                let internals = import_internals();
+                let rcode = transpile(ast);
+                assert!(rcode.starts_with(&internals));
+                let rcode = rcode[internals.len()..].replace('\n', "");
                 
                 assert_eq!(
                     rcode, 
