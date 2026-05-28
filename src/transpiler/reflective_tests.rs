@@ -16,6 +16,7 @@ mod const_tests;
 mod var_decl_tests;
 mod var_assign_tests;
 mod multi_return_tests;
+mod lock_tests;
 
 // With dynamic array types 
 static ALL_TYPES_WITH_DYN_ARR: LazyLock<Vec<Type>> = LazyLock::new(|| {
