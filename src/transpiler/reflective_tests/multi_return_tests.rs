@@ -2,7 +2,7 @@ use super::*;
 
 #[cfg(test)]
 mod multi_return_tests {
-    use super::*;
+    use super::*; 
 
     #[test]
     fn multi_decl() {
@@ -25,7 +25,10 @@ mod multi_return_tests {
 
                 let ast = &AST{ functions: vec![pair, main], globals: vec![] };
 
-                let rcode = transpile(ast).replace("\n", "");
+                let internals = import_internals();
+                let rcode = transpile(ast);
+                assert!(rcode.starts_with(&internals));
+                let rcode = rcode[internals.len()..].replace('\n', "");
 
                 let t2_str = holy_type_to_rust_type_str(&t2);
                 let l2_str = holy_expr_to_rust_expr(&l2);
@@ -64,7 +67,10 @@ mod multi_return_tests {
 
             let ast = &AST{ functions: vec![pair, main], globals: vec![] };
 
-            let rcode = transpile(ast).replace("\n", "");
+            let internals = import_internals();
+            let rcode = transpile(ast);
+            assert!(rcode.starts_with(&internals));
+            let rcode = rcode[internals.len()..].replace('\n', "");
 
 
             assert_eq!(
@@ -74,6 +80,53 @@ mod multi_return_tests {
                     t_str, t_str, t_str, bl_str, bl_str, bl_str, t_str, t_str, t_str
                 )
             );
+        }
+    }
+
+    #[test]
+    fn multi_decl_all_bin_op() {
+        let literals = get_all_literals();
+
+        for (l, t) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
+            let t_str = holy_type_to_rust_type_str(&t);
+            
+            for b in ALL_BIN_OP_KIND {
+                let bin = Expr::BinOp {
+                    left: Box::new(l.clone()),
+                    op: b,
+                    right: Box::new(l.clone()),
+                    span: span(),
+                };
+
+                let pair_body = vec![return_stmt(vec![bin.clone();3])];
+                let pair = returning_func("pair", vec![], vec![t.clone(); 3], pair_body);
+
+                let body = vec![
+                    Stmt::VarAssignMulti(MultiAssignment{
+                        names: vec!["a".to_string(), "b".to_string(), "c".to_string()],
+                        value: call_expr("pair", vec![]),
+                        span: span()
+                    })
+                ];
+                let main = void_func("main", vec![], body);
+
+                let ast = &AST{ functions: vec![pair, main], globals: vec![] };
+            
+                let internals = import_internals();
+                let rcode = transpile(ast);
+                assert!(rcode.starts_with(&internals));
+                let rcode = rcode[internals.len()..].replace('\n', "");
+
+                let bin_str = holy_expr_to_rust_expr(&bin);
+
+                assert_eq!(
+                    rcode, 
+                    format!(
+                        "fn pair() -> ({}, {}, {}) {{ return ({}, {}, {})}}fn main() {{ (a, b, c) = pair();}}",
+                        t_str, t_str, t_str, bin_str, bin_str, bin_str
+                    )
+                );
+            }
         }
     }
 

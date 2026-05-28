@@ -1,7 +1,7 @@
 use super::*;
 use std::sync::LazyLock;
 use crate::tests_consts::{
-    ALL_TYPES_NO_ARR, 
+    // ALL_TYPES_NO_ARR, 
     ALL_BIN_OP_KIND, ALL_BIN_OP_KIND_COMP, ALL_BIN_OP_KIND_COMP_EQ
 };
 
@@ -9,7 +9,7 @@ use crate::ast::{
     Type, Span, Stmt, Expr, Param,
     IntLiteralValue,
     VariableDeclaration, MultiVariableDeclaration,
-    VariableAssignment
+    VariableAssignment, MultiAssignment
 };
 
 mod const_tests;
@@ -232,6 +232,7 @@ fn get_many_boolean_conditions() -> Vec<Expr> {
 }
 
 
+/*
 fn get_all_literals_no_arr() -> [Expr; 14] {
     let literals = [
         int8_lit(1),
@@ -256,6 +257,7 @@ fn get_all_literals_no_arr() -> [Expr; 14] {
 
     return literals;
 }
+*/
 
 fn get_all_literals() -> [Expr; 28] {
     return [
