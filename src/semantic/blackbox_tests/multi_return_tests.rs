@@ -873,7 +873,7 @@ mod multi_return_tests {
         let literals = get_all_literals_no_arr();
         let literals_scattered = get_all_literals_no_arr_scattered_order();
         
-        // `a` is a `main` argument, aka it is already declared
+        // `a` is a `foo` argument, aka it is already declared
         for (((l1, t1), l2), t2) in literals.iter()
             .zip(ALL_TYPES_NO_ARR.iter())
             .zip(literals_scattered.iter())
@@ -889,9 +889,9 @@ mod multi_return_tests {
             let body = vec![
                 Stmt::VarDeclMulti(vars, call_expr("pair", vec![]))
             ];
-            let main = void_func("main", vec![param("a", t1.clone())], body);
+            let foo = void_func("foo", vec![param("a", t1.clone())], body);
 
-            let mut ast = AST { functions: vec![pair, main], globals: vec![] };
+            let mut ast = AST { functions: vec![pair, foo], globals: vec![] };
             let result = check_semantics(&mut ast);
 
             assert!(result.is_err());
@@ -915,9 +915,9 @@ mod multi_return_tests {
             let body = vec![
                 Stmt::VarDeclMulti(vars, call_expr("pair", vec![]))
             ];
-            let main = void_func("main", vec![param("b", t2.clone())], body);
+            let foo = void_func("foo", vec![param("b", t2.clone())], body);
 
-            let mut ast = AST { functions: vec![pair, main], globals: vec![] };
+            let mut ast = AST { functions: vec![pair, foo], globals: vec![] };
             let result = check_semantics(&mut ast);
 
             assert!(result.is_err());
@@ -931,7 +931,7 @@ mod multi_return_tests {
         let literals = get_all_literals_no_arr();
         let literals_scattered = get_all_literals_no_arr_scattered_order();
         
-        // `a` is a `main` argument, aka it is already declared
+        // `a` is a `foo` argument, aka it is already declared
         for (((l1, t1), l2), t2) in literals.iter()
             .zip(ALL_TYPES_NO_ARR.iter())
             .zip(literals_scattered.iter())
@@ -947,9 +947,9 @@ mod multi_return_tests {
             let body = vec![
                 Stmt::VarDeclMulti(vars, call_expr("pair", vec![]))
             ];
-            let main = void_func("main", vec![param("a", t1.clone()), param("b", t2.clone())], body);
+            let foo = void_func("foo", vec![param("a", t1.clone()), param("b", t2.clone())], body);
 
-            let mut ast = AST { functions: vec![pair, main], globals: vec![] };
+            let mut ast = AST { functions: vec![pair, foo], globals: vec![] };
             let result = check_semantics(&mut ast);
 
             assert!(result.is_err());

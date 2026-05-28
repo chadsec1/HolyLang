@@ -8,6 +8,32 @@ mod function_tests {
     use super::*;
 
     #[test]
+    fn main_func_with_return_type_errors() {
+        for t in ALL_TYPES_WITH_DYN_ARR.iter() {
+            for i in 1..100 {
+                let main = returning_func("main", vec![], vec![t.clone(); i], vec![]);
+                let mut ast = AST { functions: vec![main], globals: vec![] };
+                let result = check_semantics(&mut ast);
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("function `main` must not return."));
+            }
+        }
+    }
+
+    #[test]
+    fn main_func_with_parameters_errors() {
+        for t in ALL_TYPES_WITH_DYN_ARR.iter() {
+            for i in 1..100 {
+                let main = void_func("main", vec![param("a", t.clone()); i], vec![]);
+                let mut ast = AST { functions: vec![main], globals: vec![] };
+                let result = check_semantics(&mut ast);
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("function `main` must not have any parameters"));
+            }
+        }
+    }
+
+    #[test]
     fn function_name_taken_by_function_name_errors() {
         let f1 = void_func("foo", vec![], vec![]);
         let f2 = void_func("foo", vec![], vec![]);
