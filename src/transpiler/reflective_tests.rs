@@ -9,7 +9,10 @@ use crate::ast::{
     Type, Span, Stmt, Expr, Param,
     IntLiteralValue,
     VariableDeclaration, MultiVariableDeclaration,
-    VariableAssignment, MultiAssignment
+    VariableAssignment, MultiAssignment,
+
+    WhileStmt, InfiniteStmt, ForStmt,
+    BreakStmt
 };
 
 mod const_tests;
@@ -18,6 +21,8 @@ mod var_assign_tests;
 mod multi_return_tests;
 mod lock_tests;
 mod unlock_tests;
+
+mod break_stmt_tests;
 
 // With dynamic array types 
 static ALL_TYPES_WITH_DYN_ARR: LazyLock<Vec<Type>> = LazyLock::new(|| {
