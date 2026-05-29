@@ -11,7 +11,7 @@ use crate::ast::{
     VariableDeclaration, MultiVariableDeclaration,
     VariableAssignment, MultiAssignment,
 
-    WhileStmt, InfiniteStmt, ForStmt,
+    WhileStmt, InfiniteStmt, ForStmt, IfStmt,
     BreakStmt
 };
 
