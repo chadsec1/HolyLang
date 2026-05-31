@@ -94,6 +94,47 @@ fn get_all_literals_edge_cases() -> [String; 125] {
 mod tests {
     use super::*;
 
+    // get_array_contents
+    //
+    mod get_array_contents {
+        use super::*;
+
+        #[test]
+        fn array_literal_empty() {
+            assert_eq!(
+                helpers::get_array_contents(&"[]"),
+                Some(("", 0))
+            );
+        }
+
+        #[test]
+        fn array_literal_full_of_literals() {
+            let literals = get_all_literals_edge_cases(); 
+
+            for l in literals {
+                for s in [',', ':'] {
+                    assert_eq!(
+                        helpers::get_array_contents(&format!("[{}{} {}{} {}]", l, s, l, s, l)),
+                        Some((format!("{}{} {}{} {}", l, s, l, s, l).as_str(), 0))
+                    );
+                }
+            }
+        }
+
+        #[test]
+        fn array_access() {
+            let literals = get_all_literals_edge_cases(); 
+
+            for l in literals {
+                assert_eq!(
+                    helpers::get_array_contents(&format!("x[{}]", l)),
+                    Some((format!("{}", l).as_str(), 1))
+                );
+            }
+        }
+    }
+
+
     // find_top_level_op_any
     //
     mod find_top_level_op_any {
@@ -142,7 +183,7 @@ mod tests {
 
         #[test]
         fn left_associativity_picks_rightmost_lowest_precedence() {
-            // "a+b+c" both '+' have the same precedence; should get the RIGHTMOST one
+            // "a+b+c" both '+' have the same precedence, should get the right most one
             let result = helpers::find_top_level_op_any("a+b+c");
             assert_eq!(result, Some((3, "+")));
         }
