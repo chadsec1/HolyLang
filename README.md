@@ -109,7 +109,7 @@ func main() {
     #
 
     own a int32 = 1
-    own b int32 = x
+    own b int32 = a
 
     # This is invalid, it would not compile if I uncomment it.
     # a = 2
