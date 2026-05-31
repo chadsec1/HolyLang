@@ -11,6 +11,10 @@ use crate::consts;
 ///
 ///
 pub fn get_parenthesis_contents(s: &str) -> Option<&str> {
+    if s.len() == 0 {
+        return None
+    }
+
     let matching_close = {
         let mut depth = 0usize;
         let mut found = None;
