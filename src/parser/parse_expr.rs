@@ -282,8 +282,6 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
     }
 
 
-
-
     // special-case: array literal: 
     // e.g. "[1, 2, 3]", "[]", "[1, [2, 3], 4, 5]"
     // detect pattern: "[ ... ]"
