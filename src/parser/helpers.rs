@@ -3,6 +3,64 @@ use super::*;
 use crate::consts;
 
 
+/// Gets array contents.
+/// I.e. [ .. EXPRESSIONS .. ] would give Some(EXPRESSIONS, opening_bracket_position)
+///
+/// This only gets array content if the array extends to the end of the string
+/// like, [ .. EXPRESSIONS ..] is ok but [ .. EXPRESSIONS .. ] == EXPRESSION, etc, is not.
+///
+///
+pub fn get_array_contents(s: &str) -> Option<(&str, usize)> {
+    if let Some(first_bracket) = s.find("[") {
+        let matching_close = {
+            let mut depth = 0usize;
+            let mut found = None;
+            let mut in_string = false;
+            let mut in_escape = false;
+            for (i, c) in s[first_bracket + 1..].char_indices() {
+                if in_escape {
+                    in_escape = false;
+                    continue;
+                }
+
+                match c {
+                    '[' => {
+                        if !in_string {
+                            depth += 1
+                        }
+                    },
+                    '"' => in_string = !in_string,
+                    '\\' => in_escape = true,
+                    ']' => {
+                        if !in_string {
+                            if depth == 0 {
+                                found = Some(first_bracket + i + 1);
+                                break;
+                            }
+                            depth -= 1;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            found
+        };
+
+
+        if let Some(close_pos) = matching_close && close_pos == s.len() - 1 {
+            let elems_str = &s[first_bracket + 1.. s.len() - 1];
+
+            return Some((elems_str, first_bracket))
+        }
+    }
+
+    None
+}
+
+
+/// Finds binary operators at top level only
+/// i.e. "or", "and", "==", "<", ">", etc.
+///
 pub fn find_top_level_op_any(s: &str) -> Option<(usize, &str)> {
     fn precedence(op: &str) -> u8 {
         match op {
@@ -111,13 +169,12 @@ pub fn find_top_level_op_any(s: &str) -> Option<(usize, &str)> {
 
 
 
-/// Split "char"-separated args at top-level only.
-/// - respects nested (), [], {}
-/// - respects "..." and '...' with backslash escapes
-/// - returns slices into `s` (no allocation for substrings beyond the Vec)
+/// Split "char"-separated args at top-level only (i.e. ignores nested (), [], {})
+/// - respects backslash escapes
+///
 pub fn split_char_top_level(split_char: char, s: &str) -> Result<Vec<&str>, HolyError> {
     if (split_char != ',') && (split_char != ':') {
-        panic!("(Compiler bug guard) You are most likely misusing split_char_top_level, we expected char to be one of ':', ',', ' ', but instead we got `{}`", split_char);
+        panic!("(Compiler bug) You are most likely misusing split_char_top_level, we expected char to be one of ':', ',', ' ', but instead we got `{}`", split_char);
     }
 
     let mut parts = Vec::new();
@@ -217,7 +274,7 @@ pub fn string_strip_outer_quotes_and_unescape(s: &str) -> Result<String, HolyErr
                 Some('r')  => out.push('\r'),
                 Some('t')  => out.push('\t'),
                 Some('\\') => out.push('\\'),
-                Some('"')  => out.push('"'),
+                Some('"')  => out.push_str("\\\""),
                 Some('\'') => out.push('\''),
                 Some('0')  => out.push('\0'),
                 Some(other) => return Err(HolyError::Parse(format!(
