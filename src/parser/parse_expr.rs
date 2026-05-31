@@ -29,6 +29,8 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
         // string_strip_outer_quotes_and_unescape due to fact it errors on invalid strings thinking
         // its a string, but it could also be an expression concerning strings. so we have to still
         // manually basic match here.
+        // so binary operations regarding strings fall through, but if this is truly a string
+        // literal, we strip and unquote it.
         //
         let mut chars = s.char_indices().skip(1);
         let closing = loop {
@@ -169,6 +171,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
     if let Some((pos, op)) = helpers::find_top_level_op_any(s) {
         let left = s[..pos].trim();
         let right = s[pos + op.len()..].trim();
+
         if left.is_empty() {
             return Err(HolyError::Parse(format!(
                 "Expected expression before '{}' at line {} column {}",
@@ -288,8 +291,6 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
 
     if s.starts_with("[") {
         if let Some((elems_str, _)) = helpers::get_array_contents(&s) {
-            let elems_str = &s[1..s.len() - 1];
-
             let mut elems: Vec<Expr> = Vec::new();
             if !elems_str.trim().is_empty() {
                 let split_parts = helpers::split_char_top_level(',', elems_str)
