@@ -66,32 +66,10 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
 
 
     // Parentheses grouping: if the whole expression is wrapped in top-level parentheses, parse inner
-    if s.starts_with('(') && s.ends_with(')') {
-        // ensure the closing paren matches the opening at position 0 (top-level wrap)
-        let mut depth = 0usize;
-        let mut matched_at_end = false;
-        for (i, c) in s.char_indices() {
-            match c {
-                '(' => depth += 1,
-                ')' => {
-                    // NOTE: We dont check depth > 0 here because, we already checkk starts_with
-                    // and ends_with, so ) is guaranteed to be > 0
-                    //
-                    depth -= 1;
-                    if depth == 0 && i == s.len() - 1 {
-                        matched_at_end = true;
-                    }
-                }
-                _ => {}
-            }
-            if depth == 0 && i < s.len() - 1 {
-                // top-level closed before end means its not a full wrap
-                matched_at_end = false;
-                break;
-            }
-        }
-        if matched_at_end {
-            let inner = &s[1..s.len() - 1];
+    //
+
+    if s.starts_with('(') {
+        if let Some(inner) = helpers::get_parenthesis_contents(&s) {
             return parse_expr(inner, span);
         }
     }

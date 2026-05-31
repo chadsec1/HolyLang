@@ -3,6 +3,59 @@ use super::*;
 use crate::consts;
 
 
+/// Gets parenthesis contents.
+/// I.e. ( .. EXPRESSIONS .. ) would give Some(EXPRESSIONS)
+///
+/// This only gets parenthesis content if the parenthesis extends to the end of the string
+/// like, ( .. EXPRESSIONS ..) is ok but ( .. EXPRESSIONS .. ) == EXPRESSION, etc, is not.
+///
+///
+pub fn get_parenthesis_contents(s: &str) -> Option<&str> {
+    let matching_close = {
+        let mut depth = 0usize;
+        let mut found = None;
+        let mut in_string = false;
+        let mut in_escape = false;
+        for (i, c) in s[1..].char_indices() {
+            if in_escape {
+                in_escape = false;
+                continue;
+            }
+
+            match c {
+                '(' => {
+                    if !in_string {
+                        depth += 1
+                    }
+                },
+                '"' => in_string = !in_string,
+                '\\' => in_escape = true,
+                ')' => {
+                    if !in_string {
+                        if depth == 0 {
+                            found = Some(1 + i);
+                            break;
+                        }
+                        depth -= 1;
+                    }
+                }
+                _ => {}
+            }
+        }
+        found
+    };
+
+
+    if let Some(close_pos) = matching_close && close_pos == s.len() - 1 {
+        let parenthesis_str = &s[1.. s.len() - 1];
+
+        return Some(parenthesis_str)
+    }
+
+    None
+}
+
+
 /// Gets array contents.
 /// I.e. [ .. EXPRESSIONS .. ] would give Some(EXPRESSIONS, opening_bracket_position)
 ///
