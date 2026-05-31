@@ -101,10 +101,51 @@ mod tests {
         use super::*;
 
         #[test]
+        fn empty() {
+            assert_eq!(
+                helpers::get_parenthesis_contents(&""),
+                None
+            );
+        }
+
+        #[test]
         fn empty_parenthesis() {
             assert_eq!(
                 helpers::get_parenthesis_contents(&"()"),
                 Some("")
+            );
+        }
+
+        #[test]
+        fn empty_parenthesis_inside_empty_parenthesis() {
+            assert_eq!(
+                helpers::get_parenthesis_contents(&"(())"),
+                Some("()")
+            );
+        }
+
+
+        #[test]
+        fn two_empty_parenthesis() {
+            assert_eq!(
+                helpers::get_parenthesis_contents(&"() ()"),
+                None,
+            );
+        }
+
+        #[test]
+        fn two_empty_parenthesis_inside_two_empty_parenthesis() {
+            assert_eq!(
+                helpers::get_parenthesis_contents(&"(()) (())"),
+                None,
+            );
+        }
+
+        #[test]
+        fn two_empty_parenthesis_inside_empty_parenthesis() {
+            assert_eq!(
+                helpers::get_parenthesis_contents(&"(() ())"),
+                Some("() ()")
             );
         }
 
@@ -123,6 +164,20 @@ mod tests {
         }
 
         #[test]
+        fn two_parenthesis_full_of_literals_with_splits() {
+            let literals = get_all_literals_edge_cases(); 
+
+            for l in literals {
+                for s in [',', ':'] {
+                    assert_eq!(
+                        helpers::get_parenthesis_contents(&format!("({}{} {}{} {}) ({}{} {}{} {})", l, s, l, s, l, l, s, l, s, l)),
+                        None
+                    );
+                }
+            }
+        }
+
+        #[test]
         fn parenthesis_binop_literals() {
             let literals = get_all_literals_edge_cases(); 
 
@@ -131,6 +186,20 @@ mod tests {
                     assert_eq!(
                         helpers::get_parenthesis_contents(&format!("({}{} {}{} {})", l, s, l, s, l)),
                         Some(format!("{}{} {}{} {}", l, s, l, s, l).as_str())
+                    );
+                }
+            }
+        }
+
+        #[test]
+        fn two_parenthesis_binop_literals() {
+            let literals = get_all_literals_edge_cases(); 
+
+            for l in literals {
+                for s in BIN_OP_KIND_SYMBOLS {
+                    assert_eq!(
+                        helpers::get_parenthesis_contents(&format!("({}{} {}{} {}) ({}{} {}{} {})", l, s, l, s, l, l, s, l, s, l)),
+                        None
                     );
                 }
             }
@@ -145,6 +214,14 @@ mod tests {
         use super::*;
 
         #[test]
+        fn empty() {
+            assert_eq!(
+                helpers::get_array_contents(&""),
+                None
+            );
+        }
+
+        #[test]
         fn array_literal_empty() {
             assert_eq!(
                 helpers::get_array_contents(&"[]"),
@@ -153,7 +230,32 @@ mod tests {
         }
 
         #[test]
-        fn array_literal_full_of_literals() {
+        fn array_literal_empty_inside_array_literal() {
+            assert_eq!(
+                helpers::get_array_contents(&"[[]]"),
+                Some(("[]", 0))
+            );
+        }
+
+
+        #[test]
+        fn two_array_literal_empty_inside_array_literal() {
+            assert_eq!(
+                helpers::get_array_contents(&"[[] []]"),
+                Some(("[] []", 0))
+            );
+        }
+
+        #[test]
+        fn two_empty_array_literals() {
+            assert_eq!(
+                helpers::get_array_contents(&"[] []"),
+                None
+            );
+        }
+
+        #[test]
+        fn array_literal_full_of_literals_with_splits() {
             let literals = get_all_literals_edge_cases(); 
 
             for l in literals {
@@ -161,6 +263,48 @@ mod tests {
                     assert_eq!(
                         helpers::get_array_contents(&format!("[{}{} {}{} {}]", l, s, l, s, l)),
                         Some((format!("{}{} {}{} {}", l, s, l, s, l).as_str(), 0))
+                    );
+                }
+            }
+        }
+
+        #[test]
+        fn two_array_literal_full_of_literals_with_splits() {
+            let literals = get_all_literals_edge_cases(); 
+
+            for l in literals {
+                for s in [',', ':'] {
+                    assert_eq!(
+                        helpers::get_array_contents(&format!("[{}{} {}{} {}] [{}{} {}{} {}]", l, s, l, s, l, l, s, l, s, l)),
+                        None
+                    );
+                }
+            }
+        }
+
+        #[test]
+        fn array_literal_full_of_binop_literals() {
+            let literals = get_all_literals_edge_cases(); 
+
+            for l in literals {
+                for s in BIN_OP_KIND_SYMBOLS {
+                    assert_eq!(
+                        helpers::get_array_contents(&format!("[{}{} {}{} {}]", l, s, l, s, l)),
+                        Some((format!("{}{} {}{} {}", l, s, l, s, l).as_str(), 0))
+                    );
+                }
+            }
+        }
+
+        #[test]
+        fn two_array_literal_full_of_binop_literals() {
+            let literals = get_all_literals_edge_cases(); 
+
+            for l in literals {
+                for s in BIN_OP_KIND_SYMBOLS {
+                    assert_eq!(
+                        helpers::get_parenthesis_contents(&format!("({}{} {}{} {}) ({}{} {}{} {})", l, s, l, s, l, l, s, l, s, l)),
+                        None,
                     );
                 }
             }
