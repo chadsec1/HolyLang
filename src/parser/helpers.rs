@@ -11,13 +11,48 @@ use crate::consts;
 ///
 ///
 pub fn get_array_contents(s: &str) -> Option<(&str, usize)> {
-    if let Some(first_bracket) = s.find("[") {
+    let bracket_opening = {
+            let mut depth = 0usize;
+            let mut found = None;
+            let mut in_string = false;
+            let mut in_escape = false;
+            for (i, c) in s.char_indices() {
+                if in_escape {
+                    in_escape = false;
+                    continue;
+                }
+
+                match c {
+                    ']' => {
+                        if !in_string {
+                            depth += 1
+                        }
+                    },
+                    '"' => in_string = !in_string,
+                    '\\' => in_escape = true,
+                    '[' => {
+                        if !in_string {
+                            if depth == 0 {
+                                found = Some(i + 1);
+                                break;
+                            }
+                            depth -= 1;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            found
+        };
+
+
+    if let Some(first_bracket) = bracket_opening {
         let matching_close = {
             let mut depth = 0usize;
             let mut found = None;
             let mut in_string = false;
             let mut in_escape = false;
-            for (i, c) in s[first_bracket + 1..].char_indices() {
+            for (i, c) in s[first_bracket..].char_indices() {
                 if in_escape {
                     in_escape = false;
                     continue;
@@ -34,7 +69,7 @@ pub fn get_array_contents(s: &str) -> Option<(&str, usize)> {
                     ']' => {
                         if !in_string {
                             if depth == 0 {
-                                found = Some(first_bracket + i + 1);
+                                found = Some(first_bracket + i);
                                 break;
                             }
                             depth -= 1;
@@ -48,9 +83,9 @@ pub fn get_array_contents(s: &str) -> Option<(&str, usize)> {
 
 
         if let Some(close_pos) = matching_close && close_pos == s.len() - 1 {
-            let elems_str = &s[first_bracket + 1.. s.len() - 1];
+            let elems_str = &s[first_bracket .. s.len() - 1];
 
-            return Some((elems_str, first_bracket))
+            return Some((elems_str, first_bracket - 1))
         }
     }
 
@@ -82,85 +117,104 @@ pub fn find_top_level_op_any(s: &str) -> Option<(usize, &str)> {
 
     let chars: Vec<(usize, char)> = s.char_indices().collect();
     let mut depth = 0usize;
+    let mut in_string = false;
+    let mut in_escape = false;
     let mut best: Option<(usize, &str)> = None;
     let mut best_prec = u8::MAX;
     let mut i = 0;
 
     while i < chars.len() {
         let (idx, c) = chars[i];
-        match c {
-            '(' | '[' | '{' => depth += 1,
-            ')' | ']' | '}' => { if depth > 0 { depth -= 1; } }
-            _ if depth == 0 => {
-                // Peek next char
-                let next = chars.get(i + 1).map(|(_, nc)| *nc);
-
-                // Determine operator string at this position
-                let op_str: Option<&str> = match c {
-                    '=' if next == Some('=') => Some(&s[idx..idx + 2]),
-                    '!' if next == Some('=') => Some(&s[idx..idx + 2]),
-                    '>' if next == Some('=') => Some(&s[idx..idx + 2]),
-                    '<' if next == Some('=') => Some(&s[idx..idx + 2]),
-                    '>' if next == Some('>') => Some(&s[idx..idx + 2]),
-                    '<' if next == Some('<') => Some(&s[idx..idx + 2]),
-                    'a' if s[idx..].starts_with("and") => {
-                        let before = if i == 0 { None } else { Some(chars[i - 1].1) };
-                        let after = chars.get(i + 3).map(|(_, ch)| *ch);
-
-                        if before.map_or(true, |ch| !is_ident_char(ch))
-                            && after.map_or(true, |ch| !is_ident_char(ch))
-                        {
-                            Some(&s[idx..idx + 3])
-                        } else {
-                            None
-                        }
+        
+        if in_escape {
+            in_escape = false;
+        } else {
+            match c {
+                '"' => in_string = !in_string,
+                '\\' => in_escape = true,
+                '(' | '[' | '{' => {
+                    if !in_string {
+                        depth += 1
                     }
-
-                    'o' if s[idx..].starts_with("or") => {
-                        let before = if i == 0 { None } else { Some(chars[i - 1].1) };
-                        let after = chars.get(i + 2).map(|(_, ch)| *ch);
-
-                        if before.map_or(true, |ch| !is_ident_char(ch))
-                            && after.map_or(true, |ch| !is_ident_char(ch))
-                        {
-                            Some(&s[idx..idx + 2])
-                        } else {
-                            None
-                        }
-                    }
-
-                    '+' | '-' | '*' | '/' | '>' | '<' | '|' | '&' => Some(&s[idx..idx+1]),
-                    _ => None,
-                };
-
-                if let Some(op) = op_str {
-                    // Skip unary  (negate, logical not,m bitwise not)
-                    if op == "-" || op == "!" || op == "~" {
-                        let prev_non_ws = (0..i).rev()
-                            .map(|j| chars[j].1)
-                            .find(|ch| !ch.is_whitespace());
-                        match prev_non_ws {
-                            None => { i += 1; continue; }
-                            Some(prev) if "+-*/&|!~=<>(".contains(prev) => { i += 1; continue; }
-                            _ => {}
-                        }
-                    }
-
-                    let prec = precedence(op);
-                    if prec <= best_prec {
-                        best_prec = prec;
-                        best = Some((idx, op));
-                    }
-
-                    // Skip both chars for two-char operators so we don't
-                    // match the second char again
-                    if op.len() == 2 {
-                        i += 2;
-                        continue;
+                },
+                ')' | ']' | '}' => { 
+                    if !in_string {
+                        if depth > 0 { depth -= 1; } 
                     }
                 }
+                _ if depth == 0 => {
+                    if !in_string {
+                        // Peek next char
+                        let next = chars.get(i + 1).map(|(_, nc)| *nc);
+
+                        // Determine operator string at this position
+                        let op_str: Option<&str> = match c {
+                            '=' if next == Some('=') => Some(&s[idx..idx + 2]),
+                            '!' if next == Some('=') => Some(&s[idx..idx + 2]),
+                            '>' if next == Some('=') => Some(&s[idx..idx + 2]),
+                            '<' if next == Some('=') => Some(&s[idx..idx + 2]),
+                            '>' if next == Some('>') => Some(&s[idx..idx + 2]),
+                            '<' if next == Some('<') => Some(&s[idx..idx + 2]),
+                            'a' if s[idx..].starts_with("and") => {
+                                let before = if i == 0 { None } else { Some(chars[i - 1].1) };
+                                let after = chars.get(i + 3).map(|(_, ch)| *ch);
+
+                                if before.map_or(true, |ch| !is_ident_char(ch))
+                                    && after.map_or(true, |ch| !is_ident_char(ch))
+                                {
+                                    Some(&s[idx..idx + 3])
+                                } else {
+                                    None
+                                }
+                            }
+
+                            'o' if s[idx..].starts_with("or") => {
+                                let before = if i == 0 { None } else { Some(chars[i - 1].1) };
+                                let after = chars.get(i + 2).map(|(_, ch)| *ch);
+
+                                if before.map_or(true, |ch| !is_ident_char(ch))
+                                    && after.map_or(true, |ch| !is_ident_char(ch))
+                                {
+                                    Some(&s[idx..idx + 2])
+                                } else {
+                                    None
+                                }
+                            }
+
+                            '+' | '-' | '*' | '/' | '>' | '<' | '|' | '&' => Some(&s[idx..idx+1]),
+                            _ => None,
+                        };
+
+                        if let Some(op) = op_str {
+                            // Skip unary  (negate, logical not,m bitwise not)
+                            if op == "-" || op == "!" || op == "~" {
+                                let prev_non_ws = (0..i).rev()
+                                    .map(|j| chars[j].1)
+                                    .find(|ch| !ch.is_whitespace());
+                                match prev_non_ws {
+                                    None => { i += 1; continue; }
+                                    Some(prev) if "+-*/&|!~=<>(".contains(prev) => { i += 1; continue; }
+                                    _ => {}
+                                }
+                            }
+
+                            let prec = precedence(op);
+                            if prec <= best_prec {
+                                best_prec = prec;
+                                best = Some((idx, op));
+                            }
+
+                            // Skip both chars for two-char operators so we don't
+                            // match the second char again
+                            if op.len() == 2 {
+                                i += 2;
+                                continue;
+                            }
+                        }
+                    }
+                }
+                _ => {}
             }
-            _ => {}
         }
         i += 1;
     }
@@ -280,13 +334,9 @@ pub fn string_strip_outer_quotes_and_unescape(s: &str) -> Result<String, HolyErr
                 Some(other) => return Err(HolyError::Parse(format!(
                     "Unknown escape sequence `\\{}`", other
                 ))),
-                None => return Err(HolyError::Parse(
-                    "Trailing backslash in string".into()
-                )),
+                None => return Err(HolyError::Parse(format!("Trailing backslash in string: `{}`", s))),
             },
-            '"' => return Err(HolyError::Parse(format!(
-                "Unexpected unescaped quote inside string: `{}`", s
-            ))),
+            '"' => return Err(HolyError::Parse(format!("Unexpected unescaped quote inside string: `{}`", s))),
             _ => out.push(c),
         }
     }
