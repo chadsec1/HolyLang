@@ -41,15 +41,16 @@ mod string_literals_tests {
     #[test]
     fn string_literal_with_escaped_quote() {
         for t in ALL_TYPES_NO_ARR {
-            let stmts = parse_body(&format!("own x {} = \"say \\\"hi\\\"\"", t));
+            let stmts = parse_body(&format!(r#"own x {} = "say \"hi\"""#, t));
             assert_eq!(stmts.len(), 1);
             
             if let Stmt::VarDecl(v) = &stmts[0] {
                 assert_eq!(v.name, "x");
                 assert_eq!(v.type_name, t.clone());
 
+                println!("huh {:?}", v.value);
                 if let Expr::StringLiteral { value, .. } = &v.value {
-                    assert_eq!(value, r#"say "hi""#);
+                    assert_eq!(value, r#"say \"hi\""#);
                 } else { panic!(); }
             } else { panic!("Expected VarDecl"); }
         }

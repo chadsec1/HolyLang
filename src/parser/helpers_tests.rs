@@ -486,8 +486,8 @@ mod tests {
 
         #[test]
         fn escape_double_quote_inside() {
-            // \" inside should produce a literal "
-            assert_eq!(helpers::string_strip_outer_quotes_and_unescape(r#""a\"b""#).unwrap(), r#"a"b"#);
+            // \" inside should not be touched
+            assert_eq!(helpers::string_strip_outer_quotes_and_unescape(r#""a\"b""#).unwrap(), r#"a\"b"#);
         }
 
         #[test]

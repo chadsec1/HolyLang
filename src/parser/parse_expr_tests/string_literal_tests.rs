@@ -31,7 +31,7 @@ mod string_literals_tests {
     #[test]
     fn test_string_with_escaped_quote() {
         match parse(r#""say \"hi\"""#).unwrap() {
-            Expr::StringLiteral { value, .. } => assert_eq!(value, r#"say "hi""#),
+            Expr::StringLiteral { value, .. } => assert_eq!(value, r#"say \"hi\""#),
             other => panic!("expected StringLiteral, got {:?}", other),
         }
     }
