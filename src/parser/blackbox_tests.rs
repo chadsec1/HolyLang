@@ -90,7 +90,7 @@ fn span() -> Span {
 // all literals (ints, floats, array, strings literals of ints, floats, strings, other arrays, and variable names, and array access and slicing.
 // Some of these literals are illegal semantically, but syntaxally, should be valid.
 //
-fn get_all_literals_edge_cases() -> [String; 139] {
+fn get_all_literals_edge_cases() -> [String; 143] {
     return [
         i8::MIN.to_string(), i8::MAX.to_string(),
         i16::MIN.to_string(), i16::MAX.to_string(),
@@ -116,6 +116,8 @@ fn get_all_literals_edge_cases() -> [String; 139] {
         "\"[foo]\"".to_string(),
         "\"foo\\\"]\"".to_string(), "\"foo\\\"[\"".to_string(),
         "\"\\\"]foo\"".to_string(), "\"\\\"[foo[\"".to_string(),
+        "\"foo)\"".to_string(), "\"foo(\"".to_string(),
+        "\")foo\"".to_string(), "\"(foo\"".to_string(),
         "i".to_string(), "arr".to_string(), "x".to_string(), "y".to_string(), "xyz".to_string(),
         
         format!("arr[{}]", i8::MIN.to_string()), format!("arr[{}]", i8::MAX.to_string()), 
