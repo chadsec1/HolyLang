@@ -1,7 +1,8 @@
 use super::*;
 use crate::consts;
 use crate::tests_consts::{
-    ALL_TYPES_NO_ARR
+    ALL_TYPES_NO_ARR,
+    BIN_OP_KIND_SYMBOLS
 };
 
 // all literals (ints, floats, array, strings literals of ints, floats, strings, other arrays, and variable names, and array access and slicing.
@@ -93,6 +94,50 @@ fn get_all_literals_edge_cases() -> [String; 125] {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // get_parenthesis_contents
+    //
+    mod get_parenthesis_contents {
+        use super::*;
+
+        #[test]
+        fn empty_parenthesis() {
+            assert_eq!(
+                helpers::get_parenthesis_contents(&"()"),
+                Some("")
+            );
+        }
+
+        #[test]
+        fn parenthesis_full_of_literals_with_splits() {
+            let literals = get_all_literals_edge_cases(); 
+
+            for l in literals {
+                for s in [',', ':'] {
+                    assert_eq!(
+                        helpers::get_parenthesis_contents(&format!("({}{} {}{} {})", l, s, l, s, l)),
+                        Some(format!("{}{} {}{} {}", l, s, l, s, l).as_str())
+                    );
+                }
+            }
+        }
+
+        #[test]
+        fn parenthesis_binop_literals() {
+            let literals = get_all_literals_edge_cases(); 
+
+            for l in literals {
+                for s in BIN_OP_KIND_SYMBOLS {
+                    assert_eq!(
+                        helpers::get_parenthesis_contents(&format!("({}{} {}{} {})", l, s, l, s, l)),
+                        Some(format!("{}{} {}{} {}", l, s, l, s, l).as_str())
+                    );
+                }
+            }
+        }
+    }
+
+
 
     // get_array_contents
     //
