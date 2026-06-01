@@ -25,6 +25,8 @@ mod unlock_tests;
 mod break_stmt_tests;
 mod continue_stmt_tests;
 
+mod expr_stmt_tests;
+
 // With dynamic array types 
 static ALL_TYPES_WITH_DYN_ARR: LazyLock<Vec<Type>> = LazyLock::new(|| {
     vec![
