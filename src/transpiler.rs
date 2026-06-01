@@ -140,7 +140,7 @@ fn transpile_stmt(stmt: &Stmt) -> String {
 
             multi_decl_stmt_str.push(')');
             multi_decl_stmt_str.push_str(" = ");
-            multi_decl_stmt_str.push_str(&holy_expr_to_rust_expr(&expr));
+            multi_decl_stmt_str.push_str(&holy_expr_to_rust_expr(expr));
             multi_decl_stmt_str.push(';');
 
             multi_decl_stmt_str
@@ -157,7 +157,7 @@ fn transpile_stmt(stmt: &Stmt) -> String {
             multi_assign_stmt_str.push('(');
             
             for name in &multi_assignment.names {
-                multi_assign_stmt_str.push_str(&name);
+                multi_assign_stmt_str.push_str(name);
                 multi_assign_stmt_str.push_str(", ");
             }
 
@@ -219,7 +219,7 @@ fn transpile_stmt(stmt: &Stmt) -> String {
             } else {
                 ret_exprs_str.push('(');
                 for e in expr_vec {
-                    let expr_str = holy_expr_to_rust_expr(&e);
+                    let expr_str = holy_expr_to_rust_expr(e);
                     ret_exprs_str.push_str(&expr_str);
                     ret_exprs_str.push_str(", ");
                 }
@@ -239,7 +239,7 @@ fn transpile_stmt(stmt: &Stmt) -> String {
             let mut inf_branch_stmts_str = String::new();
 
             for s in &inf.branch {
-                inf_branch_stmts_str.push_str(&transpile_stmt(&s));
+                inf_branch_stmts_str.push_str(&transpile_stmt(s));
                 inf_branch_stmts_str.push('\n');
             }
 
@@ -250,7 +250,7 @@ fn transpile_stmt(stmt: &Stmt) -> String {
             let mut w_branch_stmts_str = String::new();
 
             for s in &w.branch {
-                w_branch_stmts_str.push_str(&transpile_stmt(&s));
+                w_branch_stmts_str.push_str(&transpile_stmt(s));
                 w_branch_stmts_str.push('\n');
             }
 
@@ -261,18 +261,18 @@ fn transpile_stmt(stmt: &Stmt) -> String {
             let mut f_branch_stmts_str = String::new();
 
             for s in &f.branch {
-                f_branch_stmts_str.push_str(&transpile_stmt(&s));
+                f_branch_stmts_str.push_str(&transpile_stmt(s));
                 f_branch_stmts_str.push('\n');
             }
 
-            return format!("for {} in {} {{\n{}}}", f.holder_name, holy_expr_to_rust_expr(&f.value), f_branch_stmts_str)
+            format!("for {} in {} {{\n{}}}", f.holder_name, holy_expr_to_rust_expr(&f.value), f_branch_stmts_str)
         },
 
         Stmt::If(i) => {
             let mut if_branch_stmts_str = String::new();
 
             for s in &i.if_branch {
-                if_branch_stmts_str.push_str(&transpile_stmt(&s));
+                if_branch_stmts_str.push_str(&transpile_stmt(s));
                 if_branch_stmts_str.push('\n');
             }
 
@@ -282,7 +282,7 @@ fn transpile_stmt(stmt: &Stmt) -> String {
                 let mut elif_branch_stmts_str = String::new();
 
                 for s in &elif_branch.1 {
-                    elif_branch_stmts_str.push_str(&transpile_stmt(&s));
+                    elif_branch_stmts_str.push_str(&transpile_stmt(s));
                     elif_branch_stmts_str.push('\n');
                 }
 
@@ -293,14 +293,14 @@ fn transpile_stmt(stmt: &Stmt) -> String {
                 let mut else_branch_stmts_str = String::new();
 
                 for s in else_branch {
-                    else_branch_stmts_str.push_str(&transpile_stmt(&s));
+                    else_branch_stmts_str.push_str(&transpile_stmt(s));
                     else_branch_stmts_str.push('\n');
                 }
 
                 if_stmt = format!("{} else {{\n{}}}", if_stmt, else_branch_stmts_str);
             }
 
-            return if_stmt
+            if_stmt
         },
 
 
@@ -323,7 +323,7 @@ fn parse_const(cons: &Constant) -> String {
     let const_type = holy_type_to_rust_type_str(&cons.type_name);
     let const_value = holy_expr_to_rust_expr(&cons.value);
 
-    return format!("const {}: {} = {};", cons.name, const_type, const_value);
+    format!("const {}: {} = {};", cons.name, const_type, const_value)
 }
 
 /// Turns a HolyLang expression, into equvilent Rust expression
@@ -335,11 +335,11 @@ fn holy_expr_to_rust_expr(expr: &Expr) -> String {
 
             if value.is_signed() {
                 let value_raw: i128 = value.as_i128();
-                return format!("{}{}", value_raw, value_ty)
+                format!("{}{}", value_raw, value_ty)
             
             } else {
                 let value_raw: u128 = value.as_u128();
-                return format!("{}{}", value_raw, value_ty)
+                format!("{}{}", value_raw, value_ty)
             }
         },
 
@@ -347,7 +347,7 @@ fn holy_expr_to_rust_expr(expr: &Expr) -> String {
 
         Expr::BoolLiteral { value, .. } => value.to_string(),
 
-        Expr::StringLiteral { value, .. } => format!("\"{}\".to_string()", value.to_string()),
+        Expr::StringLiteral { value, .. } => format!("\"{}\".to_string()", value),
         
         Expr::ArrayLiteral { elements, type_name, .. } => {
             let mut elems = String::new();
@@ -369,7 +369,7 @@ fn holy_expr_to_rust_expr(expr: &Expr) -> String {
             }
 
             elems.push(']');
-            return elems
+            elems
         },
 
         Expr::ArrayAccess { array, index, .. } => format!("{}[{}]", holy_expr_to_rust_expr(array), holy_expr_to_rust_expr(index)),
@@ -386,7 +386,7 @@ fn holy_expr_to_rust_expr(expr: &Expr) -> String {
         Expr::Var { name, .. } => name.to_string(),
 
         Expr::UnaryOp { op, expr, .. } => {
-            let expr_str = holy_expr_to_rust_expr(&expr);
+            let expr_str = holy_expr_to_rust_expr(expr);
 
             match op {
                 UnaryOpKind::Negate => format!("{}.checked_neg().unwrap_or_else(|| panic!(\"unary negate integer overflow\"))", expr_str),
@@ -396,8 +396,8 @@ fn holy_expr_to_rust_expr(expr: &Expr) -> String {
         },
 
         Expr::BinOp { op, left, right, .. } => {
-            let left_str = holy_expr_to_rust_expr(&left);
-            let right_str = holy_expr_to_rust_expr(&right);
+            let left_str = holy_expr_to_rust_expr(left);
+            let right_str = holy_expr_to_rust_expr(right);
 
             match op {
                 // Arithemtic
@@ -436,7 +436,7 @@ fn holy_expr_to_rust_expr(expr: &Expr) -> String {
         Expr::Call { name, args, .. } => {
             let mut args_str = String::new();
             
-            args_str.push_str(&name);
+            args_str.push_str(name);
             args_str.push('(');
 
             for arg_expr in args {
@@ -449,7 +449,7 @@ fn holy_expr_to_rust_expr(expr: &Expr) -> String {
             }
 
             args_str.push(')');
-            return args_str
+            args_str
         },
 
         Expr::RangeCall { start, end, ..} => format!("{}..{}", holy_expr_to_rust_expr(start), holy_expr_to_rust_expr(end)),
@@ -457,9 +457,9 @@ fn holy_expr_to_rust_expr(expr: &Expr) -> String {
         Expr::CopyCall { expr, .. } => format!("{}.clone()", holy_expr_to_rust_expr(expr)),
         Expr::FormatCall { template, expressions, .. } => {
             let mut format_expr_str = String::new();
-            format_expr_str.push_str(&"format!(");
+            format_expr_str.push_str("format!(");
             format_expr_str.push('"');
-            format_expr_str.push_str(&template);
+            format_expr_str.push_str(template);
             format_expr_str.push('"');
 
             for expr in expressions {
@@ -469,7 +469,7 @@ fn holy_expr_to_rust_expr(expr: &Expr) -> String {
             
             format_expr_str.push(')');
 
-            return format_expr_str
+            format_expr_str
         }
     }
 
