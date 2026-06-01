@@ -51,6 +51,11 @@ struct BindingInfo {
    
 /// Checks semantics and fill in inferred types where possible.
 /// This mutates the AST, because int literals can be safely are replaced with their binding types
+///
+/// # Errors
+///
+/// Will return a `HolyError` error if any AST nodes breaks holylang's semantics and rules.
+///
 pub fn check_semantics(ast: &mut AST) -> Result<(), HolyError> {
     // First pass: collect function signatures (params types and return types (possible multiple))
     let mut fun_sigs: HashMap<String, (Vec<Type>, Option<Vec<Type>>)> = HashMap::new();
@@ -174,8 +179,7 @@ fn check_global_stmt(
     match globalstmt {
         GlobalStmt::Const(cons) => check_const(cons, storage, fun_sigs),
 
-        other => panic!("(Compiler bug) Unimplemented {:?}", other)
-
+        GlobalStmt::_PlaceholderDummyUntilIAddMoreStmtsHereLikeStructsAndEnums => panic!("(Compiler bug) Unimplemented")
     }
 }
 
@@ -223,6 +227,9 @@ fn check_const(
 
 /// Parse holylang statements in a block, it does:
 /// Enforce language semantics, and ownership safety model, check function calls, etc.
+///
+#[allow(clippy::too_many_lines)]
+#[allow(clippy::needless_pass_by_value)]
 fn check_stmts(
     func: Function, 
     block: &mut Vec<Stmt>, 
@@ -282,16 +289,12 @@ fn check_stmts(
                 // Check if source value is a variable and if its locked or moved, and moves it
                 if let Expr::Var { name: src_name, span } = &var.value {
                     let src = locals.get_mut(src_name).unwrap_or_else(|| panic!(
-                            "(Compiler bug) infer_expr_type should've already errored if source variable didnt exist, but it didnt. var: {:?}", 
-                            var
+                            "(Compiler bug) infer_expr_type should've already errored if source variable didnt exist, but it didnt. var: {var:?}"
                         ));
 
                     match &mut src.kind {
                         BindingKind::Var { moved: src_moved, len: src_len, .. } => {
-                            if *src_moved {
-                                panic!("(Compiler bug) infer_expr_type should've already errored if source variable is moved, but it didnt. var: {:?}", var)
-                            }
-
+                            assert!(!*src_moved, "(Compiler bug) infer_expr_type should've already errored if source variable is moved, but it didnt. var: {var:?}");
 
                             // Error if we are in loop, and we tried to take ownership of an upstream variable
                             if in_loop && upstream_var_names.contains(src_name) {
@@ -305,8 +308,7 @@ fn check_stmts(
                             *src_moved = true;
 
                             // We copy its length
-                            value_len = *src_len
-
+                            value_len = *src_len;
                         },
                         // Ownership rules don't apply to constants.
                         BindingKind::Const { .. } => {}
@@ -314,13 +316,9 @@ fn check_stmts(
                 }
 
                 match var.value.clone() {
-                    Expr::ArrayLiteral {elements, .. } => {
-                        value_len = Some(elements.len())
-                    }
+                    Expr::ArrayLiteral {elements, .. } => value_len = Some(elements.len()),
+                    Expr::StringLiteral {value: v, ..} => value_len = Some(v.len()),
 
-                    Expr::StringLiteral {value: v, ..} => {
-                        value_len = Some(v.len())
-                    }
                     // Other experessions we can't / don't need to store their length
                     _ => {}
                 }
@@ -448,8 +446,7 @@ fn check_stmts(
               
                 if let Expr::Var { name: src_name, span } = &assign.value {
                     let src = locals.get_mut(src_name).unwrap_or_else(|| panic!(
-                                "(Compiler bug) infer_expr_type should've already errored if source variable didnt exist, but it didnt. assign: {:?}", 
-                                assign
+                                "(Compiler bug) infer_expr_type should've already errored if source variable didnt exist, but it didnt. assign: {assign:?}" 
                             ));
 
                     match &mut src.kind {
@@ -461,12 +458,8 @@ fn check_stmts(
                                             &src_name, span.line, span.column
                                         )));
                             }
-            
 
-
-                            if *src_moved {
-                                panic!("(Compiler bug) infer_expr_type should've already errored if source variable is moved, but it didnt. assign: {:?}", assign)
-                            }
+                            assert!(!*src_moved, "(Compiler bug) infer_expr_type should've already errored if source variable is moved, but it didnt. assign: {assign:?}");
 
                             // if source name is same as our variable name,
                             // then we don't move. It's re-claiming ownership.
@@ -476,22 +469,17 @@ fn check_stmts(
                             }
 
                             // We copy its length
-                            value_len = *src_len
+                            value_len = *src_len;
                         },
                         // Ownership rules don't apply to constants.
                         BindingKind::Const { .. } => {}
                      }
-
                 }
 
                 match assign.value.clone() {
-                    Expr::ArrayLiteral { elements, .. } => {
-                        value_len = Some(elements.len());
-                    }
+                    Expr::ArrayLiteral { elements, .. } => value_len = Some(elements.len()),
+                    Expr::StringLiteral { value: v, .. } => value_len = Some(v.len()),
 
-                    Expr::StringLiteral { value: v, .. } => {
-                        value_len = Some(v.len());
-                    }
                     // Other experessions we can't / don't need to store their length
                     _ => {}
                 }
@@ -500,10 +488,8 @@ fn check_stmts(
                 let varinfo = locals.get_mut(&assign.name).unwrap();
 
                 match &mut varinfo.kind {
-                    BindingKind::Var { len, .. } => {
-                        *len = value_len;
-                    },
-                    BindingKind::Const { .. } => panic!("(Compiler bug) Variable is const, despite our supposed earlier checks that its not. Wtf ?: {:?}", varinfo)
+                    BindingKind::Var { len, .. } => *len = value_len,
+                    BindingKind::Const { .. } => panic!("(Compiler bug) Variable is const, despite our supposed earlier checks that its not. Wtf ?: {varinfo:?}")
                  }
             },
 
