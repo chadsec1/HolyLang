@@ -379,7 +379,7 @@ fn check_stmts(
                                 kind: BindingKind::Var {
                                     value: None,
                                     moved: false, 
-                                    locked: false,
+                                    locked: true,
                                     len: None
                                 }
                             }
