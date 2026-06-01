@@ -38,36 +38,16 @@ pub enum Type {
 
 impl Type {
     pub fn is_integer_type(&self) -> bool {
-        match self {
-            Type::Int8 |
-            Type::Int16 |
-            Type::Int32 |
-            Type::Int64 |
-            Type::Int128 |
-
-            Type::Byte |
-            Type::Uint16 |
-            Type::Uint32 |
-            Type::Uint64 |
-            Type::Uint128 |
-            
-            Type::Usize => true,
-
-            _ => false
-        }
+        matches!(self, Type::Int8 | Type::Int16 | Type::Int32 | Type::Int64 | Type::Int128 | Type::Byte | Type::Uint16 | Type::Uint32 | Type::Uint64 | Type::Uint128 | Type::Usize)
     }
 
     pub fn is_floating_type(&self) -> bool {
-        match self {
-            Type::Float64 => true,
-
-            _ => false
-        }
+        matches!(self, Type::Float64)
     }
 
 
     pub fn is_numeric_type(&self) -> bool {
-        return self.is_integer_type() || self.is_floating_type()
+        self.is_integer_type() || self.is_floating_type()
     }
 
     pub fn is_array_type(&self) -> bool {
@@ -75,8 +55,7 @@ impl Type {
         
         let is_fixed_arr = matches!(self, Type::FixedArray(_, _));
 
-
-        return is_dynm_arr || is_fixed_arr;
+        is_dynm_arr || is_fixed_arr
     }
 
 
@@ -105,19 +84,13 @@ impl Type {
 
         fn fixed_array_to_dynamic_array_type_full_hazmat(t: &Type) -> Type {
             match t {
-                Type::FixedArray(inner, _) => {
-                    let new_inner = Box::new(fixed_array_to_dynamic_array_type_full_hazmat(inner));
-                    return Type::Array(new_inner)
-                },
-                Type::Array(inner) => {
-                    let new_inner = Box::new(fixed_array_to_dynamic_array_type_full_hazmat(inner));
-                    return Type::Array(new_inner)
-                }
+                Type::FixedArray(inner, _) => Type::Array(Box::new(fixed_array_to_dynamic_array_type_full_hazmat(inner))),
+                Type::Array(inner) => Type::Array(Box::new(fixed_array_to_dynamic_array_type_full_hazmat(inner))),
                 _ => t.clone(),
             }
         }
 
-        return fixed_array_to_dynamic_array_type_full_hazmat(self);
+        fixed_array_to_dynamic_array_type_full_hazmat(self)
     }
 
     pub fn get_array_inner_most_type(&self) -> &Type {
@@ -130,7 +103,7 @@ impl Type {
             match current {
                 Type::Array(inner) => current = inner,
                 Type::FixedArray(inner, _) => current = inner,
-                _ => return current,
+                _ => return current
             }
         }
     }

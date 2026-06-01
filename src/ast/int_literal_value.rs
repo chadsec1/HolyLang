@@ -61,15 +61,12 @@ impl IntLiteralValue {
     /// Return true if the integer literal value is of signed type
     /// i.e. int8, int16, etc.
     pub fn is_signed(self) -> bool {
-        match self {
+        matches!(self,
             IntLiteralValue::Int8(_) |
             IntLiteralValue::Int16(_) |
             IntLiteralValue::Int32(_) |
             IntLiteralValue::Int64(_) |
-            IntLiteralValue::Int128(_) => true,
-
-            _ => false
-        }
+            IntLiteralValue::Int128(_))
     }
 
     pub fn as_i128(self) -> i128 {

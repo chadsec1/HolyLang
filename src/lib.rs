@@ -15,7 +15,7 @@ pub enum CompileInfo {
 
 pub fn compile(source: &str, compile: CompileInfo) -> String {
     // Parse source code
-    let mut ast = parser::parse(&source).expect("Parsing failed");
+    let mut ast = parser::parse(source).expect("Parsing failed");
 
     println!("Pure AST: {:#?}\n\n\n", ast);
 
@@ -37,6 +37,6 @@ pub fn compile(source: &str, compile: CompileInfo) -> String {
         CompileInfo::DoNotCompile => {}
     }
 
-    return rust_code
+    rust_code
 }
 
