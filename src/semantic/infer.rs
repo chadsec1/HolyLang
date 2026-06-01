@@ -562,7 +562,7 @@ pub fn infer_expr_type(
 
 
             } else {
-                panic!("(Compiler bug) We got an unexpected BinOpKind: {:?}", op)
+                panic!("(Compiler bug) We got an unexpected BinOpKind: {op:?}")
             }
         }
 
@@ -610,9 +610,7 @@ pub fn infer_expr_type(
         }
 
         Expr::FormatCall { template, expressions: exprs_vec, span: _} => {
-            if !template.contains("{}") {
-                panic!("(Compiler bug) We got a FormatCall Without any template placeholders, the parser should've not allowed this. template: `{:?}`, expressions: `{:?}`", template, exprs_vec);
-            }
+            assert!(template.contains("{}"), "(Compiler bug) We got a FormatCall Without any template placeholders, the parser should've not allowed this. template: `{template:?}`, expressions: `{exprs_vec:?}`");
 
             for e in exprs_vec {
                 // Catch the "makes no sense" calls, like only passing a literal in {..<expr>..} formating
@@ -680,6 +678,8 @@ pub fn infer_expr_type(
 
 
 // helper: check an expression that's allowed to be an IntLiteral::Usize
+//
+#[allow(clippy::trivially_copy_pass_by_ref)]
 pub fn check_usize_literal_to_src(expr: &Expr, len: &usize, span: &Span, locals: &HashMap<String, BindingInfo>) -> Result<(), HolyError> {
     match expr {
         Expr::IntLiteral { value, .. } => match value {
@@ -693,8 +693,7 @@ pub fn check_usize_literal_to_src(expr: &Expr, len: &usize, span: &Span, locals:
                 Ok(())
             }
             other => panic!(
-                "(Compiler bug) expected IntLiteral::Usize, got {:?}. This should've been caught by other semantic checks.",
-                other
+                "(Compiler bug) expected IntLiteral::Usize, got {other:?}. This should've been caught by other semantic checks."
             ),
         },
 
@@ -724,7 +723,7 @@ pub fn check_usize_literal_to_src(expr: &Expr, len: &usize, span: &Span, locals:
                     BindingKind::Const { .. } => panic!("Still unimplemented for consts")
                 }
             } else {
-                panic!("(Compiler bug) We could not find variable `{}` in in `locals`. This should've been caught by other semantic checks, but that didnt happen..", name);
+                panic!("(Compiler bug) We could not find variable `{name}` in in `locals`. This should've been caught by other semantic checks, but that didnt happen..");
             }
         },
 
