@@ -24,6 +24,10 @@ pub fn compile_holylang_src(source: &str, compile_info: CompileInfo) -> String {
 
     println!("Pure AST: {ast:#?}\n\n\n");
 
+    if !ast.functions.iter().any(|f| f.name == "main") {
+        panic!("Missing `main` function");
+    }
+
     // Run semantic checks, enforce language rules, modify AST to remove inferred and replace with explicit types, etc.
     semantic::check_semantics(&mut ast).expect("Semantic errors");
     println!("Checked AST: {ast:#?}\n\n\n");
