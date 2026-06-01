@@ -1,5 +1,10 @@
 use crate::error::HolyError;
-use crate::ast::*;
+use crate::ast::{
+    AST, Span, GlobalStmt, Function, Param, Stmt, Constant, Expr, IfStmt, 
+    ForStmt, InfiniteStmt, WhileStmt, BreakStmt, ContinueStmt, Type, 
+    MultiVariableDeclaration, VariableDeclaration, MultiAssignment, 
+    VariableAssignment, FixedArraySize
+};
 
 #[cfg(test)]
 mod blackbox_tests;
@@ -19,7 +24,12 @@ enum BlockEnd {
     Continuation
 }
 
-/// Public parse entry
+/// Parses a source code string into a holy `AST`.
+/// 
+/// # Errors
+///
+/// Will return a `HolyError` error if any invalid syntax is detected.
+///
 pub fn parse(source: &str) -> Result<AST, HolyError> {
     let lines: Vec<&str> = source.lines().collect();
     let mut i = 0usize;
@@ -43,21 +53,22 @@ pub fn parse(source: &str) -> Result<AST, HolyError> {
             let (func, new_i) = parse_function(&lines, i)?;
             ast.functions.push(func);
             i = new_i;
-            continue;
+            continue
 
         // Or its a global statement.
-        } else {
-            let span = Span { line: i + 1, column: 0 };
-            if line.starts_with("const ") {
-                let cons = parse_const_stmt(line, span)?;
-                ast.globals.push(GlobalStmt::Const(cons));
-                i += 1;
-                continue;
-            }
-
-            return Err(HolyError::Parse(format!("Statement `{}` cannot be in the global scope (line {})", line, span.line)));
         }
+
+        let span = Span { line: i + 1, column: 0 };
+        if line.starts_with("const ") {
+            let cons = parse_const_stmt(line, span)?;
+            ast.globals.push(GlobalStmt::Const(cons));
+            i += 1;
+            continue;
+        }
+
+        return Err(HolyError::Parse(format!("Statement `{}` cannot be in the global scope (line {})", line, span.line)))
     }
+
 
     Ok(ast)
 }
@@ -78,8 +89,9 @@ fn parse_function(lines: &Vec<&str>, start_i: usize) -> Result<(Function, usize)
     })?;
     
     let name = after_func[..open_paren].trim().to_string();
-    if name.ends_with(")")  {
-        return Err(HolyError::Parse(format!("Invalid function header: there is an extra closing parenthesis `)` in the function declaration header `{}` at line {}", header_raw, start_i + 1)));
+    if name.ends_with(')')  {
+        return Err(HolyError::Parse(format!(
+                    "Invalid function header: there is an extra closing parenthesis `)` in the function declaration header `{}` at line {}", header_raw, start_i + 1)))
     }
 
 
@@ -109,32 +121,30 @@ fn parse_function(lines: &Vec<&str>, start_i: usize) -> Result<(Function, usize)
     
     let return_type = if return_type_str.is_empty() {
         None
-    } else {
-        if return_type_str.starts_with('(') {
-            if !return_type_str.ends_with(')') {
-                return Err(HolyError::Parse(format!("Missing closing parentheses for return type in function `{}` at line {}", name, start_i + 1)));
-            }
-
-            let inner = &return_type_str[1..return_type_str.len()-1].trim();
-            let mut types = Vec::new();
-            if inner.is_empty() {
-                return Err(HolyError::Parse(format!("Missing types in the `()` return types function `{}` headers at line {}", name, start_i + 1)));
-            }
-            let split_parts = helpers::split_char_top_level(',', inner)
-                .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
-
-
-            for part in split_parts {
-                let t = parse_type(part.trim(), &span)?;
-                types.push(t);
-            }
-
-            Some(types)
-        } else if return_type_str.ends_with(')') {
-            return Err(HolyError::Parse(format!("Missing opening parentheses for return type in function `{}` at line {}", name, start_i + 1)));
-        } else {
-            Some(vec![parse_type(return_type_str, &span)?])
+    } else if return_type_str.starts_with('(') {
+        if !return_type_str.ends_with(')') {
+            return Err(HolyError::Parse(format!("Missing closing parentheses for return type in function `{}` at line {}", name, start_i + 1)));
         }
+
+        let inner = &return_type_str[1..return_type_str.len()-1].trim();
+        let mut types = Vec::new();
+        if inner.is_empty() {
+            return Err(HolyError::Parse(format!("Missing types in the `()` return types function `{}` headers at line {}", name, start_i + 1)));
+        }
+        let split_parts = helpers::split_char_top_level(',', inner)
+            .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
+
+
+        for part in split_parts {
+            let t = parse_type(part.trim(), &span)?;
+            types.push(t);
+        }
+
+        Some(types)
+    } else if return_type_str.ends_with(')') {
+        return Err(HolyError::Parse(format!("Missing opening parentheses for return type in function `{}` at line {}", name, start_i + 1)));
+    } else {
+        Some(vec![parse_type(return_type_str, &span)?])
     };
 
     // parse params
@@ -574,20 +584,20 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
             for p in top_parts {
                 elems.push(parse_expr::parse_expr(p.trim(), span)?);
             }
-            return Ok(Stmt::Return(elems));
-        } else {
-            let expr = parse_expr::parse_expr(expr_str, span)?;
-            return Ok(Stmt::Return(vec![expr]));
+            return Ok(Stmt::Return(elems))
         }
+        
+        let expr = parse_expr::parse_expr(expr_str, span)?;
+        return Ok(Stmt::Return(vec![expr]))
     }
 
 
     if line == "break" {
-        return Ok(Stmt::Break(BreakStmt{ span }));
+        return Ok(Stmt::Break(BreakStmt{ span }))
     }
 
     if line == "continue" {
-        return Ok(Stmt::Continue(ContinueStmt{ span }));
+        return Ok(Stmt::Continue(ContinueStmt{ span }))
     }
 
 
@@ -706,25 +716,22 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
 
             let value = parse_expr::parse_expr(right, span)?;
 
-            return Ok(Stmt::VarDecl(VariableDeclaration { name, type_name: var_type, value, explicitly_initialized: true, span }));
-
-
-
-        } else {
-            // no '=', expect "own name type"
-            let parts: Vec<&str> = rest.split_whitespace().collect();
-            if parts.len() != 2 {
-                return Err(HolyError::Parse(format!("Invalid variable declaration `{}` at line {} column {}", line, span.line, span.column)));
-            }
-            let name = parts[0].to_string();
-            helpers::validate_identifier_name(&name)
-                .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
-
-            let ty = parse_type(parts[1], &span)?;
-            let default_value = ty.get_default_value(span);
-
-            return Ok(Stmt::VarDecl(VariableDeclaration { name, type_name: ty, value: default_value, explicitly_initialized: false, span }))
+            return Ok(Stmt::VarDecl(VariableDeclaration { name, type_name: var_type, value, explicitly_initialized: true, span }))
         }
+
+        // no '=', expect "own name type"
+        let parts: Vec<&str> = rest.split_whitespace().collect();
+        if parts.len() != 2 {
+            return Err(HolyError::Parse(format!("Invalid variable declaration `{}` at line {} column {}", line, span.line, span.column)));
+        }
+        let name = parts[0].to_string();
+        helpers::validate_identifier_name(&name)
+            .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
+
+        let ty = parse_type(parts[1], &span)?;
+        let default_value = ty.get_default_value(span);
+
+        return Ok(Stmt::VarDecl(VariableDeclaration { name, type_name: ty, value: default_value, explicitly_initialized: false, span }))
     }
 
 

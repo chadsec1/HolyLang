@@ -1,4 +1,4 @@
-use super::*;
+use super::HolyError;
 
 use crate::consts;
 
@@ -28,7 +28,7 @@ pub fn get_parenthesis_contents(s: &str) -> Option<&str> {
 
             match c {
                 '(' if !in_string => {
-                    depth += 1
+                    depth += 1;
                 },
                 '"' => in_string = !in_string,
                 '\\' => in_escape = true,
@@ -58,7 +58,7 @@ pub fn get_parenthesis_contents(s: &str) -> Option<&str> {
 
 
 /// Gets array contents.
-/// I.e. [ .. EXPRESSIONS .. ] would give Some(EXPRESSIONS, opening_bracket_position)
+/// I.e. [ .. EXPRESSIONS .. ] would give Some(EXPRESSIONS, `opening_bracket_position`)
 ///
 /// This only gets array content if the array extends to the end of the string
 /// like, [ .. EXPRESSIONS ..] is ok but [ .. EXPRESSIONS .. ] == EXPRESSION, etc, is not.
@@ -78,7 +78,7 @@ pub fn get_array_contents(s: &str) -> Option<(&str, usize)> {
 
                 match c {
                     ']' if !in_string => {
-                        depth += 1
+                        depth += 1;
                     },
                     '"' => in_string = !in_string,
                     '\\' => in_escape = true,
@@ -110,7 +110,7 @@ pub fn get_array_contents(s: &str) -> Option<(&str, usize)> {
 
                 match c {
                     '[' if !in_string => {
-                        depth += 1
+                        depth += 1;
                     },
                     '"' => in_string = !in_string,
                     '\\' => in_escape = true,
@@ -147,17 +147,14 @@ pub fn find_top_level_op_any(s: &str) -> Option<(usize, &str)> {
         match op {
             "or" => 1,
             "and" => 2,
-            "==" | "!=" => 3,
-            "&" | "|" => 3,
-            ">" | "<" | ">=" | "<=" => 3,
-            "<<" | ">>" => 3,
+            "==" | "!=" | "&" | "|" | ">" | "<" | ">=" | "<=" | "<<" | ">>" => 3,
             "+" | "-" => 4,
             "*" | "/" => 5,
             _ => panic!("(Compiler bug) If this ever fires, theres a bug in find_top_level_op_any")
         }
     }
     
-    fn is_ident_char(c: char) -> bool {
+    const fn is_ident_char(c: char) -> bool {
         c.is_ascii_alphanumeric() || c == '_'
     }
 
@@ -179,7 +176,7 @@ pub fn find_top_level_op_any(s: &str) -> Option<(usize, &str)> {
                 '"' => in_string = !in_string,
                 '\\' => in_escape = true,
                 '(' | '[' | '{' if !in_string => {
-                    depth += 1
+                    depth += 1;
                 },
                 ')' | ']' | '}' if (!in_string) && depth > 0 => {
                     depth -= 1;
@@ -191,10 +188,7 @@ pub fn find_top_level_op_any(s: &str) -> Option<(usize, &str)> {
 
                     // Determine operator string at this position
                     let op_str: Option<&str> = match c {
-                        '=' if next == Some('=') => Some(&s[idx..idx + 2]),
-                        '!' if next == Some('=') => Some(&s[idx..idx + 2]),
-                        '>' if next == Some('=') => Some(&s[idx..idx + 2]),
-                        '<' if next == Some('=') => Some(&s[idx..idx + 2]),
+                        '=' | '!' | '>' | '<' if next == Some('=') => Some(&s[idx..idx + 2]),
                         '>' if next == Some('>') => Some(&s[idx..idx + 2]),
                         '<' if next == Some('<') => Some(&s[idx..idx + 2]),
                         'a' if s[idx..].starts_with("and") => {
@@ -223,7 +217,7 @@ pub fn find_top_level_op_any(s: &str) -> Option<(usize, &str)> {
                             }
                         }
 
-                        '+' | '-' | '*' | '/' | '>' | '<' | '|' | '&' => Some(&s[idx..idx+1]),
+                        '+' | '-' | '*' | '/' | '>' | '<' | '|' | '&' => Some(&s[idx..=idx]),
                         _ => None,
                     };
 
@@ -268,9 +262,10 @@ pub fn find_top_level_op_any(s: &str) -> Option<(usize, &str)> {
 /// - respects backslash escapes
 ///
 pub fn split_char_top_level(split_char: char, s: &str) -> Result<Vec<&str>, HolyError> {
-    if (split_char != ',') && (split_char != ':') {
-        panic!("(Compiler bug) You are most likely misusing split_char_top_level, we expected char to be one of ':', ',', ' ', but instead we got `{}`", split_char);
-    }
+    assert!(
+        !((split_char != ',') && (split_char != ':')), 
+        "(Compiler bug) You are most likely misusing split_char_top_level, we expected char to be one of ':', ',', ' ', but instead we got `{split_char}`"
+    );
 
     let mut parts = Vec::new();
     let mut start = 0usize;
@@ -295,49 +290,49 @@ pub fn split_char_top_level(split_char: char, s: &str) -> Result<Vec<&str>, Holy
                 in_string = None;
                 just_closed_string = true; // remember we just closed a string
             }
-            continue;
-        } else {
-            // if we just closed a string, reject any immediate new quote
-            if just_closed_string {
-                if c == '"' || c == '\'' {
-                    return Err(HolyError::Parse(format!(
-                        "Unexpected adjacent string literal at character index {}",
-                        i
-                    )));
-                }
-                // clear the flag on the first non-whitespace (so "hi" ) or split_char or bracket clears it)
-                if !c.is_whitespace() {
-                    just_closed_string = false;
-                }
-            }
 
-            match c {
-                '"' | '\'' => {
-                    in_string = Some(c);
-                }
-                '(' | '[' | '{' => {
-                    stack.push(c);
-                    just_closed_string = false;
-                }
-                ')' => {
-                    if matches!(stack.last(), Some('(')) { stack.pop(); }
-                    just_closed_string = false;
-                }
-                ']' => {
-                    if matches!(stack.last(), Some('[')) { stack.pop(); }
-                    just_closed_string = false;
-                }
-                '}' => {
-                    if matches!(stack.last(), Some('{')) { stack.pop(); }
-                    just_closed_string = false;
-                }
-                c if (c == split_char) && stack.is_empty() && in_string.is_none() => {
-                    parts.push(s[start..i].trim());
-                    start = i + c.len_utf8();
-                    just_closed_string = false;
-                }
-                _ => {}
+            continue
+        }
+
+        // if we just closed a string, reject any immediate new quote
+        if just_closed_string {
+            if c == '"' || c == '\'' {
+                return Err(HolyError::Parse(format!(
+                    "Unexpected adjacent string literal at character index {i}",
+                )))
             }
+            // clear the flag on the first non-whitespace (so "hi" ) or split_char or bracket clears it)
+            if !c.is_whitespace() {
+                just_closed_string = false;
+            }
+        }
+
+        match c {
+            '"' | '\'' => {
+                in_string = Some(c);
+            }
+            '(' | '[' | '{' => {
+                stack.push(c);
+                just_closed_string = false;
+            }
+            ')' => {
+                if matches!(stack.last(), Some('(')) { stack.pop(); }
+                just_closed_string = false;
+            }
+            ']' => {
+                if matches!(stack.last(), Some('[')) { stack.pop(); }
+                just_closed_string = false;
+            }
+            '}' => {
+                if matches!(stack.last(), Some('{')) { stack.pop(); }
+                just_closed_string = false;
+            }
+            c if (c == split_char) && stack.is_empty() && in_string.is_none() => {
+                parts.push(s[start..i].trim());
+                start = i + c.len_utf8();
+                just_closed_string = false;
+            }
+            _ => {}
         }
     }
 
@@ -352,13 +347,11 @@ pub fn split_char_top_level(split_char: char, s: &str) -> Result<Vec<&str>, Holy
 
 
 pub fn string_strip_outer_quotes_and_unescape(s: &str) -> Result<String, HolyError> {
-    if !(s.len() >= 2 && s.starts_with('"') && s.ends_with('"')) {
-        panic!("(Compiler bug) Malformed string is not double-quoted: {:?}", s);
-    }
+    assert!(s.len() >= 2 && s.starts_with('"') && s.ends_with('"'), "(Compiler bug) Malformed string is not double-quoted: {s:?}");
 
     let inner = &s[1..s.len() - 1];
     let mut out = String::with_capacity(inner.len());
-    let mut chars = inner.chars().peekable();
+    let mut chars = inner.chars();
 
     while let Some(c) = chars.next() {
         match c {
@@ -370,12 +363,10 @@ pub fn string_strip_outer_quotes_and_unescape(s: &str) -> Result<String, HolyErr
                 Some('"')  => out.push_str("\\\""),
                 Some('\'') => out.push('\''),
                 Some('0')  => out.push('\0'),
-                Some(other) => return Err(HolyError::Parse(format!(
-                    "Unknown escape sequence `\\{}`", other
-                ))),
-                None => return Err(HolyError::Parse(format!("Trailing backslash in string: `{}`", s))),
+                Some(other) => return Err(HolyError::Parse(format!("Unknown escape sequence `\\{other}`"))),
+                None => return Err(HolyError::Parse(format!("Trailing backslash in string: `{s}`"))),
             },
-            '"' => return Err(HolyError::Parse(format!("Unexpected unescaped quote inside string: `{}`", s))),
+            '"' => return Err(HolyError::Parse(format!("Unexpected unescaped quote inside string: `{s}`"))),
             _ => out.push(c),
         }
     }
@@ -386,29 +377,23 @@ pub fn string_strip_outer_quotes_and_unescape(s: &str) -> Result<String, HolyErr
 
 
 
-
-/// Checks if a given name is a valid HolyLang identifier.
+/// Checks if a given name is a valid identifier.
 /// Rules:
 /// - Can contain letters, digits, and underscore
 /// - Must not start with a digit
 /// - Must not contain a reserved language keyword (i.e. `own`, etc)
 pub fn validate_identifier_name(name: &str) -> Result<(), HolyError> {
-    if name.trim().is_empty() {
-        panic!("(Compiler bug) `validate_identifier_name` got fed an empty string, indicating a bug in the caller's code.");
-    }
+    assert!(!name.trim().is_empty(), "(Compiler bug) `validate_identifier_name` got fed an empty string, indicating a bug in the caller's code.");
 
     // Check first character is not a number
     let first = name.chars().next().unwrap();
     if first.is_ascii_digit() {
-        return Err(HolyError::Parse(format!("Binding identifier name `{}` cannot start with a number!", name)));
+        return Err(HolyError::Parse(format!("Binding identifier name `{name}` cannot start with a number!")))
     }
 
     // Check allowed characters: a-z, A-Z, 0-9, _
     if !name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
-        return Err(HolyError::Parse(format!(
-            "Binding identifier name `{}` contains invalid characters (only letters, numbers, and `_` allowed)",
-            name
-        )));
+        return Err(HolyError::Parse(format!("Binding identifier name `{name}` contains invalid characters (only letters, numbers, and `_` allowed)")))
     }
 
     // Check against keywords and error even if name is not the 
@@ -417,7 +402,7 @@ pub fn validate_identifier_name(name: &str) -> Result<(), HolyError> {
     let name_lower = name.to_string();
     let name_lower = name_lower.to_lowercase(); 
     if consts::RESERVED_KEYWORDS.contains(&name_lower.as_ref()) {
-        return Err(HolyError::Parse(format!("Binding identifier name `{}` is a reserved keyword", name)));
+        return Err(HolyError::Parse(format!("Binding identifier name `{name}` is a reserved keyword")))
     }
 
     Ok(())
@@ -444,18 +429,19 @@ pub fn strip_inline_comment(s: &str) -> String {
             if c == q {
                 in_string = None;
             }
+
             // while inside string, ignore all other chars
+            continue
+        } 
+
+        // not in string
+        if c == '"' || c == '\'' {
+            in_string = Some(c);
             continue;
-        } else {
-            // not in string
-            if c == '"' || c == '\'' {
-                in_string = Some(c);
-                continue;
-            }
-            if c == '#' {
-                // found comment start outside of any string, so we should strip from here
-                return s[..i].trim_end().to_string();
-            }
+        }
+        if c == '#' {
+            // found comment start outside of any string, so we should strip from here
+            return s[..i].trim_end().to_string();
         }
     }
 
@@ -485,19 +471,20 @@ pub fn count_braces_outside_strings(line: &str) -> (usize, usize) {
             if ch == q {
                 in_string = None;
             }
+
             // while inside string, ignore other chars
+            continue
+        } 
+
+        // not inside string
+        if ch == '"' || ch == '\'' {
+            in_string = Some(ch);
             continue;
-        } else {
-            // not inside string
-            if ch == '"' || ch == '\'' {
-                in_string = Some(ch);
-                continue;
-            }
-            match ch {
-                '{' => opens += 1,
-                '}' => closes += 1,
-                _ => {}
-            }
+        }
+        match ch {
+            '{' => opens += 1,
+            '}' => closes += 1,
+            _ => {}
         }
     }
 
@@ -515,7 +502,7 @@ pub fn parse_format_string(s: &str) -> Result<(String, Vec<String>), HolyError> 
         match c {
             '{' => {
                 // literal {{
-                if let Some('{') = chars.peek() {
+                if matches!(chars.peek(), Some('{')) {
                     chars.next();
                     buffer.push('{');
                     buffer.push('{');
@@ -529,20 +516,18 @@ pub fn parse_format_string(s: &str) -> Result<(String, Vec<String>), HolyError> 
                 for nc in chars.by_ref() {
                     if nc == '}' {
                         closed = true;
-                        break;
-                    } else {
-                        inner.push(nc);
+                        break
                     }
+
+                    inner.push(nc);
                 }
 
                 if !closed {
-                    return Err(HolyError::Parse("Unclosed '{' in input".to_string()));
+                    return Err(HolyError::Parse("Unclosed '{' in input".to_string()))
                 }
 
                 if inner.is_empty() {
-                    return Err(HolyError::Parse(
-                        "Empty string format {} placeholder is not allowed".to_string(),
-                    ));
+                    return Err(HolyError::Parse("Empty string format {} placeholder is not allowed".to_string()))
                 }
 
                 expressions_str.push(inner);
@@ -553,12 +538,12 @@ pub fn parse_format_string(s: &str) -> Result<(String, Vec<String>), HolyError> 
 
             '}' => {
                 // literal }}
-                if let Some('}') = chars.peek() {
+                if matches!(chars.peek(), Some('}')) {
                     chars.next();
                     buffer.push('}');
                     buffer.push('}');
                 } else {
-                    return Err(HolyError::Parse("Unmatched '}' in input".to_string()));
+                    return Err(HolyError::Parse("Unmatched '}' in input".to_string()))
                 }
             }
 

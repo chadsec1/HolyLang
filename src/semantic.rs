@@ -644,9 +644,9 @@ fn check_stmts(
                                         var_name, stmt_span.line, stmt_span.column
                                     )))
 
-                            } else {
-                                *locked = true;
                             }
+                            
+                            *locked = true;
                         },
                         BindingKind::Const { .. } => {
                             return Err(HolyError::Semantic(format!(
@@ -725,9 +725,8 @@ fn check_stmts(
                                         var_name, stmt_span.line, stmt_span.column
                                     )))
 
-                            } else {
-                                *locked = false;
                             }
+                            *locked = false;
                         },
                         BindingKind::Const { .. } => {
                             return Err(HolyError::Semantic(format!(
@@ -1011,9 +1010,9 @@ fn update_local_assignments_from_clone(upstream: &mut HashMap<String, BindingInf
                     // skip.
                     if moved {
                         continue
-                    } else {
-                        *info = vi.clone();
                     }
+                    
+                    *info = vi.clone();
                 },
                 BindingKind::Const { .. } => continue
             }
