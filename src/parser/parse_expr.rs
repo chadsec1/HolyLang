@@ -1,16 +1,24 @@
-use super::{HolyError, helpers};
-use crate::ast::*;
+use super::{
+    HolyError, helpers
+};
+use crate::ast::{
+    Span, Expr, IntLiteralValue, BinOpKind, UnaryOpKind, ArraySliceRange
+};
 
 /// Expression parser:
 /// - handles binary operations (left-associative),
 /// - handles unary operations (like negate, logical not, bitwise not )
 /// - function calls like add(x, y),
-/// - Internal "function" calls (like CopyCall, FormatCall, etc),
-/// - integer literals,
-/// - float literals
-/// - string literals
-/// - array literals
-/// - variables
+/// - Internal "function" calls (like `CopyCall`, `FormatCall`, etc),
+/// - Integer literals,
+/// - Float literals
+/// - String literals
+/// - Array literals
+/// - Array access
+/// - Array slicing
+/// - Variables
+///
+#[allow(clippy::too_many_lines)]
 pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
     let s = s.trim();
 
@@ -166,7 +174,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
             "|" => BinOpKind::BitwiseOr,
             "and" => BinOpKind::And,
             "or" => BinOpKind::Or,
-            o => panic!("(Compiler bug) Unknown operand {:?} indicating a bug is in `find_top_level_op_any` func.", o)
+            o => panic!("(Compiler bug) Unknown operand `{o:?}` indicating a bug is in `find_top_level_op_any` func.")
         };
 
         let left_expr = parse_expr(left, span)?;
@@ -253,7 +261,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
     // e.g. "[1, 2, 3]", "[]", "[1, [2, 3], 4, 5]"
     // detect pattern: "[ ... ]"
     //
-    if s.starts_with("[") && let Some((elems_str, _)) = helpers::get_array_contents(s) {
+    if s.starts_with('[') && let Some((elems_str, _)) = helpers::get_array_contents(s) {
         let mut elems: Vec<Expr> = Vec::new();
         if !elems_str.trim().is_empty() {
             let split_parts = helpers::split_char_top_level(',', elems_str)
@@ -292,63 +300,62 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
             
             let value = Expr::ArrayAccess { array: Box::new(arr_expr), index: Box::new(index), span };
 
-            return Ok(value);
+            return Ok(value)
+        }
 
         // Otherwise this is a slicing operation
         // We do >= here to print helpful error messages
         //
         // NOTE TODO: Ensure this doesnt mess with nested expressions within array
         // access/slicing. 
-        } else {
-            if indx_parts.len() != 2 {
-                return Err(HolyError::Parse(format!(
-                            "Invalid array slicing syntax `{}` ! (line {} column {})",
-                            s, span.line, span.column
-                        )));
-            }
 
-            let start = indx_parts[0].trim();
-            let end = indx_parts[indx_parts.len() - 1].trim();
-
-            if start.is_empty() && end.is_empty() {
-                return Err(HolyError::Parse(format!(
-                            "Start and end expressions are both missing from array slice expression! (line {} column {})",
-                            span.line, span.column
-                        )));
-            }
-
-            // i.e. x[:EXPRESSION]
-            if start.is_empty() {
-                let end_expr = Box::new(parse_expr(end, span)?);
-
-                return Ok(Expr::ArraySlicing { 
-                            array: Box::new(arr_expr), 
-                            range: ArraySliceRange::To(end_expr),
-                            span 
-                        })
-
-            // i.e. x[EXPRESSION:]
-            } else if end.is_empty() {
-                let start_expr = Box::new(parse_expr(start, span)?);
-
-                return Ok(Expr::ArraySlicing { 
-                            array: Box::new(arr_expr), 
-                            range: ArraySliceRange::From(start_expr),
-                            span 
-                        })
-            } else {
-                // i.e. x[EXPRESSION:EXPRESSION]
-                let start_expr = Box::new(parse_expr(start, span)?);
-                let end_expr = Box::new(parse_expr(end, span)?);
-                
-                return Ok(Expr::ArraySlicing { 
-                            array: Box::new(arr_expr), 
-                            range: ArraySliceRange::FromTo(start_expr, end_expr),
-                            span 
-                        })
-            }
-
+        if indx_parts.len() != 2 {
+            return Err(HolyError::Parse(format!(
+                        "Invalid array slicing syntax `{}` ! (line {} column {})",
+                        s, span.line, span.column
+                    )));
         }
+
+        let start = indx_parts[0].trim();
+        let end = indx_parts[indx_parts.len() - 1].trim();
+
+        if start.is_empty() && end.is_empty() {
+            return Err(HolyError::Parse(format!(
+                        "Start and end expressions are both missing from array slice expression! (line {} column {})",
+                        span.line, span.column
+                    )));
+        }
+
+        // i.e. x[:EXPRESSION]
+        if start.is_empty() {
+            let end_expr = Box::new(parse_expr(end, span)?);
+
+            return Ok(Expr::ArraySlicing { 
+                        array: Box::new(arr_expr), 
+                        range: ArraySliceRange::To(end_expr),
+                        span 
+                    })
+
+        // i.e. x[EXPRESSION:]
+        } else if end.is_empty() {
+            let start_expr = Box::new(parse_expr(start, span)?);
+
+            return Ok(Expr::ArraySlicing { 
+                        array: Box::new(arr_expr), 
+                        range: ArraySliceRange::From(start_expr),
+                        span 
+                    })
+        }
+
+        // i.e. x[EXPRESSION:EXPRESSION]
+        let start_expr = Box::new(parse_expr(start, span)?);
+        let end_expr = Box::new(parse_expr(end, span)?);
+        
+        return Ok(Expr::ArraySlicing { 
+                    array: Box::new(arr_expr), 
+                    range: ArraySliceRange::FromTo(start_expr, end_expr),
+                    span 
+                })
     }
 
 
@@ -405,7 +412,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
 
 
                 let raw_str: String = if let Expr::StringLiteral { value: s, .. } = format_arg_raw {
-                        s.to_string()
+                        s
                     } else {
                         return Err(HolyError::Parse(format!(
                             "Expected a string literal, instead found `{}` (line {} column {})",

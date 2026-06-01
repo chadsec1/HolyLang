@@ -1,5 +1,8 @@
 use super::*;
 use crate::parser::parse_expr::parse_expr;
+use crate::ast::{
+    IntLiteralValue, BinOpKind, UnaryOpKind, ArraySliceRange
+};
 use crate::tests_consts::{
     ALL_BIN_OP_KIND, BIN_OP_KIND_SYMBOLS
 };

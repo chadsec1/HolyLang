@@ -1,6 +1,9 @@
 use super::*;
 
 use crate::consts;
+use crate::ast::{
+    UnaryOpKind, IntLiteralValue, ArraySliceRange
+}; 
 use crate::tests_consts::{
     ALL_TYPES_NO_ARR,
     ALL_BIN_OP_KIND,
