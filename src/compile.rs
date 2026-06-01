@@ -1,4 +1,3 @@
-use crate::error::HolyError;
 use std::env;
 use std::process::{Command, Stdio};
 use std::fs::{self, File};
@@ -6,14 +5,20 @@ use std::io::Write;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 
-pub fn compile(rcode: &str, target_dir: &str) -> Result<(), HolyError> {
+///
+///
+/// # Panics
+///
+/// Will panic if it fails to create/write files/directories in user's local `TMP` folder.
+///
+pub fn compile(rcode: &str, target_dir: &str) {
     let unix_timestamp_str = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_millis()
         .to_string();
 
-    let main_dir = env::temp_dir().join(format!("holylang-{}", unix_timestamp_str));
+    let main_dir = env::temp_dir().join(format!("holylang-{unix_timestamp_str}"));
     let src_dir = main_dir.join("src");
     fs::create_dir_all(&main_dir)
         .unwrap_or_else(|e| panic!("Compile error: Couldnt create directory `{}`, please check permissions. Error: {:?}", main_dir.display(), e));
@@ -55,7 +60,7 @@ panic = "abort"
         .stderr(Stdio::piped())
         .current_dir(&main_dir)
         .output()
-        .unwrap_or_else(|e| panic!("Compile error: Failed to compile transpiled code! Ensure Rust is correctly installed and try again. Error: {:?}", e));
+        .unwrap_or_else(|e| panic!("Compile error: Failed to compile transpiled code! Ensure Rust is correctly installed and try again. Error: {e:?}"));
 
     let stderr = String::from_utf8_lossy(&compile_proc_output.stderr);
 
@@ -64,12 +69,10 @@ panic = "abort"
     binary_path.push("debug");
     binary_path.push("holyprogram");
 
-    if !compile_proc_output.status.success() {
-        panic!(
-            "This is likely a compiler bug in the transpiler, which is expected because the transpiler is still very experimental.\nBut please open an issue on Github with the following:\nmain_file: {:#?}\nrcode: {:#}\nstderr: {:#}",
-            main_file, rcode, stderr
-        )
-    }
+    assert!(compile_proc_output.status.success(), 
+        "This is likely a compiler bug in the transpiler, which is expected because the transpiler is still very experimental.\nBut please open an issue on Github with the following:\nmain_file: {main_file:#?}\nrcode: {rcode:#}\nstderr: {stderr:#}"
+    );
+
 
     fs::rename(binary_path, target_dir)
         .unwrap_or_else(|e| panic!("Compile clean-up error: Couldnt move binary from `{}` to `{}`. Error: {:?}", main_dir.display(), target_dir, e));
@@ -77,5 +80,4 @@ panic = "abort"
     fs::remove_dir_all(&main_dir)
         .unwrap_or_else(|e| panic!("Compile clean-up error: Couldnt delete directory `{}`, please check your permissions. Error: {:?}", main_dir.display(), e));
 
-    Ok(())
 }
