@@ -309,67 +309,67 @@ mod blackbox_int_literals_tests {
     #[test]
     #[should_panic]
     fn int_literal_int8_min_as_u128_unsafe_panics_on_signed() {
-        IntLiteralValue::Int8(i8::MIN).as_u128();
+       let _ = IntLiteralValue::Int8(i8::MIN).as_u128();
     }
 
 
     #[test]
     #[should_panic]
     fn int_literal_int8_max_as_u128_unsafe_panics_on_signed() {
-        IntLiteralValue::Int8(i8::MAX).as_u128();
+       let _ = IntLiteralValue::Int8(i8::MAX).as_u128();
     }
 
 
     #[test]
     #[should_panic]
     fn int_literal_int16_min_as_u128_unsafe_panics_on_signed() {
-        IntLiteralValue::Int16(i16::MIN).as_u128();
+        let _ = IntLiteralValue::Int16(i16::MIN).as_u128();
     }
 
     #[test]
     #[should_panic]
     fn int_literal_int16_max_as_u128_unsafe_panics_on_signed() {
-        IntLiteralValue::Int16(i16::MAX).as_u128();
+       let _ = IntLiteralValue::Int16(i16::MAX).as_u128();
     }
 
 
     #[test]
     #[should_panic]
     fn int_literal_int32_min_as_u128_unsafe_panics_on_signed() {
-        IntLiteralValue::Int32(i32::MIN).as_u128();
+       let _ = IntLiteralValue::Int32(i32::MIN).as_u128();
     }
 
 
     #[test]
     #[should_panic]
     fn int_literal_int32_max_as_u128_unsafe_panics_on_signed() {
-        IntLiteralValue::Int32(i32::MAX).as_u128();
+        let _ = IntLiteralValue::Int32(i32::MAX).as_u128();
     }
 
 
     #[test]
     #[should_panic]
     fn int_literal_int64_min_as_u128_unsafe_panics_on_signed() {
-        IntLiteralValue::Int64(i64::MIN).as_u128();
+       let _ = IntLiteralValue::Int64(i64::MIN).as_u128();
     }
 
     #[test]
     #[should_panic]
     fn int_literal_int64_max_as_u128_unsafe_panics_on_signed() {
-        IntLiteralValue::Int64(i64::MAX).as_u128();
+        let _ = IntLiteralValue::Int64(i64::MAX).as_u128();
     }
 
 
     #[test]
     #[should_panic]
     fn int_literal_int128_min_as_u128_unsafe_panics_on_signed() {
-        IntLiteralValue::Int128(i128::MIN).as_u128();
+        let _ = IntLiteralValue::Int128(i128::MIN).as_u128();
     }
 
     #[test]
     #[should_panic]
     fn int_literal_int128_max_as_u128_unsafe_panics_on_signed() {
-        IntLiteralValue::Int128(i128::MAX).as_u128();
+       let _ = IntLiteralValue::Int128(i128::MAX).as_u128();
     }
 
 
@@ -377,78 +377,78 @@ mod blackbox_int_literals_tests {
     #[test]
     #[should_panic]
     fn int_literal_byte_min_as_i128_panics_on_unsigned() {
-        IntLiteralValue::Byte(u8::MIN).as_i128();
+        let _ = IntLiteralValue::Byte(u8::MIN).as_i128();
     }
 
 
     #[test]
     #[should_panic]
     fn int_literal_byte_max_as_i128_panics_on_unsigned() {
-        IntLiteralValue::Byte(u8::MAX).as_i128();
+        let _ = IntLiteralValue::Byte(u8::MAX).as_i128();
     }
 
     #[test]
     #[should_panic]
     fn int_literal_uint16_min_as_i128_panics_on_unsigned() {
-        IntLiteralValue::Uint16(u16::MIN).as_i128();
+        let _ = IntLiteralValue::Uint16(u16::MIN).as_i128();
     }
 
 
     #[test]
     #[should_panic]
     fn int_literal_uint16_max_as_i128_panics_on_unsigned() {
-        IntLiteralValue::Uint16(u16::MAX).as_i128();
+        let _ = IntLiteralValue::Uint16(u16::MAX).as_i128();
     }
 
     #[test]
     #[should_panic]
     fn int_literal_uint32_min_as_i128_panics_on_unsigned() {
-        IntLiteralValue::Uint32(u32::MIN).as_i128();
+        let _ = IntLiteralValue::Uint32(u32::MIN).as_i128();
     }
 
     #[test]
     #[should_panic]
     fn int_literal_uint32_max_as_i128_panics_on_unsigned() {
-        IntLiteralValue::Uint32(u32::MAX).as_i128();
+        let _ = IntLiteralValue::Uint32(u32::MAX).as_i128();
     }
 
 
     #[test]
     #[should_panic]
     fn int_literal_uint64_min_as_i128_panics_on_unsigned() {
-        IntLiteralValue::Uint64(u64::MIN).as_i128();
+        let _ = IntLiteralValue::Uint64(u64::MIN).as_i128();
     }
 
     #[test]
     #[should_panic]
     fn int_literal_uint64_max_as_i128_panics_on_unsigned() {
-        IntLiteralValue::Uint64(u64::MAX).as_i128();
+        let _ = IntLiteralValue::Uint64(u64::MAX).as_i128();
     }
 
     #[test]
     #[should_panic]
     fn int_literal_uint128_min_as_i128_panics_on_unsigned() {
-        IntLiteralValue::Uint128(u128::MIN).as_i128();
+        let _ = IntLiteralValue::Uint128(u128::MIN).as_i128();
     }
 
     #[test]
     #[should_panic]
     fn int_literal_uint128_max_as_i128_panics_on_unsigned() {
-        IntLiteralValue::Uint128(u128::MAX).as_i128();
+        let _ = IntLiteralValue::Uint128(u128::MAX).as_i128();
     }
 
 
     #[test]
     #[should_panic]
     fn int_literal_usize_min_as_i128_panics_on_unsigned() {
-        IntLiteralValue::Usize(usize::MIN).as_i128();
+        let _ = IntLiteralValue::Usize(usize::MIN).as_i128();
     }
 
 
     #[test]
     #[should_panic]
     fn int_literal_usize_max_as_i128_panics_on_unsigned() {
-        IntLiteralValue::Usize(usize::MAX).as_i128();
+        let _ = IntLiteralValue::Usize(usize::MAX).as_i128();
     }
 
 }
