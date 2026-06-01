@@ -1,6 +1,6 @@
 # HolyLang
-[![Unit Tests](https://github.com/chadsec1/HolyLang/actions/workflows/unit_tests_with_coverage.yml/badge.svg)](https://github.com/chadsec1/HolyLang/actions/workflows/unit_tests_with_coverage.yml)]
-[![Clippy](https://github.com/chadsec1/HolyLang/actions/workflows/clippy.yml/badge.svg)](https://github.com/chadsec1/HolyLang/actions/workflows/clippy.yml)
+![Unit Tests](https://github.com/chadsec1/HolyLang/actions/workflows/unit_tests_with_coverage.yml/badge.svg)
+![Clippy](https://github.com/chadsec1/HolyLang/actions/workflows/clippy.yml/badge.svg)
 ![CodeQL](https://github.com/chadsec1/HolyLang/actions/workflows/codeql.yml/badge.svg)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/73ffcbec8b7849a7a90f2003efe101af)](https://app.codacy.com/gh/chadsec1/HolyLang/dashboard)
 [![Codacy Badge](https://app.codacy.com/project/badge/Coverage/73ffcbec8b7849a7a90f2003efe101af)](https://app.codacy.com/gh/chadsec1/HolyLang/coverage)
