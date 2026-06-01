@@ -1,4 +1,4 @@
-name: Unit Tests
+name: Clippy
 
 permissions:
   contents: read
@@ -26,4 +26,4 @@ jobs:
         with:
           toolchain: stable
 
-      - run: cargo clippy -- -D warnings
+      - run: cargo clippy -- -D warnings -W clippy::pedantic -W clippy::nursery
