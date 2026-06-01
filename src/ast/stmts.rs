@@ -88,12 +88,12 @@ pub struct InfiniteStmt {
 }
 
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BreakStmt {
     pub span: Span
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ContinueStmt {
     pub span: Span
 }

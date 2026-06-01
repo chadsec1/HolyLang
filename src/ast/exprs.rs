@@ -3,13 +3,13 @@ use super::{ IntLiteralValue, Type, Span };
 /// Abstract syntax tree expressions nodes
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
-    /// Integer literal value, the type is the IntLiteralValue Enum wrapper
+    /// Integer literal value, the type is the `IntLiteralValue` Enum wrapper
     IntLiteral {
         value: IntLiteralValue,
         span: Span,
     },
     /// Float64 literal value
-    /// HolyLang only supports float64.
+    /// holylang only supports float64.
     Float64Literal {
         value: f64,
         span: Span,
@@ -19,7 +19,7 @@ pub enum Expr {
         span: Span,
     },
     ArrayLiteral {
-        elements: Vec<Expr>,
+        elements: Vec<Self>,
         type_name: Option<Type>, // This is just for the transpiler layer.
         span: Span
     },
@@ -33,44 +33,44 @@ pub enum Expr {
     },
     UnaryOp {
         op: UnaryOpKind,
-        expr: Box<Expr>,
+        expr: Box<Self>,
         span: Span,
     },
     BinOp {
-        left: Box<Expr>,
+        left: Box<Self>,
         op: BinOpKind,
-        right: Box<Expr>,
+        right: Box<Self>,
         span: Span,
     },
     Call {
         name: String,
-        args: Vec<Expr>,
+        args: Vec<Self>,
         span: Span,
     },
     ArrayAccess {
-        array: Box<Expr>,
-        index: Box<Expr>,
+        array: Box<Self>,
+        index: Box<Self>,
         span: Span,
     },
     ArraySlicing {
-        array: Box<Expr>,
+        array: Box<Self>,
         range: ArraySliceRange,
         span: Span,
     },
 
     // internal language functions / expressions hard-coded into the language.
     CopyCall {
-        expr: Box<Expr>,
+        expr: Box<Self>,
         span: Span,
     },
     FormatCall {
         template: String,
-        expressions: Vec<Expr>,
+        expressions: Vec<Self>,
         span: Span,
     },
     RangeCall {
-        start: Box<Expr>,
-        end: Box<Expr>,
+        start: Box<Self>,
+        end: Box<Self>,
         span: Span,
     }
 
@@ -78,9 +78,9 @@ pub enum Expr {
 
 
 /// Array slice range type:
-/// From, e.g. "x[ EXPRESSION : ]"
-/// To, e.g. "x[ : EXPRESSION ]"
-/// FromTo, e.g. "x[ EXPRESSION : EXPRESSION ]"
+/// `From`, e.g. "x[ EXPRESSION : ]"
+/// `To`, e.g. "x[ : EXPRESSION ]"
+/// `FromTo`, e.g. "x[ EXPRESSION : EXPRESSION ]"
 ///
 #[derive(Debug, Clone, PartialEq)]
 pub enum ArraySliceRange {
@@ -92,11 +92,11 @@ pub enum ArraySliceRange {
 
 
 /// Unary operations types:
-/// Logical NEGATE, such as "-EXPRESSION"
-/// Bitwise NOT, e.g. "~EXPRESSION"
-/// Logical NOT, e.g. "!EXPRESSION"
+/// Logical `Negate`, such as "-EXPRESSION"
+/// Bitwise `Not`, e.g. "~EXPRESSION"
+/// Logical `Not`, e.g. "!EXPRESSION"
 ///
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UnaryOpKind {
     Negate,
     BitwiseNot,
@@ -111,7 +111,7 @@ pub enum UnaryOpKind {
 ///
 /// etc, etc.
 ///
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BinOpKind {
     Add,
     Subtract,

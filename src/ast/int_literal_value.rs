@@ -1,6 +1,6 @@
 use super::Type;
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, Eq, PartialEq, Clone, Copy)]
 pub enum IntLiteralValue {
     Int8(i8),
     Int16(i16),
@@ -16,44 +16,43 @@ pub enum IntLiteralValue {
 }
 
 impl IntLiteralValue {
-    pub fn get_type(self) -> Type {
+    #[must_use]
+    pub const fn get_type(self) -> Type {
         match self {
-            IntLiteralValue::Int8(_) => Type::Int8,
-            IntLiteralValue::Int16(_) => Type::Int16,
-            IntLiteralValue::Int32(_) => Type::Int32,
-            IntLiteralValue::Int64(_) => Type::Int64,
-            IntLiteralValue::Int128(_) => Type::Int128,
+            Self::Int8(_)   => Type::Int8,
+            Self::Int16(_)  => Type::Int16,
+            Self::Int32(_)  => Type::Int32,
+            Self::Int64(_)  => Type::Int64,
+            Self::Int128(_) => Type::Int128,
 
-            IntLiteralValue::Byte(_) => Type::Byte,
-
-            IntLiteralValue::Uint16(_) => Type::Uint16,
-            IntLiteralValue::Uint32(_) => Type::Uint32,
-            IntLiteralValue::Uint64(_) => Type::Uint64,
-            IntLiteralValue::Uint128(_) => Type::Uint128,
-            
-            IntLiteralValue::Usize(_) => Type::Usize,
+            Self::Byte(_)    => Type::Byte,
+            Self::Uint16(_)  => Type::Uint16,
+            Self::Uint32(_)  => Type::Uint32,
+            Self::Uint64(_)  => Type::Uint64,
+            Self::Uint128(_) => Type::Uint128,
+            Self::Usize(_)   => Type::Usize
         }
     }
 
-    /// Get the bit_width of an integer literal value
+    /// Get the `bit_width` of an integer literal value
     /// e.g. an  i32 bit-width is 32, etc.
-    pub fn bit_width(self) -> u32 {
+    ///
+    #[allow(clippy::match_same_arms)]
+    #[must_use]
+    pub const fn bit_width(self) -> u32 {
         match self {
-            IntLiteralValue::Int8(_) => i8::BITS,
-            IntLiteralValue::Int16(_) => i16::BITS,
-            IntLiteralValue::Int32(_) => i32::BITS,
-            IntLiteralValue::Int64(_) => i64::BITS,
-            IntLiteralValue::Int128(_) => i128::BITS,
+            Self::Int8(_)   => i8::BITS,
+            Self::Int16(_)  => i16::BITS,
+            Self::Int32(_)  => i32::BITS,
+            Self::Int64(_)  => i64::BITS,
+            Self::Int128(_) => i128::BITS,
 
-            IntLiteralValue::Byte(_) => u8::BITS,
-
-            IntLiteralValue::Uint16(_) => u16::BITS,
-            IntLiteralValue::Uint32(_) => u32::BITS,
-            IntLiteralValue::Uint64(_) => u64::BITS,
-            IntLiteralValue::Uint128(_) => u128::BITS,
-            
-            IntLiteralValue::Usize(_) => usize::BITS,
-
+            Self::Byte(_)    => u8::BITS,
+            Self::Uint16(_)  => u16::BITS,
+            Self::Uint32(_)  => u32::BITS,
+            Self::Uint64(_)  => u64::BITS,
+            Self::Uint128(_) => u128::BITS,
+            Self::Usize(_)   => usize::BITS
         }
     }
 
