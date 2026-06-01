@@ -959,7 +959,6 @@ mod expr_stmt_in_void_func_with_params_tests {
     }
 }
 
-/*
 
 #[cfg(test)]
 mod expr_stmt_in_returning_func_with_params_tests {
@@ -967,49 +966,61 @@ mod expr_stmt_in_returning_func_with_params_tests {
 
     #[test]
     fn expr_stmt() {
-        let body = vec![
-            Stmt::Expr(l.clone())
-        ];
+        let literals = get_all_literals();
 
-        for t in ALL_TYPES_WITH_DYN_ARR.iter() {    
-            let func = returning_func("foo", vec![param("a", t.clone()), param("b", t.clone())], vec![t.clone()], body.clone());
-            let ast = &ast_one(func);
+        for l in literals {     
+            let body = vec![
+                Stmt::Expr(l.clone())
+            ];
 
-            let internals = import_internals();
-            let rcode = transpile(ast);
-            assert!(rcode.starts_with(&internals));
-            let rcode = rcode[internals.len()..].replace('\n', "");
+            let l_str = holy_expr_to_rust_expr(&l);
 
-            let t_str = holy_type_to_rust_type_str(&t);
+            for t in ALL_TYPES_WITH_DYN_ARR.iter() {    
+                let func = returning_func("foo", vec![param("a", t.clone()), param("b", t.clone())], vec![t.clone()], body.clone());
+                let ast = &ast_one(func);
 
-            assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ break;}}", t_str, t_str, t_str));
+                let internals = import_internals();
+                let rcode = transpile(ast);
+                assert!(rcode.starts_with(&internals));
+                let rcode = rcode[internals.len()..].replace('\n', "");
+
+                let t_str = holy_type_to_rust_type_str(&t);
+
+                assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ {};}}", t_str, t_str, t_str, l_str));
+            }
         }
     }
 
 
     #[test]
     fn expr_stmt_in_infinite_loop() {
-        let body = vec![
-            Stmt::Infinite(InfiniteStmt{
-                    branch: vec![
-                        Stmt::Expr(l.clone())
-                    ],
-                    span: span(),
-                }),
-        ];
+        let literals = get_all_literals();
 
-        for t in ALL_TYPES_WITH_DYN_ARR.iter() {    
-            let func = returning_func("foo", vec![param("a", t.clone()), param("b", t.clone())], vec![t.clone()], body.clone());
-            let ast = &ast_one(func);
+        for l in literals {     
+            let body = vec![
+                Stmt::Infinite(InfiniteStmt{
+                        branch: vec![
+                            Stmt::Expr(l.clone())
+                        ],
+                        span: span(),
+                    }),
+            ];
 
-            let internals = import_internals();
-            let rcode = transpile(ast);
-            assert!(rcode.starts_with(&internals));
-            let rcode = rcode[internals.len()..].replace('\n', "");
-
-            let t_str = holy_type_to_rust_type_str(&t);
+            let l_str = holy_expr_to_rust_expr(&l);
             
-            assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ loop {{break;}}}}", t_str, t_str, t_str));
+            for t in ALL_TYPES_WITH_DYN_ARR.iter() {    
+                let func = returning_func("foo", vec![param("a", t.clone()), param("b", t.clone())], vec![t.clone()], body.clone());
+                let ast = &ast_one(func);
+
+                let internals = import_internals();
+                let rcode = transpile(ast);
+                assert!(rcode.starts_with(&internals));
+                let rcode = rcode[internals.len()..].replace('\n', "");
+
+                let t_str = holy_type_to_rust_type_str(&t);
+                
+                assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ loop {{{};}}}}", t_str, t_str, t_str, l_str));
+            }
         }
     }
 
@@ -1041,7 +1052,7 @@ mod expr_stmt_in_returning_func_with_params_tests {
 
                 let t_str = holy_type_to_rust_type_str(&t);
 
-                assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ while {} {{break;}}}}", t_str, t_str, t_str, l_str));
+                assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ while {} {{{};}}}}", t_str, t_str, t_str, l_str, l_str));
             }
         }
     }
@@ -1064,7 +1075,7 @@ mod expr_stmt_in_returning_func_with_params_tests {
                     Stmt::While(WhileStmt{
                             condition: bin.clone(),
                             branch: vec![
-                                Stmt::Expr(l.clone())
+                                Stmt::Expr(bin.clone())
                             ],
                             span: span(),
                         }),
@@ -1083,7 +1094,7 @@ mod expr_stmt_in_returning_func_with_params_tests {
 
                     let t_str = holy_type_to_rust_type_str(&t);
 
-                    assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ while {} {{break;}}}}", t_str, t_str, t_str, bin_str));
+                    assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ while {} {{{};}}}}", t_str, t_str, t_str, bin_str, bin_str));
                 }
             }
         }
@@ -1091,29 +1102,35 @@ mod expr_stmt_in_returning_func_with_params_tests {
 
     #[test]
     fn expr_stmt_in_for_loop_with_var() {
-        let body = vec![
-            Stmt::For(ForStmt{
-                    holder_name: "x".to_string(),
-                    value: var_expr("arr"),
-                    branch: vec![
-                        Stmt::Expr(l.clone())
-                    ],
-                    span: span(),
-                }),
-        ];
+        let literals = get_all_literals();
 
-        for t in ALL_TYPES_WITH_DYN_ARR.iter() {
-            let func = returning_func("foo", vec![param("a", t.clone()), param("b", t.clone())], vec![t.clone()], body.clone());
-            let ast = &ast_one(func);
+        for l in literals {
+            let body = vec![
+                Stmt::For(ForStmt{
+                        holder_name: "x".to_string(),
+                        value: var_expr("arr"),
+                        branch: vec![
+                            Stmt::Expr(l.clone())
+                        ],
+                        span: span(),
+                    }),
+            ];
 
-            let internals = import_internals();
-            let rcode = transpile(ast);
-            assert!(rcode.starts_with(&internals));
-            let rcode = rcode[internals.len()..].replace('\n', "");
+            let l_str = holy_expr_to_rust_expr(&l);
 
-            let t_str = holy_type_to_rust_type_str(&t);
+            for t in ALL_TYPES_WITH_DYN_ARR.iter() {
+                let func = returning_func("foo", vec![param("a", t.clone()), param("b", t.clone())], vec![t.clone()], body.clone());
+                let ast = &ast_one(func);
 
-            assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ for x in arr {{break;}}}}", t_str, t_str, t_str));
+                let internals = import_internals();
+                let rcode = transpile(ast);
+                assert!(rcode.starts_with(&internals));
+                let rcode = rcode[internals.len()..].replace('\n', "");
+
+                let t_str = holy_type_to_rust_type_str(&t);
+
+                assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ for x in arr {{{};}}}}", t_str, t_str, t_str, l_str));
+            }
         }
     }
 
@@ -1146,7 +1163,7 @@ mod expr_stmt_in_returning_func_with_params_tests {
 
                 let t_str = holy_type_to_rust_type_str(&t);
 
-                assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ for x in {} {{break;}}}}", t_str, t_str, t_str, l_str));
+                assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ for x in {} {{{};}}}}", t_str, t_str, t_str, l_str, l_str));
             }
         }
     }
@@ -1169,7 +1186,7 @@ mod expr_stmt_in_returning_func_with_params_tests {
                             holder_name: "x".to_string(),
                             value: bin.clone(),
                             branch: vec![
-                                Stmt::Expr(l.clone())
+                                Stmt::Expr(bin.clone())
                             ],
                             span: span(),
                         }),
@@ -1188,7 +1205,7 @@ mod expr_stmt_in_returning_func_with_params_tests {
 
                     let t_str = holy_type_to_rust_type_str(&t);
 
-                    assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ for x in {} {{break;}}}}", t_str, t_str, t_str, bin_str));
+                    assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ for x in {} {{{};}}}}", t_str, t_str, t_str, bin_str, bin_str));
                 }
             }
         }
@@ -1224,7 +1241,7 @@ mod expr_stmt_in_returning_func_with_params_tests {
 
                 let t_str = holy_type_to_rust_type_str(&t);
 
-                assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ if {} {{break;}}}}", t_str, t_str, t_str, l_str));
+                assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ if {} {{{};}}}}", t_str, t_str, t_str, l_str, l_str));
             }
         }
     }
@@ -1246,7 +1263,7 @@ mod expr_stmt_in_returning_func_with_params_tests {
                     Stmt::If(IfStmt{
                             condition: bin.clone(),
                             if_branch: vec![
-                                Stmt::Expr(l.clone())
+                                Stmt::Expr(bin.clone())
                             ],
                             elif_branches: vec![],
                             else_branch: None,
@@ -1267,7 +1284,7 @@ mod expr_stmt_in_returning_func_with_params_tests {
 
                     let t_str = holy_type_to_rust_type_str(&t);
 
-                    assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ if {} {{break;}}}}", t_str, t_str, t_str, bin_str));
+                    assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ if {} {{{};}}}}", t_str, t_str, t_str, bin_str, bin_str));
                 }
             }
         }
@@ -1306,7 +1323,7 @@ mod expr_stmt_in_returning_func_with_params_tests {
 
                 let t_str = holy_type_to_rust_type_str(&t);
 
-                assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ if {} {{break;}} else {{break;}}}}", t_str, t_str, t_str, l_str));
+                assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ if {} {{{};}} else {{{};}}}}", t_str, t_str, t_str, l_str, l_str, l_str));
             }
         }
     }
@@ -1329,11 +1346,11 @@ mod expr_stmt_in_returning_func_with_params_tests {
                     Stmt::If(IfStmt{
                             condition: bin.clone(),
                             if_branch: vec![
-                                Stmt::Expr(l.clone())
+                                Stmt::Expr(bin.clone())
                             ],
                             elif_branches: vec![],
                             else_branch: Some(vec![
-                                Stmt::Expr(l.clone())
+                                Stmt::Expr(bin.clone())
                             ]),
                             span: span(),
                         }),
@@ -1352,7 +1369,7 @@ mod expr_stmt_in_returning_func_with_params_tests {
 
                     let t_str = holy_type_to_rust_type_str(&t);
 
-                    assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ if {} {{break;}} else {{break;}}}}", t_str, t_str, t_str, bin_str));
+                    assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ if {} {{{};}} else {{{};}}}}", t_str, t_str, t_str, bin_str, bin_str, bin_str));
                 }
             }
         }
@@ -1392,7 +1409,7 @@ mod expr_stmt_in_returning_func_with_params_tests {
 
                 let t_str = holy_type_to_rust_type_str(&t);
 
-                assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ if {} {{break;}} else if {} {{break;}} else {{break;}}}}", t_str, t_str, t_str, l_str, l_str));
+                assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ if {} {{{};}} else if {} {{{};}} else {{{};}}}}", t_str, t_str, t_str, l_str, l_str, l_str, l_str, l_str));
             }
         }
     }
@@ -1415,13 +1432,13 @@ mod expr_stmt_in_returning_func_with_params_tests {
                     Stmt::If(IfStmt{
                             condition: bin.clone(),
                             if_branch: vec![
-                                Stmt::Expr(l.clone())
+                                Stmt::Expr(bin.clone())
                             ],
                             elif_branches: vec![(bin.clone(), vec![
-                                Stmt::Expr(l.clone())
+                                Stmt::Expr(bin.clone())
                             ])],
                             else_branch: Some(vec![
-                                Stmt::Expr(l.clone())
+                                Stmt::Expr(bin.clone())
                             ]),
                             span: span(),
                         }),
@@ -1441,11 +1458,10 @@ mod expr_stmt_in_returning_func_with_params_tests {
                 
                     let t_str = holy_type_to_rust_type_str(&t);
 
-                    assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ if {} {{break;}} else if {} {{break;}} else {{break;}}}}", t_str, t_str, t_str, bin_str, bin_str));
+                    assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ if {} {{{};}} else if {} {{{};}} else {{{};}}}}", t_str, t_str, t_str, bin_str, bin_str, bin_str, bin_str, bin_str));
                 }
             }
         }
     }
 }
 
-*/
