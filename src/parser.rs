@@ -368,7 +368,7 @@ fn parse_if_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), Hol
             next_i = after;
             end = new_end;
         } else {
-            panic!("(Compiler bug) We encountered a line that does not start with elif nor else, this shouldve been caught by `parse_block` but it didnt. cur_line: {:?}", cur_line);
+            panic!("(Compiler bug) We encountered a line that does not start with elif nor else, this shouldve been caught by `parse_block` but it didnt. cur_line: {cur_line:?}");
         }
     }
 
@@ -422,7 +422,7 @@ fn parse_for_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), Ho
         // for loops, so it's part of the syntax structure, not just semantics.
         //
         //
-        let expr: Expr = if expr_str.starts_with("range(") && expr_str.ends_with(")") {
+        let expr: Expr = if expr_str.starts_with("range(") && expr_str.ends_with(')') {
                 let range_str = expr_str["range(".len()..].strip_suffix(")").unwrap();
 
                 let split_args = helpers::split_char_top_level(',', range_str)
@@ -556,6 +556,8 @@ fn parse_stmt_at(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), Hol
 }
 
 /// Parse a single statement from a comments-removed trimmed line. `line_no` used for error messages.
+///
+#[allow(clippy::too_many_lines)]
 fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
     let span = Span { line: line_no, column: 0 };
 
@@ -569,9 +571,7 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
 
     if let Some(expr_str) = line.strip_prefix("return ") {
         let expr_str = expr_str.trim();
-        if expr_str.is_empty() {
-            panic!("(Compiler bug) We expected to `line` to be a trimmed, comments-removed line. Instead we got {:?}", expr_str);
-        }
+        assert!(!expr_str.is_empty(), "(Compiler bug) We expected to `line` to be a trimmed, comments-removed line. Instead we got {expr_str:?}");
             
         // Check if return is like: return a, b, ...
         // then split, parse each element, and return the vec.
@@ -608,9 +608,7 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
 
     if let Some(rest) = line.strip_prefix("lock ") {
         let rest = rest.trim();
-        if rest.is_empty() {
-            panic!("(Compiler bug) We expected to `line` to be a trimmed, comments-removed line. Instead we got {:?}", rest);
-        }
+        assert!(!rest.is_empty(), "(Compiler bug) We expected to `line` to be a trimmed, comments-removed line. Instead we got {rest:?}");
 
         let split_parts = helpers::split_char_top_level(',', rest)
                 .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
@@ -634,9 +632,7 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
 
     if let Some(rest) = line.strip_prefix("unlock ") {
         let rest = rest.trim();
-        if rest.is_empty() {
-            panic!("(Compiler bug) We expected to `line` to be a trimmed, comments-removed line. Instead we got {:?}", rest);
-        }
+        assert!(!rest.is_empty(), "(Compiler bug) We expected to `line` to be a trimmed, comments-removed line. Instead we got {rest:?}");
 
         let split_parts = helpers::split_char_top_level(',', rest)
                 .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
@@ -677,7 +673,7 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
                     let name_type_arr: Vec<&str> = part.split_whitespace().collect();
 
                     if name_type_arr.len() != 2 {
-                        return Err(HolyError::Parse(format!("Invalid multi-variable declaration `{}` at line {}", line, line_no)));
+                        return Err(HolyError::Parse(format!("Invalid multi-variable declaration `{line}` at line {line_no}")))
                     }
 
                     let name = name_type_arr[0].to_string();
@@ -686,7 +682,7 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
                     helpers::validate_identifier_name(&name)
                         .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
 
-                    var_names.push(name.to_string());
+                    var_names.push(name);
                     var_types.push(typ);
                 }
 
@@ -703,7 +699,7 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
             //
             let left_parts: Vec<&str> = left.split_whitespace().collect();
             if left_parts.len() != 2 {
-                return Err(HolyError::Parse(format!("Invalid variable declaration `{}` at line {}", line, line_no)));
+                return Err(HolyError::Parse(format!("Invalid variable declaration `{line}` at line {line_no}")))
             }
 
             let name = left_parts[0].to_string();
@@ -805,15 +801,13 @@ enum InternalArraySuffix {
 fn parse_type(s: &str, span: &Span) -> Result<Type, HolyError> {
     let token = s.trim();
 
-    if token.is_empty() {
-        panic!("(Compiler bug) parse_type got called with an empty type string. Caller must always check type string is not empty");
-    }
+    assert!(!token.is_empty(), "(Compiler bug) parse_type got called with an empty type string. Caller must always check type string is not empty");
 
     // Split into base name and bracket suffixes
     // e.g. []int32 becomes "int32" base, with "[]" suffix
     if let Some(last_bracket) = token.rfind(']') {
         let base_str = token[last_bracket + 1..].trim();
-        let suffix_str = &token[..last_bracket + 1];
+        let suffix_str = &token[..=last_bracket];
 
         let base_ty = parse_base_type(base_str, span)?;
         
@@ -840,7 +834,8 @@ fn parse_type(s: &str, span: &Span) -> Result<Type, HolyError> {
     parse_base_type(token, span)
 }
 
-/// Parses a suffix string like "[][1][]" into an ordered Vec of InternalArraySuffix.
+/// Parses a suffix string like "[][1][]" into an ordered Vector of `InternalArraySuffix`.
+///
 fn parse_array_suffixes(s: &str, span: &Span) -> Result<Vec<InternalArraySuffix>, HolyError> {
     let mut suffixes = Vec::new();
     let mut rest = s;
@@ -861,13 +856,11 @@ fn parse_array_suffixes(s: &str, span: &Span) -> Result<Vec<InternalArraySuffix>
             // its not our responsiblity to give user error here
             // if we reach here, its a guard panic.
             //
-            if size_str.is_empty() {
-                panic!("(Compiler bug) Always check the type whitespaces, types must not have whitespaces");
-            }
+            assert!(!size_str.is_empty(), "(Compiler bug) Always check the type whitespaces, types must not have whitespaces");
             suffixes.push(InternalArraySuffix::Fixed(parse_fixed_array_size(size_str, span)?));
             rest = &rest[close + 1..];
         } else {
-            panic!("(Compiler bug) Expected [, instead got {:?} this is impossible because parse type shouldve caught it.", rest);
+            panic!("(Compiler bug) Expected [, instead got {rest:?} this is impossible because parse type shouldve caught it.");
         }
     }
 
