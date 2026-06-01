@@ -1,8 +1,8 @@
-use std::env;
 use std::process::{Command, Stdio};
 use std::fs::{self, File};
 use std::io::Write;
 use std::time::{SystemTime, UNIX_EPOCH};
+use std::path::PathBuf;
 
 
 ///
@@ -18,7 +18,7 @@ pub fn compile(rcode: &str, target_dir: &str) {
         .as_millis()
         .to_string();
 
-    let main_dir = env::temp_dir().join(format!("holylang-{unix_timestamp_str}"));
+    let main_dir = PathBuf::from(format!("holylang-{unix_timestamp_str}"));
     let src_dir = main_dir.join("src");
     fs::create_dir_all(&main_dir)
         .unwrap_or_else(|e| panic!("Compile error: Couldnt create directory `{}`, please check permissions. Error: {:?}", main_dir.display(), e));
