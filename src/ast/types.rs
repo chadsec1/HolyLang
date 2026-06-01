@@ -91,71 +91,74 @@ impl Type {
     /// 
     #[must_use]
     pub fn fixed_array_to_dynamic_array_type_full(&self) -> Self {
-        if !matches!(self, Type::Array(_) | Type::FixedArray(_, _)) {
-            panic!("(Compiler bug) Do not call fixed_array_to_dynamic_array_type_full unless you are sure Type is an array. Self: {:?}", self);
-        }
-
         fn fixed_array_to_dynamic_array_type_full_hazmat(t: &Type) -> Type {
             match t {
-                Type::FixedArray(inner, _) => Type::Array(Box::new(fixed_array_to_dynamic_array_type_full_hazmat(inner))),
-                Type::Array(inner) => Type::Array(Box::new(fixed_array_to_dynamic_array_type_full_hazmat(inner))),
+                Type::FixedArray(inner, _) | Type::Array(inner) => Type::Array(Box::new(fixed_array_to_dynamic_array_type_full_hazmat(inner))),
                 _ => t.clone(),
             }
         }
 
+        assert!(matches!(self, Self::Array(_) | Self::FixedArray(_, _)), "(Compiler bug) Do not call `fixed_array_to_dynamic_array_type_full` unless you are sure Type is an array. Self: {self:?}");
+
+
         fixed_array_to_dynamic_array_type_full_hazmat(self)
     }
 
-    pub fn get_array_inner_most_type(&self) -> &Type {
-        if !matches!(self, Type::Array(_) | Type::FixedArray(_, _)) {
-            panic!("(Compiler bug) Do not call get_array_inner_most_type unless you are sure Type is an array. Self: {:?}", self);
-        }
+    ///
+    /// # Panics
+    /// If called on non-array types
+    ///
+    #[must_use]
+    pub fn get_array_inner_most_type(&self) -> &Self {
+        assert!(matches!(self, Self::Array(_) | Self::FixedArray(_, _)), "(Compiler bug) Do not call `get_array_inner_most_type` unless you are sure Type is an array. Self: {self:?}");
 
         let mut current = self;
         loop {
             match current {
-                Type::Array(inner) => current = inner,
-                Type::FixedArray(inner, _) => current = inner,
+                Self::FixedArray(inner, _) | Self::Array(inner) => current = inner,
                 _ => return current
             }
         }
     }
 
-    // When variable is declared, e.g.
-    // own VAR_NAME TYPE_NAME
-    //
-    // It has no value. So parser has to assign it a value.
-    // Parser must use TYPE.get_default_value()
-    // to get the default value for a type.
-    //
-    // Integers are 0, Float64 is 0.0, Strings are "", and dynamic arrays are empty.
-    // Any other types produces a panic, because it requires programmer explicit initialization 
-    //
+    /// When variable is declared, e.g.
+    /// `own VAR_NAME TYPE_NAME`
+    ///
+    /// It has no value. So parser has to assign it a value.
+    /// Parser must use `TYPE.get_default_value()`
+    /// to get the default value for a type.
+    ///
+    /// Integers are 0, Float64 is 0.0, Strings are "", and dynamic arrays are empty.
+    /// Any other types produces a panic, because it requires programmer explicit initialization 
+    ///
+    /// # Panics
+    /// Do not call this function on fixed-arrays, it will panic.
+    ///
+    #[must_use]
     pub fn get_default_value(&self, span: Span) -> Expr {
         match self {
-            Type::Int8 => Expr::IntLiteral { value: IntLiteralValue::Int8(0), span },
-            Type::Int16 => Expr::IntLiteral { value: IntLiteralValue::Int16(0), span },
-            Type::Int32 => Expr::IntLiteral { value: IntLiteralValue::Int32(0), span },
+            Self::Int8 => Expr::IntLiteral { value: IntLiteralValue::Int8(0), span },
+            Self::Int16 => Expr::IntLiteral { value: IntLiteralValue::Int16(0), span },
+            Self::Int32 => Expr::IntLiteral { value: IntLiteralValue::Int32(0), span },
 
-            Type::Int64 => Expr::IntLiteral { value: IntLiteralValue::Int64(0), span },
-            Type::Int128 => Expr::IntLiteral { value: IntLiteralValue::Int128(0), span },
+            Self::Int64 => Expr::IntLiteral { value: IntLiteralValue::Int64(0), span },
+            Self::Int128 => Expr::IntLiteral { value: IntLiteralValue::Int128(0), span },
 
-            Type::Byte => Expr::IntLiteral { value: IntLiteralValue::Byte(0), span },
-            Type::Uint16 => Expr::IntLiteral { value: IntLiteralValue::Uint16(0), span },
-            Type::Uint32 => Expr::IntLiteral { value: IntLiteralValue::Uint32(0), span },
-            Type::Uint64 => Expr::IntLiteral { value: IntLiteralValue::Uint64(0), span },
-            Type::Uint128 => Expr::IntLiteral { value: IntLiteralValue::Uint128(0), span },
-            Type::Usize => Expr::IntLiteral { value: IntLiteralValue::Usize(0), span },
+            Self::Byte => Expr::IntLiteral { value: IntLiteralValue::Byte(0), span },
+            Self::Uint16 => Expr::IntLiteral { value: IntLiteralValue::Uint16(0), span },
+            Self::Uint32 => Expr::IntLiteral { value: IntLiteralValue::Uint32(0), span },
+            Self::Uint64 => Expr::IntLiteral { value: IntLiteralValue::Uint64(0), span },
+            Self::Uint128 => Expr::IntLiteral { value: IntLiteralValue::Uint128(0), span },
+            Self::Usize => Expr::IntLiteral { value: IntLiteralValue::Usize(0), span },
 
-            Type::Float64 => Expr::Float64Literal { value: 0.0, span },
+            Self::Float64 => Expr::Float64Literal { value: 0.0, span },
+            Self::Bool => Expr::BoolLiteral { value: false, span },
+            Self::String => Expr::StringLiteral { value: String::new(), span },
 
-            Type::Bool => Expr::BoolLiteral { value: false, span },
-
-            Type::String => Expr::StringLiteral { value: "".to_string(), span },
-            Type::Array(t) => {
+            Self::Array(t) => {
                 // This is just to ensure it doesnt have any fixedArrays with in.
                 if t.is_array_type() {
-                    t.get_default_value(span);
+                    let _ = t.get_default_value(span);
                 }
 
                 // NOTE: If any weird bugs arise that trigger panicing guard statements, its this
@@ -164,7 +167,7 @@ impl Type {
                 //
                 Expr::ArrayLiteral { elements: Vec::new(), type_name: None, span }
             },
-            Type::FixedArray(_, _) => panic!(),
+            Self::FixedArray(_, _) => panic!("(Compiler bug) Dont call get_default_value on fixed-size arrays.")
         }
     }
 
