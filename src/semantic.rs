@@ -57,15 +57,15 @@ pub fn check_semantics(ast: &mut AST) -> Result<(), HolyError> {
     for f in &ast.functions {
         let param_tys = f.params.iter().map(|p| p.type_name.clone()).collect();
         if fun_sigs.insert(f.name.clone(), (param_tys, f.return_type.clone())).is_some() {
-            return Err(HolyError::Semantic(format!("Duplicate function declaration: {}", f.name)));
+            return Err(HolyError::Semantic(format!("Duplicate function declaration: {}", f.name)))
         }
 
         if f.name == "main" && f.return_type.is_some() {
-            return Err(HolyError::Semantic("function `main` must not return.".to_string()));
+            return Err(HolyError::Semantic("function `main` must not return.".to_string()))
         }
 
-        if f.name == "main" && f.params.len() != 0 {
-            return Err(HolyError::Semantic("function `main` must not have any parameters.".to_string()));
+        if f.name == "main" && !f.params.is_empty() {
+            return Err(HolyError::Semantic("function `main` must not have any parameters.".to_string()))
         }
 
     }
@@ -154,7 +154,7 @@ fn check_function(
     //
     // We only do return branch analysis if function has declared return type.
     if func.return_type.is_some() {
-        branch_analysis::return_branch_analysis(&func.clone(), last_func_stmt.clone().unwrap(), false, false)?;
+        branch_analysis::return_branch_analysis(func, last_func_stmt.unwrap(), false, false)?;
     }
 
     Ok(())
@@ -242,16 +242,11 @@ fn check_stmts(
     // arguments though.
     //
 
-    let is_nested_scope = if block.clone() == func.body {
-        false
-    } else {
-        true
-    };
-
+    let is_nested_scope = *block != func.body;
 
     // Walk statements in order. 
     for stmt in block {
-        let stmt_span = helpers::stmt_span(&stmt);
+        let stmt_span = helpers::stmt_span(stmt);
 
         match stmt {
             Stmt::Const(cons) => {
@@ -274,7 +269,7 @@ fn check_stmts(
                 }
 
                 // HolyLang commandment 1. You shall not overshadow variables
-                if let Some(_) = locals.get(&var.name) {
+                if locals.contains_key(&var.name) {
                     return Err(HolyError::Semantic(format!(
                             "Variable `{}` is already declared, overshadowing is not allowed. (line {} column {})", 
                             &var.name, var.span.line, var.span.column
@@ -299,11 +294,11 @@ fn check_stmts(
 
 
                             // Error if we are in loop, and we tried to take ownership of an upstream variable
-                            if in_loop && upstream_var_names.contains(&src_name) {
+                            if in_loop && upstream_var_names.contains(src_name) {
                                 return Err(HolyError::Semantic(format!(
                                             "Upstream variable `{}` is potentially moved multiple times, because you are in a loop. Consider using `copy()` (line {} column {})", 
                                             &src_name, span.line, span.column
-                                        )));
+                                        )))
                             }
 
                             // mark source as moved because ownership was transferred
@@ -370,11 +365,11 @@ fn check_stmts(
 
 
                         // HolyLang commandment 1. You shall not overshadow variables
-                        if let Some(_) = locals.get(&var.name) {
+                        if locals.contains_key(&var.name) {
                             return Err(HolyError::Semantic(format!(
                                     "Variable `{}` is already declared, overshadowing is not allowed. (line {} column {})", 
                                     &var.name, var.span.line, var.span.column
-                                )));
+                                )))
                         }
 
                         // insert into locals
@@ -460,7 +455,7 @@ fn check_stmts(
                     match &mut src.kind {
                         BindingKind::Var { moved: src_moved, len: src_len, .. } => {
                             // Error if we are in loop, and we tried to take ownership of an upstream variable
-                            if in_loop && upstream_var_names.contains(&src_name) {
+                            if in_loop && upstream_var_names.contains(src_name) {
                                 return Err(HolyError::Semantic(format!(
                                             "Upstream variable `{}` is potentially moved multiple times, because you are in a loop. Consider using `copy()` (line {} column {})", 
                                             &src_name, span.line, span.column
@@ -597,7 +592,7 @@ fn check_stmts(
                                 )))
                             }
 
-                            if upstream_var_names.contains(&name) {
+                            if upstream_var_names.contains(name) {
                                 // Special rule: Despite fact you cannot lock/unlock variables declared upstream,
                                 // and function arguments are considered declared upstream, the
                                 // special rule, if we are not in a nested scope (i.e. the block of
@@ -643,14 +638,15 @@ fn check_stmts(
 
                     match &mut var.kind {
                         BindingKind::Var { locked, .. } => {
-                            if *locked == true {
+                            if *locked {
                                 return Err(HolyError::Semantic(format!(
                                         "Variable `{}` is already locked (line {} column {})",
                                         var_name, stmt_span.line, stmt_span.column
                                     )))
 
+                            } else {
+                                *locked = true;
                             }
-                            *locked = true;
                         },
                         BindingKind::Const { .. } => {
                             return Err(HolyError::Semantic(format!(
@@ -678,7 +674,7 @@ fn check_stmts(
                                 )))
                             }
 
-                            if upstream_var_names.contains(&name) {
+                            if upstream_var_names.contains(name) {
                                 // Special rule: Despite fact you cannot lock/unlock variables declared upstream,
                                 // and function arguments are considered declared upstream, the
                                 // special rule, if we are not in a nested scope (i.e. the block of
@@ -723,14 +719,15 @@ fn check_stmts(
 
                     match &mut var.kind {
                         BindingKind::Var { locked, .. } => {
-                            if *locked == false {
+                            if !*locked {
                                 return Err(HolyError::Semantic(format!(
                                         "Variable `{}` is already unlocked (line {} column {})",
                                         var_name, stmt_span.line, stmt_span.column
                                     )))
 
+                            } else {
+                                *locked = false;
                             }
-                            *locked = false;
                         },
                         BindingKind::Const { .. } => {
                             return Err(HolyError::Semantic(format!(
@@ -794,34 +791,32 @@ fn check_stmts(
                 }
 
 
-                if let Some(_) = locals.get(&for_stmt.holder_name) {
+                if locals.contains_key(&for_stmt.holder_name) {
                     return Err(HolyError::Semantic(format!(
                         "Cannot use variable name `{}` in for loop statement as it is already declared. (line {} column {})",
                         for_stmt.holder_name, stmt_span.line, stmt_span.column,
-                    )));
-
+                    )))
                 }
 
                 // If this is a for looping over an array, move the array only if its not an array
                 // literal. i.e. its a variable that holds an array.
-                if expr_ty.is_array_type()  {
-                    if let Expr::Var { name, .. } = &for_stmt.value {
-                        let src = locals.get_mut(name).unwrap_or_else(|| panic!(
-                            "(Compiler bug) infer_expr_type should've already errored if the array variable didnt exist, but it didnt. for_stmt: {:?}", 
-                            for_stmt
-                        ));
+                if expr_ty.is_array_type()
+                    && let Expr::Var { name, .. } = &for_stmt.value {
+                    let src = locals.get_mut(name).unwrap_or_else(|| panic!(
+                        "(Compiler bug) infer_expr_type should've already errored if the array variable didnt exist, but it didnt. for_stmt: {:?}", 
+                        for_stmt
+                    ));
 
-                        match &mut src.kind {
-                            BindingKind::Var { moved: src_moved, .. } => {
-                                if *src_moved {
-                                    panic!("(Compiler bug) infer_expr_type should've already errored if the array variable is moved, but it didnt. for_stmt: {:?}", for_stmt)
-                                }
+                    match &mut src.kind {
+                        BindingKind::Var { moved: src_moved, .. } => {
+                            if *src_moved {
+                                panic!("(Compiler bug) infer_expr_type should've already errored if the array variable is moved, but it didnt. for_stmt: {:?}", for_stmt)
+                            }
 
-                                *src_moved = true;
-                            },
-                            // Ownership rules don't apply to constants.
-                            BindingKind::Const { .. } => {}
-                        }
+                            *src_moved = true;
+                        },
+                        // Ownership rules don't apply to constants.
+                        BindingKind::Const { .. } => {}
                     }
                 }
 
@@ -1014,10 +1009,11 @@ fn update_local_assignments_from_clone(upstream: &mut HashMap<String, BindingInf
                 BindingKind::Var { moved, ..} => {
                     // If variable is already moved, we don't care about its assignments no more, we just
                     // skip.
-                    if moved == true {
+                    if moved {
                         continue
+                    } else {
+                        *info = vi.clone();
                     }
-                    *info = vi.clone();
                 },
                 BindingKind::Const { .. } => continue
             }
@@ -1034,7 +1030,7 @@ fn update_local_assignments_from_clone(upstream: &mut HashMap<String, BindingInf
 ///   `Ok(None)` when no return type (allowed only when `require_ret == false`).
 fn check_call(
     name: &str,
-    args: &mut Vec<Expr>,
+    args: &mut [Expr],
     locals: &mut HashMap<String, BindingInfo>,
     fun_sigs: &HashMap<String, (Vec<Type>, Option<Vec<Type>>)>,
     require_ret: bool,

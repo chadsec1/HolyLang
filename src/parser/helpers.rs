@@ -11,7 +11,7 @@ use crate::consts;
 ///
 ///
 pub fn get_parenthesis_contents(s: &str) -> Option<&str> {
-    if s.len() == 0 {
+    if s.is_empty() {
         return None
     }
 
@@ -27,22 +27,19 @@ pub fn get_parenthesis_contents(s: &str) -> Option<&str> {
             }
 
             match c {
-                '(' => {
-                    if !in_string {
-                        depth += 1
-                    }
+                '(' if !in_string => {
+                    depth += 1
                 },
                 '"' => in_string = !in_string,
                 '\\' => in_escape = true,
-                ')' => {
-                    if !in_string {
-                        if depth == 0 {
-                            found = Some(1 + i);
-                            break;
-                        }
-                        depth -= 1;
+                ')' if !in_string => {
+                    if depth == 0 {
+                        found = Some(1 + i);
+                        break;
                     }
+                    depth -= 1;
                 }
+                
                 _ => {}
             }
         }
@@ -80,21 +77,17 @@ pub fn get_array_contents(s: &str) -> Option<(&str, usize)> {
                 }
 
                 match c {
-                    ']' => {
-                        if !in_string {
-                            depth += 1
-                        }
+                    ']' if !in_string => {
+                        depth += 1
                     },
                     '"' => in_string = !in_string,
                     '\\' => in_escape = true,
-                    '[' => {
-                        if !in_string {
-                            if depth == 0 {
-                                found = Some(i + 1);
-                                break;
-                            }
-                            depth -= 1;
+                    '[' if !in_string => {
+                        if depth == 0 {
+                            found = Some(i + 1);
+                            break;
                         }
+                        depth -= 1;
                     }
                     _ => {}
                 }
@@ -116,21 +109,17 @@ pub fn get_array_contents(s: &str) -> Option<(&str, usize)> {
                 }
 
                 match c {
-                    '[' => {
-                        if !in_string {
-                            depth += 1
-                        }
+                    '[' if !in_string => {
+                        depth += 1
                     },
                     '"' => in_string = !in_string,
                     '\\' => in_escape = true,
-                    ']' => {
-                        if !in_string {
-                            if depth == 0 {
-                                found = Some(first_bracket + i);
-                                break;
-                            }
-                            depth -= 1;
+                    ']' if !in_string => {
+                        if depth == 0 {
+                            found = Some(first_bracket + i);
+                            break;
                         }
+                        depth -= 1;
                     }
                     _ => {}
                 }
@@ -189,84 +178,79 @@ pub fn find_top_level_op_any(s: &str) -> Option<(usize, &str)> {
             match c {
                 '"' => in_string = !in_string,
                 '\\' => in_escape = true,
-                '(' | '[' | '{' => {
-                    if !in_string {
-                        depth += 1
-                    }
+                '(' | '[' | '{' if !in_string => {
+                    depth += 1
                 },
-                ')' | ']' | '}' => { 
-                    if !in_string {
-                        if depth > 0 { depth -= 1; } 
-                    }
-                }
-                _ if depth == 0 => {
-                    if !in_string {
-                        // Peek next char
-                        let next = chars.get(i + 1).map(|(_, nc)| *nc);
+                ')' | ']' | '}' if (!in_string) && depth > 0 => {
+                    depth -= 1;
+                },
 
-                        // Determine operator string at this position
-                        let op_str: Option<&str> = match c {
-                            '=' if next == Some('=') => Some(&s[idx..idx + 2]),
-                            '!' if next == Some('=') => Some(&s[idx..idx + 2]),
-                            '>' if next == Some('=') => Some(&s[idx..idx + 2]),
-                            '<' if next == Some('=') => Some(&s[idx..idx + 2]),
-                            '>' if next == Some('>') => Some(&s[idx..idx + 2]),
-                            '<' if next == Some('<') => Some(&s[idx..idx + 2]),
-                            'a' if s[idx..].starts_with("and") => {
-                                let before = if i == 0 { None } else { Some(chars[i - 1].1) };
-                                let after = chars.get(i + 3).map(|(_, ch)| *ch);
+                _ if (!in_string) && (depth == 0) => {
+                    // Peek next char
+                    let next = chars.get(i + 1).map(|(_, nc)| *nc);
 
-                                if before.map_or(true, |ch| !is_ident_char(ch))
-                                    && after.map_or(true, |ch| !is_ident_char(ch))
-                                {
-                                    Some(&s[idx..idx + 3])
-                                } else {
-                                    None
-                                }
+                    // Determine operator string at this position
+                    let op_str: Option<&str> = match c {
+                        '=' if next == Some('=') => Some(&s[idx..idx + 2]),
+                        '!' if next == Some('=') => Some(&s[idx..idx + 2]),
+                        '>' if next == Some('=') => Some(&s[idx..idx + 2]),
+                        '<' if next == Some('=') => Some(&s[idx..idx + 2]),
+                        '>' if next == Some('>') => Some(&s[idx..idx + 2]),
+                        '<' if next == Some('<') => Some(&s[idx..idx + 2]),
+                        'a' if s[idx..].starts_with("and") => {
+                            let before = if i == 0 { None } else { Some(chars[i - 1].1) };
+                            let after = chars.get(i + 3).map(|(_, ch)| *ch);
+
+                            if before.is_none_or(|ch| !is_ident_char(ch))
+                                && after.is_none_or(|ch| !is_ident_char(ch))
+                            {
+                                Some(&s[idx..idx + 3])
+                            } else {
+                                None
                             }
+                        }
 
-                            'o' if s[idx..].starts_with("or") => {
-                                let before = if i == 0 { None } else { Some(chars[i - 1].1) };
-                                let after = chars.get(i + 2).map(|(_, ch)| *ch);
+                        'o' if s[idx..].starts_with("or") => {
+                            let before = if i == 0 { None } else { Some(chars[i - 1].1) };
+                            let after = chars.get(i + 2).map(|(_, ch)| *ch);
 
-                                if before.map_or(true, |ch| !is_ident_char(ch))
-                                    && after.map_or(true, |ch| !is_ident_char(ch))
-                                {
-                                    Some(&s[idx..idx + 2])
-                                } else {
-                                    None
-                                }
+                            if before.is_none_or(|ch| !is_ident_char(ch))
+                                && after.is_none_or(|ch| !is_ident_char(ch))
+                            {
+                                Some(&s[idx..idx + 2])
+                            } else {
+                                None
                             }
+                        }
 
-                            '+' | '-' | '*' | '/' | '>' | '<' | '|' | '&' => Some(&s[idx..idx+1]),
-                            _ => None,
-                        };
+                        '+' | '-' | '*' | '/' | '>' | '<' | '|' | '&' => Some(&s[idx..idx+1]),
+                        _ => None,
+                    };
 
-                        if let Some(op) = op_str {
-                            // Skip unary  (negate, logical not,m bitwise not)
-                            if op == "-" || op == "!" || op == "~" {
-                                let prev_non_ws = (0..i).rev()
-                                    .map(|j| chars[j].1)
-                                    .find(|ch| !ch.is_whitespace());
-                                match prev_non_ws {
-                                    None => { i += 1; continue; }
-                                    Some(prev) if "+-*/&|!~=<>(".contains(prev) => { i += 1; continue; }
-                                    _ => {}
-                                }
+                    if let Some(op) = op_str {
+                        // Skip unary  (negate, logical not,m bitwise not)
+                        if op == "-" || op == "!" || op == "~" {
+                            let prev_non_ws = (0..i).rev()
+                                .map(|j| chars[j].1)
+                                .find(|ch| !ch.is_whitespace());
+                            match prev_non_ws {
+                                None => { i += 1; continue; }
+                                Some(prev) if "+-*/&|!~=<>(".contains(prev) => { i += 1; continue; }
+                                _ => {}
                             }
+                        }
 
-                            let prec = precedence(op);
-                            if prec <= best_prec {
-                                best_prec = prec;
-                                best = Some((idx, op));
-                            }
+                        let prec = precedence(op);
+                        if prec <= best_prec {
+                            best_prec = prec;
+                            best = Some((idx, op));
+                        }
 
-                            // Skip both chars for two-char operators so we don't
-                            // match the second char again
-                            if op.len() == 2 {
-                                i += 2;
-                                continue;
-                            }
+                        // Skip both chars for two-char operators so we don't
+                        // match the second char again
+                        if op.len() == 2 {
+                            i += 2;
+                            continue;
                         }
                     }
                 }
@@ -347,12 +331,10 @@ pub fn split_char_top_level(split_char: char, s: &str) -> Result<Vec<&str>, Holy
                     if matches!(stack.last(), Some('{')) { stack.pop(); }
                     just_closed_string = false;
                 }
-                c if c == split_char => {
-                    if stack.is_empty() && in_string.is_none() {
-                        parts.push(s[start..i].trim());
-                        start = i + c.len_utf8();
-                        just_closed_string = false;
-                    }
+                c if (c == split_char) && stack.is_empty() && in_string.is_none() => {
+                    parts.push(s[start..i].trim());
+                    start = i + c.len_utf8();
+                    just_closed_string = false;
                 }
                 _ => {}
             }
@@ -544,7 +526,7 @@ pub fn parse_format_string(s: &str) -> Result<(String, Vec<String>), HolyError> 
                 let mut inner = String::new();
                 let mut closed = false;
 
-                while let Some(nc) = chars.next() {
+                for nc in chars.by_ref() {
                     if nc == '}' {
                         closed = true;
                         break;

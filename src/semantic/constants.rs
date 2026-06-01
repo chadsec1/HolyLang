@@ -115,7 +115,7 @@ pub fn eval_const_expr_and_fold_it_hazmat(
 
                         // Ensures unary result fits in original value type
                         let folded_result = helpers::coerce_integer_literal_to_type_helper(value.get_type(), IntLiteralValue::Int128(result), span)?;
-                        return Ok(Expr::IntLiteral { value: folded_result, span });
+                        Ok(Expr::IntLiteral { value: folded_result, span })
                     
                     // unsigned
                     } else {
@@ -131,7 +131,7 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                         // bitwise not is huge on unsigned.
                         // So truncating helps fix that.
                         //
-                        return Ok(truncate_to_uint_type_hazmat(result, value.get_type(), span))
+                        Ok(truncate_to_uint_type_hazmat(result, value.get_type(), span))
                     }
                 },
 
@@ -152,12 +152,12 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                         )));
                     }
 
-                    return Ok(Expr::Float64Literal { value: result, span });
+                    Ok(Expr::Float64Literal { value: result, span })
                 },
                 Expr::BoolLiteral{ value, span } => {
                     match op {
                         UnaryOpKind::Not => {
-                            return Ok(Expr::BoolLiteral { value: !value, span });
+                            Ok(Expr::BoolLiteral { value: !value, span })
                         },
                         other => panic!("(Compiler bug) Illegal unary operation detected `{:?}`. this shouldve errored when the wrapper called infer_expr_type", other)
                     }
@@ -183,13 +183,13 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                         BinOpKind::Equal => {
                             let result: bool = left_value == right_value;
 
-                            return Ok(Expr::BoolLiteral { value: result, span });
+                            Ok(Expr::BoolLiteral { value: result, span })
                         },
 
                         BinOpKind::NotEqual => {
                             let result: bool = left_value != right_value;
 
-                            return Ok(Expr::BoolLiteral { value: result, span });
+                            Ok(Expr::BoolLiteral { value: result, span })
                         },
 
                         other => panic!(
@@ -214,24 +214,24 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                         BinOpKind::And => {
                             let result: bool = left_value && right_value;
 
-                            return Ok(Expr::BoolLiteral { value: result, span });
+                            Ok(Expr::BoolLiteral { value: result, span })
                         },
 
                         BinOpKind::Or => {
                             let result: bool = left_value || right_value;
 
-                            return Ok(Expr::BoolLiteral { value: result, span });
+                            Ok(Expr::BoolLiteral { value: result, span })
                         },
                         BinOpKind::Equal => {
                             let result: bool = left_value == right_value;
 
-                            return Ok(Expr::BoolLiteral { value: result, span });
+                            Ok(Expr::BoolLiteral { value: result, span })
                         },
 
                         BinOpKind::NotEqual => {
                             let result: bool = left_value != right_value;
 
-                            return Ok(Expr::BoolLiteral { value: result, span });
+                            Ok(Expr::BoolLiteral { value: result, span })
                         },
 
                         other => panic!(
@@ -249,6 +249,7 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                             left, right)
                     };
 
+                    #[allow(clippy::needless_late_init)]
                     let result: f64;
 
                     match op {
@@ -320,7 +321,7 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                     }
 
 
-                    return Ok(Expr::Float64Literal { value: result, span})
+                    Ok(Expr::Float64Literal { value: result, span})
                 },
 
                 Expr::IntLiteral { value: left_value, span, ..} => {
@@ -489,7 +490,7 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                         // statements.
                         //
                         let folded_result = helpers::coerce_integer_literal_to_type_helper(left_value.get_type(), IntLiteralValue::Int128(result), span)?;
-                        return Ok(Expr::IntLiteral { value: folded_result, span });
+                        Ok(Expr::IntLiteral { value: folded_result, span })
                     } else {
                         let left_val = left_value.as_u128();
                         let right_val = right_value.as_u128();
@@ -626,7 +627,7 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                         // statements.
                         // 
                         let folded_result = helpers::coerce_integer_literal_to_type_helper(left_value.get_type(), IntLiteralValue::Uint128(result), span)?;
-                        return Ok(Expr::IntLiteral { value: folded_result, span });
+                        Ok(Expr::IntLiteral { value: folded_result, span })
                     }
                 }
                 
@@ -666,7 +667,7 @@ fn truncate_to_uint_type_hazmat(target: u128, ty: Type, span: Span) -> Expr {
         Type::Uint16 => Expr::IntLiteral { value: IntLiteralValue::Uint16(target as u16), span},
         Type::Uint32 => Expr::IntLiteral { value: IntLiteralValue::Uint32(target as u32), span},
         Type::Uint64 => Expr::IntLiteral { value: IntLiteralValue::Uint64(target as u64), span},
-        Type::Uint128 => Expr::IntLiteral { value: IntLiteralValue::Uint128(target as u128), span },
+        Type::Uint128 => Expr::IntLiteral { value: IntLiteralValue::Uint128(target), span },
         Type::Usize => Expr::IntLiteral { value: IntLiteralValue::Usize(target as usize), span },
 
         other => panic!("(Compiler bug) Expected target to be of an unsigned integer type, instead got `{:?}`. Target: {:?}", other, target)
@@ -682,7 +683,7 @@ fn truncate_to_int_type_hazmat(target: i128, ty: Type, span: Span) -> Expr {
         Type::Int16 => Expr::IntLiteral { value: IntLiteralValue::Int16(target as i16), span},
         Type::Int32 => Expr::IntLiteral { value: IntLiteralValue::Int32(target as i32), span},
         Type::Int64 => Expr::IntLiteral { value: IntLiteralValue::Int64(target as i64), span},
-        Type::Int128 => Expr::IntLiteral { value: IntLiteralValue::Int128(target as i128), span },
+        Type::Int128 => Expr::IntLiteral { value: IntLiteralValue::Int128(target), span },
 
         other => panic!("(Compiler bug) Expected target to be of an signed integer type, instead got `{:?}`. Target: {:?}", other, target)
     }

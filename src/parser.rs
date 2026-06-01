@@ -85,7 +85,7 @@ fn parse_function(lines: &Vec<&str>, start_i: usize) -> Result<(Function, usize)
 
 
     helpers::validate_identifier_name(&name)
-        .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+        .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
 
     let rest = &after_func[open_paren..]; // starts with '('
     let close_paren = rest.find(')').ok_or_else(|| {
@@ -121,7 +121,7 @@ fn parse_function(lines: &Vec<&str>, start_i: usize) -> Result<(Function, usize)
                 return Err(HolyError::Parse(format!("Missing types in the `()` return types function `{}` headers at line {}", name, start_i + 1)));
             }
             let split_parts = helpers::split_char_top_level(',', inner)
-                .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+                .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
 
 
             for part in split_parts {
@@ -148,10 +148,10 @@ fn parse_function(lines: &Vec<&str>, start_i: usize) -> Result<(Function, usize)
             }
             let pname = parts[0].to_string();
             helpers::validate_identifier_name(&pname)
-                .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+                .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
 
             let ptype = parse_type(parts[1], &span)?;
-            params.push(Param { name: pname, type_name: ptype, span: span });
+            params.push(Param { name: pname, type_name: ptype, span });
         }
     }
 
@@ -214,13 +214,13 @@ fn parse_const_stmt(line: &str, span: Span) -> Result<Constant, HolyError> {
         // Ensure the constant name doesnt have special characters, except _, and doesnt start with a
         // number.
         helpers::validate_identifier_name(&name)
-            .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+            .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
 
         let value = parse_expr::parse_expr(right, span)?;
 
-        return Ok(Constant { name, type_name: var_type, value: value, span });
+        Ok(Constant { name, type_name: var_type, value, span })
     } else {
-        return Err(HolyError::Parse(format!("Invalid constant declaration, it's missing the `=' sign: `{}` (line {} column {})", line, span.line, span.column)));
+        Err(HolyError::Parse(format!("Invalid constant declaration, it's missing the `=' sign: `{}` (line {} column {})", line, span.line, span.column)))
     }
 }
 
@@ -240,8 +240,9 @@ fn parse_block(lines: &Vec<&str>, mut idx: usize) -> Result<(Vec<Stmt>, usize, B
 
         // Lines starting with `}` close the current block level.
         // They may have a trailing `else {` or `elif <cond> {`.
-        if t.starts_with('}') {
-            let after_close = t[1..].trim();
+        //
+        if let Some(after_close) = t.strip_prefix('}') {
+            let after_close = after_close.trim();
 
             // Reject anything that isn't a known continuation
             if !after_close.is_empty()
@@ -401,9 +402,8 @@ fn parse_for_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), Ho
         let expr_str = &for_str[index + " in ".len() .. ];
         
         helpers::validate_identifier_name(&holder_name)
-            .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+            .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
 
-        let expr: Expr;
         
         // A hack, to only allow "RangeCall" expression to be used within for loop statements.
         // I would love to shove this in parse_expr, but, if I do, programmer would be able to assign
@@ -412,45 +412,44 @@ fn parse_for_stmt(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), Ho
         // for loops, so it's part of the syntax structure, not just semantics.
         //
         //
-        if expr_str.starts_with("range(") && expr_str.ends_with(")") {
-            let range_str = expr_str["range(".len()..].strip_suffix(")").unwrap();
+        let expr: Expr = if expr_str.starts_with("range(") && expr_str.ends_with(")") {
+                let range_str = expr_str["range(".len()..].strip_suffix(")").unwrap();
 
-            let split_args = helpers::split_char_top_level(',', range_str)
-                .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+                let split_args = helpers::split_char_top_level(',', range_str)
+                    .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
 
-            if split_args.len() != 2 {
-                return Err(HolyError::Parse(format!(
-                    "For loop `range` statement takes exactly 2 arguments, instead we got `{}` arguments. (line {} column {})",
-                    split_args.len(), span.line, span.column
-                )));
+                if split_args.len() != 2 {
+                    return Err(HolyError::Parse(format!(
+                        "For loop `range` statement takes exactly 2 arguments, instead we got `{}` arguments. (line {} column {})",
+                        split_args.len(), span.line, span.column
+                    )));
 
-            }
+                }
 
-            let start_expr = parse_expr::parse_expr(split_args[0], span)?;
-            let end_expr = parse_expr::parse_expr(split_args[1], span)?;
+                let start_expr = parse_expr::parse_expr(split_args[0], span)?;
+                let end_expr = parse_expr::parse_expr(split_args[1], span)?;
 
-            expr = Expr::RangeCall{ start: Box::new(start_expr), end: Box::new(end_expr), span: span };
-        } else {
-            
-            expr = parse_expr::parse_expr(expr_str, span)?;
-        }
+                Expr::RangeCall{ start: Box::new(start_expr), end: Box::new(end_expr), span }
+            } else {
+                parse_expr::parse_expr(expr_str, span)?
+            };
 
         let (branch, next_i, _) = parse_block(lines, start_i + 1)?;
 
-        return Ok((
+        Ok((
             Stmt::For(ForStmt {
                 holder_name,
                 value: expr,
                 branch,
                 span,
             }),
-            next_i,
+            next_i
         ))
     } else {
-        return Err(HolyError::Parse(format!(
+        Err(HolyError::Parse(format!(
             "For loop statement is not constructed properly. You are missing `in` keyword. (line {} column {})",
             span.line, span.column
-        )));
+        )))
     }
 }
 
@@ -558,8 +557,8 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
         )));
     }
 
-    if line.starts_with("return ") {
-        let expr_str = line["return ".len()..].trim();
+    if let Some(expr_str) = line.strip_prefix("return ") {
+        let expr_str = expr_str.trim();
         if expr_str.is_empty() {
             panic!("(Compiler bug) We expected to `line` to be a trimmed, comments-removed line. Instead we got {:?}", expr_str);
         }
@@ -568,7 +567,7 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
         // then split, parse each element, and return the vec.
         // Otherwise create new vec of single parsed element.
         let top_parts = helpers::split_char_top_level(',', expr_str)
-            .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+            .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
 
         if top_parts.len() > 1 {
             let mut elems = vec![];
@@ -584,11 +583,11 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
 
 
     if line == "break" {
-        return Ok(Stmt::Break(BreakStmt{ span: span }));
+        return Ok(Stmt::Break(BreakStmt{ span }));
     }
 
     if line == "continue" {
-        return Ok(Stmt::Continue(ContinueStmt{ span: span }));
+        return Ok(Stmt::Continue(ContinueStmt{ span }));
     }
 
 
@@ -596,14 +595,15 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
     // lock var_name
     // lock var_name, var_name, ...
     //
-    if line.starts_with("lock ") {
-        let rest = line["lock ".len()..].trim();
+
+    if let Some(rest) = line.strip_prefix("lock ") {
+        let rest = rest.trim();
         if rest.is_empty() {
             panic!("(Compiler bug) We expected to `line` to be a trimmed, comments-removed line. Instead we got {:?}", rest);
         }
 
         let split_parts = helpers::split_char_top_level(',', rest)
-                .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+                .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
 
         let mut expr_vec = vec![];
 
@@ -620,14 +620,16 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
     // lock var_name
     // lock var_name, var_name, ...
     //
-    if line.starts_with("unlock ") {
-        let rest = line["unlock ".len()..].trim();
+    
+
+    if let Some(rest) = line.strip_prefix("unlock ") {
+        let rest = rest.trim();
         if rest.is_empty() {
             panic!("(Compiler bug) We expected to `line` to be a trimmed, comments-removed line. Instead we got {:?}", rest);
         }
 
         let split_parts = helpers::split_char_top_level(',', rest)
-                .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+                .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
 
         let mut expr_vec = vec![];
 
@@ -640,18 +642,17 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
     }
 
 
-
-
     // Variable declaration: own VAR_NAME ...
-    if line.starts_with("own ") {
-        // possibilities:
-        // own VAR_NAME TYPE_NAME = EXPRESSION
-        // own VAR_NAME TYPE_NAME (all types have default values.)
-        // 
-        // special-case multi-declaration: own x TYPE_1, y TYPE_2 = call() 
-        // (just example, declared can be as many as you want, but RHS can only be a single expression) 
-        //
-        let rest = line["own ".len()..].trim();
+    // possibilities:
+    // own VAR_NAME TYPE_NAME = EXPRESSION
+    // own VAR_NAME TYPE_NAME (all types have default values.)
+    // 
+    // special-case multi-declaration: own x TYPE_1, y TYPE_2 = call() 
+    // (just example, declared can be as many as you want, but RHS can only be a single expression) 
+    //
+    if let Some(rest) = line.strip_prefix("own ") {
+        let rest = rest.trim();
+     
         // check for assignment '='
         if let Some(eq_pos) = rest.find('=') {
             let left = rest[..eq_pos].trim();
@@ -663,7 +664,7 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
                 let mut var_types: Vec<Type> = vec![];
                 
                 for part in left.split(',') {
-                    let name_type_arr: Vec<&str> = part.trim().split_whitespace().collect();
+                    let name_type_arr: Vec<&str> = part.split_whitespace().collect();
 
                     if name_type_arr.len() != 2 {
                         return Err(HolyError::Parse(format!("Invalid multi-variable declaration `{}` at line {}", line, line_no)));
@@ -673,7 +674,7 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
                     let typ = parse_type(name_type_arr[1], &span)?;
 
                     helpers::validate_identifier_name(&name)
-                        .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+                        .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
 
                     var_names.push(name.to_string());
                     var_types.push(typ);
@@ -701,11 +702,11 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
             // ensure variable name doesnt have special characters, except _, and doesnt start with a
             // number.
             helpers::validate_identifier_name(&name)
-                .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+                .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
 
             let value = parse_expr::parse_expr(right, span)?;
 
-            return Ok(Stmt::VarDecl(VariableDeclaration { name, type_name: var_type, value: value, explicitly_initialized: true, span: span }));
+            return Ok(Stmt::VarDecl(VariableDeclaration { name, type_name: var_type, value, explicitly_initialized: true, span }));
 
 
 
@@ -717,12 +718,12 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
             }
             let name = parts[0].to_string();
             helpers::validate_identifier_name(&name)
-                .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+                .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
 
             let ty = parse_type(parts[1], &span)?;
             let default_value = ty.get_default_value(span);
 
-            return Ok(Stmt::VarDecl(VariableDeclaration { name, type_name: ty, value: default_value, explicitly_initialized: false, span: span }))
+            return Ok(Stmt::VarDecl(VariableDeclaration { name, type_name: ty, value: default_value, explicitly_initialized: false, span }))
         }
     }
 
@@ -756,7 +757,7 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
             for n in name.split(',') {
                 let n = n.trim();
                 helpers::validate_identifier_name(n)
-                    .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+                    .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
 
                 var_names.push(n.to_string());
             }
@@ -768,7 +769,7 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
 
         // validate left is a valid identifier
         helpers::validate_identifier_name(name)
-                .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+                .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
 
         let value = parse_expr::parse_expr(right, span)?;
         return Ok(Stmt::VarAssign(VariableAssignment {
@@ -896,8 +897,8 @@ fn parse_fixed_array_size(s: &str, span: &Span) -> Result<FixedArraySize, HolyEr
         return Ok(FixedArraySize::Literal(n));
     }
 
-    helpers::validate_identifier_name(&s)
-        .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+    helpers::validate_identifier_name(s)
+        .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
 
     Ok(FixedArraySize::Const(s.to_string()))
 }

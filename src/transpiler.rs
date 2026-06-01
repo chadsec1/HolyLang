@@ -26,13 +26,13 @@ pub fn transpile(ast: &AST) -> String {
         rcode = format!("{}{}\n", rcode, func_rcode);
     }
 
-    return rcode
+    rcode
 }
 
 
 fn import_internals() -> String {
     let content = include_str!("transpiler/internal.rs");
-    return content.to_string()
+    content.to_string()
 }
 
 
@@ -67,7 +67,7 @@ fn transpile_function(func: &Function) -> String {
         } else {
             func_rcode.push('(');
             for t in ret_types {
-                func_rcode.push_str(&holy_type_to_rust_type_str(&t));
+                func_rcode.push_str(&holy_type_to_rust_type_str(t));
                 func_rcode.push_str(", ");
             }
             
@@ -88,7 +88,8 @@ fn transpile_function(func: &Function) -> String {
         func_rcode = format!("{} {}\n", func_rcode, stmt_rcode);
     }
     func_rcode.push_str("}\n");
-    return func_rcode
+
+    func_rcode
 }
 
 
@@ -103,9 +104,9 @@ fn transpile_stmt(stmt: &Stmt) -> String {
             let var_value = holy_expr_to_rust_expr(&var.value);
 
             if var.explicitly_initialized {
-                return format!("let {}: {} = {};", var.name, var_type, var_value);
+                format!("let {}: {} = {};", var.name, var_type, var_value)
             } else {
-                return format!("let mut {}: {} = {};", var.name, var_type, var_value);
+                format!("let mut {}: {} = {};", var.name, var_type, var_value)
             }
         },
 
@@ -142,13 +143,13 @@ fn transpile_stmt(stmt: &Stmt) -> String {
             multi_decl_stmt_str.push_str(&holy_expr_to_rust_expr(&expr));
             multi_decl_stmt_str.push(';');
 
-            return multi_decl_stmt_str
+            multi_decl_stmt_str
         },
 
         Stmt::VarAssign(va) => {
             let va_value = holy_expr_to_rust_expr(&va.value);
 
-            return format!("{} = {};", va.name, va_value)
+            format!("{} = {};", va.name, va_value)
         },
 
         Stmt::VarAssignMulti(multi_assignment) => {
@@ -170,10 +171,8 @@ fn transpile_stmt(stmt: &Stmt) -> String {
             multi_assign_stmt_str.push_str(&holy_expr_to_rust_expr(&multi_assignment.value));
             multi_assign_stmt_str.push(';');
 
-            return multi_assign_stmt_str
+            multi_assign_stmt_str
         },
-
-
 
         Stmt::Lock(var_exprs) => {
             let mut var_lock_stmts_str = "// Lock statement started\n".to_string();
@@ -188,7 +187,8 @@ fn transpile_stmt(stmt: &Stmt) -> String {
             }
 
             var_lock_stmts_str.push_str("// Lock statement ended\n");
-            return var_lock_stmts_str
+
+            var_lock_stmts_str
         },
 
         Stmt::Unlock(var_exprs) => {
@@ -204,7 +204,8 @@ fn transpile_stmt(stmt: &Stmt) -> String {
             }
 
             var_unlock_stmts_str.push_str("// Unlock statement ended");
-            return var_unlock_stmts_str
+
+            var_unlock_stmts_str
         },
         
         Stmt::Break(_) => "break;".to_string(),
@@ -230,7 +231,7 @@ fn transpile_stmt(stmt: &Stmt) -> String {
                 ret_exprs_str.push(')');
             }
 
-            return format!("return {}", ret_exprs_str)
+            format!("return {}", ret_exprs_str)
         },
 
 
@@ -242,7 +243,7 @@ fn transpile_stmt(stmt: &Stmt) -> String {
                 inf_branch_stmts_str.push('\n');
             }
 
-            return format!("loop {{\n{}}}", inf_branch_stmts_str)
+            format!("loop {{\n{}}}", inf_branch_stmts_str)
         },
 
         Stmt::While(w) => {
@@ -253,7 +254,7 @@ fn transpile_stmt(stmt: &Stmt) -> String {
                 w_branch_stmts_str.push('\n');
             }
 
-            return format!("while {} {{\n{}}}", holy_expr_to_rust_expr(&w.condition), w_branch_stmts_str)
+            format!("while {} {{\n{}}}", holy_expr_to_rust_expr(&w.condition), w_branch_stmts_str)
         },
 
         Stmt::For(f) => {
