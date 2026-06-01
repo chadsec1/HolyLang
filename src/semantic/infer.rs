@@ -1,4 +1,6 @@
-use super::*;
+use super::{
+    Expr, HashMap, BindingInfo, Type, HolyError, helpers, BindingKind, constants, check_call, Span
+};
 use crate::ast::{
     IntLiteralValue, UnaryOpKind, BinOpKind, FixedArraySize, ArraySliceRange
 };
@@ -11,6 +13,9 @@ use crate::ast::{
 ///
 /// If left nor right are neither integer literals, no ceorcion is attempted.
 ///
+// NOTE: This just for now... until I come back to the semantics layer to clean it up later..
+//
+#[allow(clippy::needless_pass_by_value)]
 pub fn advanced_infer_2_types(
     left: &mut Expr, 
     right: &mut Expr,
@@ -20,7 +25,7 @@ pub fn advanced_infer_2_types(
 ) -> Result<(Type, Type), HolyError> {
     let mut lty = infer_expr_type(left, locals, fun_sigs, infer_hint.clone())?;
 
-    let mut rty = infer_expr_type(right, locals, fun_sigs, infer_hint.clone())?;
+    let mut rty = infer_expr_type(right, locals, fun_sigs, infer_hint)?;
     
     // Integer literal inferrence
     if matches!(*left, Expr::IntLiteral {..}) && !matches!(*right, Expr::IntLiteral {..}) {
@@ -36,7 +41,7 @@ pub fn advanced_infer_2_types(
         let bigger_type = helpers::get_bigger_type_of_two_integers(lty.clone(), rty.clone());
 
         rty = infer_expr_type(right, locals, fun_sigs, Some(bigger_type.clone()))?;
-        lty = infer_expr_type(left, locals, fun_sigs, Some(bigger_type.clone()))?;
+        lty = infer_expr_type(left, locals, fun_sigs, Some(bigger_type))?;
 
     }
 
@@ -55,6 +60,7 @@ pub fn advanced_infer_2_types(
 /// the same function. I could hide this uglyness behind layers of abstraction, but the uglyness
 /// will always boil down to one function responsible for all three.
 ///
+#[allow(clippy::too_many_lines)]
 pub fn infer_expr_type(
     expr: &mut Expr,
     locals: &mut HashMap<String, BindingInfo>,
@@ -210,13 +216,13 @@ pub fn infer_expr_type(
 
             
                     *type_name = Some(Type::FixedArray(Box::new(*t.clone()), size.clone()));
-                    return Ok(Type::FixedArray(Box::new(*t.clone()), size))
+                    return Ok(Type::FixedArray(Box::new(*t), size))
                 }
 
 
 
                 *type_name = Some(Type::Array(Box::new(elem_expected_ty.clone())));
-                return Ok(Type::Array(Box::new(elem_expected_ty.clone())))
+                return Ok(Type::Array(Box::new(elem_expected_ty)))
             }
 
             if infer_hint.is_none() {
@@ -401,7 +407,7 @@ pub fn infer_expr_type(
                     if let Type::Array(_) = info.ty.clone() {
                         // We are fine returning Type wrapping in Array, because thats what the
                         // caller should expect anyway. x[s:e] always returns an array.
-                        Ok(info.ty.clone())
+                        Ok(info.ty)
 
                     } else if let Type::FixedArray(_, _) = &info.ty {
                         // Recursively converts fixed array and its inner type to dynamic arrays 
