@@ -9,6 +9,7 @@ mod reflective_tests;
 
 /// Takes a reference to a Abstract Syntax Tree, and returns equvilent code in Rust as a string
 ///
+#[must_use]
 pub fn transpile(ast: &AST) -> String {
     let mut rcode: String = String::new();
 
@@ -17,13 +18,13 @@ pub fn transpile(ast: &AST) -> String {
     for global_stmt in &ast.globals {
         let global_stmt_rcode = transpile_global_stmt(global_stmt);
 
-        rcode = format!("{}{}\n", rcode, global_stmt_rcode);
+        rcode = format!("{rcode}{global_stmt_rcode}\n");
     }
 
     for func in &ast.functions {
         let func_rcode = transpile_function(func);
 
-        rcode = format!("{}{}\n", rcode, func_rcode);
+        rcode = format!("{rcode}{func_rcode}\n");
     }
 
     rcode
@@ -85,7 +86,7 @@ fn transpile_function(func: &Function) -> String {
     
     for stmt in &func.body {
         let stmt_rcode = transpile_stmt(stmt);
-        func_rcode = format!("{} {}\n", func_rcode, stmt_rcode);
+        func_rcode = format!("{func_rcode} {stmt_rcode}\n");
     }
     func_rcode.push_str("}\n");
 
@@ -96,6 +97,7 @@ fn transpile_function(func: &Function) -> String {
 
 /// Transpiles a statement into equivlent Rust code
 ///
+#[allow(clippy::too_many_lines)]
 fn transpile_stmt(stmt: &Stmt) -> String {
     match stmt {
         Stmt::Const(cons) => parse_const(cons),
@@ -179,10 +181,14 @@ fn transpile_stmt(stmt: &Stmt) -> String {
 
             for expr in var_exprs {
                 if let Expr::Var { name, .. } = expr {
-                    var_lock_stmts_str.push_str(&format!("let {} = {};", name, name));
+                    var_lock_stmts_str.push_str("let ");
+                    var_lock_stmts_str.push_str(name);
+                    var_lock_stmts_str.push_str(" = ");
+                    var_lock_stmts_str.push_str(name);
+                    var_lock_stmts_str.push(';');
                     var_lock_stmts_str.push('\n');
                 } else {
-                    panic!("(Compiler bug) Got a non-var expression in lock statement, indicating a bug in semantics analysis layer.\nvar_exprs: {:?}", var_exprs);
+                    panic!("(Compiler bug) Got a non-var expression in lock statement, indicating a bug in semantics analysis layer.\nvar_exprs: {var_exprs:?}");
                 }
             }
 
@@ -196,10 +202,14 @@ fn transpile_stmt(stmt: &Stmt) -> String {
 
             for expr in var_exprs {
                 if let Expr::Var { name, .. } = expr {
-                    var_unlock_stmts_str.push_str(&format!("let mut {} = {};", name, name));
+                    var_unlock_stmts_str.push_str("let mut");
+                    var_unlock_stmts_str.push_str(name);
+                    var_unlock_stmts_str.push_str(" = ");
+                    var_unlock_stmts_str.push_str(name);
+                    var_unlock_stmts_str.push(';');
                     var_unlock_stmts_str.push('\n');
                 } else {
-                    panic!("(Compiler bug) Got a non-var expression in unlock statement, indicating a bug in semantics analysis layer.\nvar_exprs: {:?}", var_exprs);
+                    panic!("(Compiler bug) Got a non-var expression in unlock statement, indicating a bug in semantics analysis layer.\nvar_exprs: {var_exprs:?}");
                 }
             }
 
@@ -231,9 +241,8 @@ fn transpile_stmt(stmt: &Stmt) -> String {
                 ret_exprs_str.push(')');
             }
 
-            format!("return {}", ret_exprs_str)
+            format!("return {ret_exprs_str}")
         },
-
 
         Stmt::Infinite(inf) => {
             let mut inf_branch_stmts_str = String::new();
@@ -243,7 +252,7 @@ fn transpile_stmt(stmt: &Stmt) -> String {
                 inf_branch_stmts_str.push('\n');
             }
 
-            format!("loop {{\n{}}}", inf_branch_stmts_str)
+            format!("loop {{\n{inf_branch_stmts_str}}}")
         },
 
         Stmt::While(w) => {
@@ -297,7 +306,7 @@ fn transpile_stmt(stmt: &Stmt) -> String {
                     else_branch_stmts_str.push('\n');
                 }
 
-                if_stmt = format!("{} else {{\n{}}}", if_stmt, else_branch_stmts_str);
+                if_stmt = format!("{if_stmt} else {{\n{else_branch_stmts_str}}}");
             }
 
             if_stmt
@@ -315,7 +324,7 @@ fn transpile_global_stmt(global_stmt: &GlobalStmt) -> String {
     match global_stmt {
         GlobalStmt::Const(cons) => parse_const(cons),
 
-        _ => todo!()
+        GlobalStmt::_PlaceholderDummyUntilIAddMoreStmtsHereLikeStructsAndEnums => todo!()
     }
 }
 

@@ -596,8 +596,7 @@ fn check_stmts(
                                 }  
                             }
 
-                            var_names_to_lock.push(name.to_string());
-
+                            var_names_to_lock.push(name.clone());
 
                             // We dont care about its type, we just checking if it exists or not,
                             // and its contents are valid, etc.
@@ -618,8 +617,7 @@ fn check_stmts(
 
                 for var_name in var_names_to_lock {
                     let var = locals.get_mut(&var_name).ok_or_else(|| {
-                        panic!("(Compiler bug) Variable doesnt exist in locals despite our earlier call to infer_expr_type shouldve checked the variable thourghly, including its existence, but apparently it didnt. expr_vec: `{:?}`, var_name: {:?}", 
-                            expr_vec, var_name);
+                        panic!("(Compiler bug) Variable doesnt exist in locals despite our earlier call to infer_expr_type shouldve checked the variable thourghly, including its existence, but apparently it didnt. expr_vec: `{expr_vec:?}`, var_name: {var_name:?}");
                     })?;
 
                     match &mut var.kind {
@@ -676,9 +674,7 @@ fn check_stmts(
                                 }    
                             }
 
-
-                            var_names_to_unlock.push(name.to_string());
-
+                            var_names_to_unlock.push(name.clone());
 
                             // We dont care about its type, we just checking if it exists or not,
                             // and its contents are valid, etc.
@@ -699,8 +695,7 @@ fn check_stmts(
 
                 for var_name in var_names_to_unlock {
                     let var = locals.get_mut(&var_name).ok_or_else(|| {
-                        panic!("(Compiler bug) Variable doesnt exist in locals despite our earlier call to infer_expr_type shouldve checked the variable thourghly, including its existence, but apparently it didnt. expr_vec: `{:?}`, var_name: {:?}", 
-                            expr_vec, var_name);
+                        panic!("(Compiler bug) Variable doesnt exist in locals despite our earlier call to infer_expr_type shouldve checked the variable thourghly, including its existence, but apparently it didnt. expr_vec: `{expr_vec:?}`, var_name: {var_name:?}")
                     })?;
 
                     match &mut var.kind {
@@ -788,15 +783,15 @@ fn check_stmts(
                 if expr_ty.is_array_type()
                     && let Expr::Var { name, .. } = &for_stmt.value {
                     let src = locals.get_mut(name).unwrap_or_else(|| panic!(
-                        "(Compiler bug) infer_expr_type should've already errored if the array variable didnt exist, but it didnt. for_stmt: {:?}", 
-                        for_stmt
+                        "(Compiler bug) infer_expr_type should've already errored if the array variable didnt exist, but it didnt. for_stmt: {for_stmt:?}"
                     ));
 
                     match &mut src.kind {
                         BindingKind::Var { moved: src_moved, .. } => {
-                            if *src_moved {
-                                panic!("(Compiler bug) infer_expr_type should've already errored if the array variable is moved, but it didnt. for_stmt: {:?}", for_stmt)
-                            }
+                            assert!(
+                                !*src_moved,
+                                "(Compiler bug) infer_expr_type should've already errored if the array variable is moved, but it didnt. for_stmt: {for_stmt:?}"
+                            );
 
                             *src_moved = true;
                         },
@@ -849,13 +844,11 @@ fn check_stmts(
                     }
                 );
 
-
-                
                 // This gets all upstream variable names, and passes it to check stmts to ensure
                 // you cannot overshadow them.
                 let mut upstream = upstream_var_names.clone();
                 for var_name in locals_clone.keys() {
-                    upstream.push(var_name.to_string());
+                    upstream.push(var_name.clone());
                 }
 
                 // We also add holder_name to the list to prevent programmer overshadowing the
@@ -882,9 +875,9 @@ fn check_stmts(
                 // you cannot overshadow them.
                 let mut upstream = upstream_var_names.clone();
                 for var_name in locals.keys() {
-                    upstream.push(var_name.to_string());
+                    upstream.push(var_name.clone());
                 }
-                    
+
                 let mut locals_clone = locals.clone();
                 check_stmts(func.clone(), &mut while_stmt.branch, &mut locals_clone, upstream.clone(), fun_sigs, true)?;
                 update_local_assignments_from_clone(locals, locals_clone);
@@ -896,7 +889,7 @@ fn check_stmts(
                 // you cannot overshadow them.
                 let mut upstream = upstream_var_names.clone();
                 for var_name in locals.keys() {
-                    upstream.push(var_name.to_string());
+                    upstream.push(var_name.clone());
                 }
                     
                 let mut locals_clone = locals.clone();
@@ -940,7 +933,7 @@ fn check_stmts(
                 // you cannot overshadow them.
                 let mut upstream = upstream_var_names.clone();
                 for var_name in locals.keys() {
-                    upstream.push(var_name.to_string());
+                    upstream.push(var_name.clone());
                 }
 
                 // This is for elif, because elif is run many times we want single copy from clean
@@ -1000,7 +993,7 @@ fn update_local_assignments_from_clone(upstream: &mut HashMap<String, BindingInf
                     
                     *info = vi.clone();
                 },
-                BindingKind::Const { .. } => continue
+                BindingKind::Const { .. } => {}
             }
         }
 
@@ -1052,15 +1045,12 @@ fn check_call(
         // If this arg is a variable, mark it moved (same semantics as before)
         if let Expr::Var { name: vname, span: _ } = arg_expr {
             let v = locals.get_mut(vname).unwrap_or_else(|| panic!(
-                    "(Compiler bug) infer_expr_type should've already errored if source argument variable didnt exist, but it didnt. arg_expr: {:?}", 
-                    arg_expr
+                    "(Compiler bug) infer_expr_type should've already errored if source argument variable didnt exist, but it didnt. arg_expr: {arg_expr:?}" 
                 ));
 
             match &mut v.kind {
                 BindingKind::Var { moved, ..} => {
-                    if *moved {
-                        panic!("(Compiler bug) infer_expr_type should've already errored if source variable is moved, but it didnt. arg_expr: {:?}", arg_expr)
-                    }
+                    assert!(!*moved, "(Compiler bug) infer_expr_type should've already errored if source variable is moved, but it didnt. arg_expr: {arg_expr:?}");
 
                     *moved = true;
                 },
@@ -1071,6 +1061,7 @@ fn check_call(
     }
 
     // return handling
+    #[allow(clippy::option_if_let_else)]
     match ret_ty_opt {
         Some(rt) => Ok(Some(rt.clone())),
         None => {
