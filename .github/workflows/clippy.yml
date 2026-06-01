@@ -14,7 +14,7 @@ on:
 
 
 jobs:
-  unit_tests:
+  clippy:
     runs-on: ubuntu-latest
 
     steps:
