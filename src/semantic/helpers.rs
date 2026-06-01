@@ -50,11 +50,10 @@ pub fn get_bigger_type_of_two_integers(t_1: Type, t_2: Type) -> Type {
 
 
     if t_1_score > t_2_score {
-        return t_1
+        t_1
+    } else {
+        t_2
     }
-
-    return t_2
-
 }
 
 

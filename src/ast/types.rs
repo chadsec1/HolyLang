@@ -1,5 +1,5 @@
 /// Fixed array size can only be represented as a const, or a literal usize.
-
+///
 use crate::ast::exprs::Expr;
 use crate::ast::span::Span;
 use crate::ast::int_literal_value::IntLiteralValue;
@@ -163,7 +163,7 @@ impl Type {
 
             Type::Float64 => Expr::Float64Literal { value: 0.0, span },
 
-            Type::Bool => Expr::BoolLiteral { value: false, span: span },
+            Type::Bool => Expr::BoolLiteral { value: false, span },
 
             Type::String => Expr::StringLiteral { value: "".to_string(), span },
             Type::Array(t) => {
@@ -176,7 +176,7 @@ impl Type {
                 // "type_name: None". I think no bugs should arise, but I am keeping this comment
                 // here just in case :).
                 //
-                Expr::ArrayLiteral { elements: Vec::new(), type_name: None, span: span }
+                Expr::ArrayLiteral { elements: Vec::new(), type_name: None, span }
             },
             Type::FixedArray(_, _) => panic!(),
         }

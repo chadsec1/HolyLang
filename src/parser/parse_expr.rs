@@ -68,10 +68,8 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
     // Parentheses grouping: if the whole expression is wrapped in top-level parentheses, parse inner
     //
 
-    if s.starts_with('(') {
-        if let Some(inner) = helpers::get_parenthesis_contents(&s) {
-            return parse_expr(inner, span);
-        }
+    if s.starts_with('(') && let Some(inner) = helpers::get_parenthesis_contents(s) {
+        return parse_expr(inner, span);
     }
 
 
@@ -124,24 +122,12 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
             )));
         }
 
-        return Ok(Expr::Float64Literal { value: f64_val, span: span });
-
-
-    } else {
-        // Check to see if parsing as float failed due to it having more than one dot
-        let cleaned_s = s.replace(".", "");
-        if let Ok(_) = cleaned_s.parse::<f64>() {
-            return Err(HolyError::Parse(format!(
-                "Floating point literal `{}` must have only one `.` (line {} column {})",
-                s, span.line, span.column
-            )));
-         
-        }
+        return Ok(Expr::Float64Literal { value: f64_val, span });
     }
 
     // bool literal ? (true / false) 
     if let Ok(b) = s.parse::<bool>() {
-        return Ok(Expr::BoolLiteral { value: b, span: span });
+        return Ok(Expr::BoolLiteral { value: b, span });
     }
 
 
@@ -189,13 +175,14 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
             left: Box::new(left_expr),
             op: op_enum,
             right: Box::new(right_expr),
-            span: span,
+            span,
         });
     }
 
     // Unary negate support.
-    if s.starts_with('-') {
-        let rest = s[1..].trim();
+    //
+    if let Some(rest) = s.strip_prefix('-') {
+        let rest = rest.trim();
 
         if rest.is_empty() {
             return Err(HolyError::Parse(format!(
@@ -211,13 +198,14 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
         return Ok(Expr::UnaryOp {
             op: UnaryOpKind::Negate, 
             expr: Box::new(inner), 
-            span: span
+            span
         });
     }
 
     // Unary logical NOT support
-    if s.starts_with('!') {
-        let rest = s[1..].trim();
+    //
+    if let Some(rest) = s.strip_prefix('!') {
+        let rest = rest.trim();
 
         if rest.is_empty() {
             return Err(HolyError::Parse(format!(
@@ -233,13 +221,14 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
         return Ok(Expr::UnaryOp {
             op: UnaryOpKind::Not, 
             expr: Box::new(inner), 
-            span: span
+            span
         });
     }
 
     // Unary bitwise NOT support.
-    if s.starts_with('~') {
-        let rest = s[1..].trim();
+    //
+    if let Some(rest) = s.strip_prefix('~') {
+        let rest = rest.trim();
 
         if rest.is_empty() {
             return Err(HolyError::Parse(format!(
@@ -255,7 +244,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
         return Ok(Expr::UnaryOp {
             op: UnaryOpKind::BitwiseNot, 
             expr: Box::new(inner), 
-            span: span
+            span
         });
     }
 
@@ -264,40 +253,38 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
     // e.g. "[1, 2, 3]", "[]", "[1, [2, 3], 4, 5]"
     // detect pattern: "[ ... ]"
     //
+    if s.starts_with("[") && let Some((elems_str, _)) = helpers::get_array_contents(s) {
+        let mut elems: Vec<Expr> = Vec::new();
+        if !elems_str.trim().is_empty() {
+            let split_parts = helpers::split_char_top_level(',', elems_str)
+                                .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
 
-    if s.starts_with("[") {
-        if let Some((elems_str, _)) = helpers::get_array_contents(&s) {
-            let mut elems: Vec<Expr> = Vec::new();
-            if !elems_str.trim().is_empty() {
-                let split_parts = helpers::split_char_top_level(',', elems_str)
-                                    .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
-
-                for part in split_parts {
-                    let part = part.trim();
-                    let expr = parse_expr(part.trim(), span)?;
-                    elems.push(expr);
-                }
+            for part in split_parts {
+                let part = part.trim();
+                let expr = parse_expr(part.trim(), span)?;
+                elems.push(expr);
             }
-
-            return Ok(
-                Expr::ArrayLiteral { 
-                    elements: elems, 
-                    type_name: None,
-                    span,
-                });
         }
+
+        return Ok(
+            Expr::ArrayLiteral { 
+                elements: elems, 
+                type_name: None,
+                span,
+            });
+        
     }
 
 
     // Array access
     // e.g. "x[0]", "x[0:1]", etc.
     //
-    if let Some((inner_str, first_bracket)) = helpers::get_array_contents(&s) {
+    if let Some((inner_str, first_bracket)) = helpers::get_array_contents(s) {
         // The array holder expression
         let arr_expr = parse_expr(&s[..first_bracket], span)?;
 
         let indx_parts = helpers::split_char_top_level(':', inner_str)
-                                    .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+                                    .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
         
         // If only one part, treat as access to a single element. 
         if indx_parts.len() == 1 {
@@ -366,97 +353,95 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
 
 
     // Function call: name(arg1, arg2)
-    if let Some(open) = s.find('(') {
-        if s.ends_with(')') {
-            let name = s[..open].trim().to_string();
-            let args_str = &s[open + 1..s.len() - 1];
+    if let Some(open) = s.find('(') && s.ends_with(')') {
+        let name = s[..open].trim().to_string();
+        let args_str = &s[open + 1..s.len() - 1];
 
-            
-            // Argument parsing function
-            let mut args = vec![];
-            if !args_str.trim().is_empty() {
-                let split_args = helpers::split_char_top_level(',', args_str)
-                                    .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+        
+        // Argument parsing function
+        let mut args = vec![];
+        if !args_str.trim().is_empty() {
+            let split_args = helpers::split_char_top_level(',', args_str)
+                                .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
 
-                for a in split_args {
-                    args.push(parse_expr(a.trim(), span)?);
+            for a in split_args {
+                args.push(parse_expr(a.trim(), span)?);
+            }
+        }
+
+        
+        // Check for language-defined functions, otherwise, treat this 
+        // expression as a normal programmer-defined function call.
+        //
+        // Even though the parser in general is pretty dumb, we have to check it a bit more strictly for internal functions whose argument sizes
+        // and argument type are part of the language syntax its self.
+        //
+        match name.as_ref() {
+            "range" => return Err(HolyError::Parse(format!(
+                        "range() can only be used in for loop statements construction! (line {} column {})",
+                        span.line, span.column
+                    ))),
+
+            "copy" => {
+                if args.len() != 1 {
+                    return Err(HolyError::Parse(format!(
+                        "copy() takes exactly 1 argument, instead found {} arguments provided (line {} column {})",
+                        args.len(), span.line, span.column
+                    )));
                 }
+
+                return Ok(Expr::CopyCall{ expr: Box::new(args[0].clone()), span });
             }
 
-            
-            // Check for language-defined functions, otherwise, treat this 
-            // expression as a normal programmer-defined function call.
-            //
-            // Even though the parser in general is pretty dumb, we have to check it a bit more strictly for internal functions whose argument sizes
-            // and argument type are part of the language syntax its self.
-            //
-            match name.as_ref() {
-                "range" => return Err(HolyError::Parse(format!(
-                            "range() can only be used in for loop statements construction! (line {} column {})",
+            "format" => {
+                if args.len() != 1 {
+                    return Err(HolyError::Parse(format!(
+                        "format() takes exactly 1 string argument, instead found `{}` arguments provided (line {} column {})",
+                        args.len(), span.line, span.column
+                    )));
+                }
+
+                let format_arg_raw = args[0].clone();
+
+
+                let raw_str: String = if let Expr::StringLiteral { value: s, .. } = format_arg_raw {
+                        s.to_string()
+                    } else {
+                        return Err(HolyError::Parse(format!(
+                            "Expected a string literal, instead found `{}` (line {} column {})",
+                            format_arg_raw, span.line, span.column
+                        )));
+                    };
+
+
+
+                let (template_str, expr_str_vec) = helpers::parse_format_string(&raw_str)
+                                                    .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
+
+                // Parse expressions from string to Expr
+                let mut expr_vec: Vec<Expr> = vec![];
+                for e in expr_str_vec {
+                    expr_vec.push(parse_expr(e.trim(), span)?);
+                }
+
+                if expr_vec.is_empty() {
+                    return Err(HolyError::Parse(format!(
+                            "format() must have at least one embedded expression! (line {} column {})",
                             span.line, span.column
-                        ))),
-
-                "copy" => {
-                    if args.len() != 1 {
-                        return Err(HolyError::Parse(format!(
-                            "copy() takes exactly 1 argument, instead found {} arguments provided (line {} column {})",
-                            args.len(), span.line, span.column
                         )));
-                    }
-
-                    return Ok(Expr::CopyCall{ expr: Box::new(args[0].clone()), span: span });
-                }
-
-                "format" => {
-                    if args.len() != 1 {
-                        return Err(HolyError::Parse(format!(
-                            "format() takes exactly 1 string argument, instead found `{}` arguments provided (line {} column {})",
-                            args.len(), span.line, span.column
-                        )));
-                    }
-
-                    let format_arg_raw = args[0].clone();
-
-
-                    let raw_str: String = if let Expr::StringLiteral { value: s, .. } = format_arg_raw {
-                            s.to_string()
-                        } else {
-                            return Err(HolyError::Parse(format!(
-                                "Expected a string literal, instead found `{}` (line {} column {})",
-                                format_arg_raw, span.line, span.column
-                            )));
-                        };
-
-
-
-                    let (template_str, expr_str_vec) = helpers::parse_format_string(&raw_str)
-                                                        .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
-
-                    // Parse expressions from string to Expr
-                    let mut expr_vec: Vec<Expr> = vec![];
-                    for e in expr_str_vec {
-                        expr_vec.push(parse_expr(e.trim(), span)?);
-                    }
-
-                    if expr_vec.len() == 0 {
-                        return Err(HolyError::Parse(format!(
-                                "format() must have at least one embedded expression! (line {} column {})",
-                                span.line, span.column
-                            )));
-
-                    }
-
-                    return Ok(Expr::FormatCall{ template: template_str, expressions: expr_vec, span: span});
 
                 }
 
-                _ => {
-                    helpers::validate_identifier_name(&name)
-                        .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+                return Ok(Expr::FormatCall{ template: template_str, expressions: expr_vec, span});
+
+            }
+
+            _ => {
+                helpers::validate_identifier_name(&name)
+                    .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
 
 
-                    return Ok(Expr::Call { name, args, span })   
-                }
+                return Ok(Expr::Call { name, args, span })   
             }
         }
     }
@@ -465,9 +450,9 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
     // otherwise a variable name
 
     helpers::validate_identifier_name(s)
-        .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+        .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
 
-    Ok(Expr::Var { name: s.to_string(), span: span})
+    Ok(Expr::Var { name: s.to_string(), span})
 }
 
 
