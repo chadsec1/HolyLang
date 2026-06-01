@@ -202,7 +202,7 @@ fn transpile_stmt(stmt: &Stmt) -> String {
 
             for expr in var_exprs {
                 if let Expr::Var { name, .. } = expr {
-                    var_unlock_stmts_str.push_str("let mut");
+                    var_unlock_stmts_str.push_str("let mut ");
                     var_unlock_stmts_str.push_str(name);
                     var_unlock_stmts_str.push_str(" = ");
                     var_unlock_stmts_str.push_str(name);
