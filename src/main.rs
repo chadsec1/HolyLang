@@ -13,5 +13,5 @@ fn main() {
 
     let compile_info = holylang::CompileInfo::CompileTo(target_path);
 
-    holylang::compile(&source_content, compile_info);
+    let _ = holylang::compile_holylang_src(&source_content, compile_info);
 }

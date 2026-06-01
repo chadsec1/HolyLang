@@ -59,42 +59,50 @@ impl IntLiteralValue {
 
     /// Return true if the integer literal value is of signed type
     /// i.e. int8, int16, etc.
-    pub fn is_signed(self) -> bool {
+    ///
+    #[must_use]
+    pub const fn is_signed(self) -> bool {
         matches!(self,
-            IntLiteralValue::Int8(_) |
-            IntLiteralValue::Int16(_) |
-            IntLiteralValue::Int32(_) |
-            IntLiteralValue::Int64(_) |
-            IntLiteralValue::Int128(_))
+            Self::Int8(_) |
+            Self::Int16(_) |
+            Self::Int32(_) |
+            Self::Int64(_) |
+            Self::Int128(_))
     }
 
+    ///
+    /// # Panics
+    /// If called on unsigned integers.
+    ///
+    #[must_use]
     pub fn as_i128(self) -> i128 {
         match self {
-            IntLiteralValue::Int8(v) => v as i128,
-            IntLiteralValue::Int16(v) => v as i128,
-            IntLiteralValue::Int32(v) => v as i128,
-            IntLiteralValue::Int64(v) => v as i128,
-            IntLiteralValue::Int128(v) => v,
+            Self::Int8(v)   => i128::from(v),
+            Self::Int16(v)  => i128::from(v),
+            Self::Int32(v)  => i128::from(v),
+            Self::Int64(v)  => i128::from(v),
+            Self::Int128(v) => v,
 
-            other => {
-                panic!("(Compiler bug) Safety code to prevent you from casting an unsigned integer as signed i128. {:?}", other);
-            }
+            other => panic!("(Compiler bug) Safety code to prevent you from casting an unsigned integer as signed i128. {other:?}")
         }
     }
 
 
+    /// 
+    /// # Panics
+    /// If called on signed integers
+    ///
+    #[must_use]
     pub fn as_u128(self) -> u128 {
         match self {
-            IntLiteralValue::Usize(v) => v as u128,
-            IntLiteralValue::Byte(v) => v as u128,
-            IntLiteralValue::Uint16(v) => v as u128,
-            IntLiteralValue::Uint32(v) => v as u128,
-            IntLiteralValue::Uint64(v) => v as u128,
-            IntLiteralValue::Uint128(v) => v,
+            Self::Byte(v)    => u128::from(v),
+            Self::Uint16(v)  => u128::from(v),
+            Self::Uint32(v)  => u128::from(v),
+            Self::Uint64(v)  => u128::from(v),
+            Self::Usize(v)   => v as u128,
+            Self::Uint128(v) => v,
             
-            other => {
-                panic!("(Compiler bug) Safety code prevented you from casting a signed literal as an unsigned u128. {:?}", other);
-            }
+            other => panic!("(Compiler bug) Safety code prevented you from casting a signed literal as an unsigned u128. {other:?}")
         }
     }
 }

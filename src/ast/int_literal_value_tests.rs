@@ -172,37 +172,37 @@ mod int_literal_value_tests {
     #[test]
     #[should_panic(expected = "Compiler bug")]
     fn as_i128_panics_on_byte() {
-        IntLiteralValue::Byte(255).as_i128();
+        let _ = IntLiteralValue::Byte(255).as_i128();
     }
 
     #[test]
     #[should_panic(expected = "Compiler bug")]
     fn as_i128_panics_on_uint16() {
-        IntLiteralValue::Uint16(u16::MAX).as_i128();
+        let _ = IntLiteralValue::Uint16(u16::MAX).as_i128();
     }
 
     #[test]
     #[should_panic(expected = "Compiler bug")]
     fn as_i128_panics_on_uint32() {
-        IntLiteralValue::Uint32(u32::MAX).as_i128();
+        let _ = IntLiteralValue::Uint32(u32::MAX).as_i128();
     }
 
     #[test]
     #[should_panic(expected = "Compiler bug")]
     fn as_i128_panics_on_uint64() {
-        IntLiteralValue::Uint64(u64::MAX).as_i128();
+        let _ = IntLiteralValue::Uint64(u64::MAX).as_i128();
     }
 
     #[test]
     #[should_panic(expected = "Compiler bug")]
     fn as_i128_panics_on_uint128() {
-        IntLiteralValue::Uint128(u128::MAX).as_i128();
+        let _ = IntLiteralValue::Uint128(u128::MAX).as_i128();
     }
 
     #[test]
     #[should_panic(expected = "Compiler bug")]
     fn as_i128_panics_on_usize() {
-        IntLiteralValue::Usize(usize::MAX).as_i128();
+        let _ = IntLiteralValue::Usize(usize::MAX).as_i128();
     }
 
     // IntLiteralValue::as_u128 value preservation and boundary checks
@@ -223,35 +223,31 @@ mod int_literal_value_tests {
     #[test]
     #[should_panic(expected = "Compiler bug")]
     fn as_u128_panics_on_int8() {
-        IntLiteralValue::Int8(-1).as_u128();
+        let _ = IntLiteralValue::Int8(-1).as_u128();
     }
 
     #[test]
     #[should_panic(expected = "Compiler bug")]
     fn as_u128_panics_on_int16() {
-        IntLiteralValue::Int16(-1).as_u128();
+        let _ = IntLiteralValue::Int16(-1).as_u128();
     }
 
     #[test]
     #[should_panic(expected = "Compiler bug")]
     fn as_u128_panics_on_int32() {
-        IntLiteralValue::Int32(-1).as_u128();
+        let _ = IntLiteralValue::Int32(-1).as_u128();
     }
 
     #[test]
     #[should_panic(expected = "Compiler bug")]
     fn as_u128_panics_on_int64() {
-        IntLiteralValue::Int64(-1).as_u128();
+        let _ = IntLiteralValue::Int64(-1).as_u128();
     }
 
     #[test]
     #[should_panic(expected = "Compiler bug")]
     fn as_u128_panics_on_int128() {
-        IntLiteralValue::Int128(-1).as_u128();
+        let _ = IntLiteralValue::Int128(-1).as_u128();
     }
-
-
-
-
 }
 
