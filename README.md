@@ -73,12 +73,29 @@ func main() {
     # Declaration syntax is:
     # own VAR_NAME VAR_TYPE = EXPRESSION
     #
-
     own x int32 = 1
 
-    # Assignment example
+    # Variables declared with an explicit value are `locked` by default (aka immutable)
+    # if you want to assign to them, you must unlock them first
+    #
+    unlock x
+
+    # Then you can assign.
     x = 2
 
+    # Almost all types have a default value:
+    # 0 for integers, 0.0 for floats, false for booleans, 
+    # empty arrays for arrays, "" for strings.
+    # 
+    # The only exception to this rule are constants and fixed arrays.
+    #
+    
+    own h int32 # h has value of 0
+
+    # Variables declared without explicit value are `unlocked` by default
+    # you don't need to unlock them before assignment.
+    #
+    h = 2
 
     # Variable overshadowing is not allowed.
     # own x int64 = 2 # This would've been a compile-time error if I uncomment it.
@@ -116,18 +133,11 @@ func main() {
     # a = 2
 
     own c int32 = copy(b)
+
     # This is valid, because `c` did not move `b`, it only copied it.
+    #
+    unlock b
     b = 3
-
-
-    # All basic primitive types have a default value:
-    # 0 for integers, 0.0 for floats, false for booleans, 
-    # empty arrays for arrays, "" for strings.
-    #
-    # The only exception to this rule are constants and fixed arrays.
-    #
-    own h int32
-    # h has value of 0
 
 
     # Function calls example
@@ -136,6 +146,9 @@ func main() {
 
     # This is multi declaration
     own n1 int32, n2 int32, n3 int32 = give_3_numbers()
+
+
+    unlock n1, n2, n3
 
     # You can also do multi assignment
     n1, n2, n3 = give_3_numbers()
@@ -150,7 +163,7 @@ func main() {
 
 
 
-    own v int32 = 1
+    own v int32
 
     # Variable locking prevents assigning to it.
     # You can still move or copy it though.
@@ -167,8 +180,9 @@ func main() {
 
 
     # If statements example
-    own one int32 = 1
-    own two int32 = 2
+    own one int32
+    own two int32 
+
 
     if two > one {
         one = 2
