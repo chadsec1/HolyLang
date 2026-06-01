@@ -1,4 +1,6 @@
-use super::*;
+use super::{
+    HashMap, BindingInfo, Type, HolyError, infer, Expr, helpers, BindingKind, Span
+};
 use crate::ast::{
     IntLiteralValue, UnaryOpKind, BinOpKind, Constant
 };
@@ -42,7 +44,7 @@ pub fn eval_const_expr_and_fold_it(
 ///
 /// IMPORTANT NOTE: Do NOT call this function directly unless you 1000% know what youre doing.
 ///
-///
+#[allow(clippy::too_many_lines)]
 pub fn eval_const_expr_and_fold_it_hazmat(
     expr: &Expr, 
     storage: &HashMap<String, BindingInfo>
@@ -65,12 +67,11 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                     match value {
                         IntLiteralValue::Usize(v) => v,
                         other => panic!(
-                                "(Compiler bug) Expected IntLiteralValue::Usize, but found `{:?}` instead. Infer_expr_type shouldve caught this. Expr: {:#?}", 
-                                other, expr
+                                "(Compiler bug) Expected IntLiteralValue::Usize, but found `{other:?}` instead. `Infer_expr_type` shouldve caught this. Expr: {expr:#?}"
                             )
                     }
                 },
-                other => panic!("(Compiler bug) Expected IntLiteral, but found `{:?}` instead. Infer_expr_type shouldve caught this. Expr: {:#?}", other, expr)
+                other => panic!("(Compiler bug) Expected IntLiteral, but found `{other:?}` instead. `Infer_expr_type` shouldve caught this. Expr: {expr:#?}")
             };
 
         
@@ -86,7 +87,7 @@ pub fn eval_const_expr_and_fold_it_hazmat(
             
                     Ok(elements[index_usize].clone())
                 },
-                other => panic!("(Compiler bug) Expected ArrayLiteral, but found `{:?}` instead. Infer_expr_type shouldve caught this. Expr: {:#?}", other, expr)
+                other => panic!("(Compiler bug) Expected ArrayLiteral, but found `{other:?}` instead. `Infer_expr_type` shouldve caught this. Expr: {expr:#?}")
             }
 
         },
@@ -109,7 +110,7 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                             UnaryOpKind::BitwiseNot => {
                                 result = !result;
                             },
-                            _ => panic!("(Compiler bug) Illegal unary operation detected. this shouldve errored when the wrapper called infer_expr_type")
+                            UnaryOpKind::Not => panic!("(Compiler bug) Illegal unary operation detected. this shouldve errored when the wrapper called `infer_expr_type`")
                         }
                         
 
@@ -142,7 +143,7 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                             result = -result;
                         },
 
-                        other => panic!("(Compiler bug) Got `{:?}` on a floating point `{:?}, this is illegal and should've been caught by infer_expr_type.\nNON-EVALED EXPR: {:?}", other, expr_evaled, expr)
+                        other => panic!("(Compiler bug) Got `{other:?}` on a floating point `{expr_evaled:?}, this is illegal and should've been caught by `infer_expr_type`.\nNON-EVALED EXPR: {expr:?}")
                     }
                     
                     if !result.is_finite() {
@@ -159,10 +160,10 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                         UnaryOpKind::Not => {
                             Ok(Expr::BoolLiteral { value: !value, span })
                         },
-                        other => panic!("(Compiler bug) Illegal unary operation detected `{:?}`. this shouldve errored when the wrapper called infer_expr_type", other)
+                        other => panic!("(Compiler bug) Illegal unary operation detected `{other:?}`. this shouldve errored when the wrapper called `infer_expr_type`")
                     }
                 },
-                other => panic!("(Compiler bug) Illegal unary operation. This shouldve been caught by infer_expr_type.\nother: {:?}", other)
+                other => panic!("(Compiler bug) Illegal unary operation. This shouldve been caught by `infer_expr_type`.\nother: {other:?}")
             }
         },
         Expr::BinOp{ left, right, op, ..} => {
@@ -174,8 +175,7 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                     let right_value: String = match right_lit_expr {
                         Expr::StringLiteral { value: right_value, .. } => right_value,
                         _ => panic!(
-                            "(Compiler bug) eval_const_expr_and_fold_hazmat, infer_expr_type should've been called and verified both left and right binary operations are same type, but apparently not.\nLeft: {:?}\nRight: {:?}",
-                            left, right)
+                            "(Compiler bug) eval_const_expr_and_fold_hazmat, infer_expr_type should've been called and verified both left and right binary operations are same type, but apparently not.\nLeft: {left:?}\nRight: {right:?}")
                     };
 
 
@@ -192,9 +192,7 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                             Ok(Expr::BoolLiteral { value: result, span })
                         },
 
-                        other => panic!(
-                            "(Compiler bug) infer_expr_type should've caught illegal BinOpKind on string.\nLeft: {:?}\nRight: {:?}\nBinOpKind: {:?}", 
-                                    left, right, other)
+                        other => panic!("(Compiler bug) infer_expr_type should've caught illegal BinOpKind on string.\nLeft: {left:?}\nRight: {right:?}\nBinOpKind: {other:?}")
                     }
 
                 },
@@ -205,10 +203,8 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                     let right_value: bool = match right_lit_expr {
                         Expr::BoolLiteral { value: right_value, .. } => right_value,
                         _ => panic!(
-                            "(Compiler bug) eval_const_expr_and_fold_hazmat, infer_expr_type should've been called and verified both left and right binary operations are same type, but apparently not.\nLeft: {:?}\nRight: {:?}",
-                            left, right)
+                                "(Compiler bug) eval_const_expr_and_fold_hazmat, infer_expr_type should've been called and verified both left and right binary operations are same type, but apparently not.\nLeft: {left:?}\nRight: {right:?}")
                     };
-
 
                     match op {
                         BinOpKind::And => {
@@ -235,18 +231,17 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                         },
 
                         other => panic!(
-                            "(Compiler bug) infer_expr_type should've caught illegal BinOpKind on string.\nLeft: {:?}\nRight: {:?}\nBinOpKind: {:?}", 
-                                    left, right, other)
+                            "(Compiler bug) infer_expr_type should've caught illegal BinOpKind on string.\nLeft: {left:?}\nRight: {right:?}\nBinOpKind: {other:?}")
                     }
 
                 },
 
                 Expr::Float64Literal { value: left_value, span, ..} => {
+                    #[allow(clippy::manual_let_else)]
                     let right_value = match right_lit_expr {
                         Expr::Float64Literal { value: right_value, .. } => right_value,
                         _ => panic!(
-                            "(Compiler bug) eval_const_expr_and_fold_hazmat, infer_expr_type should've been called and verified both left and right binary operations are same type, but apparently not.\nLeft: {:?}\nRight: {:?}",
-                            left, right)
+                            "(Compiler bug) eval_const_expr_and_fold_hazmat, infer_expr_type should've been called and verified both left and right binary operations are same type, but apparently not.\nLeft: {left:?}\nRight: {right:?}")
                     };
 
                     #[allow(clippy::needless_late_init)]
@@ -269,48 +264,47 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                             result = left_value / right_value; 
                         },
 
-
+                        #[allow(clippy::float_cmp)]
                         BinOpKind::Equal => {
                             let result: bool = left_value == right_value;
 
-                            return Ok(Expr::BoolLiteral { value: result, span });
+                            return Ok(Expr::BoolLiteral { value: result, span })
                         },
 
+                        #[allow(clippy::float_cmp)]
                         BinOpKind::NotEqual => {
                             let result: bool = left_value != right_value;
 
-                            return Ok(Expr::BoolLiteral { value: result, span });
+                            return Ok(Expr::BoolLiteral { value: result, span })
                         },
 
                         BinOpKind::Greater => {
                             let result: bool = left_value > right_value;
 
-                            return Ok(Expr::BoolLiteral { value: result, span });
+                            return Ok(Expr::BoolLiteral { value: result, span })
                         },
 
                         BinOpKind::GreaterEqual => {
                             let result: bool = left_value >= right_value;
 
-                            return Ok(Expr::BoolLiteral { value: result, span });
+                            return Ok(Expr::BoolLiteral { value: result, span })
                         },
 
 
                         BinOpKind::Less => {
                             let result: bool = left_value < right_value;
 
-                            return Ok(Expr::BoolLiteral { value: result, span });
+                            return Ok(Expr::BoolLiteral { value: result, span })
                         },
 
                         BinOpKind::LessEqual => {
                             let result: bool = left_value <= right_value;
 
-                            return Ok(Expr::BoolLiteral { value: result, span });
+                            return Ok(Expr::BoolLiteral { value: result, span })
                         },
 
 
-                        other => panic!(
-                            "(Compiler bug) infer_expr_type should've caught illegal BinOpKind on float.\nLeft: {:?}\nRight: {:?}\nBinOpKind: {:?}", 
-                                    left, right, other)
+                        other => panic!("(Compiler bug) infer_expr_type should've caught illegal BinOpKind on float.\nLeft: {left:?}\nRight: {right:?}\nBinOpKind: {other:?}")
                     }
 
                     if !result.is_finite() {
@@ -327,17 +321,12 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                 Expr::IntLiteral { value: left_value, span, ..} => {
                     let right_value: IntLiteralValue = match right_lit_expr {
                         Expr::IntLiteral { value: right_value, .. } => {
-                            if left_value.get_type() != right_value.get_type() {
-                                panic!(
-                                    "(Compiler bug) eval_const_expr_and_fold_hazmat, infer_expr_type should've been called and verified both left and right binary operations are same type exact integer literal type, but apparently not.\nLeft: {:?}\nRight: {:?}",
-                                    left, right)
+                            assert!(left_value.get_type() == right_value.get_type(), "(Compiler bug) eval_const_expr_and_fold_hazmat, infer_expr_type should've been called and verified both left and right binary operations are same type exact integer literal type, but apparently not.\nLeft: {left:?}\nRight: {right:?}");
 
-                            }
                             right_value
                         },
                         _ => panic!(
-                            "(Compiler bug) eval_const_expr_and_fold_hazmat, infer_expr_type should've been called and verified both left and right binary operations are same type, but apparently not.\nLeft: {:?}\nRight: {:?}",
-                            left, right)
+                            "(Compiler bug) eval_const_expr_and_fold_hazmat, infer_expr_type should've been called and verified both left and right binary operations are same type, but apparently not.\nLeft: {left:?}\nRight: {right:?}")
                     };
 
                     if left_value.is_signed() {
@@ -392,7 +381,7 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                                     )));
                                 }
 
-                                if right_val >= (bit_width as i128) {
+                                if right_val >= (i128::from(bit_width)) {
                                     return Err(HolyError::Semantic(format!(
                                         "Constant bitwise shift to the left's right-side value cannot exceed `{}`. Left: `{}`, Right: `{}`. (line {} column {})",
                                         bit_width - 1, left_val, right_val, span.line, span.column
@@ -418,7 +407,7 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                                     )));
                                 }
 
-                                if right_val >= (bit_width as i128) {
+                                if right_val >= (i128::from(bit_width)) {
                                     return Err(HolyError::Semantic(format!(
                                         "Constant bitwise shift to the right's right-side value cannot exceed `{}`. Left: `{}`, Right: `{}`. (line {} column {})",
                                         bit_width - 1, left_val, right_val, span.line, span.column
@@ -434,11 +423,11 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                                 return Ok(truncate_to_int_type_hazmat(result, left_value.get_type(), span))
                             },
                             BinOpKind::BitwiseAnd => {
-                                result = left_val & right_val
+                                result = left_val & right_val;
                             },
 
                             BinOpKind::BitwiseOr => {
-                                result = left_val | right_val
+                                result = left_val | right_val;
                             },
 
                             BinOpKind::Equal => {
@@ -480,8 +469,8 @@ pub fn eval_const_expr_and_fold_it_hazmat(
 
 
                             other => panic!(
-                                "(Compiler bug) infer_expr_type should've caught illegal BinOpKind on integer.\nLeft: {:?}\nRight: {:?}\nBinOpKind: {:?}", 
-                                        left, right, other)
+                                "(Compiler bug) infer_expr_type should've caught illegal BinOpKind on integer.\nLeft: {left:?}\nRight: {right:?}\nBinOpKind: {other:?}"
+                                )
                         }
 
                        
@@ -536,7 +525,7 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                             BinOpKind::BitwiseShiftLeft => {
                                 let bit_width: u32 = left_value.bit_width();
 
-                                if right_val >= (bit_width as u128) {
+                                if right_val >= u128::from(bit_width) {
                                     return Err(HolyError::Semantic(format!(
                                         "Constant bitwise shift to the left's right-side value cannot exceed `{}`. Left: `{}`, Right: `{}`. (line {} column {})",
                                         bit_width - 1, left_val, right_val, span.line, span.column
@@ -555,7 +544,7 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                             BinOpKind::BitwiseShiftRight => {
                                 let bit_width: u32 = left_value.bit_width();
 
-                                if right_val >= (bit_width as u128) {
+                                if right_val >= u128::from(bit_width) {
                                     return Err(HolyError::Semantic(format!(
                                         "Constant bitwise shift to the right's right-side value cannot exceed `{}`. Left: `{}`, Right: `{}`. (line {} column {})",
                                         bit_width - 1, left_val, right_val, span.line, span.column
@@ -570,12 +559,8 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                                 // expected.
                                 return Ok(truncate_to_uint_type_hazmat(result, left_value.get_type(), span))
                             },
-                            BinOpKind::BitwiseAnd => {
-                                result = left_val & right_val
-                            },
-                            BinOpKind::BitwiseOr => {
-                                result = left_val | right_val
-                            },
+                            BinOpKind::BitwiseAnd => result = left_val & right_val,
+                            BinOpKind::BitwiseOr => result = left_val | right_val,
 
                             BinOpKind::Equal => {
                                 let result: bool = left_val == right_val;
@@ -614,12 +599,9 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                                 return Ok(Expr::BoolLiteral { value: result, span });
                             },
 
-
-
-
                             other => panic!(
-                                "(Compiler bug) infer_expr_type should've caught illegal BinOpKind on integer.\nLeft: {:?}\nRight: {:?}\nBinOpKind: {:?}", 
-                                        left, right, other)
+                                "(Compiler bug) infer_expr_type should've caught illegal BinOpKind on integer.\nLeft: {left:?}\nRight: {right:?}\nBinOpKind: {other:?}"
+                                )
                         }
 
                         // Here we operate on left_value type, but it doesn't matter because
@@ -631,7 +613,7 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                     }
                 }
                 
-                other => panic!( "(Compiler bug) We didn't get literal AND didnt error earlier in binop check. Other: {:?}", other)
+                other => panic!( "(Compiler bug) We didn't get literal AND didnt error earlier in binop check. Other: {other:?}")
             }
         },
 
@@ -646,7 +628,7 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                     BindingKind::Const { ref value, .. } => eval_const_expr_and_fold_it_hazmat(value, storage)
                 }            
             } else {
-                panic!("(Compiler bug) Binding doesnt exist in scope, which is impossible because infer_expr_type shouldve been called and validated its existence.\nBinding name: {:?}\nscope: {:#?}", name, storage);
+                panic!("(Compiler bug) Binding doesnt exist in scope, which is impossible because infer_expr_type shouldve been called and validated its existence.\nBinding name: {name:?}\nscope: {storage:#?}")
             }
         }
 
@@ -661,6 +643,8 @@ pub fn eval_const_expr_and_fold_it_hazmat(
 
 /// Takes a `target` which is an uint128, and a type to try to coerce it to.
 /// The reason this function exists is purely only for bitwise shift operations
+///
+#[allow(clippy::cast_possible_truncation)]
 fn truncate_to_uint_type_hazmat(target: u128, ty: Type, span: Span) -> Expr {
     match ty {
         Type::Byte => Expr::IntLiteral { value: IntLiteralValue::Byte(target as u8), span},
@@ -670,13 +654,15 @@ fn truncate_to_uint_type_hazmat(target: u128, ty: Type, span: Span) -> Expr {
         Type::Uint128 => Expr::IntLiteral { value: IntLiteralValue::Uint128(target), span },
         Type::Usize => Expr::IntLiteral { value: IntLiteralValue::Usize(target as usize), span },
 
-        other => panic!("(Compiler bug) Expected target to be of an unsigned integer type, instead got `{:?}`. Target: {:?}", other, target)
+        other => panic!("(Compiler bug) Expected target to be of an unsigned integer type, instead got `{other:?}`. Target: {target:?}")
     }
 }
 
 
 /// Takes a `target` which is an int128, and a type to try to coerce it to.
 /// The reason this function exists is purely only for bitwise shift operations
+///
+#[allow(clippy::cast_possible_truncation)]
 fn truncate_to_int_type_hazmat(target: i128, ty: Type, span: Span) -> Expr {
     match ty {
         Type::Int8 => Expr::IntLiteral { value: IntLiteralValue::Int8(target as i8), span},
@@ -685,7 +671,7 @@ fn truncate_to_int_type_hazmat(target: i128, ty: Type, span: Span) -> Expr {
         Type::Int64 => Expr::IntLiteral { value: IntLiteralValue::Int64(target as i64), span},
         Type::Int128 => Expr::IntLiteral { value: IntLiteralValue::Int128(target), span },
 
-        other => panic!("(Compiler bug) Expected target to be of an signed integer type, instead got `{:?}`. Target: {:?}", other, target)
+        other => panic!("(Compiler bug) Expected target to be of an signed integer type, instead got `{other:?}`. Target: {target:?}")
     }
 }
 
