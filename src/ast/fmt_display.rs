@@ -4,35 +4,35 @@ use std::fmt;
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match self {
-            Type::Int8 => "int8",
-            Type::Int16 => "int16",
-            Type::Int32 => "int32",
-            Type::Int64 => "int64",
-            Type::Int128 => "int128",
+            Self::Int8 => "int8",
+            Self::Int16 => "int16",
+            Self::Int32 => "int32",
+            Self::Int64 => "int64",
+            Self::Int128 => "int128",
 
-            Type::Byte => "byte",
-            Type::Uint16 => "uint16",
-            Type::Uint32 => "uint32",
-            Type::Uint64 => "uint64",
-            Type::Uint128 => "uint128",
+            Self::Byte => "byte",
+            Self::Uint16 => "uint16",
+            Self::Uint32 => "uint32",
+            Self::Uint64 => "uint64",
+            Self::Uint128 => "uint128",
             
-            Type::Usize => "usize",
+            Self::Usize => "usize",
 
-            Type::Float64 => "float64",
-            Type::Bool => "bool",
-            Type::String => "string",
-            Type::Array(inner_ty) => &format!("[]{}", inner_ty),
-            Type::FixedArray(inner_ty, size) => &format!("[{}]{}", size, inner_ty)
+            Self::Float64 => "float64",
+            Self::Bool => "bool",
+            Self::String => "string",
+            Self::Array(inner_ty) => &format!("[]{inner_ty}"),
+            Self::FixedArray(inner_ty, size) => &format!("[{size}]{inner_ty}")
         };
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 
 impl fmt::Display for FixedArraySize {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            FixedArraySize::Literal(l) => write!(f, "{}", l),
-            FixedArraySize::Const(c) => write!(f, "{}", c)
+            Self::Literal(l) => write!(f, "{l}"),
+            Self::Const(c) => write!(f, "{c}"),
         }
  
     }
@@ -42,20 +42,19 @@ impl fmt::Display for FixedArraySize {
 impl fmt::Display for IntLiteralValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            IntLiteralValue::Int8(v) => write!(f, "{}", v),
-            IntLiteralValue::Int16(v) => write!(f, "{}", v),
-            IntLiteralValue::Int32(v) => write!(f, "{}", v),
-            IntLiteralValue::Int64(v) => write!(f, "{}", v),
-            IntLiteralValue::Int128(v) => write!(f, "{}", v),
+            Self::Int8(v) => write!(f, "{v}"),
+            Self::Int16(v) => write!(f, "{v}"),
+            Self::Int32(v) => write!(f, "{v}"),
+            Self::Int64(v) => write!(f, "{v}"),
+            Self::Int128(v) => write!(f, "{v}"),
 
+            Self::Usize(v) => write!(f, "{v}"),
 
-            IntLiteralValue::Usize(v) => write!(f, "{}", v),
-
-            IntLiteralValue::Byte(v) => write!(f, "{}", v),
-            IntLiteralValue::Uint16(v) => write!(f, "{}", v),
-            IntLiteralValue::Uint32(v) => write!(f, "{}", v),
-            IntLiteralValue::Uint64(v) => write!(f, "{}", v),
-            IntLiteralValue::Uint128(v) => write!(f, "{}", v),
+            Self::Byte(v) => write!(f, "{v}"),
+            Self::Uint16(v) => write!(f, "{v}"),
+            Self::Uint32(v) => write!(f, "{v}"),
+            Self::Uint64(v) => write!(f, "{v}"),
+            Self::Uint128(v) => write!(f, "{v}")
         }
     }
 }
@@ -64,22 +63,22 @@ impl fmt::Display for IntLiteralValue {
 impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let name = match self {
-            Expr::IntLiteral { .. } => "Int Literal",
-            Expr::Float64Literal { .. } => "Float64 Literal",
-            Expr::BoolLiteral { .. } => "Bool Literal",
-            Expr::ArrayLiteral { .. } => "Array Literal",
-            Expr::StringLiteral { .. } => "String Literal",
-            Expr::Var { .. } => "Variable",
-            Expr::UnaryOp { .. } => "Unary Operation",
-            Expr::BinOp { .. } => "Binary Operation",
-            Expr::Call { .. } => "Function Call",
-            Expr::ArrayAccess { .. } => "Array Access",
-            Expr::ArraySlicing { .. } => "Array Slicing",
-            Expr::CopyCall { .. } => "Copy Call",
-            Expr::FormatCall { .. } => "Format Call",
-            Expr::RangeCall { .. } => "Range Call",
+            Self::IntLiteral { .. } => "Int Literal",
+            Self::Float64Literal { .. } => "Float64 Literal",
+            Self::BoolLiteral { .. } => "Bool Literal",
+            Self::ArrayLiteral { .. } => "Array Literal",
+            Self::StringLiteral { .. } => "String Literal",
+            Self::Var { .. } => "Variable",
+            Self::UnaryOp { .. } => "Unary Operation",
+            Self::BinOp { .. } => "Binary Operation",
+            Self::Call { .. } => "Function Call",
+            Self::ArrayAccess { .. } => "Array Access",
+            Self::ArraySlicing { .. } => "Array Slicing",
+            Self::CopyCall { .. } => "Copy Call",
+            Self::FormatCall { .. } => "Format Call",
+            Self::RangeCall { .. } => "Range Call",
         };
-        write!(f, "{}", name)
+        write!(f, "{name}")
     }
 }
 

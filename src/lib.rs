@@ -31,7 +31,7 @@ pub fn compile(source: &str, compile: CompileInfo) -> String {
     match compile {
         CompileInfo::CompileTo(target_path) => {
             // Compile the transpiled Rust code into target_path.
-            compile::compile(&rust_code, &target_path).expect("Compile errors");
+            compile::compile(&rust_code, &target_path);
         },
 
         CompileInfo::DoNotCompile => {}

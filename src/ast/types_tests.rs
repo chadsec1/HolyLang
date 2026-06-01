@@ -235,7 +235,7 @@ mod types_tests {
     fn fixed_array_to_dynamic_array_type_full() {
         for t in ALL_TYPES_NO_ARR {
             let result = std::panic::catch_unwind(|| { 
-                t.fixed_array_to_dynamic_array_type_full();
+                let _ = t.fixed_array_to_dynamic_array_type_full();
             });
 
             assert!(result.is_err(), "Expected panic for: {:?}", t);

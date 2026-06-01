@@ -337,6 +337,7 @@ fn parse_const(cons: &Constant) -> String {
 
 /// Turns a HolyLang expression, into equvilent Rust expression
 ///
+#[allow(clippy::doc_markdown)]
 fn holy_expr_to_rust_expr(expr: &Expr) -> String {
     match expr {
         Expr::IntLiteral { value, .. } => {
@@ -344,19 +345,18 @@ fn holy_expr_to_rust_expr(expr: &Expr) -> String {
 
             if value.is_signed() {
                 let value_raw: i128 = value.as_i128();
-                format!("{}{}", value_raw, value_ty)
-            
+                format!("{value_raw}{value_ty}")
             } else {
                 let value_raw: u128 = value.as_u128();
-                format!("{}{}", value_raw, value_ty)
+                format!("{value_raw}{value_ty}")
             }
         },
 
-        Expr::Float64Literal { value, .. } => format!("{}f64", value),
+        Expr::Float64Literal { value, .. } => format!("{value}f64"),
 
         Expr::BoolLiteral { value, .. } => value.to_string(),
 
-        Expr::StringLiteral { value, .. } => format!("\"{}\".to_string()", value),
+        Expr::StringLiteral { value, .. } => format!("\"{value}\".to_string()"),
         
         Expr::ArrayLiteral { elements, type_name, .. } => {
             let mut elems = String::new();
@@ -364,7 +364,7 @@ fn holy_expr_to_rust_expr(expr: &Expr) -> String {
             match type_name.clone().expect("(Compiler bug) Expected type_name to be Some, instead got None. theres likely a bug in semantics layer") {
                 Type::Array(_) => elems.push_str("vec!["),
                 Type::FixedArray(_, _) => elems.push('['),
-                other => panic!("(Compiler bug) got arrayl iteral with non array array type_name `{:?}`, indicating a potentinal bug in semantics layer", other)
+                other => panic!("(Compiler bug) got arrayl iteral with non array array type_name `{other:?}`, indicating a potentinal bug in semantics layer")
             }
 
             for e in elements {
@@ -392,15 +392,15 @@ fn holy_expr_to_rust_expr(expr: &Expr) -> String {
             ArraySliceRange::FromTo(from, to) => format!("{}[{}..{}].to_vec()", holy_expr_to_rust_expr(array), holy_expr_to_rust_expr(from), holy_expr_to_rust_expr(to)),
         },
 
-        Expr::Var { name, .. } => name.to_string(),
+        Expr::Var { name, .. } => name.clone(),
 
         Expr::UnaryOp { op, expr, .. } => {
             let expr_str = holy_expr_to_rust_expr(expr);
 
             match op {
-                UnaryOpKind::Negate => format!("{}.checked_neg().unwrap_or_else(|| panic!(\"unary negate integer overflow\"))", expr_str),
-                UnaryOpKind::Not => format!("!{}", expr_str),
-                UnaryOpKind::BitwiseNot => format!("!{}", expr_str),
+                UnaryOpKind::Negate => format!("{expr_str}.checked_neg().unwrap_or_else(|| panic!(\"unary negate integer overflow\"))"),
+                UnaryOpKind::Not |
+                UnaryOpKind::BitwiseNot => format!("!{expr_str}")
             }
         },
 
@@ -411,32 +411,32 @@ fn holy_expr_to_rust_expr(expr: &Expr) -> String {
             match op {
                 // Arithemtic
                 //
-                BinOpKind::Add      => format!("{}.checked_add({}).unwrap_or_else(|| panic!(\"arithmetic addition overflow\"))", left_str, right_str),
-                BinOpKind::Subtract => format!("{}.checked_sub({}).unwrap_or_else(|| panic!(\"arithmetic subtraction overflow\"))", left_str, right_str),
-                BinOpKind::Multiply => format!("{}.checked_mul({}).unwrap_or_else(|| panic!(\"arithmetic multiplication overflow\"))", left_str, right_str),
-                BinOpKind::Divide   => format!("{}.checked_div({}).unwrap_or_else(|| panic!(\"arithmetic divison overflow\"))", left_str, right_str),
+                BinOpKind::Add      => format!("{left_str}.checked_add({right_str}).unwrap_or_else(|| panic!(\"arithmetic addition overflow\"))"),
+                BinOpKind::Subtract => format!("{left_str}.checked_sub({right_str}).unwrap_or_else(|| panic!(\"arithmetic subtraction overflow\"))"),
+                BinOpKind::Multiply => format!("{left_str}.checked_mul({right_str}).unwrap_or_else(|| panic!(\"arithmetic multiplication overflow\"))"),
+                BinOpKind::Divide   => format!("{left_str}.checked_div({right_str}).unwrap_or_else(|| panic!(\"arithmetic divison overflow\"))"),
 
                 // Logical
                 //
-                BinOpKind::Equal    => format!("({} == {})", left_str, right_str),
-                BinOpKind::NotEqual => format!("({} != {})", left_str, right_str),
-                BinOpKind::Greater  => format!("({} > {})", left_str, right_str),
-                BinOpKind::Less     => format!("({} < {})", left_str, right_str),
+                BinOpKind::Equal    => format!("({left_str} == {right_str})"),
+                BinOpKind::NotEqual => format!("({left_str} != {right_str})"),
+                BinOpKind::Greater  => format!("({left_str} > {right_str})"),
+                BinOpKind::Less     => format!("({left_str} < {right_str})"),
                 
-                BinOpKind::GreaterEqual => format!("({} >= {})", left_str, right_str),
-                BinOpKind::LessEqual    => format!("({} <= {})", left_str, right_str),
+                BinOpKind::GreaterEqual => format!("({left_str} >= {right_str})"),
+                BinOpKind::LessEqual    => format!("({left_str} <= {right_str})"),
 
-                BinOpKind::And => format!("({} && {})", left_str, right_str),
-                BinOpKind::Or  => format!("({} || {})", left_str, right_str),
+                BinOpKind::And => format!("({left_str} && {right_str})"),
+                BinOpKind::Or  => format!("({left_str} || {right_str})"),
 
                 // Bitwise
                 //
-                BinOpKind::BitwiseAnd => format!("({} & {})", left_str, right_str),
-                BinOpKind::BitwiseOr  => format!("({} | {})", left_str, right_str),
+                BinOpKind::BitwiseAnd => format!("({left_str} & {right_str})"),
+                BinOpKind::BitwiseOr  => format!("({left_str} | {left_str})"),
 
-                BinOpKind::BitwiseShiftLeft => format!("({}.checked_shl({}.try_into().unwrap_or_else(|_| panic!(\"bitwise shift left count `{{}}` does not fit in u32\", {})) )).unwrap_or_else(|| panic!(\"bitwise shift left overflow\"))", left_str, right_str, right_str),
+                BinOpKind::BitwiseShiftLeft => format!("({left_str}.checked_shl({right_str}.try_into().unwrap_or_else(|_| panic!(\"bitwise shift left count `{{}}` does not fit in u32\", {right_str})) )).unwrap_or_else(|| panic!(\"bitwise shift left overflow\"))"),
 
-                BinOpKind::BitwiseShiftRight => format!("({}.checked_shr({}.try_into().unwrap_or_else(|_| panic!(\"bitwise shift right count `{{}}` does not fit in u32\", {})) )).unwrap_or_else(|| panic!(\"bitwise shift right overflow\"))", left_str, right_str, right_str),
+                BinOpKind::BitwiseShiftRight => format!("({left_str}.checked_shr({right_str}.try_into().unwrap_or_else(|_| panic!(\"bitwise shift right count `{{}}` does not fit in u32\", {right_str})) )).unwrap_or_else(|| panic!(\"bitwise shift right overflow\"))"),
 
             }
 

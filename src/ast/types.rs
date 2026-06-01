@@ -4,7 +4,7 @@ use crate::ast::exprs::Expr;
 use crate::ast::span::Span;
 use crate::ast::int_literal_value::IntLiteralValue;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FixedArraySize {
     Literal(usize),
     Const(String)
@@ -30,54 +30,67 @@ pub enum Type {
     Float64,
     Bool,
     String,
-    Array(Box<Type>),
-    FixedArray(Box<Type>, FixedArraySize)
+    Array(Box<Self>),
+    FixedArray(Box<Self>, FixedArraySize)
 }
 
 
 
 impl Type {
-    pub fn is_integer_type(&self) -> bool {
-        matches!(self, Type::Int8 | Type::Int16 | Type::Int32 | Type::Int64 | Type::Int128 | Type::Byte | Type::Uint16 | Type::Uint32 | Type::Uint64 | Type::Uint128 | Type::Usize)
+    #[must_use]
+    pub const fn is_integer_type(&self) -> bool {
+        matches!(self, Self::Int8 | Self::Int16 | Self::Int32 | Self::Int64 | Self::Int128 | Self::Byte | Self::Uint16 | Self::Uint32 | Self::Uint64 | Self::Uint128 | Self::Usize)
     }
 
-    pub fn is_floating_type(&self) -> bool {
-        matches!(self, Type::Float64)
+    #[must_use]
+    pub const fn is_floating_type(&self) -> bool {
+        matches!(self, Self::Float64)
     }
 
-
-    pub fn is_numeric_type(&self) -> bool {
+    #[must_use]
+    pub const fn is_numeric_type(&self) -> bool {
         self.is_integer_type() || self.is_floating_type()
     }
 
-    pub fn is_array_type(&self) -> bool {
-        let is_dynm_arr = matches!(self, Type::Array(_));
+    #[must_use]
+    pub const fn is_array_type(&self) -> bool {
+        let is_dynm_arr = matches!(self, Self::Array(_));
         
-        let is_fixed_arr = matches!(self, Type::FixedArray(_, _));
+        let is_fixed_arr = matches!(self, Self::FixedArray(_, _));
 
         is_dynm_arr || is_fixed_arr
     }
 
 
+    ///
+    /// # Panics
+    /// If callled on non-array types
+    ///
+    #[must_use]
     pub fn is_fully_fixed_array_type(&self) -> bool {
-        if !matches!(self, Type::Array(_) | Type::FixedArray(_, _)) {
-            panic!("(Compiler bug) Do not call is_fully_fixed_array_type unless you are sure Type is an array. Self: {:?}", self);
-        }
+        assert!(
+            matches!(self, Self::Array(_) | Self::FixedArray(_, _)), 
+            "(Compiler bug) Do not call is_fully_fixed_array_type unless you are sure Type is an array. Self: {self:?}"
+        );
 
         let mut current = self;
         loop {
             match current {
-                Type::Array(_) => return false,
-                Type::FixedArray(inner, _) => current = inner,
+                Self::Array(_) => return false,
+                Self::FixedArray(inner, _) => current = inner,
                 _ => return true,
             }
         }
     }
 
-    /// Converts a fixed_array into dynamic array, and walks recursively into fixed_array type and
+    /// Converts a `FixedArray` into a dynamic `Array`, and walks recursively into `FixedArray` type and
     /// does the same.
+    ///
+    /// # Panics
+    /// If called on non-array types
     /// 
-    pub fn fixed_array_to_dynamic_array_type_full(&self) -> Type {
+    #[must_use]
+    pub fn fixed_array_to_dynamic_array_type_full(&self) -> Self {
         if !matches!(self, Type::Array(_) | Type::FixedArray(_, _)) {
             panic!("(Compiler bug) Do not call fixed_array_to_dynamic_array_type_full unless you are sure Type is an array. Self: {:?}", self);
         }
