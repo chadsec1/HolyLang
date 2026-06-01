@@ -15,11 +15,15 @@ pub fn compile(rcode: &str, target_dir: &str) -> Result<(), HolyError> {
 
     let main_dir = env::temp_dir().join(format!("holylang-{}", unix_timestamp_str));
     let src_dir = main_dir.join("src");
-    fs::create_dir_all(&main_dir).expect(&format!("Compile error: Couldnt create directory `{}`, please check permissions.", main_dir.display()));
-    fs::create_dir_all(&src_dir).expect(&format!("Compile error: Couldnt create directory `{}`, please check permissions.", src_dir.display()));
+    fs::create_dir_all(&main_dir)
+        .unwrap_or_else(|e| panic!("Compile error: Couldnt create directory `{}`, please check permissions. Error: {:?}", main_dir.display(), e));
+
+    fs::create_dir_all(&src_dir)
+        .unwrap_or_else(|e| panic!("Compile error: Couldnt create directory `{}`, please check permissions. Error: {:?}", src_dir.display(), e));
 
     let cargo_file_path = main_dir.join("Cargo.toml");
-    let mut cargo_file = File::create(&cargo_file_path).expect(&format!("Compile error: Couldnt create file `{}`, please check your permissions", cargo_file_path.display()));
+    let mut cargo_file = File::create(&cargo_file_path)
+        .unwrap_or_else(|e| panic!("Compile error: Couldnt create file `{}`, please check permissions. Error: {:?}", cargo_file_path.display(), e));
 
     let cargo_content = r#"[package]
 name = "holyprogram"
@@ -35,19 +39,23 @@ opt-level = 0
 panic = "abort"
 "#;
 
-    cargo_file.write_all(cargo_content.as_bytes()).expect(&format!("Compile error: Couldnt write to file `{}`, please check your permissions", cargo_file_path.display()));
+    cargo_file.write_all(cargo_content.as_bytes())
+        .unwrap_or_else(|e| panic!("Compile error: Couldnt write to file `{}`, please check permissions. Error: {:?}", cargo_file_path.display(), e));
     
     let main_file_path = src_dir.join("main.rs");
-    let mut main_file = File::create(&main_file_path).expect(&format!("Compile error: Couldnt create file `{}`, please check your permissions", main_file_path.display()));
+    let mut main_file = File::create(&main_file_path)
+            .unwrap_or_else(|e| panic!("Compile error: Couldnt create file `{}`, please check permissions. Error: {:?}", main_file_path.display(), e));
 
-    main_file.write_all(rcode.as_bytes()).expect(&format!("Compile error: Couldnt write to file `{}`, please check your permissions", main_file_path.display()));
+    main_file.write_all(rcode.as_bytes())
+        .unwrap_or_else(|e| panic!("Compile error: Couldnt write file `{}`, please check permissions. Error: {:?}", main_file_path.display(), e));
 
     let compile_proc_output = Command::new("cargo")
         .arg("build")
         .stdout(Stdio::null())
         .stderr(Stdio::piped())
         .current_dir(&main_dir)
-        .output().expect("Compile error: Failed to compile transpiled code! Ensure Rust is correctly installed and try again");
+        .output()
+        .unwrap_or_else(|e| panic!("Compile error: Failed to compile transpiled code! Ensure Rust is correctly installed and try again. Error: {:?}", e));
 
     let stderr = String::from_utf8_lossy(&compile_proc_output.stderr);
 
@@ -63,7 +71,11 @@ panic = "abort"
         )
     }
 
-    fs::rename(binary_path, target_dir).expect(&format!("Compile clean-up error: Couldnt move binary from `{}` to `{}`", main_dir.display(), target_dir));
-    fs::remove_dir_all(&main_dir).expect(&format!("Compile clean-up error: Couldnt delete directory `{}`, please check your permissions", main_dir.display()));
+    fs::rename(binary_path, target_dir)
+        .unwrap_or_else(|e| panic!("Compile clean-up error: Couldnt move binary from `{}` to `{}`. Error: {:?}", main_dir.display(), target_dir, e));
+
+    fs::remove_dir_all(&main_dir)
+        .unwrap_or_else(|e| panic!("Compile clean-up error: Couldnt delete directory `{}`, please check your permissions. Error: {:?}", main_dir.display(), e));
+
     Ok(())
 }
