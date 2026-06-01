@@ -381,3 +381,579 @@ mod holy_type_to_rust_type_str_dyn_arr_types_tests {
         }
     }
 }
+
+
+#[cfg(test)]
+mod holy_type_to_rust_type_str_fixed_arr_with_literal_size_types_tests {
+    use super::*;
+
+    #[test]
+    fn array_of_string() {
+        let plain_t = Type::String;
+        let plain_t_str = holy_type_to_rust_type_str(&plain_t);
+
+        let mut vec_str = plain_t_str;
+        let mut arr_t = plain_t;
+
+        for i in 1..=1000 {
+            arr_t = Type::FixedArray(Box::new(arr_t), FixedArraySize::Literal(i));
+            vec_str = format!("[{}; {}]", vec_str, i);
+
+            let arr_t_str = holy_type_to_rust_type_str(&arr_t);
+
+            assert_eq!(arr_t_str, vec_str)
+        }
+    }
+
+    #[test]
+    fn array_of_float64() {
+        let plain_t = Type::Float64;
+        let plain_t_str = holy_type_to_rust_type_str(&plain_t);
+
+        let mut vec_str = plain_t_str;
+        let mut arr_t = plain_t;
+
+        for i in 1..=1000 {
+            arr_t = Type::FixedArray(Box::new(arr_t), FixedArraySize::Literal(i));
+            vec_str = format!("[{}; {}]", vec_str, i);
+
+            let arr_t_str = holy_type_to_rust_type_str(&arr_t);
+
+            assert_eq!(arr_t_str, vec_str)
+        }
+    }
+
+    #[test]
+    fn array_of_bool() {
+        let plain_t = Type::Bool;
+        let plain_t_str = holy_type_to_rust_type_str(&plain_t);
+
+        let mut vec_str = plain_t_str;
+        let mut arr_t = plain_t;
+
+        for i in 1..=1000 {
+            arr_t = Type::FixedArray(Box::new(arr_t), FixedArraySize::Literal(i));
+            vec_str = format!("[{}; {}]", vec_str, i);
+
+            let arr_t_str = holy_type_to_rust_type_str(&arr_t);
+
+            assert_eq!(arr_t_str, vec_str)
+        }
+    }
+
+    #[test]
+    fn array_of_int8() {
+        let plain_t = Type::Int8;
+        let plain_t_str = holy_type_to_rust_type_str(&plain_t);
+
+        let mut vec_str = plain_t_str;
+        let mut arr_t = plain_t;
+
+        for i in 1..=1000 {
+            arr_t = Type::FixedArray(Box::new(arr_t), FixedArraySize::Literal(i));
+            vec_str = format!("[{}; {}]", vec_str, i);
+
+            let arr_t_str = holy_type_to_rust_type_str(&arr_t);
+
+            assert_eq!(arr_t_str, vec_str)
+        }
+    }
+
+    #[test]
+    fn array_of_int16() {
+        let plain_t = Type::Int16;
+        let plain_t_str = holy_type_to_rust_type_str(&plain_t);
+
+        let mut vec_str = plain_t_str;
+        let mut arr_t = plain_t;
+
+        for i in 1..=1000 {
+            arr_t = Type::FixedArray(Box::new(arr_t), FixedArraySize::Literal(i));
+            vec_str = format!("[{}; {}]", vec_str, i);
+
+            let arr_t_str = holy_type_to_rust_type_str(&arr_t);
+
+            assert_eq!(arr_t_str, vec_str)
+        }
+    }
+ 
+    #[test]
+    fn array_of_int32() {
+        let plain_t = Type::Int32;
+        let plain_t_str = holy_type_to_rust_type_str(&plain_t);
+
+        let mut vec_str = plain_t_str;
+        let mut arr_t = plain_t;
+
+        for i in 1..=1000 {
+            arr_t = Type::FixedArray(Box::new(arr_t), FixedArraySize::Literal(i));
+            vec_str = format!("[{}; {}]", vec_str, i);
+
+            let arr_t_str = holy_type_to_rust_type_str(&arr_t);
+
+            assert_eq!(arr_t_str, vec_str)
+        }
+    }
+
+    #[test]
+    fn array_of_int64() {
+        let plain_t = Type::Int64;
+        let plain_t_str = holy_type_to_rust_type_str(&plain_t);
+
+        let mut vec_str = plain_t_str;
+        let mut arr_t = plain_t;
+
+        for i in 1..=1000 {
+            arr_t = Type::FixedArray(Box::new(arr_t), FixedArraySize::Literal(i));
+            vec_str = format!("[{}; {}]", vec_str, i);
+
+            let arr_t_str = holy_type_to_rust_type_str(&arr_t);
+
+            assert_eq!(arr_t_str, vec_str)
+        }
+    }
+
+    #[test]
+    fn array_of_int128() {
+        let plain_t = Type::Int128;
+        let plain_t_str = holy_type_to_rust_type_str(&plain_t);
+
+        let mut vec_str = plain_t_str;
+        let mut arr_t = plain_t;
+
+        for i in 1..=1000 {
+            arr_t = Type::FixedArray(Box::new(arr_t), FixedArraySize::Literal(i));
+            vec_str = format!("[{}; {}]", vec_str, i);
+
+            let arr_t_str = holy_type_to_rust_type_str(&arr_t);
+
+            assert_eq!(arr_t_str, vec_str)
+        }
+    }
+
+
+    #[test]
+    fn array_of_byte() {
+        let plain_t = Type::Byte;
+        let plain_t_str = holy_type_to_rust_type_str(&plain_t);
+
+        let mut vec_str = plain_t_str;
+        let mut arr_t = plain_t;
+
+        for i in 1..=1000 {
+            arr_t = Type::FixedArray(Box::new(arr_t), FixedArraySize::Literal(i));
+            vec_str = format!("[{}; {}]", vec_str, i);
+
+            let arr_t_str = holy_type_to_rust_type_str(&arr_t);
+
+            assert_eq!(arr_t_str, vec_str)
+        }
+    }
+
+    #[test]
+    fn array_of_uint16() {
+        let plain_t = Type::Uint16;
+        let plain_t_str = holy_type_to_rust_type_str(&plain_t);
+
+        let mut vec_str = plain_t_str;
+        let mut arr_t = plain_t;
+
+        for i in 1..=1000 {
+            arr_t = Type::FixedArray(Box::new(arr_t), FixedArraySize::Literal(i));
+            vec_str = format!("[{}; {}]", vec_str, i);
+
+            let arr_t_str = holy_type_to_rust_type_str(&arr_t);
+
+            assert_eq!(arr_t_str, vec_str)
+        }
+    }
+
+    #[test]
+    fn array_of_uint32() {
+        let plain_t = Type::Uint32;
+        let plain_t_str = holy_type_to_rust_type_str(&plain_t);
+
+        let mut vec_str = plain_t_str;
+        let mut arr_t = plain_t;
+
+        for i in 1..=1000 {
+            arr_t = Type::FixedArray(Box::new(arr_t), FixedArraySize::Literal(i));
+            vec_str = format!("[{}; {}]", vec_str, i);
+
+            let arr_t_str = holy_type_to_rust_type_str(&arr_t);
+
+            assert_eq!(arr_t_str, vec_str)
+        }
+    }
+
+    #[test]
+    fn array_of_uint64() {
+        let plain_t = Type::Uint64;
+        let plain_t_str = holy_type_to_rust_type_str(&plain_t);
+
+        let mut vec_str = plain_t_str;
+        let mut arr_t = plain_t;
+
+        for i in 1..=1000 {
+            arr_t = Type::FixedArray(Box::new(arr_t), FixedArraySize::Literal(i));
+            vec_str = format!("[{}; {}]", vec_str, i);
+
+            let arr_t_str = holy_type_to_rust_type_str(&arr_t);
+
+            assert_eq!(arr_t_str, vec_str)
+        }
+    }
+
+    #[test]
+    fn array_of_uint128() {
+        let plain_t = Type::Uint128;
+        let plain_t_str = holy_type_to_rust_type_str(&plain_t);
+
+        let mut vec_str = plain_t_str;
+        let mut arr_t = plain_t;
+
+        for i in 1..=1000 {
+            arr_t = Type::FixedArray(Box::new(arr_t), FixedArraySize::Literal(i));
+            vec_str = format!("[{}; {}]", vec_str, i);
+
+            let arr_t_str = holy_type_to_rust_type_str(&arr_t);
+
+            assert_eq!(arr_t_str, vec_str)
+        }
+    }
+
+    #[test]
+    fn array_of_usize() {
+        let plain_t = Type::Usize;
+        let plain_t_str = holy_type_to_rust_type_str(&plain_t);
+
+        let mut vec_str = plain_t_str;
+        let mut arr_t = plain_t;
+
+        for i in 1..=1000 {
+            arr_t = Type::FixedArray(Box::new(arr_t), FixedArraySize::Literal(i));
+            vec_str = format!("[{}; {}]", vec_str, i);
+
+            let arr_t_str = holy_type_to_rust_type_str(&arr_t);
+
+            assert_eq!(arr_t_str, vec_str)
+        }
+    }
+}
+
+
+// Same tests, but this time with constants
+//
+#[cfg(test)]
+mod holy_type_to_rust_type_str_fixed_arr_with_const_size_types_tests {
+    use super::*;
+
+    #[test]
+    fn array_of_string() {
+        let letters: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
+
+        for l in letters {
+            let plain_t = Type::String;
+            let plain_t_str = holy_type_to_rust_type_str(&plain_t);
+
+            let mut vec_str = plain_t_str;
+            let mut arr_t = plain_t;
+
+            for _ in 1..=1000 {
+                arr_t = Type::FixedArray(Box::new(arr_t), FixedArraySize::Const(l.to_string()));
+                vec_str = format!("[{}; {}]", vec_str, l);
+
+                let arr_t_str = holy_type_to_rust_type_str(&arr_t);
+
+                assert_eq!(arr_t_str, vec_str)
+            }
+        }
+    }
+
+    #[test]
+    fn array_of_float64() {
+        let letters: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
+
+        for l in letters {
+            let plain_t = Type::Float64;
+            let plain_t_str = holy_type_to_rust_type_str(&plain_t);
+
+            let mut vec_str = plain_t_str;
+            let mut arr_t = plain_t;
+
+            for _ in 1..=1000 {
+                arr_t = Type::FixedArray(Box::new(arr_t), FixedArraySize::Const(l.to_string()));
+                vec_str = format!("[{}; {}]", vec_str, l);
+
+                let arr_t_str = holy_type_to_rust_type_str(&arr_t);
+
+                assert_eq!(arr_t_str, vec_str)
+            }
+        }
+    }
+
+    #[test]
+    fn array_of_bool() {
+        let letters: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
+
+        for l in letters {
+            let plain_t = Type::Bool;
+            let plain_t_str = holy_type_to_rust_type_str(&plain_t);
+
+            let mut vec_str = plain_t_str;
+            let mut arr_t = plain_t;
+
+            for _ in 1..=1000 {
+                arr_t = Type::FixedArray(Box::new(arr_t), FixedArraySize::Const(l.to_string()));
+                vec_str = format!("[{}; {}]", vec_str, l);
+
+                let arr_t_str = holy_type_to_rust_type_str(&arr_t);
+
+                assert_eq!(arr_t_str, vec_str)
+            }
+        }
+    }
+
+    #[test]
+    fn array_of_int8() {
+        let letters: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
+
+        for l in letters {
+            let plain_t = Type::Int8;
+            let plain_t_str = holy_type_to_rust_type_str(&plain_t);
+
+            let mut vec_str = plain_t_str;
+            let mut arr_t = plain_t;
+
+            for _ in 1..=1000 {
+                arr_t = Type::FixedArray(Box::new(arr_t), FixedArraySize::Const(l.to_string()));
+                vec_str = format!("[{}; {}]", vec_str, l);
+
+                let arr_t_str = holy_type_to_rust_type_str(&arr_t);
+
+                assert_eq!(arr_t_str, vec_str)
+            }
+        }
+    }
+
+    #[test]
+    fn array_of_int16() {
+        let letters: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
+
+        for l in letters {
+            let plain_t = Type::Int16;
+            let plain_t_str = holy_type_to_rust_type_str(&plain_t);
+
+            let mut vec_str = plain_t_str;
+            let mut arr_t = plain_t;
+
+            for _ in 1..=1000 {
+                arr_t = Type::FixedArray(Box::new(arr_t), FixedArraySize::Const(l.to_string()));
+                vec_str = format!("[{}; {}]", vec_str, l);
+
+                let arr_t_str = holy_type_to_rust_type_str(&arr_t);
+
+                assert_eq!(arr_t_str, vec_str)
+            }
+        }
+    }
+ 
+    #[test]
+    fn array_of_int32() {
+        let letters: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
+
+        for l in letters {
+            let plain_t = Type::Int32;
+            let plain_t_str = holy_type_to_rust_type_str(&plain_t);
+
+            let mut vec_str = plain_t_str;
+            let mut arr_t = plain_t;
+
+            for _ in 1..=1000 {
+                arr_t = Type::FixedArray(Box::new(arr_t), FixedArraySize::Const(l.to_string()));
+                vec_str = format!("[{}; {}]", vec_str, l);
+
+                let arr_t_str = holy_type_to_rust_type_str(&arr_t);
+
+                assert_eq!(arr_t_str, vec_str)
+            }
+        }
+    }
+
+    #[test]
+    fn array_of_int64() {
+        let letters: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
+
+        for l in letters {
+            let plain_t = Type::Int64;
+            let plain_t_str = holy_type_to_rust_type_str(&plain_t);
+
+            let mut vec_str = plain_t_str;
+            let mut arr_t = plain_t;
+
+            for _ in 1..=1000 {
+                arr_t = Type::FixedArray(Box::new(arr_t), FixedArraySize::Const(l.to_string()));
+                vec_str = format!("[{}; {}]", vec_str, l);
+
+                let arr_t_str = holy_type_to_rust_type_str(&arr_t);
+
+                assert_eq!(arr_t_str, vec_str)
+            }
+        }
+    }
+
+    #[test]
+    fn array_of_int128() {
+        let letters: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
+
+        for l in letters {
+            let plain_t = Type::Int128;
+            let plain_t_str = holy_type_to_rust_type_str(&plain_t);
+
+            let mut vec_str = plain_t_str;
+            let mut arr_t = plain_t;
+
+            for _ in 1..=1000 {
+                arr_t = Type::FixedArray(Box::new(arr_t), FixedArraySize::Const(l.to_string()));
+                vec_str = format!("[{}; {}]", vec_str, l);
+
+                let arr_t_str = holy_type_to_rust_type_str(&arr_t);
+
+                assert_eq!(arr_t_str, vec_str)
+            }
+        }
+    }
+
+
+    #[test]
+    fn array_of_byte() {
+        let letters: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
+
+        for l in letters {
+            let plain_t = Type::Byte;
+            let plain_t_str = holy_type_to_rust_type_str(&plain_t);
+
+            let mut vec_str = plain_t_str;
+            let mut arr_t = plain_t;
+
+            for _ in 1..=1000 {
+                arr_t = Type::FixedArray(Box::new(arr_t), FixedArraySize::Const(l.to_string()));
+                vec_str = format!("[{}; {}]", vec_str, l);
+
+                let arr_t_str = holy_type_to_rust_type_str(&arr_t);
+
+                assert_eq!(arr_t_str, vec_str)
+            }
+        }
+    }
+
+    #[test]
+    fn array_of_uint16() {
+        let letters: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
+
+        for l in letters {
+            let plain_t = Type::Uint16;
+            let plain_t_str = holy_type_to_rust_type_str(&plain_t);
+
+            let mut vec_str = plain_t_str;
+            let mut arr_t = plain_t;
+
+            for _ in 1..=1000 {
+                arr_t = Type::FixedArray(Box::new(arr_t), FixedArraySize::Const(l.to_string()));
+                vec_str = format!("[{}; {}]", vec_str, l);
+
+                let arr_t_str = holy_type_to_rust_type_str(&arr_t);
+
+                assert_eq!(arr_t_str, vec_str)
+            }
+        }
+    }
+
+    #[test]
+    fn array_of_uint32() {
+        let letters: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
+
+        for l in letters {
+            let plain_t = Type::Uint32;
+            let plain_t_str = holy_type_to_rust_type_str(&plain_t);
+
+            let mut vec_str = plain_t_str;
+            let mut arr_t = plain_t;
+
+            for _ in 1..=1000 {
+                arr_t = Type::FixedArray(Box::new(arr_t), FixedArraySize::Const(l.to_string()));
+                vec_str = format!("[{}; {}]", vec_str, l);
+
+                let arr_t_str = holy_type_to_rust_type_str(&arr_t);
+
+                assert_eq!(arr_t_str, vec_str)
+            }
+        }
+    }
+
+    #[test]
+    fn array_of_uint64() {
+        let letters: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
+
+        for l in letters {
+            let plain_t = Type::Uint64;
+            let plain_t_str = holy_type_to_rust_type_str(&plain_t);
+
+            let mut vec_str = plain_t_str;
+            let mut arr_t = plain_t;
+
+            for _ in 1..=1000 {
+                arr_t = Type::FixedArray(Box::new(arr_t), FixedArraySize::Const(l.to_string()));
+                vec_str = format!("[{}; {}]", vec_str, l);
+
+                let arr_t_str = holy_type_to_rust_type_str(&arr_t);
+
+                assert_eq!(arr_t_str, vec_str)
+            }
+        }
+    }
+
+    #[test]
+    fn array_of_uint128() {
+        let letters: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
+
+        for l in letters {
+            let plain_t = Type::Uint128;
+            let plain_t_str = holy_type_to_rust_type_str(&plain_t);
+
+            let mut vec_str = plain_t_str;
+            let mut arr_t = plain_t;
+
+            for _ in 1..=1000 {
+                arr_t = Type::FixedArray(Box::new(arr_t), FixedArraySize::Const(l.to_string()));
+                vec_str = format!("[{}; {}]", vec_str, l);
+
+                let arr_t_str = holy_type_to_rust_type_str(&arr_t);
+
+                assert_eq!(arr_t_str, vec_str)
+            }
+        }
+    }
+
+    #[test]
+    fn array_of_usize() {
+        let letters: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
+
+        for l in letters {
+            let plain_t = Type::Usize;
+            let plain_t_str = holy_type_to_rust_type_str(&plain_t);
+
+            let mut vec_str = plain_t_str;
+            let mut arr_t = plain_t;
+
+            for _ in 1..=1000 {
+                arr_t = Type::FixedArray(Box::new(arr_t), FixedArraySize::Const(l.to_string()));
+                vec_str = format!("[{}; {}]", vec_str, l);
+
+                let arr_t_str = holy_type_to_rust_type_str(&arr_t);
+
+                assert_eq!(arr_t_str, vec_str)
+            }
+        }
+    }
+}
