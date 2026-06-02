@@ -293,18 +293,22 @@ mod holy_expr_to_rust_literals_in_binop_non_arr_exprs_tests {
     fn binop_equal_all_literals() {
         let literals = get_all_literals();
 
-        for expr in literals {
-            let expr_str = holy_expr_to_rust_expr(&expr);
+        for right_expr in &literals {
+            let right_expr_str = holy_expr_to_rust_expr(&right_expr);
 
-            let bin_expr = Expr::BinOp {
-                left: Box::new(expr.clone()),
-                right: Box::new(expr),
-                op: BinOpKind::Equal,
-                span: span()
-            };
-            let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+            for left_expr in &literals {
+                let left_expr_str = holy_expr_to_rust_expr(&left_expr);
 
-            assert_eq!(bin_expr_str, format!("({} == {})", expr_str, expr_str))
+                let bin_expr = Expr::BinOp {
+                    left: Box::new(left_expr.clone()),
+                    right: Box::new(right_expr.clone()),
+                    op: BinOpKind::Equal,
+                    span: span()
+                };
+                let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+
+                assert_eq!(bin_expr_str, format!("({} == {})", left_expr_str, right_expr_str))
+            }
         }
     }
 
@@ -312,18 +316,22 @@ mod holy_expr_to_rust_literals_in_binop_non_arr_exprs_tests {
     fn binop_not_equal_all_literals() {
         let literals = get_all_literals();
 
-        for expr in literals {
-            let expr_str = holy_expr_to_rust_expr(&expr);
+        for right_expr in &literals {
+            let right_expr_str = holy_expr_to_rust_expr(&right_expr);
 
-            let bin_expr = Expr::BinOp {
-                left: Box::new(expr.clone()),
-                right: Box::new(expr),
-                op: BinOpKind::NotEqual,
-                span: span()
-            };
-            let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+            for left_expr in &literals {
+                let left_expr_str = holy_expr_to_rust_expr(&left_expr);
 
-            assert_eq!(bin_expr_str, format!("({} != {})", expr_str, expr_str))
+                let bin_expr = Expr::BinOp {
+                    left: Box::new(left_expr.clone()),
+                    right: Box::new(right_expr.clone()),
+                    op: BinOpKind::NotEqual,
+                    span: span()
+                };
+                let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+
+                assert_eq!(bin_expr_str, format!("({} != {})", left_expr_str, right_expr_str))
+            }
         }
     }
 
@@ -331,18 +339,22 @@ mod holy_expr_to_rust_literals_in_binop_non_arr_exprs_tests {
     fn binop_greater_equal_all_literals() {
         let literals = get_all_literals();
 
-        for expr in literals {
-            let expr_str = holy_expr_to_rust_expr(&expr);
+        for right_expr in &literals {
+            let right_expr_str = holy_expr_to_rust_expr(&right_expr);
 
-            let bin_expr = Expr::BinOp {
-                left: Box::new(expr.clone()),
-                right: Box::new(expr),
-                op: BinOpKind::GreaterEqual,
-                span: span()
-            };
-            let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+            for left_expr in &literals {
+                let left_expr_str = holy_expr_to_rust_expr(&left_expr);
 
-            assert_eq!(bin_expr_str, format!("({} >= {})", expr_str, expr_str))
+                let bin_expr = Expr::BinOp {
+                    left: Box::new(left_expr.clone()),
+                    right: Box::new(right_expr.clone()),
+                    op: BinOpKind::GreaterEqual,
+                    span: span()
+                };
+                let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+
+                assert_eq!(bin_expr_str, format!("({} >= {})", left_expr_str, right_expr_str))
+            }
         }
     }
 
@@ -350,18 +362,22 @@ mod holy_expr_to_rust_literals_in_binop_non_arr_exprs_tests {
     fn binop_less_equal_all_literals() {
         let literals = get_all_literals();
 
-        for expr in literals {
-            let expr_str = holy_expr_to_rust_expr(&expr);
+        for right_expr in &literals {
+            let right_expr_str = holy_expr_to_rust_expr(&right_expr);
 
-            let bin_expr = Expr::BinOp {
-                left: Box::new(expr.clone()),
-                right: Box::new(expr),
-                op: BinOpKind::LessEqual,
-                span: span()
-            };
-            let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+            for left_expr in &literals {
+                let left_expr_str = holy_expr_to_rust_expr(&left_expr);
 
-            assert_eq!(bin_expr_str, format!("({} <= {})", expr_str, expr_str))
+                let bin_expr = Expr::BinOp {
+                    left: Box::new(left_expr.clone()),
+                    right: Box::new(right_expr.clone()),
+                    op: BinOpKind::LessEqual,
+                    span: span()
+                };
+                let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+
+                assert_eq!(bin_expr_str, format!("({} <= {})", left_expr_str, right_expr_str))
+            }
         }
     }
 
@@ -369,18 +385,22 @@ mod holy_expr_to_rust_literals_in_binop_non_arr_exprs_tests {
     fn binop_greater_all_literals() {
         let literals = get_all_literals();
 
-        for expr in literals {
-            let expr_str = holy_expr_to_rust_expr(&expr);
+        for right_expr in &literals {
+            let right_expr_str = holy_expr_to_rust_expr(&right_expr);
 
-            let bin_expr = Expr::BinOp {
-                left: Box::new(expr.clone()),
-                right: Box::new(expr),
-                op: BinOpKind::Greater,
-                span: span()
-            };
-            let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+            for left_expr in &literals {
+                let left_expr_str = holy_expr_to_rust_expr(&left_expr);
 
-            assert_eq!(bin_expr_str, format!("({} > {})", expr_str, expr_str))
+                let bin_expr = Expr::BinOp {
+                    left: Box::new(left_expr.clone()),
+                    right: Box::new(right_expr.clone()),
+                    op: BinOpKind::Greater,
+                    span: span()
+                };
+                let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+
+                assert_eq!(bin_expr_str, format!("({} > {})", left_expr_str, right_expr_str))
+            }
         }
     }
 
@@ -388,18 +408,22 @@ mod holy_expr_to_rust_literals_in_binop_non_arr_exprs_tests {
     fn binop_less_all_literals() {
         let literals = get_all_literals();
 
-        for expr in literals {
-            let expr_str = holy_expr_to_rust_expr(&expr);
+        for right_expr in &literals {
+            let right_expr_str = holy_expr_to_rust_expr(&right_expr);
 
-            let bin_expr = Expr::BinOp {
-                left: Box::new(expr.clone()),
-                right: Box::new(expr),
-                op: BinOpKind::Less,
-                span: span()
-            };
-            let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+            for left_expr in &literals {
+                let left_expr_str = holy_expr_to_rust_expr(&left_expr);
 
-            assert_eq!(bin_expr_str, format!("({} < {})", expr_str, expr_str))
+                let bin_expr = Expr::BinOp {
+                    left: Box::new(left_expr.clone()),
+                    right: Box::new(right_expr.clone()),
+                    op: BinOpKind::Less,
+                    span: span()
+                };
+                let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+
+                assert_eq!(bin_expr_str, format!("({} < {})", left_expr_str, right_expr_str))
+            }
         }
     }
 
@@ -407,18 +431,22 @@ mod holy_expr_to_rust_literals_in_binop_non_arr_exprs_tests {
     fn binop_and_all_literals() {
         let literals = get_all_literals();
 
-        for expr in literals {
-            let expr_str = holy_expr_to_rust_expr(&expr);
+        for right_expr in &literals {
+            let right_expr_str = holy_expr_to_rust_expr(&right_expr);
 
-            let bin_expr = Expr::BinOp {
-                left: Box::new(expr.clone()),
-                right: Box::new(expr),
-                op: BinOpKind::And,
-                span: span()
-            };
-            let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+            for left_expr in &literals {
+                let left_expr_str = holy_expr_to_rust_expr(&left_expr);
 
-            assert_eq!(bin_expr_str, format!("({} && {})", expr_str, expr_str))
+                let bin_expr = Expr::BinOp {
+                    left: Box::new(left_expr.clone()),
+                    right: Box::new(right_expr.clone()),
+                    op: BinOpKind::And,
+                    span: span()
+                };
+                let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+
+                assert_eq!(bin_expr_str, format!("({} && {})", left_expr_str, right_expr_str))
+            }
         }
     }
 
@@ -426,18 +454,68 @@ mod holy_expr_to_rust_literals_in_binop_non_arr_exprs_tests {
     fn binop_or_all_literals() {
         let literals = get_all_literals();
 
-        for expr in literals {
-            let expr_str = holy_expr_to_rust_expr(&expr);
+        for right_expr in &literals {
+            let right_expr_str = holy_expr_to_rust_expr(&right_expr);
 
-            let bin_expr = Expr::BinOp {
-                left: Box::new(expr.clone()),
-                right: Box::new(expr),
-                op: BinOpKind::Or,
-                span: span()
-            };
-            let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+            for left_expr in &literals {
+                let left_expr_str = holy_expr_to_rust_expr(&left_expr);
 
-            assert_eq!(bin_expr_str, format!("({} || {})", expr_str, expr_str))
+                let bin_expr = Expr::BinOp {
+                    left: Box::new(left_expr.clone()),
+                    right: Box::new(right_expr.clone()),
+                    op: BinOpKind::Or,
+                    span: span()
+                };
+                let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+
+                assert_eq!(bin_expr_str, format!("({} || {})", left_expr_str, right_expr_str))
+            }
+        }
+    }
+
+    #[test]
+    fn binop_bitwise_shift_left_all_literals() {
+        let literals = get_all_literals();
+
+        for right_expr in &literals {
+            let right_expr_str = holy_expr_to_rust_expr(&right_expr);
+
+            for left_expr in &literals {
+                let left_expr_str = holy_expr_to_rust_expr(&left_expr);
+
+                let bin_expr = Expr::BinOp {
+                    left: Box::new(left_expr.clone()),
+                    right: Box::new(right_expr.clone()),
+                    op: BinOpKind::BitwiseShiftLeft,
+                    span: span()
+                };
+                let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+
+                assert_eq!(bin_expr_str, format!("{left_expr_str}.checked_shl({right_expr_str}.try_into().unwrap_or_else(|_| panic!(\"bitwise shift left count `{{}}` does not fit in u32\", {right_expr_str}))).unwrap_or_else(|| panic!(\"bitwise shift left overflow\"))"))
+            }
+        }
+    }
+
+    #[test]
+    fn binop_bitwise_shift_right_all_literals() {
+        let literals = get_all_literals();
+
+        for right_expr in &literals {
+            let right_expr_str = holy_expr_to_rust_expr(&right_expr);
+
+            for left_expr in &literals {
+                let left_expr_str = holy_expr_to_rust_expr(&left_expr);
+
+                let bin_expr = Expr::BinOp {
+                    left: Box::new(left_expr.clone()),
+                    right: Box::new(right_expr.clone()),
+                    op: BinOpKind::BitwiseShiftRight,
+                    span: span()
+                };
+                let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+
+                assert_eq!(bin_expr_str, format!("{left_expr_str}.checked_shr({right_expr_str}.try_into().unwrap_or_else(|_| panic!(\"bitwise shift right count `{{}}` does not fit in u32\", {right_expr_str}))).unwrap_or_else(|| panic!(\"bitwise shift right overflow\"))"));
+            }
         }
     }
 
@@ -445,18 +523,22 @@ mod holy_expr_to_rust_literals_in_binop_non_arr_exprs_tests {
     fn binop_bitwise_and_all_literals() {
         let literals = get_all_literals();
 
-        for expr in literals {
-            let expr_str = holy_expr_to_rust_expr(&expr);
+        for right_expr in &literals {
+            let right_expr_str = holy_expr_to_rust_expr(&right_expr);
 
-            let bin_expr = Expr::BinOp {
-                left: Box::new(expr.clone()),
-                right: Box::new(expr),
-                op: BinOpKind::BitwiseAnd,
-                span: span()
-            };
-            let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+            for left_expr in &literals {
+                let left_expr_str = holy_expr_to_rust_expr(&left_expr);
 
-            assert_eq!(bin_expr_str, format!("({} & {})", expr_str, expr_str))
+                let bin_expr = Expr::BinOp {
+                    left: Box::new(left_expr.clone()),
+                    right: Box::new(right_expr.clone()),
+                    op: BinOpKind::BitwiseAnd,
+                    span: span()
+                };
+                let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+
+                assert_eq!(bin_expr_str, format!("({} & {})", left_expr_str, right_expr_str))
+            }
         }
     }
 
@@ -464,18 +546,22 @@ mod holy_expr_to_rust_literals_in_binop_non_arr_exprs_tests {
     fn binop_bitwise_or_all_literals() {
         let literals = get_all_literals();
 
-        for expr in literals {
-            let expr_str = holy_expr_to_rust_expr(&expr);
+        for right_expr in &literals {
+            let right_expr_str = holy_expr_to_rust_expr(&right_expr);
 
-            let bin_expr = Expr::BinOp {
-                left: Box::new(expr.clone()),
-                right: Box::new(expr),
-                op: BinOpKind::BitwiseOr,
-                span: span()
-            };
-            let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+            for left_expr in &literals {
+                let left_expr_str = holy_expr_to_rust_expr(&left_expr);
 
-            assert_eq!(bin_expr_str, format!("({} | {})", expr_str, expr_str))
+                let bin_expr = Expr::BinOp {
+                    left: Box::new(left_expr.clone()),
+                    right: Box::new(right_expr.clone()),
+                    op: BinOpKind::BitwiseOr,
+                    span: span()
+                };
+                let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+
+                assert_eq!(bin_expr_str, format!("({} | {})", left_expr_str, right_expr_str))
+            }
         }
     }
 
@@ -485,18 +571,22 @@ mod holy_expr_to_rust_literals_in_binop_non_arr_exprs_tests {
     fn binop_add_all_literals() {
         let literals = get_all_literals();
 
-        for expr in literals {
-            let expr_str = holy_expr_to_rust_expr(&expr);
+        for right_expr in &literals {
+            let right_expr_str = holy_expr_to_rust_expr(&right_expr);
 
-            let bin_expr = Expr::BinOp {
-                left: Box::new(expr.clone()),
-                right: Box::new(expr),
-                op: BinOpKind::Add,
-                span: span()
-            };
-            let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+            for left_expr in &literals {
+                let left_expr_str = holy_expr_to_rust_expr(&left_expr);
 
-            assert_eq!(bin_expr_str, format!("{expr_str}.checked_add({expr_str}).unwrap_or_else(|| panic!(\"arithmetic addition overflow\"))"));
+                let bin_expr = Expr::BinOp {
+                    left: Box::new(left_expr.clone()),
+                    right: Box::new(right_expr.clone()),
+                    op: BinOpKind::Add,
+                    span: span()
+                };
+                let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+
+                assert_eq!(bin_expr_str, format!("{left_expr_str}.checked_add({right_expr_str}).unwrap_or_else(|| panic!(\"arithmetic addition overflow\"))"));
+            }
         }
     }
 
@@ -504,18 +594,22 @@ mod holy_expr_to_rust_literals_in_binop_non_arr_exprs_tests {
     fn binop_subtract_all_literals() {
         let literals = get_all_literals();
 
-        for expr in literals {
-            let expr_str = holy_expr_to_rust_expr(&expr);
+        for right_expr in &literals {
+            let right_expr_str = holy_expr_to_rust_expr(&right_expr);
 
-            let bin_expr = Expr::BinOp {
-                left: Box::new(expr.clone()),
-                right: Box::new(expr),
-                op: BinOpKind::Subtract,
-                span: span()
-            };
-            let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+            for left_expr in &literals {
+                let left_expr_str = holy_expr_to_rust_expr(&left_expr);
 
-            assert_eq!(bin_expr_str, format!("{expr_str}.checked_sub({expr_str}).unwrap_or_else(|| panic!(\"arithmetic subtraction overflow\"))"));
+                let bin_expr = Expr::BinOp {
+                    left: Box::new(left_expr.clone()),
+                    right: Box::new(right_expr.clone()),
+                    op: BinOpKind::Subtract,
+                    span: span()
+                };
+                let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+
+                assert_eq!(bin_expr_str, format!("{left_expr_str}.checked_sub({right_expr_str}).unwrap_or_else(|| panic!(\"arithmetic subtraction overflow\"))"));
+            }
         }
     }
 
@@ -523,18 +617,22 @@ mod holy_expr_to_rust_literals_in_binop_non_arr_exprs_tests {
     fn binop_multiply_all_literals() {
         let literals = get_all_literals();
 
-        for expr in literals {
-            let expr_str = holy_expr_to_rust_expr(&expr);
+        for right_expr in &literals {
+            let right_expr_str = holy_expr_to_rust_expr(&right_expr);
 
-            let bin_expr = Expr::BinOp {
-                left: Box::new(expr.clone()),
-                right: Box::new(expr),
-                op: BinOpKind::Multiply,
-                span: span()
-            };
-            let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+            for left_expr in &literals {
+                let left_expr_str = holy_expr_to_rust_expr(&left_expr);
 
-            assert_eq!(bin_expr_str, format!("{expr_str}.checked_mul({expr_str}).unwrap_or_else(|| panic!(\"arithmetic multiplication overflow\"))"));
+                let bin_expr = Expr::BinOp {
+                    right: Box::new(right_expr.clone()),
+                    left: Box::new(left_expr.clone()),
+                    op: BinOpKind::Multiply,
+                    span: span()
+                };
+                let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+
+                assert_eq!(bin_expr_str, format!("{left_expr_str}.checked_mul({right_expr_str}).unwrap_or_else(|| panic!(\"arithmetic multiplication overflow\"))"));
+            }
         }
     }
 
@@ -543,18 +641,22 @@ mod holy_expr_to_rust_literals_in_binop_non_arr_exprs_tests {
     fn binop_divide_all_literals() {
         let literals = get_all_literals();
 
-        for expr in literals {
-            let expr_str = holy_expr_to_rust_expr(&expr);
+        for right_expr in &literals {
+            let right_expr_str = holy_expr_to_rust_expr(&right_expr);
 
-            let bin_expr = Expr::BinOp {
-                left: Box::new(expr.clone()),
-                right: Box::new(expr),
-                op: BinOpKind::Divide,
-                span: span()
-            };
-            let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+            for left_expr in &literals {
+                let left_expr_str = holy_expr_to_rust_expr(&left_expr);
 
-            assert_eq!(bin_expr_str, format!("{expr_str}.checked_div({expr_str}).unwrap_or_else(|| panic!(\"arithmetic division overflow\"))"));
+                let bin_expr = Expr::BinOp {
+                    left: Box::new(left_expr.clone()),
+                    right: Box::new(right_expr.clone()),
+                    op: BinOpKind::Divide,
+                    span: span()
+                };
+                let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+
+                assert_eq!(bin_expr_str, format!("{left_expr_str}.checked_div({right_expr_str}).unwrap_or_else(|| panic!(\"arithmetic division overflow\"))"));
+            }
         }
     }
 } 
