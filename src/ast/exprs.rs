@@ -1,4 +1,6 @@
-use super::{ IntLiteralValue, Type, Span };
+use super::{
+    IntLiteralValue, Type, Span
+};
 
 /// Abstract syntax tree expressions nodes
 #[derive(Debug, Clone, PartialEq)]
