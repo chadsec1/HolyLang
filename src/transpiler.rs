@@ -432,11 +432,11 @@ fn holy_expr_to_rust_expr(expr: &Expr) -> String {
                 // Bitwise
                 //
                 BinOpKind::BitwiseAnd => format!("({left_str} & {right_str})"),
-                BinOpKind::BitwiseOr  => format!("({left_str} | {left_str})"),
+                BinOpKind::BitwiseOr  => format!("({left_str} | {right_str})"),
 
-                BinOpKind::BitwiseShiftLeft => format!("({left_str}.checked_shl({right_str}.try_into().unwrap_or_else(|_| panic!(\"bitwise shift left count `{{}}` does not fit in u32\", {right_str})) )).unwrap_or_else(|| panic!(\"bitwise shift left overflow\"))"),
+                BinOpKind::BitwiseShiftLeft => format!("{left_str}.checked_shl({right_str}.try_into().unwrap_or_else(|_| panic!(\"bitwise shift left count `{{}}` does not fit in u32\", {right_str}))).unwrap_or_else(|| panic!(\"bitwise shift left overflow\"))"),
 
-                BinOpKind::BitwiseShiftRight => format!("({left_str}.checked_shr({right_str}.try_into().unwrap_or_else(|_| panic!(\"bitwise shift right count `{{}}` does not fit in u32\", {right_str})) )).unwrap_or_else(|| panic!(\"bitwise shift right overflow\"))"),
+                BinOpKind::BitwiseShiftRight => format!("{left_str}.checked_shr({right_str}.try_into().unwrap_or_else(|_| panic!(\"bitwise shift right count `{{}}` does not fit in u32\", {right_str}))).unwrap_or_else(|| panic!(\"bitwise shift right overflow\"))"),
 
             }
 
