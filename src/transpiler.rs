@@ -414,7 +414,7 @@ fn holy_expr_to_rust_expr(expr: &Expr) -> String {
                 BinOpKind::Add      => format!("{left_str}.checked_add({right_str}).unwrap_or_else(|| panic!(\"arithmetic addition overflow\"))"),
                 BinOpKind::Subtract => format!("{left_str}.checked_sub({right_str}).unwrap_or_else(|| panic!(\"arithmetic subtraction overflow\"))"),
                 BinOpKind::Multiply => format!("{left_str}.checked_mul({right_str}).unwrap_or_else(|| panic!(\"arithmetic multiplication overflow\"))"),
-                BinOpKind::Divide   => format!("{left_str}.checked_div({right_str}).unwrap_or_else(|| panic!(\"arithmetic divison overflow\"))"),
+                BinOpKind::Divide   => format!("{left_str}.checked_div({right_str}).unwrap_or_else(|| panic!(\"arithmetic division overflow\"))"),
 
                 // Logical
                 //
