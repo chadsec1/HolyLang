@@ -6,7 +6,7 @@ use super::*;
 
 
 #[cfg(test)]
-mod holy_expr_to_rust_expr_non_arr_literals_tests {
+mod holy_expr_to_rust_literals_non_arr_exprs_tests {
     use super::*;
 
     #[test]
@@ -214,4 +214,347 @@ mod holy_expr_to_rust_expr_non_arr_literals_tests {
         }
     }
 
+    #[test]
+    fn var() {
+        let letters: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
+
+        for l in letters {
+            let expr = Expr::Var { name: l.to_string(), span: span() };
+            let expr_str = holy_expr_to_rust_expr(&expr);
+
+            assert_eq!(expr_str, l.to_string())
+        }
+    }
 }
+
+#[cfg(test)]
+mod holy_expr_to_rust_literals_in_binop_non_arr_exprs_tests {
+    use super::*;
+
+    #[test]
+    fn binop_equal_string_all_letters() {
+        let letters: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
+
+        for l1 in &letters {
+            let expr1 = Expr::StringLiteral { value: l1.to_string(), span: span() };
+            let expr1_str = holy_expr_to_rust_expr(&expr1);
+
+            assert_eq!(expr1_str, format!("\"{}\".to_string()", l1));
+
+            for l2 in &letters {
+                let expr2 = Expr::StringLiteral { value: l2.to_string(), span: span() };
+                let expr2_str = holy_expr_to_rust_expr(&expr2);
+            
+                assert_eq!(expr2_str, format!("\"{}\".to_string()", l2));
+
+                let bin_expr = Expr::BinOp {
+                    left: Box::new(expr1.clone()),
+                    right: Box::new(expr2),
+                    op: BinOpKind::Equal,
+                    span: span()
+                };
+                let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+
+                assert_eq!(bin_expr_str, format!("({} == {})", expr1_str, expr2_str))
+            }
+        }
+    }
+
+    #[test]
+    fn binop_not_equal_string_all_letters() {
+        let letters: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
+
+        for l1 in &letters {
+            let expr1 = Expr::StringLiteral { value: l1.to_string(), span: span() };
+            let expr1_str = holy_expr_to_rust_expr(&expr1);
+
+            assert_eq!(expr1_str, format!("\"{}\".to_string()", l1));
+
+            for l2 in &letters {
+                let expr2 = Expr::StringLiteral { value: l2.to_string(), span: span() };
+                let expr2_str = holy_expr_to_rust_expr(&expr2);
+            
+                assert_eq!(expr2_str, format!("\"{}\".to_string()", l2));
+
+                let bin_expr = Expr::BinOp {
+                    left: Box::new(expr1.clone()),
+                    right: Box::new(expr2),
+                    op: BinOpKind::NotEqual,
+                    span: span()
+                };
+                let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+
+                assert_eq!(bin_expr_str, format!("({} != {})", expr1_str, expr2_str))
+            }
+        }
+    }
+
+    #[test]
+    fn binop_equal_all_literals() {
+        let literals = get_all_literals();
+
+        for expr in literals {
+            let expr_str = holy_expr_to_rust_expr(&expr);
+
+            let bin_expr = Expr::BinOp {
+                left: Box::new(expr.clone()),
+                right: Box::new(expr),
+                op: BinOpKind::Equal,
+                span: span()
+            };
+            let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+
+            assert_eq!(bin_expr_str, format!("({} == {})", expr_str, expr_str))
+        }
+    }
+
+    #[test]
+    fn binop_not_equal_all_literals() {
+        let literals = get_all_literals();
+
+        for expr in literals {
+            let expr_str = holy_expr_to_rust_expr(&expr);
+
+            let bin_expr = Expr::BinOp {
+                left: Box::new(expr.clone()),
+                right: Box::new(expr),
+                op: BinOpKind::NotEqual,
+                span: span()
+            };
+            let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+
+            assert_eq!(bin_expr_str, format!("({} != {})", expr_str, expr_str))
+        }
+    }
+
+    #[test]
+    fn binop_greater_equal_all_literals() {
+        let literals = get_all_literals();
+
+        for expr in literals {
+            let expr_str = holy_expr_to_rust_expr(&expr);
+
+            let bin_expr = Expr::BinOp {
+                left: Box::new(expr.clone()),
+                right: Box::new(expr),
+                op: BinOpKind::GreaterEqual,
+                span: span()
+            };
+            let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+
+            assert_eq!(bin_expr_str, format!("({} >= {})", expr_str, expr_str))
+        }
+    }
+
+    #[test]
+    fn binop_less_equal_all_literals() {
+        let literals = get_all_literals();
+
+        for expr in literals {
+            let expr_str = holy_expr_to_rust_expr(&expr);
+
+            let bin_expr = Expr::BinOp {
+                left: Box::new(expr.clone()),
+                right: Box::new(expr),
+                op: BinOpKind::LessEqual,
+                span: span()
+            };
+            let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+
+            assert_eq!(bin_expr_str, format!("({} <= {})", expr_str, expr_str))
+        }
+    }
+
+    #[test]
+    fn binop_greater_all_literals() {
+        let literals = get_all_literals();
+
+        for expr in literals {
+            let expr_str = holy_expr_to_rust_expr(&expr);
+
+            let bin_expr = Expr::BinOp {
+                left: Box::new(expr.clone()),
+                right: Box::new(expr),
+                op: BinOpKind::Greater,
+                span: span()
+            };
+            let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+
+            assert_eq!(bin_expr_str, format!("({} > {})", expr_str, expr_str))
+        }
+    }
+
+    #[test]
+    fn binop_less_all_literals() {
+        let literals = get_all_literals();
+
+        for expr in literals {
+            let expr_str = holy_expr_to_rust_expr(&expr);
+
+            let bin_expr = Expr::BinOp {
+                left: Box::new(expr.clone()),
+                right: Box::new(expr),
+                op: BinOpKind::Less,
+                span: span()
+            };
+            let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+
+            assert_eq!(bin_expr_str, format!("({} < {})", expr_str, expr_str))
+        }
+    }
+
+    #[test]
+    fn binop_and_all_literals() {
+        let literals = get_all_literals();
+
+        for expr in literals {
+            let expr_str = holy_expr_to_rust_expr(&expr);
+
+            let bin_expr = Expr::BinOp {
+                left: Box::new(expr.clone()),
+                right: Box::new(expr),
+                op: BinOpKind::And,
+                span: span()
+            };
+            let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+
+            assert_eq!(bin_expr_str, format!("({} && {})", expr_str, expr_str))
+        }
+    }
+
+    #[test]
+    fn binop_or_all_literals() {
+        let literals = get_all_literals();
+
+        for expr in literals {
+            let expr_str = holy_expr_to_rust_expr(&expr);
+
+            let bin_expr = Expr::BinOp {
+                left: Box::new(expr.clone()),
+                right: Box::new(expr),
+                op: BinOpKind::Or,
+                span: span()
+            };
+            let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+
+            assert_eq!(bin_expr_str, format!("({} || {})", expr_str, expr_str))
+        }
+    }
+
+    #[test]
+    fn binop_bitwise_and_all_literals() {
+        let literals = get_all_literals();
+
+        for expr in literals {
+            let expr_str = holy_expr_to_rust_expr(&expr);
+
+            let bin_expr = Expr::BinOp {
+                left: Box::new(expr.clone()),
+                right: Box::new(expr),
+                op: BinOpKind::BitwiseAnd,
+                span: span()
+            };
+            let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+
+            assert_eq!(bin_expr_str, format!("({} & {})", expr_str, expr_str))
+        }
+    }
+
+    #[test]
+    fn binop_bitwise_or_all_literals() {
+        let literals = get_all_literals();
+
+        for expr in literals {
+            let expr_str = holy_expr_to_rust_expr(&expr);
+
+            let bin_expr = Expr::BinOp {
+                left: Box::new(expr.clone()),
+                right: Box::new(expr),
+                op: BinOpKind::BitwiseOr,
+                span: span()
+            };
+            let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+
+            assert_eq!(bin_expr_str, format!("({} | {})", expr_str, expr_str))
+        }
+    }
+
+
+
+    #[test]
+    fn binop_add_all_literals() {
+        let literals = get_all_literals();
+
+        for expr in literals {
+            let expr_str = holy_expr_to_rust_expr(&expr);
+
+            let bin_expr = Expr::BinOp {
+                left: Box::new(expr.clone()),
+                right: Box::new(expr),
+                op: BinOpKind::Add,
+                span: span()
+            };
+            let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+
+            assert_eq!(bin_expr_str, format!("{expr_str}.checked_add({expr_str}).unwrap_or_else(|| panic!(\"arithmetic addition overflow\"))"));
+        }
+    }
+
+    #[test]
+    fn binop_subtract_all_literals() {
+        let literals = get_all_literals();
+
+        for expr in literals {
+            let expr_str = holy_expr_to_rust_expr(&expr);
+
+            let bin_expr = Expr::BinOp {
+                left: Box::new(expr.clone()),
+                right: Box::new(expr),
+                op: BinOpKind::Subtract,
+                span: span()
+            };
+            let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+
+            assert_eq!(bin_expr_str, format!("{expr_str}.checked_sub({expr_str}).unwrap_or_else(|| panic!(\"arithmetic subtraction overflow\"))"));
+        }
+    }
+
+    #[test]
+    fn binop_multiply_all_literals() {
+        let literals = get_all_literals();
+
+        for expr in literals {
+            let expr_str = holy_expr_to_rust_expr(&expr);
+
+            let bin_expr = Expr::BinOp {
+                left: Box::new(expr.clone()),
+                right: Box::new(expr),
+                op: BinOpKind::Multiply,
+                span: span()
+            };
+            let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+
+            assert_eq!(bin_expr_str, format!("{expr_str}.checked_mul({expr_str}).unwrap_or_else(|| panic!(\"arithmetic multiplication overflow\"))"));
+        }
+    }
+
+
+    #[test]
+    fn binop_divide_all_literals() {
+        let literals = get_all_literals();
+
+        for expr in literals {
+            let expr_str = holy_expr_to_rust_expr(&expr);
+
+            let bin_expr = Expr::BinOp {
+                left: Box::new(expr.clone()),
+                right: Box::new(expr),
+                op: BinOpKind::Divide,
+                span: span()
+            };
+            let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+
+            assert_eq!(bin_expr_str, format!("{expr_str}.checked_div({expr_str}).unwrap_or_else(|| panic!(\"arithmetic division overflow\"))"));
+        }
+    }
+} 
