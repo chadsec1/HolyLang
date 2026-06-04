@@ -660,3 +660,344 @@ mod holy_expr_to_rust_literals_in_binop_non_arr_exprs_tests {
         }
     }
 } 
+
+
+#[cfg(test)]
+mod holy_expr_to_rust_literals_in_unaryop_non_arr_exprs_tests {
+    use super::*;
+
+    #[test]
+    fn unary_negate_all_literals() {
+        let literals = get_all_literals();
+
+        for expr in literals {
+            let expr_str = holy_expr_to_rust_expr(&expr);
+
+            let unary_expr = Expr::UnaryOp {
+                expr: Box::new(expr),
+                op: UnaryOpKind::Negate,
+                span: span()
+            };
+            let unary_expr_str = holy_expr_to_rust_expr(&unary_expr);
+
+            assert_eq!(unary_expr_str, format!("{expr_str}.checked_neg().unwrap_or_else(|| panic!(\"unary negate integer overflow\"))"))
+        }
+    }
+
+    #[test]
+    fn unary_logic_not_all_literals() {
+        let literals = get_all_literals();
+
+        for expr in literals {
+            let expr_str = holy_expr_to_rust_expr(&expr);
+
+            let unary_expr = Expr::UnaryOp {
+                expr: Box::new(expr),
+                op: UnaryOpKind::Not,
+                span: span()
+            };
+            let unary_expr_str = holy_expr_to_rust_expr(&unary_expr);
+
+            assert_eq!(unary_expr_str, format!("!{expr_str}"))
+        }
+    }
+
+    #[test]
+    fn unary_bitwise_not_all_literals() {
+        let literals = get_all_literals();
+
+        for expr in literals {
+            let expr_str = holy_expr_to_rust_expr(&expr);
+
+            let unary_expr = Expr::UnaryOp {
+                expr: Box::new(expr),
+                op: UnaryOpKind::BitwiseNot,
+                span: span()
+            };
+            let unary_expr_str = holy_expr_to_rust_expr(&unary_expr);
+
+            assert_eq!(unary_expr_str, format!("!{expr_str}"))
+        }
+    }
+}
+
+
+#[cfg(test)]
+mod holy_expr_to_rust_literals_dyn_array_literals_exprs_tests {
+    use super::*;
+
+    #[test]
+    fn arr_of_all_literals() {
+        let literals = get_all_literals();
+
+        for t in ALL_TYPES_WITH_DYN_ARR.iter() {
+            let type_name = Type::Array(Box::new(t.clone()));
+
+            for expr1 in &literals {
+                let expr1_str = holy_expr_to_rust_expr(&expr1);
+
+                for expr2 in &literals {
+                    let expr2_str = holy_expr_to_rust_expr(&expr2);
+
+                    for expr3 in &literals {
+                        let expr3_str = holy_expr_to_rust_expr(&expr3);
+
+                        let elements = vec![expr1.clone(), expr2.clone(), expr3.clone()];
+                        let arr_expr = Expr::ArrayLiteral {
+                            elements,
+                            type_name: Some(type_name.clone()),
+                            span: span()
+                        };
+                        let arr_expr_str = holy_expr_to_rust_expr(&arr_expr);
+
+                        assert_eq!(arr_expr_str, format!("vec![{},{},{}]", expr1_str, expr2_str, expr3_str))
+                    }
+                }
+            }
+        }
+    }
+
+
+    #[test]
+    fn arr_of_all_literals_none_type_name_panics() {
+        let literals = get_all_literals();
+
+        for expr1 in &literals {
+            for expr2 in &literals {
+                for expr3 in &literals {
+                    let elements = vec![expr1.clone(), expr2.clone(), expr3.clone()];
+                    let arr_expr = Expr::ArrayLiteral {
+                        elements,
+                        type_name: None,
+                        span: span()
+                    };
+
+                    let result = std::panic::catch_unwind(|| { 
+                            holy_expr_to_rust_expr(&arr_expr)
+                        });
+
+                    assert!(result.is_err(), "Expected panic for: {:?}", arr_expr);
+                }
+            }
+        }
+    }
+
+
+    #[test]
+    fn arr_of_all_literals_type_name_non_arr_type_panics() {
+        let literals = get_all_literals();
+
+        for t in ALL_TYPES_NO_ARR {
+            for expr1 in &literals {
+                for expr2 in &literals {
+                    for expr3 in &literals {
+                        let elements = vec![expr1.clone(), expr2.clone(), expr3.clone()];
+                        let arr_expr = Expr::ArrayLiteral {
+                            elements,
+                            type_name: Some(t.clone()),
+                            span: span()
+                        };
+
+                        let result = std::panic::catch_unwind(|| { 
+                                holy_expr_to_rust_expr(&arr_expr)
+                            });
+
+                        assert!(result.is_err(), "Expected panic for: {:?}", arr_expr);
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod holy_expr_to_rust_literals_fixed_array_literals_exprs_tests {
+    use super::*;
+
+    #[test]
+    fn arr_with_literal_size_of_all_literals() {
+        let literals = get_all_literals();
+        for t in ALL_TYPES_WITH_DYN_ARR.iter() {
+            let type_name = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(1));
+
+            for expr1 in &literals {
+                let expr1_str = holy_expr_to_rust_expr(&expr1);
+
+                for expr2 in &literals {
+                    let expr2_str = holy_expr_to_rust_expr(&expr2);
+
+                    for expr3 in &literals {
+                        let expr3_str = holy_expr_to_rust_expr(&expr3);
+
+                        let elements = vec![expr1.clone(), expr2.clone(), expr3.clone()];
+                        let arr_expr = Expr::ArrayLiteral {
+                            elements,
+                            type_name: Some(type_name.clone()),
+                            span: span()
+                        };
+                        let arr_expr_str = holy_expr_to_rust_expr(&arr_expr);
+
+                        assert_eq!(arr_expr_str, format!("[{},{},{}]", expr1_str, expr2_str, expr3_str))
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn arr_with_const_size_of_all_literals() {
+        let literals = get_all_literals();
+        for t in ALL_TYPES_WITH_DYN_ARR.iter() {
+            let type_name = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Const("x".to_string()));
+
+            for expr1 in &literals {
+                let expr1_str = holy_expr_to_rust_expr(&expr1);
+
+                for expr2 in &literals {
+                    let expr2_str = holy_expr_to_rust_expr(&expr2);
+
+                    for expr3 in &literals {
+                        let expr3_str = holy_expr_to_rust_expr(&expr3);
+
+                        let elements = vec![expr1.clone(), expr2.clone(), expr3.clone()];
+                        let arr_expr = Expr::ArrayLiteral {
+                            elements,
+                            type_name: Some(type_name.clone()),
+                            span: span()
+                        };
+                        let arr_expr_str = holy_expr_to_rust_expr(&arr_expr);
+
+                        assert_eq!(arr_expr_str, format!("[{},{},{}]", expr1_str, expr2_str, expr3_str))
+                    }
+                }
+            }
+        }
+    }
+
+}
+
+
+#[cfg(test)]
+mod holy_expr_to_rust_literals_array_access_exprs_tests {
+    use super::*;
+
+    #[test]
+    fn dyn_arr_access_with_all_literal_on_arr_expr() {
+        let literals = get_all_literals();
+        for t in ALL_TYPES_WITH_DYN_ARR.iter() {
+            let arr_t = Type::Array(Box::new(t.clone()));
+
+            for expr in &literals {
+                let arr_expr = Expr::ArrayLiteral {
+                    elements: vec![],
+                    type_name: Some(arr_t.clone()),
+                    span: span()
+                };
+
+                let arr_access_expr = Expr::ArrayAccess {
+                    array: Box::new(arr_expr.clone()),
+                    index: Box::new(expr.clone()),
+                    span: span()
+                };
+
+                let expr_str = holy_expr_to_rust_expr(&expr);
+                let arr_expr_str = holy_expr_to_rust_expr(&arr_expr);
+                let arr_access_expr_str = holy_expr_to_rust_expr(&arr_access_expr);
+
+                assert_eq!(arr_access_expr_str, format!("{}[{}]", arr_expr_str, expr_str))
+            }
+        }
+    }
+
+    #[test]
+    fn dyn_arr_access_with_all_binop_on_arr_expr() {
+        let literals = get_all_literals();
+
+        for t in ALL_TYPES_WITH_DYN_ARR.iter() {
+            for b in ALL_BIN_OP_KIND {
+                let arr_t = Type::Array(Box::new(t.clone()));
+
+                for left_expr in &literals {
+                    for right_expr in &literals {
+                        let arr_expr = Expr::ArrayLiteral {
+                            elements: vec![],
+                            type_name: Some(arr_t.clone()),
+                            span: span()
+                        };
+
+                        let bin_expr = Expr::BinOp {
+                            left: Box::new(left_expr.clone()),
+                            right: Box::new(right_expr.clone()),
+                            op: b.clone(),
+                            span: span()
+                        };
+
+                        let arr_access_expr = Expr::ArrayAccess {
+                            array: Box::new(arr_expr.clone()),
+                            index: Box::new(bin_expr.clone()),
+                            span: span()
+                        };
+
+                        let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+                        let arr_expr_str = holy_expr_to_rust_expr(&arr_expr);
+                        let arr_access_expr_str = holy_expr_to_rust_expr(&arr_access_expr);
+
+                        assert_eq!(arr_access_expr_str, format!("{}[{}]", arr_expr_str, bin_expr_str))
+                    }
+                }
+            }
+        }
+    }
+
+
+
+    #[test]
+    fn dyn_arr_access_with_all_literal_on_var_expr() {
+        let literals = get_all_literals();
+
+        for expr in literals {
+            let arr_access_expr = Expr::ArrayAccess {
+                array: Box::new(var_expr("x")),
+                index: Box::new(expr.clone()),
+                span: span()
+            };
+
+            let expr_str = holy_expr_to_rust_expr(&expr);
+            let arr_access_expr_str = holy_expr_to_rust_expr(&arr_access_expr);
+
+            assert_eq!(arr_access_expr_str, format!("x[{}]", expr_str))
+        }
+    }
+
+    #[test]
+    fn dyn_arr_access_with_all_binop_on_var_expr() {
+        let literals = get_all_literals();
+
+        for b in ALL_BIN_OP_KIND {
+            for left_expr in &literals {
+                for right_expr in &literals {
+                    let bin_expr = Expr::BinOp {
+                        left: Box::new(left_expr.clone()),
+                        right: Box::new(right_expr.clone()),
+                        op: b.clone(),
+                        span: span()
+                    };
+
+                    let arr_access_expr = Expr::ArrayAccess {
+                        array: Box::new(var_expr("x")),
+                        index: Box::new(bin_expr.clone()),
+                        span: span()
+                    };
+
+                    let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+                    let arr_access_expr_str = holy_expr_to_rust_expr(&arr_access_expr);
+
+                    assert_eq!(arr_access_expr_str, format!("x[{}]", bin_expr_str))
+                }
+            }
+        }
+    }
+}
+
+
+
