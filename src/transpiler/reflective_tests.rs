@@ -1,7 +1,7 @@
 use super::*;
 use std::sync::LazyLock;
 use crate::tests_consts::{
-    // ALL_TYPES_NO_ARR, 
+    ALL_TYPES_NO_ARR, 
     ALL_BIN_OP_KIND, ALL_BIN_OP_KIND_COMP, ALL_BIN_OP_KIND_COMP_EQ
 };
 
