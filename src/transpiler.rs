@@ -388,7 +388,7 @@ fn holy_expr_to_rust_expr(expr: &Expr) -> String {
         //
         Expr::ArraySlicing { array, range, .. } => match range {
             ArraySliceRange::From(from) => format!("{}[{}..].to_vec()", holy_expr_to_rust_expr(array), holy_expr_to_rust_expr(from)),
-            ArraySliceRange::To(to) => format!("{}[{}..].to_vec()", holy_expr_to_rust_expr(array), holy_expr_to_rust_expr(to)),
+            ArraySliceRange::To(to) => format!("{}[..{}].to_vec()", holy_expr_to_rust_expr(array), holy_expr_to_rust_expr(to)),
             ArraySliceRange::FromTo(from, to) => format!("{}[{}..{}].to_vec()", holy_expr_to_rust_expr(array), holy_expr_to_rust_expr(from), holy_expr_to_rust_expr(to)),
         },
 
