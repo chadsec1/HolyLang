@@ -56,6 +56,7 @@ panic = "abort"
 
     let compile_proc_output = Command::new("cargo")
         .arg("build")
+        .arg("--release")
         .stdout(Stdio::null())
         .stderr(Stdio::piped())
         .current_dir(&main_dir)
@@ -66,7 +67,7 @@ panic = "abort"
 
     let mut binary_path = main_dir.clone();
     binary_path.push("target");
-    binary_path.push("debug");
+    binary_path.push("release");
     binary_path.push("holyprogram");
 
     assert!(compile_proc_output.status.success(), 
