@@ -91,6 +91,26 @@ mod holy_expr_to_rust_internal_func_call_exprs_tests {
             assert_eq!(copy_call_expr_str, format!("{}.clone()", expr_str))
         }
     }
+    
+    #[test]
+    fn format_call_all_literals() {
+        let literals = get_all_literals();
+
+        for expr in literals {
+            let expr_str = holy_expr_to_rust_expr(&expr);
+            for i in 1..1000 {
+                let format_call_expr = Expr::FormatCall {
+                    template: "hi {}".to_string(),
+                    expressions: vec![expr.clone(); i],
+                    span: span() 
+                };
+
+                let format_call_expr_str = holy_expr_to_rust_expr(&format_call_expr);
+
+                assert_eq!(format_call_expr_str, format!("format!(\"hi {{}}\"{})", format!(", {}", expr_str).repeat(i) ))
+            }
+        }
+    }
 
     #[test]
     #[should_panic(expected = "Compiler bug")]
