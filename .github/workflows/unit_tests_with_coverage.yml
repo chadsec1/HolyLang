@@ -33,8 +33,9 @@ jobs:
 
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@7006c4492b2e0ee0f816d36501671557c97f5995 # v8.1.0
-        args: >
-          -Dsonar.rust.lcov.reportPaths=coverage.lcov
+        with:
+          args: >
+            -Dsonar.rust.lcov.reportPaths=coverage.lcov
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
