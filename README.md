@@ -1,5 +1,5 @@
 # HolyLang
-![Unit Tests](https://github.com/HolyLang/HolyLang-Bootstrap/actions/workflows/unit_tests.yml/badge.svg)
+![Unit Tests](https://github.com/HolyLang/HolyLang-Bootstrap/actions/workflows/unit_tests_with_coverage.yml/badge.svg)
 ![Clippy](https://github.com/HolyLang/HolyLang-Bootstrap/actions/workflows/clippy.yml/badge.svg)
 ![CodeQL](https://github.com/HolyLang/HolyLang-Bootstrap/actions/workflows/codeql.yml/badge.svg)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=HolyLang_HolyLang-Bootstrap&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=HolyLang_HolyLang-Bootstrap)
