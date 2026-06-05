@@ -338,6 +338,7 @@ fn parse_const(cons: &Constant) -> String {
 /// Turns a HolyLang expression, into equvilent Rust expression
 ///
 #[allow(clippy::doc_markdown)]
+#[allow(clippy::too_many_lines)]
 fn holy_expr_to_rust_expr(expr: &Expr) -> String {
     match expr {
         Expr::IntLiteral { value, .. } => {
