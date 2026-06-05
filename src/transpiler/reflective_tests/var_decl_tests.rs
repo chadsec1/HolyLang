@@ -50,7 +50,9 @@ mod var_decl_in_void_func_tests {
                     span: span(),
                 };
 
-                let body = vec![var_decl("x", t.clone(), bin.clone(), false)];
+                let body = vec![
+                    var_decl("x", t.clone(), bin.clone(), false)
+                ];
                 let func = void_func("foo", vec![], body);
                 let ast = &ast_one(func);
 
