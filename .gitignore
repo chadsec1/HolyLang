@@ -6,6 +6,9 @@ TODO.*
 
 dev_builds
 
+# Temporary files holylang transpiler creates.
+holylang-*
+
 # Vim
 *.sw*
 src/*.sw*
