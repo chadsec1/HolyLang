@@ -2,6 +2,13 @@
 ![Unit Tests](https://github.com/HolyLang/HolyLang-Bootstrap/actions/workflows/unit_tests.yml/badge.svg)
 ![Clippy](https://github.com/HolyLang/HolyLang-Bootstrap/actions/workflows/clippy.yml/badge.svg)
 ![CodeQL](https://github.com/HolyLang/HolyLang-Bootstrap/actions/workflows/codeql.yml/badge.svg)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=HolyLang_HolyLang-Bootstrap&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=HolyLang_HolyLang-Bootstrap)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=HolyLang_HolyLang-Bootstrap&metric=bugs)](https://sonarcloud.io/summary/new_code?id=HolyLang_HolyLang-Bootstrap)
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=HolyLang_HolyLang-Bootstrap&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=HolyLang_HolyLang-Bootstrap)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=HolyLang_HolyLang-Bootstrap&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=HolyLang_HolyLang-Bootstrap)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=HolyLang_HolyLang-Bootstrap&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=HolyLang_HolyLang-Bootstrap)
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=HolyLang_HolyLang-Bootstrap&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=HolyLang_HolyLang-Bootstrap)
+[![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=HolyLang_HolyLang-Bootstrap&metric=ncloc)](https://sonarcloud.io/summary/new_code?id=HolyLang_HolyLang-Bootstrap)
 
 
 **HolyLang** programming language: Rust's compile-time safety, with Golang's readability.
