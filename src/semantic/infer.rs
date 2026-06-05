@@ -1,13 +1,20 @@
 use super::*;
+use crate::ast::{
+    IntLiteralValue, UnaryOpKind, BinOpKind, FixedArraySize, ArraySliceRange
+};
 
 
-/// This takes 2 expressions, and tries to infer types, and convert each other types to same if
-/// possible (only for integer literlas and float literals)
+/// This takes 2 expressions, and tries to get types, and convert each other types to the same type 
+/// if possible (only for integer literals)
+/// 
+/// This is used for binary operations where at least one side is an integer literal.
+///
+/// If left nor right are neither integer literals, no ceorcion is attempted.
 ///
 pub fn advanced_infer_2_types(
     left: &mut Expr, 
     right: &mut Expr,
-    locals: &mut HashMap<String, VarInfo>,
+    locals: &mut HashMap<String, BindingInfo>,
     fun_sigs: &HashMap<String, (Vec<Type>, Option<Vec<Type>>)>,
     infer_hint: Option<Type>
 ) -> Result<(Type, Type), HolyError> {
@@ -15,8 +22,6 @@ pub fn advanced_infer_2_types(
 
     let mut rty = infer_expr_type(right, locals, fun_sigs, infer_hint.clone())?;
     
-    
-
     // Integer literal inferrence
     if matches!(*left, Expr::IntLiteral {..}) && !matches!(*right, Expr::IntLiteral {..}) {
         lty = infer_expr_type(left, locals, fun_sigs, Some(rty.clone()))?;
@@ -24,27 +29,11 @@ pub fn advanced_infer_2_types(
     } else if matches!(*right, Expr::IntLiteral {..}) && !matches!(*left, Expr::IntLiteral {..}) {
         rty = infer_expr_type(right, locals, fun_sigs, Some(lty.clone()))?;
     
-    // Float literal inferrence
-    } else if matches!(*left, Expr::FloatLiteral {..}) && !matches!(*right, Expr::FloatLiteral {..}) {
-        lty = infer_expr_type(left, locals, fun_sigs, Some(rty.clone()))?;
-
-    } else if matches!(*right, Expr::FloatLiteral {..}) && !matches!(*left, Expr::FloatLiteral {..}) {
-        rty = infer_expr_type(right, locals, fun_sigs, Some(lty.clone()))?;
-    
-
 
     } else if lty.is_integer_type() && rty.is_integer_type() {
         // If lty and rty are both integer types, we get the bigger type of them, and try force it
         // upon both lty and rty.
         let bigger_type = helpers::get_bigger_type_of_two_integers(lty.clone(), rty.clone());
-
-        rty = infer_expr_type(right, locals, fun_sigs, Some(bigger_type.clone()))?;
-        lty = infer_expr_type(left, locals, fun_sigs, Some(bigger_type.clone()))?;
-
-
-    } else if lty.is_floating_type() && rty.is_floating_type() {
-        // Same thing as above, except its for floating points.
-        let bigger_type = helpers::get_bigger_type_of_two_floatings(lty.clone(), rty.clone());
 
         rty = infer_expr_type(right, locals, fun_sigs, Some(bigger_type.clone()))?;
         lty = infer_expr_type(left, locals, fun_sigs, Some(bigger_type.clone()))?;
@@ -57,137 +46,253 @@ pub fn advanced_infer_2_types(
 }
 
 
-
-/// Guard wrapper function around infer_expr_type_hazmat
-pub fn infer_expr_type(
-    expr: &mut Expr,
-    locals: &mut HashMap<String, VarInfo>,
-    fun_sigs: &HashMap<String, (Vec<Type>, Option<Vec<Type>>)>,
-    infer_hint: Option<Type>
-) -> Result<Type, HolyError> {
- 
-    let t = infer_expr_type_hazmat(expr, locals, fun_sigs, infer_hint.clone())?;
-
-    // This is a global guard for all calls to infer_expr_type_handler, to catch most critical bugs
-    // within the handler.
-    if t == Type::Infer {
-        panic!(
-            "(Compiler bug) Inferred type of the expression is `Infer`, which shouldn't be possible and indicates a bug in either infer_expr_type_handler or in caller's logic.\nexpr: {:?}\nlocals: {:?}\nfun_sigs: {:?}\ninfer_hint: {:?}",
-            expr, locals, fun_sigs, infer_hint
-            );
-    }
-
-    Ok(t)
-}
-
 /// Infer the type of an expression, and update literal nodes (and nested nodes) where possible.
 /// Returns the deduced Type for the expression.
 ///
-/// NOTE: This function is not to be called directly, always call the guard function instead unless
-/// you absolutely sure of what you're doing.
-fn infer_expr_type_hazmat(
+/// NOTE: Unfortuntely I couldn't decouple the coerion logic, from getting type from expression,
+/// from enforcing the expression's legality. This is not a design limitation, but a limitations on
+/// all compilers pretty much. We have to both get type and try to coerce, AND enforce legality in
+/// the same function. I could hide this uglyness behind layers of abstraction, but the uglyness
+/// will always boil down to one function responsible for all three.
+///
+pub fn infer_expr_type(
     expr: &mut Expr,
-    locals: &mut HashMap<String, VarInfo>,
+    locals: &mut HashMap<String, BindingInfo>,
     fun_sigs: &HashMap<String, (Vec<Type>, Option<Vec<Type>>)>,
-    infer_hint: Option<Type>
+    infer_hint: Option<Type> // For type coercion
 ) -> Result<Type, HolyError> {
     match expr {
+        // NOTE: If `infer_hint` is set, we **TRY** to coerce the expression value into infer_hint (if
+        // possible), and error if we can't (BUT we do NOT error if we didnt attempt coercion)
+        // So far, infer_hint is only used with IntLiterals. It does not coerece variables, only
+        // integer literals.
+        //
+        // This function is NOT meant to type validating, it's a function that does 3 things:
+        // 1. Resolve expression type(s) and ensure they are compatiable in complex expressions
+        //    (like `range(expr1, expr2)`, expr1 + expr2, etc.)
+        //
+        // 2. Get expression "final" type. 
+        // 3. **Attempt** to "soft" coerce an expression type to a hint. (only possible on integer
+        //    literals. and this is NOT full type validating)
+        //    It's still completely the caller's responsiblity to check if the returned type matches
+        //    what he expects.
+        //
+        //  4. Ensure bindings exist and are not moved.
+        //
+        //  This function only does type validating on complex expressions like BinOp, Range, etc.
+        //  to ensure Left and Right are the same exact type, etc. and error if not.
+        //
 
-        // Note: If infer hint is set, we alter the value to fit the hint, if we can.
+
         Expr::IntLiteral { value, span } => {
-            if infer_hint.is_some() {
-                let infer_hint = infer_hint.unwrap();
-                match infer_hint {
-                    Type::Int8 | Type::Int16 | Type::Int32 | Type::Int64 | Type::Int128 | Type::Usize | Type::Byte | Type::Uint16 | Type::Uint32 | Type::Uint64 | Type::Uint128 => {
-                        *value = infer_integer_literal_helper(infer_hint, *value, *span)?;
-                    }
+            if let Some(infer_hint) = infer_hint {
 
-                    _ => {}
-                    
+                // If the hint is an integer, we try to coerce and error if we can't. if hint is not integer, we simply return type of value
+                if infer_hint.is_integer_type() {
+                    *value = helpers::coerce_integer_literal_to_type_helper(infer_hint, *value, *span)?;
                 }
             }
             Ok(value.get_type())
         }
-        Expr::FloatLiteral { value, span } => {
-            if infer_hint.is_some() {
-                match infer_hint.unwrap() {
-                    Type::Float32 => {
-                        if let FloatLiteralValue::Float64(f) = value {
-                            return Err(HolyError::Semantic(format!("Float literal `{}` is of type `float64`, but we expected type `float32` (line {} column {})", f, span.line, span.column)));
-                        }
-                    }
-                    Type::Float64 => {
-                        if let FloatLiteralValue::Float32(f) = value {
-                            *value = FloatLiteralValue::Float64(f.clone() as f64);
-                        }
-                    }
-                    _ => {}
-             
-                }
-            }
+        Expr::Float64Literal { .. } => Ok(Type::Float64),
 
-            Ok(value.get_type())
-        }
+        Expr::BoolLiteral { .. } => Ok(Type::Bool),
 
-        Expr::BoolLiteral { value: _, span: _ } => {
-            Ok(Type::Bool)
-        }
-
-        Expr::StringLiteral { value: _, span: _ } => {
-            Ok(Type::String)
-        }
+        Expr::StringLiteral { .. } => Ok(Type::String),
         
-        Expr::ArrayLiteral { elements, array_ty,  span } => {
-            // all elements must have same type as the array type
-            for e in elements.iter_mut() {
-                let ety = infer_expr_type(e, locals, fun_sigs, Some(array_ty.clone()))?;
-                if !helpers::type_compatible(&ety, &array_ty) {
+        Expr::ArrayLiteral { elements, type_name, span } => {
+            // Array literals e.g. [1,2,3]
+            // Array literals type determining method differs based on array elements:
+            // - If the array is not empty, the first expression element type becomes the array type,
+            //      and all other elements types are checked against it.
+            //
+            // - If the array is empty, then it is "ceorcied" into the same type as infer_hint.
+            //   NOTE: If infer_hint is empty in this case, it would trigger a compiler bug guard
+            //          panic. So be careful how you call this.
+            //
+            //
 
-                    return Err(HolyError::Semantic(format!(
-                        "Array element type mismatch: expected `{}` got `{}` (line {} column {})",
-                        array_ty, ety, span.line, span.column
-                    )));
-                }
-            }
+            // TODO: Add semantics blackbox tests to cover nested arrays.
+            if !elements.is_empty() {
+                
+                // IMPORTANT TODO NOTE:: I think block is buggy, or at very least, very ugly to
+                // look at..
+                //
+                let elem_ih = match infer_hint.clone() {
+                    Some(Type::FixedArray(t, _)) => {
+                        let fixed_inner = if t.is_array_type() {
+                            // NOTE: I believe this part specifically is buggy.
+                            t.get_array_inner_most_type()
+                        } else {
+                            &*t
+                        };
+                        
+                        let array_ty = infer_expr_type(&mut elements[0], locals, fun_sigs, Some(*t.clone()))?;
 
-            Ok(Type::Array(Box::new(array_ty.clone())))
-        }
+                        let arr_inner = if array_ty.is_array_type() {
+                            array_ty.get_array_inner_most_type()
+                        } else {
+                            &array_ty
+                        };
 
-        Expr::ArraySingleAccess { array, index,  span } => {
-            if let Expr::Var { name, span: inner_span } = &**array {
-                if let Some(info) = locals.get(name).cloned() {
-                    if info.moved {
-                        return Err(HolyError::Semantic(format!(
-                                    "Array access on moved variable `{}` (line {} column {})", 
-                                    name, inner_span.line, inner_span.column
-                                )));
+                        if fixed_inner != arr_inner {
+                               return Err(HolyError::Semantic(format!(
+                                    "Array literal is of `{}` type, but we expected `{}` type (line {} column {})",
+                                    array_ty, t, span.line, span.column
+                                )))
+                        }
+
+                        *t
                     }
+                    Some(Type::Array(t)) => *t,
+                    _ => {
+                        // First element type
+                        let t = infer_expr_type(&mut elements[0], locals, fun_sigs, None)?;
+                        t
+                    }
+                };
+
+                let elem_expected_ty = infer_expr_type(&mut elements[0], locals, fun_sigs, Some(elem_ih))?;
+
+
+                for e in elements.iter_mut() {
+                    let ety = infer_expr_type(e, locals, fun_sigs, Some(elem_expected_ty.clone()))?;
+                    if ety != elem_expected_ty {
+                        return Err(HolyError::Semantic(format!(
+                            "Array element type mismatch: expected `{}` got `{}` (line {} column {})",
+                            elem_expected_ty, ety, span.line, span.column
+                        )));
+                    }
+                }
+
+                match infer_hint.clone() {
+                    Some(Type::FixedArray(t, size)) => {
+
+                        // Get size of the array if its fixed sized array.
+                        let size_usize: usize = (|| -> Result<usize, HolyError> {
+                            match size.clone() {
+                                FixedArraySize::Literal(n) => Ok(n),
+                                FixedArraySize::Const(const_name) => {
+                                    if let Some(info) = locals.get(&const_name) {
+                                        match &info.kind {
+                                            BindingKind::Var { .. } => return Err(HolyError::Semantic(format!(
+                                                        "Expected a Usize literal or a const binding, found variable name `{}` instead. (line {} column {})", 
+                                                                                                              const_name, span.line, span.column))),
+                                            BindingKind::Const { value } => {
+                                                let const_value_evaled = constants::eval_const_expr_and_fold_it_hazmat(value, locals)?;
+                                                match const_value_evaled {
+                                                    Expr::IntLiteral { value, .. } => {
+                                                        if let IntLiteralValue::Usize(n) = value {
+                                                            return Ok(n)
+                                                        } else {
+                                                            return Err(HolyError::Semantic(format!(
+                                                                "Expected array index constant `{}` to be of type `usize`, instead we got `{}` (line {} column {})", 
+                                                                const_name, value.get_type(), span.line, span.column
+                                                            )))
+                                                        }
+                                                    },
+                                                    other => return Err(HolyError::Semantic(format!(
+                                                            "Expected array index constant `{}` to be an int literal, instead we got `{}` (line {} column {})", 
+                                                            const_name, other, span.line, span.column
+                                                        )))
+                                                }
+                                            }
+                                        }
+                                    
+                                    } else {
+                                        return Err(HolyError::Semantic(format!("Use of undeclared binding `{}` (line {} column {})", const_name, span.line, span.column)))
+                                    }
+                                }
+                            }
+                        })()?;
+
+                        if elements.len() != size_usize {
+                            return Err(HolyError::Semantic(format!(
+                                "Expected array of `{}` size, instead found with `{}` size (line {} column {})",
+                                size_usize, elements.len(), span.line, span.column
+                            )));
+                        }
 
                 
+                        *type_name = Some(Type::FixedArray(Box::new(*t.clone()), size.clone()));
+                        return Ok(Type::FixedArray(Box::new(*t.clone()), size));
+
+                    },
+
+                    _ => {}
+                }
+
+
+
+                *type_name = Some(Type::Array(Box::new(elem_expected_ty.clone())));
+                return Ok(Type::Array(Box::new(elem_expected_ty.clone())))
+            }
+
+            if infer_hint.is_none() {
+                // TODO NOTE: Perhaps we shoud panic here, and error at semantics phase if see a
+                // lone statement expression of array literal.
+                //
+                *type_name = Some(Type::Array(Box::new(Type::Int8)));
+                return Ok(Type::Array(Box::new(Type::Int8)))
+            }
+
+            *type_name = Some(infer_hint.clone().unwrap());
+            Ok(infer_hint.unwrap())
+
+        }
+
+        Expr::ArrayAccess { array, index,  span } => {
+            if let Expr::Var { name, span: inner_span } = &**array {
+                if let Some(info) = locals.get(name).cloned() {
+                    if !info.ty.is_array_type() {
+                        return Err(HolyError::Semantic(format!(
+                                    "Array access on non-array variable `{}` of type `{}` (line {} column {})",
+                                    name, info.ty, span.line, span.column)));
+                    }
+
                     // Ensure that the type of the index expression is usize.
                     let ety = infer_expr_type(index, locals, fun_sigs, Some(Type::Usize))?;
-                    if !helpers::type_compatible(&ety, &Type::Usize) {
-                        return Err(HolyError::Semantic(format!("Expected array index to be of type `usize`, instead we got `{}` (line {} column {})", ety, span.line, span.column)));
+                    if ety != Type::Usize {
+                        return Err(HolyError::Semantic(format!(
+                                    "Expected array index to be of type `usize`, instead we got `{}` (line {} column {})", 
+                                    ety, span.line, span.column)));
                     }
 
 
-                    if !matches!(&info.ty, Type::Array(_)) {
-                        return Err(HolyError::Semantic(format!("Array access on non-array variable `{}` of type `{}` (line {} column {})", name, info.ty, span.line, span.column)));
+                    match info.kind {
+                        BindingKind::Var { moved, len, .. } => {
+                            if moved {
+                                return Err(HolyError::Semantic(format!(
+                                            "Array access on moved variable `{}` (line {} column {})", 
+                                            name, inner_span.line, inner_span.column
+                                        )));
+                            }
+
+                                                        
+                            // We only do the basic out-of-bounds checks if possible
+                            // This is fine, because Rust is the one handling the actual safety down hood
+                            //
+                            // TODO: Though it'd still be nice if we improve upon this 
+                            //
+                            if len.is_some() {
+                                check_usize_literal_to_src(&**index, len.unwrap(), span.clone(), locals.clone())?;
+                            }
+                        },
+                        // Ownership rules dont apply to constants, so its fine to skip.
+                        // Also, in constant evaluation, it will catch out of bounds access.
+                        BindingKind::Const { .. } => {}
                     }
 
-                    // We only do the basic out-of-bounds checks if possible
-                    // This is fine, because Rust is the one handling the actual safety down hood
-                    //
-                    // TODO: Though it'd still be nice if we improve upon this 
-                    //
-                    if info.len.is_some() {
-                        check_usize_literal_to_src(&**index, info.len.unwrap(), span.clone(), locals.clone())?;
-                    }
 
                     // Because we are accessing (or shall I say copying) a single element of an array
                     // we only care about the inner type, not the outer array type.
+                    //
                     if let Type::Array(unarrayed_ty) = &info.ty {
                         Ok(*unarrayed_ty.clone())
+
+                    } else if let Type::FixedArray(unarrayed_ty, _) = &info.ty {
+                        Ok(*unarrayed_ty.clone())
+                  
                     } else {
                         panic!("(Compiler bug) Expected array type, instead we got: {:?}", info.ty);
                     }
@@ -204,129 +309,195 @@ fn infer_expr_type_hazmat(
 
         }
 
-        Expr::ArrayMultipleAccess { array, start, end,  span } => {
+        Expr::ArraySlicing { array, range,  span } => {
             if let Expr::Var { name, span: inner_span } = &**array {
                 if let Some(info) = locals.get(name).cloned() {
-                    if info.moved {
-                        return Err(HolyError::Semantic(format!(
-                                    "Array access on moved variable `{}` (line {} column {})", 
-                                    name, inner_span.line, inner_span.column
-                                )));
-                    }
-
-
-                    if start.is_none() && end.is_none() {
-                        panic!("(Compiler bug) We expected the parser to not allow such invalid syntax of no start and no end indexes in array multiple access");
-                    }
-
-                    if !matches!(&info.ty, Type::Array(_)) {
+                    if !info.ty.is_array_type() {
                         return Err(HolyError::Semantic(format!("Array access on non-array variable `{}` (line {} column {})", name, span.line, span.column)));
                     }
 
-
-                    // We only do the basic out-of-bounds checks if possible
-                    // This is fine, because Rust is the one handling the actual safety down hood
+                    // If the range is FromTo (e.g. x[1:10])
+                    // ensure that `start` index is not larger than `end`,
                     //
-                    // TODO: Though it'd still be nice if we improve upon this 
-                    //
-                    if info.len.is_some() {
-                        if let Some(s) = &mut *start {
-                            // Ensure that the type of the start index expression is usize, and try to
-                            // convert it if possible.
-                            let start_ety = infer_expr_type(s, locals, fun_sigs, Some(Type::Usize))?;
-                            if !helpers::type_compatible(&start_ety, &Type::Usize) {
-                                return Err(HolyError::Semantic(format!(
-                                            "Expected start index to be of type `usize` for array `{}`, instead we got `{}` (line {} column {})", 
-                                            start_ety, name, span.line, span.column
-                                        )));
-                            }
-
-                            check_usize_literal_to_src(&s, info.len.unwrap(), span.clone(), locals.clone())?;
-                        }
-     
-                        if let Some(e) = &mut *end {
-                            // Same as above, for end index.
-                            let end_ety = infer_expr_type(e, locals, fun_sigs, Some(Type::Usize))?;
-                            if !helpers::type_compatible(&end_ety, &Type::Usize) {
-                                return Err(HolyError::Semantic(format!(
-                                            "Expected end index to be of type `usize` for array `{}`, instead we got `{}` (line {} column {})", 
-                                            end_ety, name, span.line, span.column
-                                        )));
-                            }
-
-
-                            check_usize_literal_to_src(&e, info.len.unwrap(), span.clone(), locals.clone())?;
-                        }
-                    }
-
-
-                    // If both start and end are present, ensure that start is not larger than end,
-                    // and end not smaller than start.
                     // This is **basic** out-of-bounds safety check against int literals.
                     // The real out-of-bounds safety guarantees is inserted in the binary machine code that'd panic if index is
                     // larger than array, thanks to rust.
-                    if start.is_some() && end.is_some() {
-                        if let Expr::IntLiteral { value: IntLiteralValue::Usize(start_num), .. } = start.as_deref().unwrap() {
-
-                            if let Expr::IntLiteral { value: IntLiteralValue::Usize(end_num), .. } = end.as_deref().unwrap() {
-                                if start_num > end_num {
-                                    return Err(HolyError::Semantic(format!(
-                                                "Start index `{}` cannot be larger than end index `{}` (line {} column {})", 
-                                                start_num, end_num, span.line, span.column
-                                            )));
+                    //
+                    match range {
+                        ArraySliceRange::FromTo(start, end) => {
+                            if let Expr::IntLiteral { value: IntLiteralValue::Usize(start_num), .. } = &**start {
+                                if let Expr::IntLiteral { value: IntLiteralValue::Usize(end_num), .. } = &**end {
+                                    if start_num > end_num {
+                                        return Err(HolyError::Semantic(format!(
+                                            "Start index `{}` cannot be larger than end index `{}` (line {} column {})", 
+                                            start_num, end_num, span.line, span.column
+                                        )));
+                                    }
                                 }
+                            }
+
+                            // Ensure that the type of the start index expression is usize, and try to
+                            // convert it if possible.
+                            let start_ety = infer_expr_type(start, locals, fun_sigs, Some(Type::Usize))?;
+                            if start_ety != Type::Usize { 
+                                return Err(HolyError::Semantic(format!(
+                                                "Expected start index to be of type `usize` for array `{}`, instead we got `{}` (line {} column {})", 
+                                                name, start_ety, span.line, span.column
+                                            )));
+                            }
+
+                            // Same as above, for end index.
+                            let end_ety = infer_expr_type(end, locals, fun_sigs, Some(Type::Usize))?;
+                            if end_ety != Type::Usize { 
+                                return Err(HolyError::Semantic(format!(
+                                            "Expected end index to be of type `usize` for array `{}`, instead we got `{}` (line {} column {})", 
+                                            name, end_ety, span.line, span.column
+                                        )));
+                            }
+                        },
+
+                        ArraySliceRange::From(start) => {
+                            let start_ety = infer_expr_type(start, locals, fun_sigs, Some(Type::Usize))?;
+                            if start_ety != Type::Usize { 
+                                return Err(HolyError::Semantic(format!(
+                                                "Expected start index to be of type `usize` for array `{}`, instead we got `{}` (line {} column {})", 
+                                                name, start_ety, span.line, span.column
+                                            )));
+                            }
+                        },
+
+                        ArraySliceRange::To(end) => {
+                            // Same as above, for end index.
+                            let end_ety = infer_expr_type(end, locals, fun_sigs, Some(Type::Usize))?;
+                            if end_ety != Type::Usize { 
+                                return Err(HolyError::Semantic(format!(
+                                            "Expected end index to be of type `usize` for array `{}`, instead we got `{}` (line {} column {})", 
+                                            name, end_ety, span.line, span.column
+                                        )));
                             }
                         }
                     }
 
 
+                    match info.kind {
+                        BindingKind::Var { moved, len, .. } => {
+                            if moved {
+                                return Err(HolyError::Semantic(format!(
+                                            "Array access on moved variable `{}` (line {} column {})", 
+                                            name, inner_span.line, inner_span.column
+                                        )));
+                            }
+
+                            // We only do the basic out-of-bounds checks if possible
+                            // This is fine, because Rust is the one handling the actual safety down hood
+                            //
+                            // TODO: Though it'd still be nice if we improve upon this 
+                            //
+                            if len.is_some() {
+                                match range {
+                                    ArraySliceRange::From(start) => {
+                                        check_usize_literal_to_src(&start, len.unwrap(), span.clone(), locals.clone())?;
+                                    },
+
+                                    ArraySliceRange::To(end) => {
+                                        check_usize_literal_to_src(&end, len.unwrap(), span.clone(), locals.clone())?;
+                                    },
+
+                                    ArraySliceRange::FromTo(start, end) => {
+                                        check_usize_literal_to_src(&start, len.unwrap(), span.clone(), locals.clone())?;
+                                        check_usize_literal_to_src(&end, len.unwrap(), span.clone(), locals.clone())?;
+                                    }
+
+                                }
+                            }
+                        },
+
+                        // Ownership rules dont apply to constants, so its fine to skip.
+                        BindingKind::Const { .. } => {}
+                    }
+
                     if let Type::Array(_) = info.ty.clone() {
-                        // We are fine returning Type wrapping in Aray, because thats what the
+                        // We are fine returning Type wrapping in Array, because thats what the
                         // caller should expect anyway. x[s:e] always returns an array.
                         Ok(info.ty.clone())
+
+                    } else if let Type::FixedArray(_, _) = &info.ty {
+                        // Recursively converts fixed array and its inner type to dynamic arrays 
+                        // if they're fixed arrays. 
+                        //
+                        let new_ty = info.ty.fixed_array_to_dynamic_array_type_full();
+                        Ok(new_ty)
+
                     }  else {
                         panic!("(Compiler bug) Expected array type, instead we got: {:?}", info.ty);
                     }
-                } else {
+
+
+                 } else {
                     Err(HolyError::Semantic(format!("Array access on undeclared variable `{}` (line {} column {})", name, span.line, span.column)))
                 }
             } else {
                 return Err(HolyError::Semantic(format!(
-                        "Expected variable of any `array` type, instead got an `{}` (line {} column {})", 
+                        "Expected variable of `array` or `fixed array` type, instead got `{}` (line {} column {})", 
                         array, span.line, span.column
                     )));
             }
         }
         Expr::Var{name, span} => {
             if let Some(info) = locals.get(name) {
-                if info.moved {
-                    return Err(HolyError::Semantic(format!(
-                                "Use of moved variable `{}` (line {} column {})", 
-                                name, span.line, span.column
-                            )));
+                match info.kind {
+                    BindingKind::Var { moved, .. } => {
+                        if moved {
+                            return Err(HolyError::Semantic(format!(
+                                        "Use of moved variable `{}` (line {} column {})", 
+                                        name, span.line, span.column
+                                    )));
+                        }
+                    },
+                    // Ownership rules don't apply to constants.
+                    BindingKind::Const { .. } => {}
                 }
 
                 // TODO: Maybe also recursively check value type ?
                 // not sure.
+                //
+                // Like info's value if it even exists..
+                //
+
                 
                 Ok(info.ty.clone())
             } else {
-                Err(HolyError::Semantic(format!("Use of undeclared variable `{}` (line {} column {})", name, span.line, span.column)))
+                Err(HolyError::Semantic(format!("Use of undeclared binding `{}` (line {} column {})", name, span.line, span.column)))
             }
         }
 
 
         Expr::UnaryOp{ op, expr, span } => {
-            let ety = infer_expr_type(expr, locals, fun_sigs, infer_hint)?;
+            let expr_ty = infer_expr_type(expr, locals, fun_sigs, infer_hint.clone())?;
             
-            // Ensure that no negate unary operation is allowed on an unsigned integer.
-            if *op == UnaryOpKind::Negate {
-                if !matches!(ety, Type::Int8 | Type::Int16 | Type::Int32 | Type::Int64 | Type::Int128 | Type::Float32 | Type::Float64) {
-                    return Err(HolyError::Semantic(format!("{} cannot have negate unary operation. (line {} column {})", ety, span.line, span.column)))
+            match *op {
+                UnaryOpKind::Not => {
+                    if !matches!(expr_ty, Type::Bool) {
+                        return Err(HolyError::Semantic(format!("Expression of type `{}` cannot have unary `not` operation. (line {} column {})", expr_ty, span.line, span.column)))
+                    }
+                },
+                UnaryOpKind::Negate => {
+                    // Ensure that negate unary operations is only allowed on floating points, and signed integers.
+                    //
+                    if !matches!(expr_ty, Type::Int8 | Type::Int16 | Type::Int32 | Type::Int64 | Type::Int128 | Type::Float64) {
+                        return Err(HolyError::Semantic(format!("Expression of type `{}` cannot have unary `negate` operation. (line {} column {})", expr_ty, span.line, span.column)))
+                    }
+                },
+
+                UnaryOpKind::BitwiseNot => {
+                    if !expr_ty.is_integer_type() {
+                        return Err(HolyError::Semantic(format!("Expression of type `{}` cannot have unary `bitwise not` operation. (line {} column {})", expr_ty, span.line, span.column)))
+                    }
+
                 }
             }
 
-            Ok(ety)
+            Ok(expr_ty)
         
         }
 
@@ -408,10 +579,7 @@ fn infer_expr_type_hazmat(
         }
 
         Expr::RangeCall { start: start_expr, end: end_expr, span } => {
-            
-            let end_ty = infer_expr_type(end_expr, locals, fun_sigs, None)?;
-            let start_ty = infer_expr_type(start_expr, locals, fun_sigs, Some(end_ty.clone()))?;
-
+            let (start_ty, end_ty) = advanced_infer_2_types(start_expr, end_expr, locals, fun_sigs, infer_hint.clone())?;
 
             if start_ty != end_ty {
                 return Err(HolyError::Semantic(format!(
@@ -419,17 +587,14 @@ fn infer_expr_type_hazmat(
                         start_ty, end_ty, span.line, span.column)))
             }
 
-
-            if (!start_ty.is_integer_type()) || (!end_ty.is_integer_type()) {
-                return Err(HolyError::Semantic(format!(
-                        "Expected range arguments to be any Integer type, instead we got: `{}` and `{}` (line {} column {})", 
-                        start_ty, end_ty, span.line, span.column)))
-            }
-
-
-
+            // NOTE: Starting from here, start_ty is end_ty
+            //
             
-            // start_ty is same as end_ty
+            if !start_ty.is_integer_type() {
+                return Err(HolyError::Semantic(format!(
+                        "Expected range arguments to be any Integer type, instead we got: `{}` (line {} column {})", 
+                        start_ty, span.line, span.column)))
+            }
             Ok(start_ty)
         }
 
@@ -444,13 +609,13 @@ fn infer_expr_type_hazmat(
                     return Err(HolyError::Semantic(format!("Double copying is not needed. Remove the extra copy call. (line {} column {})", inner_span.line, inner_span.column)))
                 }
                 Expr::IntLiteral{span: inner_span, ..} | 
-                Expr::FloatLiteral{span: inner_span, ..} | 
+                Expr::Float64Literal{span: inner_span, ..} | 
                 Expr::BoolLiteral{span: inner_span, ..} | 
                 Expr::StringLiteral{span: inner_span, ..} | 
                 Expr::ArrayLiteral{span: inner_span, ..} => {
                     return Err(HolyError::Semantic(format!("Copying a literal is not needed. Remove the copy call and use the literal directly. (line {} column {})", inner_span.line, inner_span.column)))
                 }
-                Expr::ArraySingleAccess{span: inner_span, ..} | Expr::ArrayMultipleAccess{span: inner_span, ..} => {
+                Expr::ArrayAccess{span: inner_span, ..} | Expr::ArraySlicing{span: inner_span, ..} => {
                     return Err(HolyError::Semantic(format!(
                         "Copying is not needed for array access, when you access or slice an array or a string, a new copy is made. Remove the copy call and use operation directly. (line {} column {})", 
                         inner_span.line, inner_span.column)))
@@ -482,7 +647,7 @@ fn infer_expr_type_hazmat(
                     Expr::CopyCall {span: inner_span, ..} => {
                         return Err(HolyError::Semantic(format!("Format calls copy by default, Remove the extra copy call. (line {} column {})", inner_span.line, inner_span.column)))
                     }
-                    Expr::IntLiteral{span: inner_span, ..} | Expr::FloatLiteral{span: inner_span, ..} | Expr::BoolLiteral{span: inner_span, ..} | Expr::StringLiteral{span: inner_span, ..} | Expr::ArrayLiteral{span: inner_span, ..}   => {
+                    Expr::IntLiteral{span: inner_span, ..} | Expr::Float64Literal{span: inner_span, ..} | Expr::BoolLiteral{span: inner_span, ..} | Expr::StringLiteral{span: inner_span, ..} | Expr::ArrayLiteral{span: inner_span, ..}   => {
                         return Err(HolyError::Semantic(format!(
                                     "Plain literals are not allowed in formating! Remove the format placeholders and use the literal directly! (line {} column {})", 
                                     inner_span.line, inner_span.column
@@ -541,7 +706,7 @@ fn infer_expr_type_hazmat(
 
 
 // helper: check an expression that's allowed to be an IntLiteral::Usize
-pub fn check_usize_literal_to_src(expr: &Expr, len: usize, span: Span, locals: HashMap<String, VarInfo>) -> Result<(), HolyError> {
+pub fn check_usize_literal_to_src(expr: &Expr, len: usize, span: Span, locals: HashMap<String, BindingInfo>) -> Result<(), HolyError> {
     match expr {
         Expr::IntLiteral { value, .. } => match value {
             IntLiteralValue::Usize(n) => {
@@ -571,14 +736,19 @@ pub fn check_usize_literal_to_src(expr: &Expr, len: usize, span: Span, locals: H
                                       
         Expr::Var {name, ..} => {
             if let Some(inner_info) = locals.get(name).cloned() {
-                if inner_info.value.is_none() {
-                    // This could happen if the most upstream source is a function call. We just
-                    // return Ok.
-                    return Ok(());
-                }
-                check_usize_literal_to_src(&inner_info.value.unwrap(), len, span, locals)?;
+                match inner_info.kind {
+                    BindingKind::Var { value, .. } => {
+                        if value.is_none() {
+                            // This could happen if the most upstream source is a function call. We just
+                            // return Ok.
+                            return Ok(());
+                        }
+                        check_usize_literal_to_src(&value.unwrap(), len, span, locals)?;
 
-                Ok(())
+                        Ok(())
+                    },
+                    BindingKind::Const { .. } => panic!("Still unimplemented for consts")
+                }
             } else {
                 panic!("(Compiler bug) We could not find variable `{}` in in `locals`. This should've been caught by other semantic checks, but that didnt happen..", name);
             }
@@ -599,44 +769,6 @@ pub fn check_usize_literal_to_src(expr: &Expr, len: usize, span: Span, locals: H
 }
 
 
-pub fn infer_integer_literal_helper(infer_ty: Type, value: IntLiteralValue, span: Span) -> Result<IntLiteralValue, HolyError> {
-    if !value.get_type().is_integer_type() {
-        panic!("(Compiler bug) Value `{}` of type `{}` is not an integer type", value, value.get_type());
-    }
 
-    let range_err = || HolyError::Semantic(format!(
-        "Integer literal `{}` out of range for type `{}` (line {} column {})",
-        value, infer_ty, span.line, span.column
-    ));
 
-    // Normalize up front. One or both may be None if the value can't be represented that way.
-    let (as_signed, as_unsigned) = if value.is_signed() {
-        let s = value.as_i128();
-        let u = if s >= 0 { Some(s as u128) } else { None };
-        (Some(s), u)
-    } else {
-        let u = value.as_u128();
-        let s = if u <= i128::MAX as u128 { Some(u as i128) } else { None };
-        (s, Some(u))
-    };
 
-    let fits_signed   = |min: i128, max: i128| as_signed.filter(|&v| v >= min && v <= max).ok_or_else(range_err);
-    let fits_unsigned = |max: u128|            as_unsigned.filter(|&v| v <= max).ok_or_else(range_err);
-
-    match infer_ty {
-        Type::Int8   => Ok(IntLiteralValue::Int8  (fits_signed(i8::MIN   as i128, i8::MAX   as i128)? as i8)),
-        Type::Int16  => Ok(IntLiteralValue::Int16 (fits_signed(i16::MIN  as i128, i16::MAX  as i128)? as i16)),
-        Type::Int32  => Ok(IntLiteralValue::Int32 (fits_signed(i32::MIN  as i128, i32::MAX  as i128)? as i32)),
-        Type::Int64  => Ok(IntLiteralValue::Int64 (fits_signed(i64::MIN  as i128, i64::MAX  as i128)? as i64)),
-        Type::Int128 => Ok(IntLiteralValue::Int128(fits_signed(i128::MIN,         i128::MAX)?)),
-
-        Type::Byte   => Ok(IntLiteralValue::Byte  (fits_unsigned(u8::MAX   as u128)? as u8)),
-        Type::Uint16 => Ok(IntLiteralValue::Uint16(fits_unsigned(u16::MAX  as u128)? as u16)),
-        Type::Uint32 => Ok(IntLiteralValue::Uint32(fits_unsigned(u32::MAX  as u128)? as u32)),
-        Type::Uint64 => Ok(IntLiteralValue::Uint64(fits_unsigned(u64::MAX  as u128)? as u64)),
-        Type::Uint128 => Ok(IntLiteralValue::Uint128(fits_unsigned(u128::MAX)?)),
-        Type::Usize  => Ok(IntLiteralValue::Usize (fits_unsigned(usize::MAX as u128)? as usize)),
-
-        other => panic!("(Compiler bug) Unexpected type in infer_integer_literal_helper: {:?}", other),
-    }
-}

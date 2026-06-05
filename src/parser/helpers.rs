@@ -2,26 +2,6 @@ use super::*;
 
 use crate::consts;
 
-/// Returns the index of the first `[` that does NOT immediately form a `[]` pair.
-/// Useful to distinguish type-suffix `[]` from the constructor `...[ ... ]`.
-pub fn find_constructor_bracket(s: &str) -> Option<usize> {
-    let bytes = s.as_bytes();
-    let mut i = 0usize;
-    while i < bytes.len() {
-        if bytes[i] == b'[' {
-            // if this '[' is immediately followed by ']' => it's a suffix pair "[]", skip both
-            if i + 1 < bytes.len() && bytes[i + 1] == b']' {
-                i += 2;
-                continue;
-            } else {
-                return Some(i);
-            }
-        } else {
-            i += 1;
-        }
-    }
-    None
-}
 
 
 pub fn find_top_level_op_any(s: &str) -> Option<(usize, &str)> {
@@ -30,11 +10,12 @@ pub fn find_top_level_op_any(s: &str) -> Option<(usize, &str)> {
             "or" => 1,
             "and" => 2,
             "==" | "!=" => 3,
+            "&" | "|" => 3,
             ">" | "<" | ">=" | "<=" => 3,
             "<<" | ">>" => 3,
             "+" | "-" => 4,
             "*" | "/" => 5,
-            _ => u8::MAX,
+            _ => panic!("(Compiler bug) If this ever fires, theres a bug in find_top_level_op_any")
         }
     }
     
@@ -96,14 +77,14 @@ pub fn find_top_level_op_any(s: &str) -> Option<(usize, &str)> {
                 };
 
                 if let Some(op) = op_str {
-                    // Skip unary  (negate, bitwise not)
-                    if op == "-" || op == "~" {
+                    // Skip unary  (negate, logical not,m bitwise not)
+                    if op == "-" || op == "!" || op == "~" {
                         let prev_non_ws = (0..i).rev()
                             .map(|j| chars[j].1)
                             .find(|ch| !ch.is_whitespace());
                         match prev_non_ws {
                             None => { i += 1; continue; }
-                            Some(prev) if "+-*/&|!=<>(".contains(prev) => { i += 1; continue; }
+                            Some(prev) if "+-*/&|!~=<>(".contains(prev) => { i += 1; continue; }
                             _ => {}
                         }
                     }
@@ -129,84 +110,21 @@ pub fn find_top_level_op_any(s: &str) -> Option<(usize, &str)> {
     best
 }
 
-/*
-
-pub fn find_top_level_op_any(s: &str, ops: &[char]) -> Option<(usize, char)> {
-    fn precedence(c: char, next: Option<char>) -> u8 {
-        match c {
-            '=' if next == Some('=') => 1,
-            '!' if next == Some('=') => 1,
-            '>' | '<'               => 1,  // handles >= and <= too
-            '+' | '-'               => 2,
-            '*' | '/'               => 3,
-            _                       => u8::MAX,
-        }
-    }
-
-    let chars: Vec<(usize, char)> = s.char_indices().collect();
-    let mut depth    = 0usize;
-    let mut best: Option<(usize, char)> = None;
-    let mut best_prec = u8::MAX;
-
-    let mut i = 0;
-    while i < chars.len() {
-        let (idx, c) = chars[i];
-        match c {
-            '(' => depth += 1,
-            ')' => { if depth > 0 { depth -= 1; } }
-            _ if depth == 0 && ops.contains(&c) => {
-                if c == '-' {
-
-                    // Skip whitespaces
-                    let prev_non_ws = (0..i).rev()
-                        .map(|j| chars[j].1)
-                        .find(|ch| !ch.is_whitespace());
-
-                    match prev_non_ws {
-                        // start of string, unary
-                        None => { 
-                            i += 1; 
-                            continue; 
-                        } 
-                        // unary
-                        Some(prev) if ops.contains(&prev) || prev == '(' => { 
-                            i += 1; 
-                            continue; 
-                        }
-                        // binary, fall through
-                        _ => {} 
-                    }
-                }
-
-                let next = chars.get(i + 1).map(|(_, nc)| *nc);
-                let prec = precedence(c, next);
-                // <= gives us rightmost of lowest precedence (left-associativity)
-                if prec <= best_prec {
-                    best_prec = prec;
-                    best = Some((idx, c));
-                }
-            }
-            _ => {}
-        }
-        i += 1;
-    }
-
-    best
-}
-*/
 
 
-
-
-/// Split comma-separated args at top-level only.
+/// Split "char"-separated args at top-level only.
 /// - respects nested (), [], {}
 /// - respects "..." and '...' with backslash escapes
 /// - returns slices into `s` (no allocation for substrings beyond the Vec)
-pub fn split_comma_top_level(s: &str) -> Result<Vec<&str>, HolyError> {
+pub fn split_char_top_level(split_char: char, s: &str) -> Result<Vec<&str>, HolyError> {
+    if (split_char != ',') && (split_char != ':') {
+        panic!("(Compiler bug guard) You are most likely misusing split_char_top_level, we expected char to be one of ':', ',', ' ', but instead we got `{}`", split_char);
+    }
+
     let mut parts = Vec::new();
     let mut start = 0usize;
     let mut stack: Vec<char> = Vec::new();
-    let mut in_string: Option<char> = None; // Some('"') or Some('\'')
+    let mut in_string: Option<char> = None; 
     let mut escape = false;
     let mut just_closed_string = false;
 
@@ -236,7 +154,7 @@ pub fn split_comma_top_level(s: &str) -> Result<Vec<&str>, HolyError> {
                         i
                     )));
                 }
-                // clear the flag on the first non-whitespace (so "hi" ) or comma or bracket clears it)
+                // clear the flag on the first non-whitespace (so "hi" ) or split_char or bracket clears it)
                 if !c.is_whitespace() {
                     just_closed_string = false;
                 }
@@ -262,7 +180,7 @@ pub fn split_comma_top_level(s: &str) -> Result<Vec<&str>, HolyError> {
                     if matches!(stack.last(), Some('{')) { stack.pop(); }
                     just_closed_string = false;
                 }
-                ',' => {
+                c if c == split_char => {
                     if stack.is_empty() && in_string.is_none() {
                         parts.push(s[start..i].trim());
                         start = i + c.len_utf8();
@@ -278,55 +196,42 @@ pub fn split_comma_top_level(s: &str) -> Result<Vec<&str>, HolyError> {
         return Err(HolyError::Parse("Unclosed string literal".into()));
     }
 
-    if escape {
-        return Err(HolyError::Parse("Invalid trailing escape in string".into()));
-    }
-
     // push last part
     parts.push(s[start..].trim());
     Ok(parts)
 }
 
 
-pub fn strip_outer_quotes_and_unescape(s: &str) -> Result<String, HolyError> {
-    // This removes surrounding double quotes if both ends are quotes
-    let inner = if s.len() >= 2 && s.starts_with('"') && s.ends_with('"') {
-        &s[1..s.len()-1]
-    } else {
-        s
-    };
+pub fn string_strip_outer_quotes_and_unescape(s: &str) -> Result<String, HolyError> {
+    if !(s.len() >= 2 && s.starts_with('"') && s.ends_with('"')) {
+        panic!("(Compiler bug) Malformed string is not double-quoted: {:?}", s);
+    }
 
-    // This unescape of common sequences
+    let inner = &s[1..s.len() - 1];
     let mut out = String::with_capacity(inner.len());
     let mut chars = inner.chars().peekable();
 
-    let mut double_quotes_encountered = false;
-
     while let Some(c) = chars.next() {
-        if c == '\\' {
-            match chars.next() {
-                Some('n') => out.push('\n'),
-                Some('r') => out.push('\r'),
-                Some('t') => out.push('\t'),
+        match c {
+            '\\' => match chars.next() {
+                Some('n')  => out.push('\n'),
+                Some('r')  => out.push('\r'),
+                Some('t')  => out.push('\t'),
                 Some('\\') => out.push('\\'),
-                Some('"') => {
-                    double_quotes_encountered = true;
-                    out.push('"')
-                },
+                Some('"')  => out.push('"'),
                 Some('\'') => out.push('\''),
-                Some('0') => out.push('\0'),
-                // unknown escape: just emit the escaped char as-is
-                Some(other) => out.push(other),
-                None => out.push('\\'), // trailing backslash
-            }
-            
-
-        } else if c == '"' {
-            if double_quotes_encountered == false {
-                return Err(HolyError::Parse(format!("Unterminated string: `{}`", out).into()));
-            }
-        } else {
-            out.push(c);
+                Some('0')  => out.push('\0'),
+                Some(other) => return Err(HolyError::Parse(format!(
+                    "Unknown escape sequence `\\{}`", other
+                ))),
+                None => return Err(HolyError::Parse(
+                    "Trailing backslash in string".into()
+                )),
+            },
+            '"' => return Err(HolyError::Parse(format!(
+                "Unexpected unescaped quote inside string: `{}`", s
+            ))),
+            _ => out.push(c),
         }
     }
 
@@ -335,9 +240,6 @@ pub fn strip_outer_quotes_and_unescape(s: &str) -> Result<String, HolyError> {
 
 
 
-pub fn is_array_type(t: &Type) -> bool {
-    matches!(t, Type::Array(_))
-}
 
 
 /// Checks if a given name is a valid HolyLang identifier.
@@ -346,20 +248,20 @@ pub fn is_array_type(t: &Type) -> bool {
 /// - Must not start with a digit
 /// - Must not contain a reserved language keyword (i.e. `own`, etc)
 pub fn validate_identifier_name(name: &str) -> Result<(), HolyError> {
-    if name.is_empty() {
-        return Err(HolyError::Parse("Empty variable name (You most likely have invalid syntax)".to_string()));
+    if name.trim().is_empty() {
+        panic!("(Compiler bug) `validate_identifier_name` got fed an empty string, indicating a bug in the caller's code.");
     }
 
     // Check first character is not a number
     let first = name.chars().next().unwrap();
     if first.is_ascii_digit() {
-        return Err(HolyError::Parse(format!("Variable name `{}` cannot start with a number!", name)));
+        return Err(HolyError::Parse(format!("Binding identifier name `{}` cannot start with a number!", name)));
     }
 
     // Check allowed characters: a-z, A-Z, 0-9, _
     if !name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
         return Err(HolyError::Parse(format!(
-            "Variable name `{}` contains invalid characters (only letters, numbers, and `_` allowed)",
+            "Binding identifier name `{}` contains invalid characters (only letters, numbers, and `_` allowed)",
             name
         )));
     }
@@ -370,7 +272,7 @@ pub fn validate_identifier_name(name: &str) -> Result<(), HolyError> {
     let name_lower = name.to_string();
     let name_lower = name_lower.to_lowercase(); 
     if consts::RESERVED_KEYWORDS.contains(&name_lower.as_ref()) {
-        return Err(HolyError::Parse(format!("Variable name `{}` is a reserved keyword", name)));
+        return Err(HolyError::Parse(format!("Binding identifier name `{}` is a reserved keyword", name)));
     }
 
     Ok(())

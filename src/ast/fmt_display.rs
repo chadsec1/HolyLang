@@ -1,4 +1,5 @@
-use super::*;
+use super::{ Type, Expr, FixedArraySize, IntLiteralValue };
+use std::fmt;
 
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -17,16 +18,26 @@ impl fmt::Display for Type {
             
             Type::Usize => "usize",
 
-            Type::Float32 => "float32",
             Type::Float64 => "float64",
             Type::Bool => "bool",
             Type::String => "string",
-            Type::Array(inner) => &format!("{}[]", inner),
-            Type::Infer => "infer",
+            Type::Array(inner_ty) => &format!("[]{}", inner_ty),
+            Type::FixedArray(inner_ty, size) => &format!("[{}]{}", size, inner_ty)
         };
         write!(f, "{}", s)
     }
 }
+
+impl fmt::Display for FixedArraySize {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FixedArraySize::Literal(l) => write!(f, "{}", l),
+            FixedArraySize::Const(c) => write!(f, "{}", c)
+        }
+ 
+    }
+}
+
 
 impl fmt::Display for IntLiteralValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -54,7 +65,7 @@ impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let name = match self {
             Expr::IntLiteral { .. } => "Int Literal",
-            Expr::FloatLiteral { .. } => "Float Literal",
+            Expr::Float64Literal { .. } => "Float64 Literal",
             Expr::BoolLiteral { .. } => "Bool Literal",
             Expr::ArrayLiteral { .. } => "Array Literal",
             Expr::StringLiteral { .. } => "String Literal",
@@ -62,8 +73,8 @@ impl fmt::Display for Expr {
             Expr::UnaryOp { .. } => "Unary Operation",
             Expr::BinOp { .. } => "Binary Operation",
             Expr::Call { .. } => "Function Call",
-            Expr::ArraySingleAccess { .. } => "Array Index Access",
-            Expr::ArrayMultipleAccess { .. } => "Array Slice Access",
+            Expr::ArrayAccess { .. } => "Array Access",
+            Expr::ArraySlicing { .. } => "Array Slicing",
             Expr::CopyCall { .. } => "Copy Call",
             Expr::FormatCall { .. } => "Format Call",
             Expr::RangeCall { .. } => "Range Call",

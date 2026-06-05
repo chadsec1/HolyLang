@@ -1,10 +1,18 @@
 use std::collections::HashMap;
 
 use crate::error::HolyError;
-use crate::parser::{
-    AST, Expr, Function, Stmt, Type, Span, IntLiteralValue, FloatLiteralValue, UnaryOpKind, BinOpKind
+use crate::ast::{
+    AST, Expr, Function, GlobalStmt, Stmt, Type, Span, Constant 
 };
 
+mod branch_analysis;
+mod constants;
+mod infer;
+mod helpers;
+
+
+#[cfg(test)]
+mod branch_analysis_tests; 
 
 #[cfg(test)]
 mod helpers_tests;
@@ -12,35 +20,37 @@ mod helpers_tests;
 #[cfg(test)]
 mod blackbox_tests;
 
-#[cfg(test)]
-mod branch_analysis_tests;
-
-mod branch_analysis;
-mod infer;
-mod helpers;
- 
 
 #[derive(Clone, Debug)]
-struct VarInfo {
-    ty: Type,
-    moved: bool,
-    locked: bool,
-    value: Option<Expr>,
-    
-    len: Option<usize> // NOTE: This field purpose is only for partial, simple compile-time safety
-                       // for out of bounds array/string indexing/slicing. It is not reliable but
-                       // it will catch most simple out-of-bounds (except if the most upstream
-                       // source is a function call). 
-                       // This is fine, because Rust automatically inserts bounds checking before
-                       // array / string access/slicing anyway!
-                       // Rust also will handle literals in expressions smartly so it would also
-                       // act as an additional protection for our implementation
-                       // but it's something to keep in mind.
+enum BindingKind {
+    Const {
+        value: Expr
+    },
+    Var {
+        moved: bool,
+        locked: bool,
+        value: Option<Expr>,
+
+        len: Option<usize> // NOTE: This field purpose is only for partial, simple compile-time safety
+                           //       for out of bounds array/string indexing/slicing. It is not reliable but
+                           //       it will catch most simple out-of-bounds (except if the most upstream
+                           //       source is a function call). 
+                           //       This is fine, because Rust automatically inserts bounds checking before
+                           //       array / string access/slicing anyway!
+                           //       Rust also will handle literals in expressions smartly so it would also
+                           //       act as an additional protection for our implementation
+                           //       but it's something to keep in mind.
+    }
 }
 
+#[derive(Clone, Debug)]
+struct BindingInfo {
+    ty: Type,
+    kind: BindingKind,
+}
+   
 /// Checks semantics and fill in inferred types where possible.
-/// This mutates the AST, Type::Infer are replaced with concrete types where
-/// they can be inferred.
+/// This mutates the AST, because int literals can be safely are replaced with their binding types
 pub fn check_semantics(ast: &mut AST) -> Result<(), HolyError> {
     // First pass: collect function signatures (params types and return types (possible multiple))
     let mut fun_sigs: HashMap<String, (Vec<Type>, Option<Vec<Type>>)> = HashMap::new();
@@ -50,42 +60,62 @@ pub fn check_semantics(ast: &mut AST) -> Result<(), HolyError> {
             return Err(HolyError::Semantic(format!("Duplicate function declaration: {}", f.name)));
         }
     }
+    
+    // Second pass: check each global statement
+    let mut globals: HashMap<String, BindingInfo> = HashMap::new();
+    for global_stmt in &mut ast.globals {
+        check_global_stmt(global_stmt, &mut globals, &fun_sigs)?;
+    }
 
-    // Second pass: check each function body
+
+    // Third pass: check each function body
     for func in &mut ast.functions {
-        check_function(func, &fun_sigs)?;
+        // Clone on globals here because we don't want global variables to be modified
+        // cross-function
+        //
+        check_function(func, &fun_sigs, &mut globals.clone())?;
     }
 
     Ok(())
 }
 
 /// Check single function, infer local var types where possible, check calls, returns.
-fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Option<Vec<Type>>)>) -> Result<(), HolyError> {
+fn check_function(
+    func: &mut Function, 
+    fun_sigs: &HashMap<String, (Vec<Type>, Option<Vec<Type>>)>,
+    locals: &mut HashMap<String, BindingInfo>
+) -> Result<(), HolyError> {
     // Build local symbol table starting with params
-    let mut locals: HashMap<String, VarInfo> = HashMap::new();
     let mut upstream_var_names: Vec<String> = vec![];
 
     for p in &func.params {
+        if locals.contains_key(&p.name) {
+            return Err(HolyError::Semantic(format!(
+                        "Cannot use `{}` as function parameter name, because it is already declared globally", // (line {} column {})", 
+                        &p.name //, cons.span.line, cons.span.column
+                    )));
+        }
         locals.insert(
             p.name.clone(), 
-            VarInfo {
+            BindingInfo {
                 ty: p.type_name.clone(),
-                moved: false,
-                
-                // By default, function arguments are locked 
-                locked: true,
-                
-                // We do not know a parameter value.
-                value: None,
-                // Nor its length
-                len: None
+                kind: BindingKind::Var {
+                    moved: false,
+                    
+                    // By default, function arguments are locked 
+                    locked: true,
+                    
+                    // We do not know a parameter value.
+                    value: None,
+                    // Nor its length
+                    len: None
+                }
             });
 
         upstream_var_names.push(p.name.clone());
     }
-    
 
-    check_stmts(func.clone(), &mut func.body, &mut locals, upstream_var_names, fun_sigs, false)?;
+    check_stmts(func.clone(), &mut func.body, locals, upstream_var_names, fun_sigs, false)?;
 
 
     // Branch analysis to determine if function returns in all branches
@@ -106,7 +136,7 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
     // We call dead code analysis here after check_stmts, because we want checked semantics.
     // Semantics take priority more than dead code
     //
-    branch_analysis::dead_code_analysis(&func.body)?;
+    branch_analysis::dead_code_analysis(&func.body, false)?;
 
     // Return analysis only needs to check last statement which has return statements
     // because dead code analysis should not let dead code pass.
@@ -114,8 +144,7 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
     //
     // We only do return branch analysis if function has declared return type.
     if func.return_type.is_some() {
-        let last_func_stmt = func.body.last();
-        branch_analysis::return_branch_analysis(&func.clone(), last_func_stmt.cloned(), false, false)?;
+        branch_analysis::return_branch_analysis(&func.clone(), last_func_stmt.clone().unwrap(), false, false)?;
     }
 
     Ok(())
@@ -124,13 +153,70 @@ fn check_function(func: &mut Function, fun_sigs: &HashMap<String, (Vec<Type>, Op
 
 
 
+/// Checks Stmt to see if its a statement is legally allowed to be global
+/// and error if not.
+///
+fn check_global_stmt(
+    globalstmt: &mut GlobalStmt,
+    storage: &mut HashMap<String, BindingInfo>, 
+    fun_sigs: &HashMap<String, (Vec<Type>, Option<Vec<Type>>)>,
+) -> Result<(), HolyError> { 
+    match globalstmt {
+        GlobalStmt::Const(cons) => check_const(cons, storage, fun_sigs),
 
-/// Parse stmts in a block, it does:
-/// Enforce language semantics, resolve "infer" types, check calls, etc.
+        other => panic!("(Compiler bug) Unimplemented {:?}", other)
+
+    }
+}
+
+fn check_const(
+    cons: &mut Constant,
+    storage: &mut HashMap<String, BindingInfo>, 
+    fun_sigs: &HashMap<String, (Vec<Type>, Option<Vec<Type>>)>,
+) -> Result<(), HolyError> {
+    if fun_sigs.contains_key(&cons.name) {
+        return Err(HolyError::Semantic(format!(
+                    "Constant identifier name `{}` is already taken by a function. (line {} column {})", 
+                    &cons.name, cons.span.line, cons.span.column
+                )));
+    }
+
+    if storage.contains_key(&cons.name) {
+        return Err(HolyError::Semantic(format!(
+                "Cannot use `{}` as the constant identifier name as it is already declared. Overshadowing is not allowed. (line {} column {})", 
+                &cons.name, cons.span.line, cons.span.column
+            )));
+    }
+
+
+    // Validate the constant type against the expression, AND internally coerce literals if
+    // possible (i.e. int8 -> int32, etc), AND validate the constant value expression 
+    // to ensure it is known at compile-time, AND evaluate it, and then fold it.
+    //
+    constants::eval_const_expr_and_fold_it(cons, storage, fun_sigs)?;
+
+    // register the constant in storage (could be locals, or globals. we don't care.) 
+    storage.insert(
+        cons.name.clone(),
+        BindingInfo {
+            ty: cons.type_name.clone(),
+            kind: BindingKind::Const {
+                value: cons.value.clone()
+            }
+        }
+    );
+
+    Ok(())
+
+}
+
+
+/// Parse holylang statements in a block, it does:
+/// Enforce language semantics, and ownership safety model, check function calls, etc.
 fn check_stmts(
     func: Function, 
     block: &mut Vec<Stmt>, 
-    locals: &mut HashMap<String, VarInfo>, 
+    locals: &mut HashMap<String, BindingInfo>, 
     upstream_var_names: Vec<String>, 
     fun_sigs: &HashMap<String, (Vec<Type>, Option<Vec<Type>>)>,
     in_loop: bool
@@ -158,103 +244,76 @@ fn check_stmts(
         let stmt_span = helpers::stmt_span(&stmt);
 
         match stmt {
+            Stmt::Const(cons) => {
+                check_const(cons, locals, fun_sigs)?;
+            },
             Stmt::VarDecl(var) => {
                 if fun_sigs.contains_key(&var.name) {
                     return Err(HolyError::Semantic(format!(
-                                "Name `{}` is already taken by a function, pick a different name for your variable. (line {} column {})", 
+                                "Variable identifier name `{}` is already taken by a function. (line {} column {})", 
                                 &var.name, var.span.line, var.span.column
                             )));
-
-                }
-                // If var has explicit type: keep it. If Infer: try infer from initializer.
-                if var.type_name == Type::Infer {
-                    if let Some(expr) = &mut var.value {
-                        let ty = infer::infer_expr_type(expr, locals, fun_sigs, None)?;
-                        // assign inferred type to variable
-                        var.type_name = ty.clone();
-                    } else {
-                        panic!("(Compiler bug) parser phase shouldnt have let this invalid code reach this far, Since var is of type infer, it must've had a value for declaration. Var: {:?}", var);
-                    }
-                } else {
-                    // explicit type, if initializer present, ensure initializer is compatible
-                    
-                    if let Some(expr) = &mut var.value {
-                        // On second thought, I don't think this is needed.
-                        // infer::assign_infer_type_to_expr_value(expr, var.type_name.clone())?;
-
-                        // Infer and check the expression type.
-                        let expr_ty = infer::infer_expr_type(expr, locals, fun_sigs, Some(var.type_name.clone()))?;
-                        if !helpers::type_compatible(&expr_ty, &var.type_name) {
-                            return Err(HolyError::Semantic(format!(
-                                "Type mismatch assigning to `{}`: got `{}`, expected `{}` (line {} column {})",
-                                var.name, expr_ty, var.type_name, var.span.line, var.span.column
-                            )));
-                        }
-
-                    } else {
-                        helpers::assign_default_value_for_type(&mut var.value, &var.type_name, var.span)?;
-                    }
                 }
 
-            
-                // You cannot overshadow variables declared in upstream scopes.
-                if upstream_var_names.contains(&var.name) {
+                let expr_ty = infer::infer_expr_type(&mut var.value, locals, fun_sigs, Some(var.type_name.clone()))?;
+                if expr_ty != var.type_name {
                     return Err(HolyError::Semantic(format!(
-                                "Variable `{}` is already defined upstream, you cannot overshadow upstream variables (line {} column {})", 
-                                &var.name, var.span.line, var.span.column
-                            )));
+                        "Type mismatch assigning to `{}`: got `{}`, expected `{}` (line {} column {})",
+                        var.name, expr_ty, var.type_name, var.span.line, var.span.column
+                    )));
                 }
 
-                // Check if variable exists in locals and if its locked.
-                if let Some(info) = locals.get(&var.name) {
-                    if info.locked {
-                        return Err(HolyError::Semantic(format!(
-                                "Variable `{}` is locked, therefore you cannot overshadow it (line {} column {})", 
-                                &var.name, var.span.line, var.span.column
-                            )));
-                    }
+                // HolyLang commandment 1. You shall not overshadow variables
+                if let Some(_) = locals.get(&var.name) {
+                    return Err(HolyError::Semantic(format!(
+                            "Variable `{}` is already declared, overshadowing is not allowed. (line {} column {})", 
+                            &var.name, var.span.line, var.span.column
+                        )));
                 }
-
-
 
 
                 let mut value_len: Option<usize> = None;
-                if var.value.is_none() {
-                    panic!("(Compiler bug) Variable value is none even after we attempted to assign default value! {:?}", var);
-                }
 
                 // Check if source value is a variable and if its locked or moved, and moves it
-                if let Some(Expr::Var { name: src_name, span }) = &var.value {
-                    let src = locals.get_mut(src_name).expect(
-                        &format!("(Compiler bug) infer_expr_type should've already errored if source variable didnt exist, but it didnt. var: {:?}", var)
-                        );
+                if let Expr::Var { name: src_name, span } = &var.value {
+                    let src = locals.get_mut(src_name).unwrap_or_else(|| panic!(
+                            "(Compiler bug) infer_expr_type should've already errored if source variable didnt exist, but it didnt. var: {:?}", 
+                            var
+                        ));
 
-                    if src.moved {
-                        panic!("(Compiler bug) infer_expr_type should've already errored if source variable is moved, but it didnt. var: {:?}", var)
+                    match &mut src.kind {
+                        BindingKind::Var { moved: src_moved, len: src_len, .. } => {
+                            if *src_moved {
+                                panic!("(Compiler bug) infer_expr_type should've already errored if source variable is moved, but it didnt. var: {:?}", var)
+                            }
+
+
+                            // Error if we are in loop, and we tried to take ownership of an upstream variable
+                            if in_loop && upstream_var_names.contains(&src_name) {
+                                return Err(HolyError::Semantic(format!(
+                                            "Upstream variable `{}` is potentially moved multiple times, because you are in a loop. Consider using `copy()` (line {} column {})", 
+                                            &src_name, span.line, span.column
+                                        )));
+                            }
+
+                            // mark source as moved because ownership was transferred
+                            *src_moved = true;
+
+                            // We copy its length
+                            value_len = *src_len
+
+                        },
+                        // Ownership rules don't apply to constants.
+                        BindingKind::Const { .. } => {}
                     }
-
-
-                    // Error if we are in loop, and we tried to take ownership of an upstream variable
-                    if in_loop && upstream_var_names.contains(&src_name) {
-                        return Err(HolyError::Semantic(format!(
-                                    "Upstream variable `{}` is potentially moved multiple times, because you are in a loop. Consider using `copy()` (line {} column {})", 
-                                    &src_name, span.line, span.column
-                                )));
-                    }
-
-                    // mark source as moved because ownership was transferred
-                    src.moved = true;
-
-                    // We copy its length
-                    value_len = src.len
                 }
 
-                match var.value.clone().unwrap() {
-                    Expr::ArrayLiteral{elements, array_ty: _, span: _} => {
+                match var.value.clone() {
+                    Expr::ArrayLiteral {elements, .. } => {
                         value_len = Some(elements.len())
                     }
 
-                    Expr::StringLiteral{value: v, span: _} => {
+                    Expr::StringLiteral {value: v, ..} => {
                         value_len = Some(v.len())
                     }
                     // Other experessions we can't / don't need to store their length
@@ -262,28 +321,26 @@ fn check_stmts(
                 }
 
 
-                // register variable in locals (now with concrete type)
+                // register variable in locals 
                 locals.insert(
                     var.name.clone(),
-                    VarInfo {
+                    BindingInfo {
                         ty: var.type_name.clone(),
-                        value: var.value.clone(),
-                        moved: false,
-                        locked: false,
-                        len: value_len
+                        kind: BindingKind::Var {
+                            value: Some(var.value.clone()),
+                            moved: false,
+                            locked: false,
+                            len: value_len
+                        }
                     }
                 );
             }
 
             Stmt::VarDeclMulti(var_list, call_expr) => {
-                // Expect the rhs to be a Call
+                // Expect the right-hand side to be a function Call expression
                 if let Expr::Call { name, args, span } = call_expr {
                     // check_call with require_ret = true -> Option<Vec<Type>>
-                    let ret_opt = check_call(name, args, locals, fun_sigs, true, *span)?;
-                    let ret_vec = ret_opt.ok_or_else(|| HolyError::Semantic(format!(
-                        "Call to function `{}` used in multi-declaration but function has no declared return types (line {} column {})",
-                        name, span.line, span.column
-                    )))?;
+                    let ret_vec = check_call(name, args, locals, fun_sigs, true, *span)?.unwrap();
 
                     if ret_vec.len() != var_list.len() {
                         return Err(HolyError::Semantic(format!(
@@ -294,43 +351,34 @@ fn check_stmts(
 
                     // assign types and register locals
                     for (var, ret_ty) in var_list.iter_mut().zip(ret_vec.iter()) {
-                        if var.type_name == Type::Infer {
-                            var.type_name = ret_ty.clone();
-                        } else if !helpers::type_compatible(&var.type_name, ret_ty) {
+                        if var.type_name != *ret_ty {
                             return Err(HolyError::Semantic(format!(
                                 "Type mismatch for variable `{}`: declared `{}` but call returns `{}` (line {} column {})",
                                 var.name, var.type_name, ret_ty, var.span.line, var.span.column
                             )));
                         }
 
-                        if upstream_var_names.contains(&var.name) {
+
+                        // HolyLang commandment 1. You shall not overshadow variables
+                        if let Some(_) = locals.get(&var.name) {
                             return Err(HolyError::Semantic(format!(
-                                        "Variable `{}` is already defined upstream, you cannot overshadow upstream variables (line {} column {})", 
-                                        &var.name, var.span.line, var.span.column
-                                    )));
+                                    "Variable `{}` is already declared, overshadowing is not allowed. (line {} column {})", 
+                                    &var.name, var.span.line, var.span.column
+                                )));
                         }
-
-                        // Check if variable exists in locals and if its locked.
-                        if let Some(info) = locals.get(&var.name) {
-                            if info.locked {
-                                return Err(HolyError::Semantic(format!(
-                                        "Variable `{}` is locked, therefore you cannot overshadow it (line {} column {})", 
-                                        &var.name, var.span.line, var.span.column
-                                    )));
-                            }
-                        }
-
 
                         // insert into locals
                         //
                         locals.insert(
                             var.name.clone(),
-                            VarInfo {
+                            BindingInfo {
                                 ty: var.type_name.clone(), 
-                                value: var.value.clone(), 
-                                moved: false, 
-                                locked: false,
-                                len: None
+                                kind: BindingKind::Var {
+                                    value: None,
+                                    moved: false, 
+                                    locked: false,
+                                    len: None
+                                }
                             }
                         );
                     }
@@ -343,6 +391,9 @@ fn check_stmts(
             }
 
             Stmt::VarAssign(assign) => {
+                // NOTE: If any weird ass bugs arise, its this fucking clone.
+                // we need it to satisify rust borrow checker
+                //
                 let varinfo = locals.get(&assign.name).ok_or_else(|| {
                     HolyError::Semantic(format!(
                         "Use of undeclared variable `{}` (line {} column {})",
@@ -350,74 +401,90 @@ fn check_stmts(
                     ))
                 })?.clone();
 
-                // Its fine to clone and pass it to infer_expr_type in this specific scenario
-                // because we don't give it any infer type hint and therefore no need for it to be
-                // reflected back in locals. I think.
 
-                let expr_ty = infer::infer_expr_type(&mut assign.value.clone(), locals, fun_sigs, Some(varinfo.ty.clone()))?;
-                if !helpers::type_compatible(&expr_ty, &varinfo.ty) {
+                let expr_ty = infer::infer_expr_type(&mut assign.value, locals, fun_sigs, Some(varinfo.ty.clone()))?;
+                if expr_ty != varinfo.ty {
                     return Err(HolyError::Semantic(format!(
-                        "Cannot assign `{}` to `{}` of type `{}` (line {} column {})",
-                        expr_ty, assign.name, varinfo.ty, assign.span.line, assign.span.column
+                            "Type mismatch assigning to `{}`: got `{}`, expected `{}` (line {} column {})",
+                            assign.name, expr_ty, varinfo.ty, assign.span.line, assign.span.column
                     )));
                 }
 
-                // Check if our variable is moved
-                if varinfo.moved {
-                    return Err(HolyError::Semantic(format!(
-                        "Value assignment to moved variable `{}` (line {} column {})",
-                        assign.name, assign.span.line, assign.span.column
-                    ))); 
-                }
 
-                // Check if our variable is locked.
-                if varinfo.locked {
-                    return Err(HolyError::Semantic(format!(
-                            "Variable `{}` is locked, therefore you cannot assign to it (line {} column {})", 
+                match varinfo.kind {
+                    BindingKind::Var { moved, locked, .. } => {
+                        // Check if our variable is moved
+                        if moved {
+                            return Err(HolyError::Semantic(format!(
+                                "Value assignment to moved variable `{}` (line {} column {})",
+                                &assign.name, assign.span.line, assign.span.column
+                            )));
+                        }
+
+                
+                        // Check if our variable is locked.
+                        if locked {
+                            return Err(HolyError::Semantic(format!(
+                                    "Variable `{}` is locked, therefore you cannot assign to it (line {} column {})", 
+                                    &assign.name, assign.span.line, assign.span.column
+                                )));
+                        }
+                    },
+                    BindingKind::Const { .. } => {
+                        return Err(HolyError::Semantic(format!(
+                            "You cannot assign to constant `{}` (line {} column {})",
                             &assign.name, assign.span.line, assign.span.column
-                        )));
+                        )))
+                    }
                 }
 
                 
                 let mut value_len: Option<usize> = None;
               
                 if let Expr::Var { name: src_name, span } = &assign.value {
-                    let src = locals.get_mut(src_name).expect(
-                        &format!("(Compiler bug) infer_expr_type should've already errored if source variable didnt exist, but it didnt. assign: {:?}", assign)
-                        );
+                    let src = locals.get_mut(src_name).unwrap_or_else(|| panic!(
+                                "(Compiler bug) infer_expr_type should've already errored if source variable didnt exist, but it didnt. assign: {:?}", 
+                                assign
+                            ));
 
-                    if src.moved {
-                        panic!("(Compiler bug) infer_expr_type should've already errored if source variable is moved, but it didnt. assign: {:?}", assign)
-                    }
+                    match &mut src.kind {
+                        BindingKind::Var { moved: src_moved, len: src_len, .. } => {
+                            // Error if we are in loop, and we tried to take ownership of an upstream variable
+                            if in_loop && upstream_var_names.contains(&src_name) {
+                                return Err(HolyError::Semantic(format!(
+                                            "Upstream variable `{}` is potentially moved multiple times, because you are in a loop. Consider using `copy()` (line {} column {})", 
+                                            &src_name, span.line, span.column
+                                        )));
+                            }
+            
 
 
-                    // Error if we are in loop, and we tried to take ownership of an upstream variable
-                    if in_loop && upstream_var_names.contains(&src_name) {
-                        return Err(HolyError::Semantic(format!(
-                                    "Upstream variable `{}` is potentially moved multiple times, because you are in a loop. Consider using `copy()` (line {} column {})", 
-                                    &src_name, span.line, span.column
-                                )));
-                    }
+                            if *src_moved {
+                                panic!("(Compiler bug) infer_expr_type should've already errored if source variable is moved, but it didnt. assign: {:?}", assign)
+                            }
 
+                            // if source name is same as our variable name,
+                            // then we don't move. It's re-claiming ownership.
+                            if *src_name != assign.name { 
+                                // mark source as moved because ownership was transferred
+                                *src_moved = true;
+                            }
 
-                    // if source name is same as our variable name,
-                    // then we don't move. It's re-claiming ownership.
-                    if src_name != &assign.name { 
-                        // mark source as moved because ownership was transferred
-                        src.moved = true;
-                    }
-
-                    // We copy its length
-                    value_len = src.len
+                            // We copy its length
+                            value_len = *src_len
+                        },
+                        // Ownership rules don't apply to constants.
+                        BindingKind::Const { .. } => {}
+                     }
 
                 }
 
                 match assign.value.clone() {
-                    Expr::ArrayLiteral{elements, array_ty: _, span: _} => {
+                    Expr::ArrayLiteral { elements, .. } => {
                         value_len = Some(elements.len());
                     }
 
-                    Expr::StringLiteral{value: v, span: _} => {
+                    Expr::StringLiteral { value: v, .. } => {
                         value_len = Some(v.len());
                     }
                     // Other experessions we can't / don't need to store their length
@@ -426,20 +493,19 @@ fn check_stmts(
 
                 // Let us get a mutable varinfo to update length
                 let varinfo = locals.get_mut(&assign.name).unwrap();
-                varinfo.len = value_len;
 
-            }
-
+                match &mut varinfo.kind {
+                    BindingKind::Var { len, .. } => {
+                        *len = value_len;
+                    },
+                    BindingKind::Const { .. } => panic!("(Compiler bug) Variable is const, despite our supposed earlier checks that its not. Wtf ?: {:?}", varinfo)
+                 }
+            },
 
             Stmt::VarAssignMulti(expr) => {
-                
                 if let Expr::Call { name, args, span } = &mut expr.value {
                     // check_call with require_ret = true -> Option<Vec<Type>>
-                    let ret_opt = check_call(name, args, locals, fun_sigs, true, *span)?;
-                    let ret_vec = ret_opt.ok_or_else(|| HolyError::Semantic(format!(
-                        "Call to function `{}` used in multi-assignment but function has no declared return types (line {} column {})",
-                        name, span.line, span.column
-                    )))?;
+                    let ret_vec = check_call(name, args, locals, fun_sigs, true, *span)?.unwrap();
 
                     if ret_vec.len() != expr.names.len() {
                         return Err(HolyError::Semantic(format!(
@@ -457,33 +523,38 @@ fn check_stmts(
                             ))
                         })?.clone();
 
-                        if varinfo.moved {
-                            return Err(HolyError::Semantic(format!(
-                                "Value assignment to moved variable `{}` (line {} column {})",
-                                var_name, expr.span.line, expr.span.column
-                            )));
+                        match varinfo.kind {
+                            BindingKind::Var { moved, locked, .. } => {
+                                if moved {
+                                    return Err(HolyError::Semantic(format!(
+                                        "Value assignment to moved variable `{}` (line {} column {})",
+                                        var_name, expr.span.line, expr.span.column
+                                    )));
+                                }
+
+                                // Check if variable is locked.
+                                if locked {
+                                    return Err(HolyError::Semantic(format!(
+                                            "Variable `{}` is locked, therefore you cannot assign to it (line {} column {})", 
+                                            &var_name, expr.span.line, expr.span.column
+                                        )));
+                                }
+                            },
+                            BindingKind::Const { .. } => {
+                                return Err(HolyError::Semantic(format!(
+                                    "You cannot assign to constant `{}` (line {} column {})",
+                                    var_name, stmt_span.line, stmt_span.column
+                                )))
+                            }
                         }
-
-
-                        // Check if variable is locked.
-                        if varinfo.locked {
-                            return Err(HolyError::Semantic(format!(
-                                    "Variable `{}` is locked, therefore you cannot assign to it (line {} column {})", 
-                                    &var_name, expr.span.line, expr.span.column
-                                )));
-                        }
-
-
-                        if !helpers::type_compatible(&varinfo.ty, ret_ty) {
+                        
+                        if &varinfo.ty != ret_ty {
                             return Err(HolyError::Semantic(format!(
                                 "Type mismatch for variable `{}`: declared `{}` but call returns `{}` (line {} column {})",
                                 var_name, varinfo.ty, ret_ty, expr.span.line, expr.span.column
                             )));
                         }
-
                     }
-
-
                 } else {
                     return Err(HolyError::Semantic(format!(
                         "Multi-assignment requires only a single function call on the right-hand side (line {} column {})",
@@ -528,7 +599,7 @@ fn check_stmts(
 
                                 if is_nested_scope || (!func.params.iter().any(|p| p.name == *name)) {
                                     return Err(HolyError::Semantic(format!(
-                                            "You cannot unlock variable `{}` because it is declared upstream (line {} column {})", 
+                                            "You cannot lock variable `{}` because it is declared upstream (line {} column {})", 
                                             name, span.line, span.column
                                         )));
                                 }  
@@ -560,15 +631,25 @@ fn check_stmts(
                             expr_vec, var_name);
                     })?;
 
-                    if var.locked == true {
-                        return Err(HolyError::Semantic(format!(
-                                "Variable `{}` is already locked (line {} column {})",
+                    match &mut var.kind {
+                        BindingKind::Var { locked, .. } => {
+                            if *locked == true {
+                                return Err(HolyError::Semantic(format!(
+                                        "Variable `{}` is already locked (line {} column {})",
+                                        var_name, stmt_span.line, stmt_span.column
+                                    )))
+
+                            }
+                            *locked = true;
+                        },
+                        BindingKind::Const { .. } => {
+                            return Err(HolyError::Semantic(format!(
+                                "Expected variable name, instead got a constant name `{}` (line {} column {})",
                                 var_name, stmt_span.line, stmt_span.column
                             )))
 
+                        }
                     }
-
-                    var.locked = true;
                 }
 
             }
@@ -630,15 +711,25 @@ fn check_stmts(
                             expr_vec, var_name);
                     })?;
 
-                    if var.locked == false {
-                        return Err(HolyError::Semantic(format!(
-                                "Variable `{}` is already unlocked (line {} column {})",
+                    match &mut var.kind {
+                        BindingKind::Var { locked, .. } => {
+                            if *locked == false {
+                                return Err(HolyError::Semantic(format!(
+                                        "Variable `{}` is already unlocked (line {} column {})",
+                                        var_name, stmt_span.line, stmt_span.column
+                                    )))
+
+                            }
+                            *locked = false;
+                        },
+                        BindingKind::Const { .. } => {
+                            return Err(HolyError::Semantic(format!(
+                                "Expected variable name, instead got a constant name `{}` (line {} column {})",
                                 var_name, stmt_span.line, stmt_span.column
                             )))
 
+                        }
                     }
-
-                    var.locked = false;
                 }
 
 
@@ -669,7 +760,7 @@ fn check_stmts(
                             let declared_ty = declared_ty_vec[i].clone();
                             let expr_ty = infer::infer_expr_type(expr, locals, fun_sigs, Some(declared_ty.clone()))?;
 
-                            if !helpers::type_compatible(&expr_ty, &declared_ty) {
+                            if expr_ty != declared_ty {
                                 return Err(HolyError::Semantic(format!(
                                     "Return type mismatch in `{}`: got `{}`, expected `{}` (line {} column {})",
                                     func.name, expr_ty, declared_ty_vec[i], stmt_span.line, stmt_span.column,
@@ -685,7 +776,7 @@ fn check_stmts(
             Stmt::For(for_stmt) => {
                 let expr_ty = infer::infer_expr_type(&mut for_stmt.value, locals, fun_sigs, None)?;
 
-                if (!matches!(expr_ty, Type::Array(_))) && (!matches!(for_stmt.value, Expr::RangeCall{ .. })) {
+                if (!expr_ty.is_array_type()) && (!matches!(for_stmt.value, Expr::RangeCall{ .. })) {
                     return Err(HolyError::Semantic(format!(
                         "For loop statement require an expression to be evaulatable to any `Array` type, or `range(expr1, expr2)`, instead we got `{}` (line {} column {})",
                         expr_ty, stmt_span.line, stmt_span.column,
@@ -701,6 +792,29 @@ fn check_stmts(
 
                 }
 
+                // If this is a for looping over an array, move the array only if its not an array
+                // literal. i.e. its a variable that holds an array.
+                if expr_ty.is_array_type()  {
+                    if let Expr::Var { name, .. } = &for_stmt.value {
+                        let src = locals.get_mut(name).unwrap_or_else(|| panic!(
+                            "(Compiler bug) infer_expr_type should've already errored if the array variable didnt exist, but it didnt. for_stmt: {:?}", 
+                            for_stmt
+                        ));
+
+                        match &mut src.kind {
+                            BindingKind::Var { moved: src_moved, .. } => {
+                                if *src_moved {
+                                    panic!("(Compiler bug) infer_expr_type should've already errored if the array variable is moved, but it didnt. for_stmt: {:?}", for_stmt)
+                                }
+
+                                *src_moved = true;
+                            },
+                            // Ownership rules don't apply to constants.
+                            BindingKind::Const { .. } => {}
+                        }
+                    }
+                }
+
 
                 let mut locals_clone = locals.clone();
 
@@ -713,6 +827,8 @@ fn check_stmts(
                 if let Type::Array(inner_ty) = expr_ty {
                     decided_ty = *inner_ty;
 
+                } else if let Type::FixedArray(inner_ty, _) = expr_ty {
+                    decided_ty = *inner_ty;
                     
                 } else if expr_ty.is_integer_type() {
                     decided_ty = expr_ty;
@@ -723,7 +839,8 @@ fn check_stmts(
                 }
 
 
-                // NOTE only specific if decided_ty is an Array: 
+
+                // NOTE only specific if decided_ty is of an array: 
                 //      Out-of-bounds access protection here is non-existent, but thats fine because Rust
                 //      will catch at transpile layer
                 //      However it would be nicer if we can do better job of catching out of bounds
@@ -731,12 +848,14 @@ fn check_stmts(
                 //
                 locals_clone.insert(
                     for_stmt.holder_name.clone(),
-                    VarInfo {
+                    BindingInfo {
                         ty: decided_ty,
-                        value: None,
-                        moved: false,
-                        locked: true, // the holder variable is locked by default.
-                        len: None
+                        kind: BindingKind::Var {
+                            value: None,
+                            moved: false,
+                            locked: true, // the holder variable is locked by default.
+                            len: None
+                        }
                     }
                 );
 
@@ -868,26 +987,30 @@ fn check_stmts(
                 }
                 
             }
-
-            Stmt::Func(_) => {}
         }
     }
 
     Ok(())
 }
 
-fn update_local_assignments_from_clone(upstream: &mut HashMap<String, VarInfo>, downstream: HashMap<String, VarInfo> ) {
+fn update_local_assignments_from_clone(upstream: &mut HashMap<String, BindingInfo>, downstream: HashMap<String, BindingInfo> ) {
     // We loop over the downstream locals, to update our 
     // corresponding upstream locals
     // like variable assignments, length change, ownership change, etc
+    //
     for (n, vi) in downstream {
         if let Some(info) = upstream.get_mut(&n) {
-            // If variable is already moved, we don't care about its assignments no more, we just
-            // skip.
-            if info.moved == true {
-                continue
+            match info.kind {
+                BindingKind::Var { moved, ..} => {
+                    // If variable is already moved, we don't care about its assignments no more, we just
+                    // skip.
+                    if moved == true {
+                        continue
+                    }
+                    *info = vi.clone();
+                },
+                BindingKind::Const { .. } => continue
             }
-            *info = vi.clone();
         }
 
     }
@@ -901,8 +1024,8 @@ fn update_local_assignments_from_clone(upstream: &mut HashMap<String, VarInfo>, 
 ///   `Ok(None)` when no return type (allowed only when `require_ret == false`).
 fn check_call(
     name: &str,
-    args: &mut [Expr],
-    locals: &mut HashMap<String, VarInfo>,
+    args: &mut Vec<Expr>,
+    locals: &mut HashMap<String, BindingInfo>,
     fun_sigs: &HashMap<String, (Vec<Type>, Option<Vec<Type>>)>,
     require_ret: bool,
     span: Span,
@@ -928,14 +1051,7 @@ fn check_call(
     // check each arg type and apply moves
     for (i, (arg_expr, param_ty)) in args.iter_mut().zip(param_tys.iter()).enumerate() {
         let arg_ty = infer::infer_expr_type(arg_expr, locals, fun_sigs, Some(param_ty.clone()))?;
-        if arg_ty == Type::Infer {
-            panic!(
-                "(Compiler bug) argument inferred type is Infer, that's an impossible condition. name: {:?}\nargs: {:?}\nlocals: {:?}\nfun_sigs: {:?}\nrequire_ret: {:?}\nspan: {:?}", 
-                name, args, locals, fun_sigs, require_ret, span
-                )
-
-            // infer::assign_infer_type_to_expr_value(arg_expr, param_ty.clone())?;
-        } else if !helpers::type_compatible(&arg_ty, param_ty) {
+        if arg_ty != *param_ty {
             return Err(HolyError::Semantic(format!(
                 "Argument number `{}` type mismatch in call to `{}`: expected `{}`, got `{}` (line {} column {})",
                 i + 1, name, param_ty, arg_ty, span.line, span.column,
@@ -943,17 +1059,23 @@ fn check_call(
         }
 
         // If this arg is a variable, mark it moved (same semantics as before)
-        if let Expr::Var { name: vname, span: vspan } = arg_expr {
-            let v = locals.get_mut(vname).ok_or_else(|| {
-                HolyError::Semantic(format!("Use of undeclared variable `{}` (line {} column {})", vname, vspan.line, vspan.column))
-            })?;
-            if v.moved {
-                return Err(HolyError::Semantic(format!(
-                    "Variable `{}` already moved (line {} column {})",
-                    vname, vspan.line, vspan.column
-                )));
+        if let Expr::Var { name: vname, span: _ } = arg_expr {
+            let v = locals.get_mut(vname).unwrap_or_else(|| panic!(
+                    "(Compiler bug) infer_expr_type should've already errored if source argument variable didnt exist, but it didnt. arg_expr: {:?}", 
+                    arg_expr
+                ));
+
+            match &mut v.kind {
+                BindingKind::Var { moved, ..} => {
+                    if *moved {
+                        panic!("(Compiler bug) infer_expr_type should've already errored if source variable is moved, but it didnt. arg_expr: {:?}", arg_expr)
+                    }
+
+                    *moved = true;
+                },
+                // Ownership rules dont apply to constants
+                BindingKind::Const { .. } => {}
             }
-            v.moved = true;
         }
     }
 

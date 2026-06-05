@@ -1,10 +1,17 @@
 use std::fs;
 
 fn main() {
-    // Read file path from CLI
-    let path = std::env::args().nth(1).expect("No file provided");
-    let source = fs::read_to_string(&path)
-        .expect("Failed to read file");
+    let source_path = std::env::args().nth(1)
+        .expect("No holy source file path provided");
 
-    holylang::compile(&source);
+    let target_path = std::env::args().nth(2)
+        .expect("No output file path provided");
+
+
+    let source_content = fs::read_to_string(&source_path)
+        .expect("Failed to read source file file, check your permissions.");
+
+    let compile_info = holylang::CompileInfo::CompileTo(target_path);
+
+    holylang::compile(&source_content, compile_info);
 }

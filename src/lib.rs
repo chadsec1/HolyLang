@@ -1,13 +1,19 @@
-
 pub mod parser;
 pub mod semantic;
+pub mod transpiler;
+pub mod compile;
 pub mod error;
 pub mod consts;
+pub mod ast;
 #[cfg(test)]
 mod tests_consts;
 
-pub fn compile(source: &str) {
+pub enum CompileInfo {
+    CompileTo(String),
+    DoNotCompile
+}
 
+pub fn compile(source: &str, compile: CompileInfo) -> String {
     // Parse source code
     let mut ast = parser::parse(&source).expect("Parsing failed");
 
@@ -18,7 +24,19 @@ pub fn compile(source: &str) {
     println!("Checked AST: {:#?}\n\n\n", ast);
 
 
-    // TODO: Transpile to Rust code
-    // let rust_code = transpile(&ast);
+    // Transpile to Rust code
+    let rust_code = transpiler::transpile(&ast);
+    println!("Transpiled Rust code:\n{:#}\n", rust_code);
+
+    match compile {
+        CompileInfo::CompileTo(target_path) => {
+            // Compile the transpiled Rust code into target_path.
+            compile::compile(&rust_code, &target_path).expect("Compile errors");
+        },
+
+        CompileInfo::DoNotCompile => {}
+    }
+
+    return rust_code
 }
 

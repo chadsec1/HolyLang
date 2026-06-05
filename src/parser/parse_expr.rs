@@ -1,35 +1,35 @@
-use super::*;
-
+use super::{HolyError, helpers};
+use crate::ast::*;
 
 /// Expression parser:
 /// - handles binary operations (left-associative),
-/// - handles unary operations (like negate)
+/// - handles unary operations (like negate, logical not, bitwise not )
 /// - function calls like add(x, y),
 /// - Internal "function" calls (like CopyCall, FormatCall, etc),
 /// - integer literals,
 /// - float literals
+/// - string literals
+/// - array literals
 /// - variables
 pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
     let s = s.trim();
 
     if s.is_empty() {
         return Err(HolyError::Parse(format!(
-                    "Empty expression at line {}, column {}",
-                    span.line, span.column
-            )));
-    }
-
-    
-    if s.starts_with('[') {
-        return Err(HolyError::Parse(format!(
-                "Array literal requires an explicit type on right-hand side, e.g. `own x = int32[1,2,3]` (line {} column {})",
+                "Empty expression at line {}, column {}",
                 span.line, span.column
-            )));
-    }    
+        )));
+    }
 
     // String Literal ?
     if s.starts_with('"') {
         // Find the matching closing quote
+        //
+        // The reason we do this here, instead of just letting up to
+        // string_strip_outer_quotes_and_unescape due to fact it errors on invalid strings thinking
+        // its a string, but it could also be an expression concerning strings. so we have to still
+        // manually basic match here.
+        //
         let mut chars = s.char_indices().skip(1);
         let closing = loop {
             match chars.next() {
@@ -48,9 +48,12 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
                 )));
             }
             Some(i) if i == s.len() - 1 => {
-                let str_unescaped = helpers::strip_outer_quotes_and_unescape(s)
+                // Escapes the string content (like \n, etc), and removes the outer double quotes
+                //
+                let str_unescaped = helpers::string_strip_outer_quotes_and_unescape(s)
                     .map_err(|e| HolyError::Parse(format!("{} (line {} column {})",
                         e, span.line, span.column)))?;
+
                 return Ok(Expr::StringLiteral { value: str_unescaped, span });
             }
             // Fall through
@@ -69,11 +72,12 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
             match c {
                 '(' => depth += 1,
                 ')' => {
-                    if depth > 0 {
-                        depth -= 1;
-                        if depth == 0 && i == s.len() - 1 {
-                            matched_at_end = true;
-                        }
+                    // NOTE: We dont check depth > 0 here because, we already checkk starts_with
+                    // and ends_with, so ) is guaranteed to be > 0
+                    //
+                    depth -= 1;
+                    if depth == 0 && i == s.len() - 1 {
+                        matched_at_end = true;
                     }
                 }
                 _ => {}
@@ -91,209 +95,44 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
     }
 
 
-
-
-    // special-case: typed array literal on RHS: e.g. "int32[1, 2, 3]" 
-    // detect pattern: "<type_without_brackets>[ ... ]"
-   
-    if let Some(first_bracket) = helpers::find_constructor_bracket(&s) && s.ends_with(']') {
-        let constructor_type_str = s[..first_bracket].trim();
-        let elems_str = &s[first_bracket + 1..s.len() - 1];
-
-        if !constructor_type_str.is_empty() {
-            match parse_type(constructor_type_str, &span) {
-                Ok(inner_ty) => {
-                    // wrap into array type for the variable
-                    let rhs_var_type = Type::Array(Box::new(inner_ty.clone()));
-
-                    let mut elems: Vec<Expr> = Vec::new();
-                    if !elems_str.trim().is_empty() {
-                        let split_parts = helpers::split_comma_top_level(elems_str)
-                                            .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
-
-                        for part in split_parts {
-                            let part = part.trim();
-                            if helpers::find_constructor_bracket(part).is_some() {
-                                let nested = parse_typed_array_literal(part, span )?;
-                                elems.push(nested);
-
-                            } else {
-                                let expr = parse_expr(part.trim(), span)?;
-                                // I could override expression's type here because we already
-                                // know array's type, but I leave it up to semantic analysis 
-                                // to determine types and error according.
-                                elems.push(expr);
-                            }
-                        }
-                    }
-
-
-                    // This is so it allows programmer to optionally explicitly set type of
-                    // array on left hand side. 
-                    // we still require rhs var type though, the optional left hand side
-                    // type of array is useful when you calling a function and want to lock
-                    // your code to expect a specific type and error otherwise.
-                    // Example:
-                    // own x int32[] = int32[1, 2, 3] # This is valid
-                    // own x = int32[1, 2, 3] # This is also valid
-                    // own x uint32[] = int32[1, 2, 3] # This is invalid.
-                    //
-                    let mut value = Expr::ArrayLiteral { elements: elems.clone(), span, array_ty: inner_ty.clone() };
-                    if helpers::is_array_type(&rhs_var_type) {
-                        if let Type::Array(inner_array_ty) = rhs_var_type.clone() {
-                            value = Expr::ArrayLiteral { elements: elems, span, array_ty: *inner_array_ty };
-                        }
-                    }
-
-                    return Ok(value);
-            }
-            // Not an array literal, but an array access
-            Err(_) => {
-                let array = parse_expr(constructor_type_str, span)?;
-                let indx_parts: Vec<&str> = elems_str.split(':').collect();
-
-                // Treat as access to a single element. 
-                if indx_parts.len() == 1 {
-                    let index = parse_expr(indx_parts[0], span)?;
-                    
-                    let value = Expr::ArraySingleAccess { array: Box::new(array), index: Box::new(index), span };
-
-                    return Ok(value);
-                
-                // We do >= here because indx_parts could themselves contain
-                // expressions of array access. 
-                // We only care about first, and last indx_parts.
-                } else if indx_parts.len() >= 2 {
-                    let start = indx_parts[0].trim();
-                    let end = indx_parts[indx_parts.len() - 1].trim();
-
-                    let mut start_expr: Option<Box<Expr>> = None;
-                    let mut end_expr: Option<Box<Expr>> = None;
-
-                    if start.is_empty() && end.is_empty() {
-                        return Err(HolyError::Parse(format!(
-                                    "Start and or end index are empty! (line {} column {})",
-                                    span.line, span.column
-                                )));
-                    }
-
-                    // i.e. x[:10]
-                    if start.is_empty() {
-                        end_expr = Some(Box::new(parse_expr(end, span)?));
-                    }
-
-                    // i.e. x[1:]
-                    if end.is_empty() {
-                        start_expr = Some(Box::new(parse_expr(start, span)?));
-                    }
-
-                    // i.e. x[1:10]
-                    if !start.is_empty() && !end.is_empty() {
-                        start_expr = Some(Box::new(parse_expr(start, span)?));
-                        end_expr = Some(Box::new(parse_expr(end, span)?));
-                    }
-
-                    
-                    let value = Expr::ArrayMultipleAccess { array: Box::new(array), start: start_expr, end: end_expr, span };
-
-                    return Ok(value);
-                }
-            }
-        }
-    }
-       
-    // handle empty typed-array literal like:
-    // own x = int32[]
-    } else if s.ends_with("[]") {
-        let type_str = s[..s.len() - 2].trim();
-        if !type_str.is_empty() {
-            // parse the inner element type (may be nested like "int32[]", parse_type handles nesting)
-            let inner_ty = parse_type(type_str, &span)?;
-
-            let rhs_var_type = Type::Array(Box::new(inner_ty.clone()));
-
-            // create empty array literal (no elements)
-            let mut value = Expr::ArrayLiteral {
-                elements: Vec::new(),
-                array_ty: inner_ty.clone(),
-                span,
-            };
-
-            if helpers::is_array_type(&rhs_var_type) {
-                if let Type::Array(inner_array_ty) = rhs_var_type.clone() {
-                    value = Expr::ArrayLiteral { elements: Vec::new(), span, array_ty: *inner_array_ty };
-                }
-            }
-            return Ok(value);
-        }
-    }
-
     // integer literal (int8) ?
     if let Ok(i) = s.parse::<i8>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Int8(i), span: span });
+        return Ok(Expr::IntLiteral { value: IntLiteralValue::Int8(i), span });
     }
 
     // integer literal (int16) ?
     if let Ok(i) = s.parse::<i16>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Int16(i), span: span });
+        return Ok(Expr::IntLiteral { value: IntLiteralValue::Int16(i), span });
     }
 
     // integer literal (int32) ?
     if let Ok(i) = s.parse::<i32>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Int32(i), span: span });
+        return Ok(Expr::IntLiteral { value: IntLiteralValue::Int32(i), span });
     }
 
     // integer literal (int64) ?
     if let Ok(i) = s.parse::<i64>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Int64(i), span: span });
+        return Ok(Expr::IntLiteral { value: IntLiteralValue::Int64(i), span });
     }
 
     // integer literal (int128) ?
     if let Ok(i) = s.parse::<i128>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Int128(i), span: span });
+        return Ok(Expr::IntLiteral { value: IntLiteralValue::Int128(i), span });
     }
 
 
-    // integer literal (byte, aka uint8) ?
-    if let Ok(i) = s.parse::<u8>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Byte(i), span: span });
-    }
-
-    if let Ok(i) = s.parse::<u16>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Uint16(i), span: span });
-    }
-
-    if let Ok(i) = s.parse::<u32>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Uint32(i), span: span });
-    }
-
-    if let Ok(i) = s.parse::<u64>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Uint64(i), span: span });
-    }
-
+    // We only check for u128 here, because anything less should've been caught 
+    // by the earlier checks
+    //
     if let Ok(i) = s.parse::<u128>() {
-        return Ok(Expr::IntLiteral { value: IntLiteralValue::Uint128(i), span: span });
-
-    } else if let Err(e) = s.parse::<u128>() {
-        if matches!(e.kind(), IntErrorKind::PosOverflow) {
-            // Return error only if we sure expression is not meant as a float
-            if !s.contains('.') {
-                return Err(HolyError::Parse(format!(
-                    "Literal is an integer but is too big to fit even as an uint128, consider using a float literal (line {} column {})",
-                    span.line, span.column
-                )));
-                
-            }
-        }
-    }
-
-    
+        return Ok(Expr::IntLiteral { value: IntLiteralValue::Uint128(i), span });
+    } 
 
     // float literal?
     if let Ok(f64_val) = s.parse::<f64>() {
         if f64_val.is_nan() {
             return Err(HolyError::Parse(format!(
-                "Floating point literal `{}` is Nan (line {} column {})",
+                "Floating point literal `{}` is NaN (line {} column {})",
                 s, span.line, span.column
             )));
         }
@@ -305,52 +144,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
             )));
         }
 
-        if s.chars().enumerate().any(|(i, c)| !c.is_ascii_digit() && c != '.' && !(c == '-' && i == 0)) {
-            return Err(HolyError::Parse(format!(
-                "Floating point literal `{}` is invalid (line {} column {})",
-                s, span.line, span.column
-            )));
-
-        }
-
-        let sig_trimmed = s.trim_start_matches('0');
-        let sig_count = sig_trimmed.len();
-
-        
-        // f32 has about 7 decimal digits of precision (log10(2^24) = 7.22).
-        // Use 1 for the dot, that makes 8 a conservative threshold.
-        // It's reasonable for us to check inprecision and just use float64 if sig_count is higher
-        // than 8.
-        //
-        if sig_count <= 8 {
-            let f32_val = f64_val as f32;
-
-            if (!f32_val.is_infinite()) && (!f32_val.is_nan()) {
-                let roundtrip = f32_val as f64;
-                let diff = (f64_val - roundtrip).abs();
-
-                // compute next representable f32 (neighbor) by bit-twiddling
-                let bits = f32_val.to_bits();
-                // increment/decrement to get the neighbor toward +
-                let next_bits = if f32_val >= 0.0 { bits.wrapping_add(1) } else { bits.wrapping_sub(1) };
-                let next_up = f32::from_bits(next_bits);
-                let ulp = (next_up as f64 - roundtrip).abs();
-
-                // fallback: if ulp is zero (shouldn't happen for normals/subnormals), use EPSILON heuristic
-                let ok = if ulp > 0.0 {
-                    diff <= (ulp / 2.0)
-                } else {
-                    diff <= (f32::EPSILON as f64) * roundtrip.abs().max(1.0)
-                };
-
-
-                if ok {
-                    return Ok(Expr::FloatLiteral { value: FloatLiteralValue::Float32(f32_val), span: span });
-                }
-            }
-        }
-
-        return Ok(Expr::FloatLiteral { value: FloatLiteralValue::Float64(f64_val), span: span });
+        return Ok(Expr::Float64Literal { value: f64_val, span: span });
 
 
     } else {
@@ -370,8 +164,6 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
         return Ok(Expr::BoolLiteral { value: b, span: span });
     }
 
-
-    
 
     // Binary operations handling: split on the first operator
     if let Some((pos, op)) = helpers::find_top_level_op_any(s) {
@@ -407,12 +199,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
             "|" => BinOpKind::BitwiseOr,
             "and" => BinOpKind::And,
             "or" => BinOpKind::Or,
-            o => {
-                return Err(HolyError::Parse(format!(
-                    "Unknown binary operand `{}` (line {} column {})",
-                    o, span.line, span.column
-                )));
-            },
+            o => panic!("(Compiler bug) Unknown operand {:?} indicating a bug is in `find_top_level_op_any` func.", o)
         };
 
         let left_expr = parse_expr(left, span)?;
@@ -447,8 +234,29 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
         });
     }
 
+    // Unary logical NOT support
+    if s.starts_with('!') {
+        let rest = s[1..].trim();
 
-    // Unary bitwise not support.
+        if rest.is_empty() {
+            return Err(HolyError::Parse(format!(
+                "Expected expression before '!' at line {} column {}",
+                span.line, span.column
+            )));
+        }
+
+        // Parse inner expression
+        let inner = parse_expr(rest, span)?;
+
+        // Return the expression wrapped in Unary of operation NOT.
+        return Ok(Expr::UnaryOp {
+            op: UnaryOpKind::Not, 
+            expr: Box::new(inner), 
+            span: span
+        });
+    }
+
+    // Unary bitwise NOT support.
     if s.starts_with('~') {
         let rest = s[1..].trim();
 
@@ -473,6 +281,159 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
 
 
 
+    // special-case: array literal: 
+    // e.g. "[1, 2, 3]", "[]", "[1, [2, 3], 4, 5]"
+    // detect pattern: "[ ... ]"
+    //
+
+    if s.starts_with("[") {
+        // Find the bracket that actually closes this opening '[', not just the last ']'
+        let matching_close = {
+            let mut depth = 0usize;
+            let mut found = None;
+            for (i, c) in s[1..].char_indices() {
+                match c {
+                    '[' => depth += 1,
+                    ']' => {
+                        if depth == 0 {
+                            found = Some(1 + i);
+                            break;
+                        }
+                        depth -= 1;
+                    }
+                    _ => {}
+                }
+            }
+            found
+        };
+
+        // Only take the array path if the matching ']' is the very last character.
+        // If it isn't (e.g. `[1, 2, 3] == [1, 2, 3]`, etc), then we just let it fall through to other expression detections.
+        //
+
+        if let Some(close_pos) = matching_close && close_pos == s.len() - 1 {
+            let elems_str = &s[1..s.len() - 1];
+
+            let mut elems: Vec<Expr> = Vec::new();
+            if !elems_str.trim().is_empty() {
+                let split_parts = helpers::split_char_top_level(',', elems_str)
+                                    .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+
+                for part in split_parts {
+                    let part = part.trim();
+                    let expr = parse_expr(part.trim(), span)?;
+                    elems.push(expr);
+                }
+            }
+
+            return Ok(
+                Expr::ArrayLiteral { 
+                    elements: elems, 
+                    type_name: None,
+                    span,
+                });
+        }
+    }
+
+
+    // Array access
+    // e.g. "x[0]", "x[0:1]", etc.
+    if let Some(first_bracket) = s.find("[") {
+        // Find the bracket that actually closes this opening '[', not just the last ']'
+        let matching_close = {
+            let mut depth = 0usize;
+            let mut found = None;
+            for (i, c) in s[first_bracket..].char_indices() {
+                match c {
+                    '[' => depth += 1,
+                    ']' => {
+                        depth -= 1;
+                        if depth == 0 {
+                            found = Some(first_bracket + i);
+                            break;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            found
+        };
+
+        if let Some(close_pos) = matching_close && close_pos == s.len() - 1 {
+            let arr_expr = parse_expr(&s[..first_bracket], span)?;
+
+            // like whats inside the a[...]
+            let inner_str = &s[first_bracket + 1 .. s.len() - 1];
+
+            let indx_parts = helpers::split_char_top_level(':', inner_str)
+                                        .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+            
+            // If only one part, treat as access to a single element. 
+            if indx_parts.len() == 1 {
+                let index = parse_expr(indx_parts[0], span)?;
+                
+                let value = Expr::ArrayAccess { array: Box::new(arr_expr), index: Box::new(index), span };
+
+                return Ok(value);
+
+            // Otherwise this is a slicing operation
+            // We do >= here to print helpful error messages
+            //
+            // NOTE TODO: Ensure this doesnt mess with nested expressions within array
+            // access/slicing. 
+            } else {
+                if indx_parts.len() != 2 {
+                    return Err(HolyError::Parse(format!(
+                                "Invalid array slicing syntax `{}` ! (line {} column {})",
+                                s, span.line, span.column
+                            )));
+                }
+
+                let start = indx_parts[0].trim();
+                let end = indx_parts[indx_parts.len() - 1].trim();
+
+                if start.is_empty() && end.is_empty() {
+                    return Err(HolyError::Parse(format!(
+                                "Start and end expressions are both missing from array slice expression! (line {} column {})",
+                                span.line, span.column
+                            )));
+                }
+
+                // i.e. x[:EXPRESSION]
+                if start.is_empty() {
+                    let end_expr = Box::new(parse_expr(end, span)?);
+
+                    return Ok(Expr::ArraySlicing { 
+                                array: Box::new(arr_expr), 
+                                range: ArraySliceRange::To(end_expr),
+                                span 
+                            })
+
+                // i.e. x[EXPRESSION:]
+                } else if end.is_empty() {
+                    let start_expr = Box::new(parse_expr(start, span)?);
+
+                    return Ok(Expr::ArraySlicing { 
+                                array: Box::new(arr_expr), 
+                                range: ArraySliceRange::From(start_expr),
+                                span 
+                            })
+                } else {
+                    // i.e. x[EXPRESSION:EXPRESSION]
+                    let start_expr = Box::new(parse_expr(start, span)?);
+                    let end_expr = Box::new(parse_expr(end, span)?);
+                    
+                    return Ok(Expr::ArraySlicing { 
+                                array: Box::new(arr_expr), 
+                                range: ArraySliceRange::FromTo(start_expr, end_expr),
+                                span 
+                            })
+                }
+
+            }
+        }
+    }
+
 
     // Function call: name(arg1, arg2)
     if let Some(open) = s.find('(') {
@@ -484,7 +445,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
             // Argument parsing function
             let mut args = vec![];
             if !args_str.trim().is_empty() {
-                let split_args = helpers::split_comma_top_level(args_str)
+                let split_args = helpers::split_char_top_level(',', args_str)
                                     .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
 
                 for a in split_args {
@@ -492,7 +453,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
                 }
             }
 
-
+            
             // Check for language-defined functions, otherwise, treat this 
             // expression as a normal programmer-defined function call.
             //
@@ -500,6 +461,11 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
             // and argument type are part of the language syntax its self.
             //
             match name.as_ref() {
+                "range" => return Err(HolyError::Parse(format!(
+                            "range() can only be used in for loop statements construction! (line {} column {})",
+                            span.line, span.column
+                        ))),
+
                 "copy" => {
                     if args.len() != 1 {
                         return Err(HolyError::Parse(format!(
@@ -554,14 +520,17 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
 
                 }
 
-                _ => return Ok(Expr::Call { name, args, span })   
+                _ => {
+                    helpers::validate_identifier_name(&name)
+                        .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e.to_string(), span.line, span.column)))?;
+
+
+                    return Ok(Expr::Call { name, args, span })   
+                }
             }
         }
     }
-
-
-
-
+    
 
     // otherwise a variable name
 

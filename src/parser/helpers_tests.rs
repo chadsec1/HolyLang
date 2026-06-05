@@ -1,103 +1,98 @@
 use super::*;
 use crate::consts;
 use crate::tests_consts::{
-    ALL_TYPES_NO_ARR_NO_INFER
+    ALL_TYPES_NO_ARR
 };
+
+// all literals (ints, floats, array, strings literals of ints, floats, strings, other arrays, and variable names, and array access and slicing.
+// Some of these literals are illegal semantically, but syntaxally, should be valid.
+//
+fn get_all_literals_edge_cases() -> [String; 125] {
+    return [
+        i8::MIN.to_string(), i8::MAX.to_string(),
+        i16::MIN.to_string(), i16::MAX.to_string(),
+        i32::MIN.to_string(), i32::MAX.to_string(),
+        i64::MIN.to_string(), i64::MAX.to_string(),
+        i128::MIN.to_string(), i128::MAX.to_string(),
+        
+        u8::MIN.to_string(), u8::MAX.to_string(),
+        u16::MAX.to_string(),
+        u32::MAX.to_string(),
+        u64::MAX.to_string(),
+        u128::MAX.to_string(),
+        usize::MAX.to_string(),
+        
+        "0.0".to_string(), format!("{}.0", f64::MIN.to_string()), format!("{}.0", f64::MAX.to_string()), 
+
+        "false".to_string(), "true".to_string(),
+        "\"\"".to_string(), "\"h\"".to_string(), "\"hi\"".to_string(),
+        "i".to_string(), "arr".to_string(), "x".to_string(), "y".to_string(), "xyz".to_string(),
+        
+        format!("arr[{}]", i8::MIN.to_string()), format!("arr[{}]", i8::MAX.to_string()), 
+        format!("arr[:{}]", i8::MIN.to_string()), format!("arr[:{}]", i8::MAX.to_string()), 
+        format!("arr[{}:]", i8::MIN.to_string()), format!("arr[{}:]", i8::MAX.to_string()), 
+        format!("arr[{0}:{0}]", i8::MIN.to_string()), format!("arr[{0}:{0}]", i8::MAX.to_string()), 
+
+        format!("arr[{}]", usize::MIN.to_string()), format!("arr[{}]", usize::MAX.to_string()), 
+        format!("arr[:{}]", usize::MIN.to_string()), format!("arr[:{}]", usize::MAX.to_string()), 
+        format!("arr[{}:]", usize::MIN.to_string()), format!("arr[{}:]", usize::MAX.to_string()), 
+        format!("arr[{0}:{0}]", usize::MIN.to_string()), format!("arr[{0}:{0}]", usize::MAX.to_string()), 
+
+        "arr[i]".to_string(), "arr[:i]".to_string(), "arr[i:]".to_string(), "arr[e:h]".to_string(),
+        
+        "idk()".to_string(), 
+        format!("idk({})", i8::MIN.to_string()), format!("idk({})", i8::MAX.to_string()), 
+        format!("idk({})", i16::MIN.to_string()), format!("idk({})", i16::MAX.to_string()), 
+        format!("idk({})", i32::MIN.to_string()), format!("idk({})", i32::MAX.to_string()), 
+        format!("idk({})", i64::MIN.to_string()), format!("idk({})", i64::MAX.to_string()), 
+        format!("idk({})", i128::MIN.to_string()), format!("idk({})", i128::MAX.to_string()), 
+
+        format!("idk({})", u8::MIN.to_string()), format!("idk({})", u8::MAX.to_string()), 
+        format!("idk({})", u16::MAX.to_string()),
+        format!("idk({})", u32::MAX.to_string()), 
+        format!("idk({})", u64::MAX.to_string()), 
+        format!("idk({})", u128::MAX.to_string()), 
+        format!("idk({})", usize::MAX.to_string()), 
+
+
+        format!("idk({0}, {0}, {0})", i8::MIN.to_string()), format!("idk({0}, {0}, {0})", i8::MAX.to_string()), 
+        format!("idk({0}, {0}, {0})", i16::MIN.to_string()), format!("idk({0}, {0}, {0})", i16::MAX.to_string()), 
+        format!("idk({0}, {0}, {0})", i32::MIN.to_string()), format!("idk({0}, {0}, {0})", i32::MAX.to_string()), 
+        format!("idk({0}, {0}, {0})", i64::MIN.to_string()), format!("idk({0}, {0}, {0})", i64::MAX.to_string()), 
+        format!("idk({0}, {0}, {0})", i128::MIN.to_string()), format!("idk({0}, {0}, {0})", i128::MAX.to_string()), 
+
+        "idk(false)".to_string(), "idk(true)".to_string(),
+        format!("idk({})", f64::MIN.to_string()), format!("idk({})", u64::MAX.to_string()), 
+
+        "idk(\"hi\")".to_string(), 
+        "idk(\"\")".to_string(), "idk(\"h\")".to_string(),
+        "idk(i)".to_string(), "idk(arr)".to_string(), "idk(x)".to_string(), "idk(y)".to_string(), "idk(xyz)".to_string(),
+        "idk(arr[i])".to_string(), "idk(arr[:i])".to_string(), "idk(arr[i:])".to_string(), "idk(arr[e:h])".to_string(),
+        
+        "idk(false, \"hi\")".to_string(), "idk(lol())".to_string(), "idk(idk())".to_string(),
+
+        "idk([1, 2, 3])".to_string(), "idk([-1, -2, -3])".to_string(), "idk([-1, 2, -3])".to_string(), "idk([1, -2, 3])".to_string(),
+        "idk([1.0, 2.0, 3.0])".to_string(), "idk([-1.0, -2.0, -3.0])".to_string(), "idk([-1.0, 2.0, -3.0])".to_string(), "idk([1.0, -2.0, 3.0])".to_string(),
+        "idk([1, 2.0, 3])".to_string(), "idk([-1, -2.0, -3])".to_string(), "idk([-1, 2.0, -3])".to_string(), "idk([1, -2.0, 3])".to_string(),
+
+        "idk([1, 2.0, \"hi\", false, -0, heh()])".to_string(),
+        "idk([1, 2.0, \"hi\", false, -0, heh([1, 2.0, \"hi\", false, -0, heh()])])".to_string(),
+
+
+        "[1, 2, 3]".to_string(), "[-1, -2, -3]".to_string(), "[-1, 2, -3]".to_string(), "[1, -2, 3]".to_string(),
+        "[1.0, 2.0, 3.0]".to_string(), "[-1.0, -2.0, -3.0]".to_string(), "[-1.0, 2.0, -3.0]".to_string(), "[1.0, -2.0, 3.0]".to_string(),
+        "[1, 2.0, 3]".to_string(), "[-1, -2.0, -3]".to_string(), "[-1, 2.0, -3]".to_string(), "[1, -2.0, 3]".to_string(),
+
+        "[1, 2.0, \"hi\", false, -0, heh()]".to_string(),
+        "[1, 2.0, \"hi\", false, -0, heh([1, 2.0, \"hi\", false, -0, heh()])]".to_string(),
+    ]
+}
+
+
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    // find_constructor_bracket
-    mod find_constructor_bracket {
-        use super::*;
-        // --- basic happy paths ---
-
-        #[test]
-        fn empty_string_returns_none() {
-            assert_eq!(helpers::find_constructor_bracket(""), None);
-        }
-
-        #[test]
-        fn no_brackets_returns_none() {
-            assert_eq!(helpers::find_constructor_bracket("hello"), None);
-        }
-
-        #[test]
-        fn single_empty_pair_is_suffix_not_constructor() {
-            // "[]" alone is a type suffix, not a constructor bracket
-            assert_eq!(helpers::find_constructor_bracket("[]"), None);
-        }
-
-        #[test]
-        fn open_bracket_with_content_is_constructor() {
-            // "[1, 2, 3]" — the '[' at 0 is NOT followed by ']'
-            assert_eq!(helpers::find_constructor_bracket("[1, 2, 3]"), Some(0));
-        }
-
-        #[test]
-        fn suffix_then_constructor() {
-            // "int[][1, 2]" — first pair is suffix, second '[' is constructor
-            let s = "int[][1, 2]";
-            assert_eq!(helpers::find_constructor_bracket(s), Some(5));
-        }
-
-        #[test]
-        fn multiple_suffix_pairs_before_constructor() {
-            // "int[][][5]" — three '[', first two are suffix pairs, third is constructor
-            let s = "int[][][5]";
-            assert_eq!(helpers::find_constructor_bracket(s), Some(7));
-        }
-
-        #[test]
-        fn only_suffix_pairs_returns_none() {
-            // "int[][]" — both are suffix pairs
-            assert_eq!(helpers::find_constructor_bracket("int[][]"), None);
-        }
-
-        #[test]
-        fn constructor_at_start() {
-            assert_eq!(helpers::find_constructor_bracket("["), Some(0));
-        }
-
-        #[test]
-        fn unclosed_bracket_is_constructor() {
-            // "[abc" — '[' at 0 has no matching ']'
-            assert_eq!(helpers::find_constructor_bracket("[abc"), Some(0));
-        }
-
-        #[test]
-        fn suffix_pair_then_unclosed() {
-            // "[][" — first is suffix, second is constructor (no following ']')
-            assert_eq!(helpers::find_constructor_bracket("[]["), Some(2));
-        }
-
-        #[test]
-        fn open_bracket_at_very_end_is_constructor() {
-            // "abc[" — '[' at end has no following char
-            assert_eq!(helpers::find_constructor_bracket("abc["), Some(3));
-        }
-
-        #[test]
-        fn interleaved_non_bracket_chars() {
-            // "x[]y[z]" — '[]' at 1 is suffix, '[' at 4 has 'z]' after it
-            let s = "x[]y[z]";
-            assert_eq!(helpers::find_constructor_bracket(s), Some(4));
-        }
-
-        #[test]
-        fn trailing_open_immediately_after_suffix() {
-            // "[][" last '[' is not followed by ']'
-            assert_eq!(helpers::find_constructor_bracket("[]["), Some(2));
-        }
-
-        // --- does NOT care about nested brackets; it's purely sequential ---
-        #[test]
-        fn nested_brackets_inner_is_found_first() {
-            // "[[]]" — outer '[' at 0 is followed by '[', not ']', so it IS a constructor
-            assert_eq!(helpers::find_constructor_bracket("[[]]"), Some(0));
-        }
-    }
 
     // find_top_level_op_any
     //
@@ -133,21 +128,21 @@ mod tests {
 
         #[test]
         fn op_inside_parens_is_skipped() {
-            // "(a+b)" — '+' is depth-1, should be ignored
+            // "(a+b)" '+' is depth-1, should be ignored
             let result = helpers::find_top_level_op_any("(a+b)");
             assert_eq!(result, None);
         }
 
         #[test]
         fn op_at_top_level_with_inner_parens() {
-            // "(a+b)+(c+d)" — only the middle '+' is top-level
+            // "(a+b)+(c+d)" only the middle '+' is top-level
             let result = helpers::find_top_level_op_any("(a+b)+(c+d)");
             assert_eq!(result, Some((5, "+")));
         }
 
         #[test]
         fn left_associativity_picks_rightmost_lowest_precedence() {
-            // "a+b+c" — both '+' have the same precedence; should get the RIGHTMOST one
+            // "a+b+c" both '+' have the same precedence; should get the RIGHTMOST one
             let result = helpers::find_top_level_op_any("a+b+c");
             assert_eq!(result, Some((3, "+")));
         }
@@ -168,14 +163,14 @@ mod tests {
 
         #[test]
         fn nested_parens_all_ops_hidden() {
-            // "((a+b)*(c-d))" — all ops are nested
+            // "((a+b)*(c-d))" all ops are nested
             let result = helpers::find_top_level_op_any("((a+b)*(c-d))");
             assert_eq!(result, None);
         }
 
         #[test]
         fn comparison_operators_have_lowest_precedence() {
-            // "a+b>c*d" — '>' has prec 1, '+' has prec 2, so '>' wins
+            // "a+b>c*d" '>' has prec 1, '+' has prec 2, so '>' wins
             let result = helpers::find_top_level_op_any("a+b>c*d");
             assert_eq!(result, Some((3, ">")));
         }
@@ -188,7 +183,7 @@ mod tests {
 
         #[test]
         fn unbalanced_close_paren_depth_saturates_at_zero() {
-            // "a)+b" — after ')' depth would go negative but is clamped, '+' at 2 is top-level
+            // "a)+b"  after ')' depth would go negative but is clamped, '+' at 2 is top-level
             let result = helpers::find_top_level_op_any("a)+b");
             assert_eq!(result, Some((2, "+")));
         }
@@ -209,66 +204,65 @@ mod tests {
     // split_comma_top_level
     mod split_comma_top_level {
         use super::*;
-        // --- happy paths ---
 
         #[test]
         fn empty_string_gives_one_empty_part() {
-            let result = helpers::split_comma_top_level("").unwrap();
+            let result = helpers::split_char_top_level(',', "").unwrap();
             assert_eq!(result, vec![""]);
         }
 
         #[test]
         fn single_arg_no_comma() {
-            let result = helpers::split_comma_top_level("hello").unwrap();
+            let result = helpers::split_char_top_level(',', "hello").unwrap();
             assert_eq!(result, vec!["hello"]);
         }
 
         #[test]
         fn two_simple_args() {
-            let result = helpers::split_comma_top_level("a, b").unwrap();
+            let result = helpers::split_char_top_level(',', "a, b").unwrap();
             assert_eq!(result, vec!["a", "b"]);
         }
 
         #[test]
         fn three_args_with_whitespace() {
-            let result = helpers::split_comma_top_level("  x ,  y ,  z  ").unwrap();
+            let result = helpers::split_char_top_level(',', "  x ,  y ,  z  ").unwrap();
             assert_eq!(result, vec!["x", "y", "z"]);
         }
 
         #[test]
         fn nested_parens_hide_comma() {
-            let result = helpers::split_comma_top_level("f(a, b), c").unwrap();
+            let result = helpers::split_char_top_level(',', "f(a, b), c").unwrap();
             assert_eq!(result, vec!["f(a, b)", "c"]);
         }
 
         #[test]
         fn nested_square_brackets_hide_comma() {
-            let result = helpers::split_comma_top_level("[1, 2], [3, 4]").unwrap();
+            let result = helpers::split_char_top_level(',', "[1, 2], [3, 4]").unwrap();
             assert_eq!(result, vec!["[1, 2]", "[3, 4]"]);
         }
 
         #[test]
         fn nested_curly_braces_hide_comma() {
-            let result = helpers::split_comma_top_level("{a: 1, b: 2}, c").unwrap();
+            let result = helpers::split_char_top_level(',', "{a: 1, b: 2}, c").unwrap();
             assert_eq!(result, vec!["{a: 1, b: 2}", "c"]);
         }
 
         #[test]
         fn double_quoted_string_hides_comma() {
-            let result = helpers::split_comma_top_level(r#""hello, world", x"#).unwrap();
+            let result = helpers::split_char_top_level(',', r#""hello, world", x"#).unwrap();
             assert_eq!(result, vec![r#""hello, world""#, "x"]);
         }
 
         #[test]
         fn single_quoted_string_hides_comma() {
-            let result = helpers::split_comma_top_level("'a, b', c").unwrap();
+            let result = helpers::split_char_top_level(',', "'a, b', c").unwrap();
             assert_eq!(result, vec!["'a, b'", "c"]);
         }
 
         #[test]
         fn backslash_escaped_quote_inside_string() {
             // The comma after the escaped quote should NOT split
-            let result = helpers::split_comma_top_level(r#""he said \"hi, there\"", x"#).unwrap();
+            let result = helpers::split_char_top_level(',', r#""he said \"hi, there\"", x"#).unwrap();
             assert_eq!(result.len(), 2);
             assert_eq!(result[1], "x");
         }
@@ -276,116 +270,132 @@ mod tests {
         #[test]
         fn backslash_at_end_of_string_is_error() {
             // Trailing backslash outside string is invalid
-            let result = helpers::split_comma_top_level(r#""abc\"#);
+            let result = helpers::split_char_top_level(',', r#""abc\"#);
             assert!(result.is_err(), "expected error for unclosed string");
         }
 
         #[test]
         fn unclosed_double_quote_is_error() {
-            let result = helpers::split_comma_top_level(r#""unclosed"#);
+            let result = helpers::split_char_top_level(',', r#""unclosed"#);
             assert!(result.is_err());
         }
 
         #[test]
         fn adjacent_string_literals_are_error() {
             // Two string literals back-to-back with no separator
-            let result = helpers::split_comma_top_level(r#""a""b""#);
+            let result = helpers::split_char_top_level(',', r#""a""b""#);
             assert!(result.is_err(), "adjacent string literals should be an error");
         }
 
         #[test]
         fn comma_only_gives_two_empty_parts() {
-            let result = helpers::split_comma_top_level(",").unwrap();
+            let result = helpers::split_char_top_level(',', ",").unwrap();
             assert_eq!(result, vec!["", ""]);
         }
 
         #[test]
         fn trailing_comma_gives_empty_last_part() {
-            let result = helpers::split_comma_top_level("a,").unwrap();
+            let result = helpers::split_char_top_level(',', "a,").unwrap();
             assert_eq!(result, vec!["a", ""]);
         }
 
         #[test]
         fn leading_comma_gives_empty_first_part() {
-            let result = helpers::split_comma_top_level(",a").unwrap();
+            let result = helpers::split_char_top_level(',', ",a").unwrap();
             assert_eq!(result, vec!["", "a"]);
         }
 
         #[test]
-        fn deeply_nested_structure() {
-            let result = helpers::split_comma_top_level("f(g(h(1, 2), 3), 4), 5").unwrap();
+        fn deeply_nested_structures() {
+            let result = helpers::split_char_top_level(',', "f(g(h(1, 2), 3), 4), 5").unwrap();
             assert_eq!(result, vec!["f(g(h(1, 2), 3), 4)", "5"]);
+
+            let result = helpers::split_char_top_level(',', "f(g(h(1, 2), 3), 4) 5").unwrap();
+            assert_eq!(result, vec!["f(g(h(1, 2), 3), 4) 5"]);
+
         }
 
         #[test]
         fn mixed_bracket_types_nested() {
-            let result = helpers::split_comma_top_level("([{a, b}]), c").unwrap();
+            let result = helpers::split_char_top_level(',', "([{a, b}]), c").unwrap();
             assert_eq!(result, vec!["([{a, b}])", "c"]);
         }
 
         #[test]
+        fn all_literals_in_array() {
+            let literals = get_all_literals_edge_cases(); 
+
+            for l in literals { 
+                let s = format!("{}, {}", l, l);
+                let result = helpers::split_char_top_level(',', &s).unwrap();
+                assert_eq!(result, vec![l.clone(), l]);
+            }
+        }
+
+
+        #[test]
         fn string_with_escaped_backslash() {
-            // "\\" is a single backslash — the quote after it should close the string
+            // "\\" is a single backslash the quote after it should close the string
             let s = r#""back\\slash", next"#;
-            let result = helpers::split_comma_top_level(s).unwrap();
+            let result = helpers::split_char_top_level(',', s).unwrap();
             assert_eq!(result.len(), 2);
             assert_eq!(result[1], "next");
         }
 
         #[test]
         fn empty_string_literal_as_arg() {
-            let result = helpers::split_comma_top_level(r#""", x"#).unwrap();
+            let result = helpers::split_char_top_level(',', r#""", x"#).unwrap();
             assert_eq!(result.len(), 2);
         }
 
         #[test]
         fn whitespace_only_parts_are_trimmed() {
-            let result = helpers::split_comma_top_level("  ,  ").unwrap();
+            let result = helpers::split_char_top_level(',', "  ,  ").unwrap();
             assert_eq!(result, vec!["", ""]);
         }
 
         #[test]
         fn unicode_in_args() {
-            let result = helpers::split_comma_top_level("héllo, wörld").unwrap();
+            let result = helpers::split_char_top_level(',', "héllo, wörld").unwrap();
             assert_eq!(result, vec!["héllo", "wörld"]);
         }
 
         #[test]
         fn single_item() {
-            let result = helpers::split_comma_top_level("a").unwrap();
+            let result = helpers::split_char_top_level(',', "a").unwrap();
             assert_eq!(result, vec!["a"]);
         }
 
         #[test]
         fn multiple_items() {
-            let result = helpers::split_comma_top_level("a, b, c").unwrap();
+            let result = helpers::split_char_top_level(',', "a, b, c").unwrap();
             assert_eq!(result, vec!["a", "b", "c"]);
         }
 
         #[test]
         fn nested_parens_not_split() {
-            let result = helpers::split_comma_top_level("foo(a, b), c").unwrap();
+            let result = helpers::split_char_top_level(',', "foo(a, b), c").unwrap();
             assert_eq!(result, vec!["foo(a, b)", "c"]);
         }
 
         #[test]
         fn nested_brackets_not_split() {
-            for t in ALL_TYPES_NO_ARR_NO_INFER {
+            for t in ALL_TYPES_NO_ARR {
                 let f = format!("{}[1, 2], {}[3, 4]", t.clone(), t.clone());
-                let result = helpers::split_comma_top_level(&f).unwrap();
+                let result = helpers::split_char_top_level(',', &f).unwrap();
                 assert_eq!(result, vec![format!("{}[1, 2]", t), format!("{}[3, 4]", t)]);
             }
 
 
-            for t in ALL_TYPES_NO_ARR_NO_INFER {
+            for t in ALL_TYPES_NO_ARR {
                 let f = format!("{}[\"Hi\", \"There\"], {}[\"Lol\", \"xD\"]", t.clone(), t.clone());
-                let result = helpers::split_comma_top_level(&f).unwrap();
+                let result = helpers::split_char_top_level(',', &f).unwrap();
                 assert_eq!(result, vec![format!("{}[\"Hi\", \"There\"]", t), format!("{}[\"Lol\", \"xD\"]", t)]);
             }
             
-            for t in ALL_TYPES_NO_ARR_NO_INFER {
+            for t in ALL_TYPES_NO_ARR {
                 let f = format!("{}[\"Hi,!!\", \"The,re\"], {}[\"Lo, l!\", \", xD\"]", t.clone(), t.clone());
-                let result = helpers::split_comma_top_level(&f).unwrap();
+                let result = helpers::split_char_top_level(',', &f).unwrap();
                 assert_eq!(result, vec![format!("{}[\"Hi,!!\", \"The,re\"]", t), format!("{}[\"Lo, l!\", \", xD\"]", t)]);
             }
                 
@@ -394,121 +404,167 @@ mod tests {
 
         #[test]
         fn string_containing_comma() {
-            let result = helpers::split_comma_top_level(r#""hello, world", b"#).unwrap();
+            let result = helpers::split_char_top_level(',', r#""hello, world", b"#).unwrap();
             assert_eq!(result, vec![r#""hello, world""#, "b"]);
         }
 
         #[test]
         fn unclosed_string_errors() {
-            assert!(helpers::split_comma_top_level(r#""unclosed, x"#).is_err());
+            assert!(helpers::split_char_top_level(',', r#""unclosed, x"#).is_err());
+        }
+
+        #[test]
+        fn potentinal_misuse_panic_guard_panics() {
+            let visible_ascii: Vec<char> = (0x21u8..=0x7E)
+                .map(|b| b as char)
+                .filter(|&c| c != ',' && c != ':')
+                .collect();
+
+            for c in visible_ascii {
+                let result = std::panic::catch_unwind(|| { 
+                    let _ = helpers::split_char_top_level(c, r#"whatever"#);
+                });
+
+                assert!(result.is_err(), "Expected panic for: {:?}", c);
+
+            }
         }
     }
 
-    // strip_outer_quotes_and_unescape
-    mod strip_outer_quotes_and_unescape {
+    // string_strip_outer_quotes_and_unescape
+    mod string_strip_outer_quotes_and_unescape {
         use super::*;
 
         #[test]
         fn empty_string_returns_empty() {
-            assert_eq!(helpers::strip_outer_quotes_and_unescape("").unwrap(), "");
-        }
-
-        #[test]
-        fn plain_string_no_quotes_passthrough() {
-            assert_eq!(helpers::strip_outer_quotes_and_unescape("hello").unwrap(), "hello");
+            assert_eq!(helpers::string_strip_outer_quotes_and_unescape(r#""""#).unwrap(), r#""#);
         }
 
         #[test]
         fn double_quoted_string_stripped() {
-            assert_eq!(helpers::strip_outer_quotes_and_unescape(r#""hello""#).unwrap(), "hello");
+            assert_eq!(helpers::string_strip_outer_quotes_and_unescape(r#""hello""#).unwrap(), "hello");
+        }
+
+
+        #[test]
+        #[should_panic(expected = "Compiler bug")]
+        fn plain_string_no_quotes_panics() {
+            let _ = helpers::string_strip_outer_quotes_and_unescape("hello");
         }
 
         #[test]
-        fn double_quote_at_start_only_errors() {
-            assert!(helpers::strip_outer_quotes_and_unescape(r#""hello"#).is_err());
+        #[should_panic(expected = "Compiler bug")]
+        fn double_quote_at_start_only_panics() {
+            let _ = helpers::string_strip_outer_quotes_and_unescape(r#""hello"#);
         }
 
         #[test]
-        fn single_quote_at_end_only_errors() {
-            assert!(helpers::strip_outer_quotes_and_unescape(r#"hello""#).is_err());
+        #[should_panic(expected = "Compiler bug")]
+        fn single_quote_at_end_only_panics() {
+            let _ = helpers::string_strip_outer_quotes_and_unescape(r#"hello""#);
         }
 
         #[test]
         fn escape_newline() {
-            assert_eq!(helpers::strip_outer_quotes_and_unescape(r#""a\nb""#).unwrap(), "a\nb");
+            assert_eq!(helpers::string_strip_outer_quotes_and_unescape(r#""a\nb""#).unwrap(), "a\nb");
         }
 
         #[test]
         fn escape_carriage_return() {
-            assert_eq!(helpers::strip_outer_quotes_and_unescape(r#""a\rb""#).unwrap(), "a\rb");
+            assert_eq!(helpers::string_strip_outer_quotes_and_unescape(r#""a\rb""#).unwrap(), "a\rb");
         }
 
         #[test]
         fn escape_tab() {
-            assert_eq!(helpers::strip_outer_quotes_and_unescape(r#""a\tb""#).unwrap(), "a\tb");
+            assert_eq!(helpers::string_strip_outer_quotes_and_unescape(r#""a\tb""#).unwrap(), "a\tb");
         }
 
         #[test]
         fn escape_backslash() {
-            assert_eq!(helpers::strip_outer_quotes_and_unescape(r#""a\\b""#).unwrap(), r#"a\b"#);
+            assert_eq!(helpers::string_strip_outer_quotes_and_unescape(r#""a\\b""#).unwrap(), r#"a\b"#);
         }
 
         #[test]
         fn escape_double_quote_inside() {
             // \" inside should produce a literal "
-            assert_eq!(helpers::strip_outer_quotes_and_unescape(r#""a\"b""#).unwrap(), r#"a"b"#);
+            assert_eq!(helpers::string_strip_outer_quotes_and_unescape(r#""a\"b""#).unwrap(), r#"a"b"#);
         }
 
         #[test]
         fn escape_single_quote_inside() {
-            assert_eq!(helpers::strip_outer_quotes_and_unescape(r#""a\'b""#).unwrap(), "a'b");
+            assert_eq!(helpers::string_strip_outer_quotes_and_unescape(r#""a\'b""#).unwrap(), "a'b");
         }
 
         #[test]
         fn escape_null_byte() {
-            assert_eq!(helpers::strip_outer_quotes_and_unescape(r#""a\0b""#).unwrap(), "a\0b");
+            assert_eq!(helpers::string_strip_outer_quotes_and_unescape(r#""a\0b""#).unwrap(), "a\0b");
         }
 
         #[test]
-        fn unknown_escape_passes_through() {
-            // \q → just 'q'
-            assert_eq!(helpers::strip_outer_quotes_and_unescape(r#""a\qb""#).unwrap(), "aqb");
+        fn valid_escapes() {
+            let valid_escapes = ['n', 'r', 't', '\\', '"', '\'', '0'];
+
+            for v in valid_escapes {
+                assert!(helpers::string_strip_outer_quotes_and_unescape(&format!("\"a\\{}b\"", v)).is_ok());
+            }
         }
 
         #[test]
-        fn trailing_backslash_in_unquoted_emits_backslash() {
-            // Input doesn't have surrounding quotes; trailing \ emits \
-            assert_eq!(helpers::strip_outer_quotes_and_unescape(r#"abc\"#).unwrap(), r#"abc\"#);
+        fn invalid_escapes() {
+            let escape = "";
+                
+            for _ in 1..=10000 {
+                let escape = format!("{}\\", escape);
+                assert!(helpers::string_strip_outer_quotes_and_unescape(&format!("\"hi{}\"", escape)).is_err());
+            }
+        }
+
+
+        #[test]
+        fn unknown_escape_errors() {
+            let valid_escapes = ['n', 'r', 't', '\\', '"', '\'', '0'];
+
+            let invalid_escapes: Vec<char> = (0x20u8..=0x7E)
+                .map(|b| b as char)
+                .filter(|c| !valid_escapes.contains(c))
+                .collect();
+
+            for i in invalid_escapes {
+                assert!(helpers::string_strip_outer_quotes_and_unescape(&format!("\"\\{}b\"", i)).is_err());
+                assert!(helpers::string_strip_outer_quotes_and_unescape(&format!("\"a\\{}b\"", i)).is_err());
+                assert!(helpers::string_strip_outer_quotes_and_unescape(&format!("\"'a\\{}\"", i)).is_err());
+                assert!(helpers::string_strip_outer_quotes_and_unescape(&format!("\"\\{}\"", i)).is_err());
+            }
         }
 
         #[test]
         fn unescaped_inner_double_quote_is_error() {
             // A bare " in the middle of a quoted string is unterminated
-            let result = helpers::strip_outer_quotes_and_unescape(r#""a"b""#);
+            let result = helpers::string_strip_outer_quotes_and_unescape(r#""a"b""#);
             assert!(result.is_err(), "bare inner quote should be an error");
         }
 
         #[test]
         fn only_two_double_quotes_empty_content() {
-            assert_eq!(helpers::strip_outer_quotes_and_unescape(r#""""#).unwrap(), "");
+            assert_eq!(helpers::string_strip_outer_quotes_and_unescape(r#""""#).unwrap(), "");
         }
 
         #[test]
         fn multiple_escape_sequences_in_a_row() {
             assert_eq!(
-                helpers::strip_outer_quotes_and_unescape(r#""\n\t\r\\""#).unwrap(),
+                helpers::string_strip_outer_quotes_and_unescape(r#""\n\t\r\\""#).unwrap(),
                 "\n\t\r\\"
             );
         }
 
         #[test]
         fn string_of_only_backslash_escape() {
-            assert_eq!(helpers::strip_outer_quotes_and_unescape(r#""\\""#).unwrap(), "\\");
+            assert_eq!(helpers::string_strip_outer_quotes_and_unescape(r#""\\""#).unwrap(), "\\");
         }
 
         #[test]
         fn unicode_content_preserved() {
-            assert_eq!(helpers::strip_outer_quotes_and_unescape(r#""héllo""#).unwrap(), "héllo");
+            assert_eq!(helpers::string_strip_outer_quotes_and_unescape(r#""héllo""#).unwrap(), "héllo");
         }
     }
 
@@ -552,8 +608,9 @@ mod tests {
         }
 
         #[test]
-        fn empty_name_is_error() {
-            assert!(helpers::validate_identifier_name("").is_err());
+        #[should_panic(expected = "Compiler bug")]
+        fn empty_name_is_panic() {
+            let _ = helpers::validate_identifier_name("");
         }
 
         #[test]
@@ -625,11 +682,16 @@ mod tests {
         }
 
         #[test]
-        fn identifier_empty() {
+        fn identifier_empty_with_whitespaces_panics() {
             const MAX_SPACES: usize = 10000;
             let mut spaces = String::with_capacity(MAX_SPACES);
             for _ in 0..MAX_SPACES {
-                assert!(helpers::validate_identifier_name(&spaces).is_err());
+                let result = std::panic::catch_unwind(|| { 
+                    let _ = helpers::validate_identifier_name(&spaces);
+                });
+
+                assert!(result.is_err(), "Expected panic");
+
                 spaces.push(' ');
             }
         }
@@ -664,14 +726,16 @@ mod tests {
                 assert!(helpers::validate_identifier_name(&format!("foob{c}ar")).is_err());
                 assert!(helpers::validate_identifier_name(&format!("fooba{c}r")).is_err());
                 assert!(helpers::validate_identifier_name(&format!("foobar{c}")).is_err());
-                assert!(helpers::validate_identifier_name(&format!("{c}{c}{c}{c}")).is_err());
-                assert!(helpers::validate_identifier_name(&format!("{c}{c}{c}")).is_err());
-                assert!(helpers::validate_identifier_name(&format!("{c}{c}")).is_err());
-                assert!(helpers::validate_identifier_name(&format!("{c}")).is_err());
                 assert!(helpers::validate_identifier_name(&format!("{c}_{c}")).is_err());
                 assert!(helpers::validate_identifier_name(&format!("{c}_")).is_err());
                 assert!(helpers::validate_identifier_name(&format!("_{c}")).is_err());
-                assert!(helpers::validate_identifier_name(&format!("{c}")).is_err());
+
+                if !c.is_whitespace() && !c.is_control() {
+                    assert!(helpers::validate_identifier_name(&format!("{c}{c}{c}{c}")).is_err());
+                    assert!(helpers::validate_identifier_name(&format!("{c}{c}{c}")).is_err());
+                    assert!(helpers::validate_identifier_name(&format!("{c}{c}")).is_err());
+                    assert!(helpers::validate_identifier_name(&format!("{c}")).is_err());
+                }
             }
         }
 
@@ -919,7 +983,7 @@ mod tests {
 
         #[test]
         fn mixed_outside_and_inside_braces() {
-            // "{ \"inside: {}\" }" — outer braces count, inner two (in string) do not
+            // "{ \"inside: {}\" }"  outer braces count, inner two (in string) do not
             let s = r#"{ "inside: {}" }"#;
             assert_eq!(helpers::count_braces_outside_strings(s), (1, 1));
         }
@@ -1107,28 +1171,52 @@ mod tests {
         }
     }
 
-    // is_array_type — trivial but document the contract
+    // is_array_type method on Type
     mod is_array_type {
         use super::*;
 
         #[test]
-        fn array_type_is_true() {
-            let t = Type::Array(Box::new(Type::Int8)); 
-            assert!(helpers::is_array_type(&t));
+        fn dynamic_array_type_is_true() {
+            for t in ALL_TYPES_NO_ARR {
+                let arr_t = Type::Array(Box::new(t.clone())); 
+                assert!(arr_t.is_array_type());
+            }
         }
+
+        #[test]
+        fn nested_dynamic_array_is_still_array() {
+            for t in ALL_TYPES_NO_ARR {
+                let arr_t = Type::Array(Box::new(Type::Array(Box::new(t.clone()))));
+                assert!(arr_t.is_array_type());
+            }
+        }
+
+        #[test]
+        fn fixed_array_type_is_true() {
+            for t in ALL_TYPES_NO_ARR {
+                let arr_t = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(1)); 
+                assert!(arr_t.is_array_type());
+            }
+        }
+
+        #[test]
+        fn nested_fixed_array_is_still_array() {
+            for t in ALL_TYPES_NO_ARR {
+                let arr_t = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(1)); 
+                let arr_t = Type::FixedArray(Box::new(arr_t), FixedArraySize::Literal(1)); 
+
+                assert!(arr_t.is_array_type());
+            }
+        }
+
 
         #[test]
         fn non_array_types_are_false() {
-            assert!(!helpers::is_array_type(&Type::Int8));
-            assert!(!helpers::is_array_type(&Type::Bool));
-            assert!(!helpers::is_array_type(&Type::String));
+            for t in ALL_TYPES_NO_ARR {
+                assert!(!t.is_array_type());
+            }
         }
 
-        #[test]
-        fn nested_array_is_still_array() {
-            let t = Type::Array(Box::new(Type::Array(Box::new(Type::Int8))));
-            assert!(helpers::is_array_type(&t));
-        }
     }
 
     // Cross-cutting / regression tests
@@ -1147,7 +1235,7 @@ mod tests {
         fn stripped_comment_then_split() {
             let raw = "a, b, c # trailing comment";
             let stripped = helpers::strip_inline_comment(raw);
-            let parts = helpers::split_comma_top_level(&stripped).unwrap();
+            let parts = helpers::split_char_top_level(',', &stripped).unwrap();
             assert_eq!(parts, vec!["a", "b", "c"]);
         }
 
@@ -1160,6 +1248,7 @@ mod tests {
             assert_eq!(opens, closes);
         }
 
+        /*
         /// Identifier used as constructor bracket argument
         #[test]
         fn constructor_bracket_arg_is_valid_identifier() {
@@ -1168,6 +1257,7 @@ mod tests {
             let inner = &input[idx + 1..input.len() - 1];
             assert!(helpers::validate_identifier_name(inner).is_ok());
         }
+        */
 
         /// helpers::strip_inline_comment followed by unescape should be consistent
         #[test]
@@ -1176,7 +1266,7 @@ mod tests {
             let stripped = helpers::strip_inline_comment(raw);
             // The # is inside the string, so nothing should be stripped
             assert_eq!(stripped, raw);
-            let unescaped = helpers::strip_outer_quotes_and_unescape(&stripped).unwrap();
+            let unescaped = helpers::string_strip_outer_quotes_and_unescape(&stripped).unwrap();
             assert_eq!(unescaped, "hello # world");
         }
     }
