@@ -19,6 +19,7 @@ mod const_tests;
 mod var_decl_tests;
 mod var_assign_tests;
 mod multi_return_tests;
+mod return_tests;
 mod lock_tests;
 mod unlock_tests;
 
