@@ -465,6 +465,9 @@ fn holy_expr_to_rust_expr(expr: &Expr) -> String {
 
         Expr::CopyCall { expr, .. } => format!("{}.clone()", holy_expr_to_rust_expr(expr)),
         Expr::FormatCall { template, expressions, .. } => {
+            assert!(!expressions.is_empty(), "(Compiler bug) `expressions` is empty, indicating a bug in semantics layer. template: {:?}", template);
+            assert!(!template.is_empty(), "(Compiler bug) `template` is empty, indicating a bug in semantics layer. expressions: {:?}", expressions);
+
             let mut format_expr_str = String::new();
             format_expr_str.push_str("format!(");
             format_expr_str.push('"');
