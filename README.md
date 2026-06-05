@@ -4,12 +4,9 @@
 ![CodeQL](https://github.com/HolyLang/HolyLang-Bootstrap/actions/workflows/codeql.yml/badge.svg)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=HolyLang_HolyLang-Bootstrap&metric=coverage)](https://sonarcloud.io/summary/new_code?id=HolyLang_HolyLang-Bootstrap)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=HolyLang_HolyLang-Bootstrap&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=HolyLang_HolyLang-Bootstrap)
-[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=HolyLang_HolyLang-Bootstrap&metric=bugs)](https://sonarcloud.io/summary/new_code?id=HolyLang_HolyLang-Bootstrap)
 [![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=HolyLang_HolyLang-Bootstrap&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=HolyLang_HolyLang-Bootstrap)
 [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=HolyLang_HolyLang-Bootstrap&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=HolyLang_HolyLang-Bootstrap)
 [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=HolyLang_HolyLang-Bootstrap&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=HolyLang_HolyLang-Bootstrap)
-[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=HolyLang_HolyLang-Bootstrap&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=HolyLang_HolyLang-Bootstrap)
-[![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=HolyLang_HolyLang-Bootstrap&metric=ncloc)](https://sonarcloud.io/summary/new_code?id=HolyLang_HolyLang-Bootstrap)
 [![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=HolyLang_HolyLang-Bootstrap&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=HolyLang_HolyLang-Bootstrap)
 
 
