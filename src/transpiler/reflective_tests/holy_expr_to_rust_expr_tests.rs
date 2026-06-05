@@ -6,6 +6,147 @@ use super::*;
 
 
 #[cfg(test)]
+mod holy_expr_to_rust_prog_func_call_exprs_tests {
+    use super::*;
+
+    #[test]
+    fn no_args() {
+        let expr = Expr::Call {
+            name: "foo".to_string(), 
+            args: vec![], 
+            span: span() 
+        };
+        let expr_str = holy_expr_to_rust_expr(&expr);
+
+        assert_eq!(expr_str, "foo()")
+    }
+
+    #[test]
+    fn all_literals_arg() {
+        let literals = get_all_literals();
+
+        for arg1 in &literals {
+            let arg1_str = holy_expr_to_rust_expr(&arg1);
+
+            for arg2 in &literals {
+                let arg2_str = holy_expr_to_rust_expr(&arg2);
+
+                for arg3 in &literals {
+                    let arg3_str = holy_expr_to_rust_expr(&arg3);
+
+                    let call_expr = Expr::Call {
+                        name: "foo".to_string(), 
+                        args: vec![arg1.clone(), arg2.clone(), arg3.clone()], 
+                        span: span() 
+                    };
+                    let call_expr_str = holy_expr_to_rust_expr(&call_expr);
+
+                    assert_eq!(call_expr_str, format!("foo({},{},{})", arg1_str, arg2_str, arg3_str))
+                }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod holy_expr_to_rust_internal_func_call_exprs_tests {
+    use super::*;
+
+    #[test]
+    fn range_call_all_literals() {
+        let literals = get_all_literals();
+
+        for start_expr in &literals {
+            let start_expr_str = holy_expr_to_rust_expr(&start_expr);
+
+            for end_expr in &literals {
+                let end_expr_str = holy_expr_to_rust_expr(&end_expr);
+
+                let range_call_expr = Expr::RangeCall {
+                    start: Box::new(start_expr.clone()),
+                    end: Box::new(end_expr.clone()),
+                    span: span() 
+                };
+                let range_call_expr_str = holy_expr_to_rust_expr(&range_call_expr);
+
+                assert_eq!(range_call_expr_str, format!("{}..{}", start_expr_str, end_expr_str))
+            }
+        }
+    }
+
+    #[test]
+    fn copy_call_all_literals() {
+        let literals = get_all_literals();
+
+        for expr in literals {
+            let expr_str = holy_expr_to_rust_expr(&expr);
+
+            let copy_call_expr = Expr::CopyCall {
+                expr: Box::new(expr),
+                span: span() 
+            };
+            let copy_call_expr_str = holy_expr_to_rust_expr(&copy_call_expr);
+
+            assert_eq!(copy_call_expr_str, format!("{}.clone()", expr_str))
+        }
+    }
+
+    #[test]
+    #[should_panic(expected = "Compiler bug")]
+    fn format_call_template_no_template_no_exprs_panics() {
+        let format_call_expr = Expr::FormatCall {
+            template: "".to_string(),
+            expressions: vec![],
+            span: span() 
+        };
+        holy_expr_to_rust_expr(&format_call_expr);
+    }
+
+    #[test]
+    #[should_panic(expected = "Compiler bug")]
+    fn format_call_template_no_placeholder_no_exprs_panics() {
+        let format_call_expr = Expr::FormatCall {
+            template: "hi".to_string(),
+            expressions: vec![],
+            span: span() 
+        };
+        holy_expr_to_rust_expr(&format_call_expr);
+    }
+
+    #[test]
+    #[should_panic(expected = "Compiler bug")]
+    fn format_call_template_with_placeholder_no_exprs_panics() {
+        let format_call_expr = Expr::FormatCall {
+            template: "hi {}".to_string(),
+            expressions: vec![],
+            span: span() 
+        };
+        holy_expr_to_rust_expr(&format_call_expr);
+    }
+
+    #[test]
+    fn format_call_no_template_with_exprs_panics() {
+        let literals = get_all_literals();
+
+        for expr in literals {
+            for i in 1..1000 {
+                let format_call_expr = Expr::FormatCall {
+                    template: "".to_string(),
+                    expressions: vec![expr.clone(); i],
+                    span: span() 
+                };
+
+                let result = std::panic::catch_unwind(|| { 
+                            holy_expr_to_rust_expr(&format_call_expr);
+                        });
+
+                assert!(result.is_err(), "Expected panic for: {:?}", format_call_expr);
+            }
+        }
+    }
+}
+
+#[cfg(test)]
 mod holy_expr_to_rust_literals_non_arr_exprs_tests {
     use super::*;
 
@@ -882,10 +1023,10 @@ mod holy_expr_to_rust_literals_array_access_exprs_tests {
     use super::*;
 
     #[test]
-    fn dyn_arr_access_with_all_literal_on_arr_expr() {
+    fn fixed_arr_with_literal_size_access_with_all_literal_on_arr_expr() {
         let literals = get_all_literals();
         for t in ALL_TYPES_WITH_DYN_ARR.iter() {
-            let arr_t = Type::Array(Box::new(t.clone()));
+            let arr_t = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(1));
 
             for expr in &literals {
                 let arr_expr = Expr::ArrayLiteral {
@@ -910,13 +1051,12 @@ mod holy_expr_to_rust_literals_array_access_exprs_tests {
     }
 
     #[test]
-    fn dyn_arr_access_with_all_binop_on_arr_expr() {
+    fn fixed_arr_with_literal_size_access_with_all_binop_on_arr_expr() {
         let literals = get_all_literals();
 
         for t in ALL_TYPES_WITH_DYN_ARR.iter() {
+            let arr_t = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(1));
             for b in ALL_BIN_OP_KIND {
-                let arr_t = Type::Array(Box::new(t.clone()));
-
                 for left_expr in &literals {
                     for right_expr in &literals {
                         let arr_expr = Expr::ArrayLiteral {
@@ -949,28 +1089,384 @@ mod holy_expr_to_rust_literals_array_access_exprs_tests {
         }
     }
 
-
-
     #[test]
-    fn dyn_arr_access_with_all_literal_on_var_expr() {
+    fn fixed_arr_with_const_size_access_with_all_literal_on_arr_expr() {
         let literals = get_all_literals();
+        for t in ALL_TYPES_WITH_DYN_ARR.iter() {
+            let arr_t = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Const("x".to_string()));
 
-        for expr in literals {
-            let arr_access_expr = Expr::ArrayAccess {
-                array: Box::new(var_expr("x")),
-                index: Box::new(expr.clone()),
-                span: span()
-            };
+            for expr in &literals {
+                let arr_expr = Expr::ArrayLiteral {
+                    elements: vec![],
+                    type_name: Some(arr_t.clone()),
+                    span: span()
+                };
 
-            let expr_str = holy_expr_to_rust_expr(&expr);
-            let arr_access_expr_str = holy_expr_to_rust_expr(&arr_access_expr);
+                let arr_access_expr = Expr::ArrayAccess {
+                    array: Box::new(arr_expr.clone()),
+                    index: Box::new(expr.clone()),
+                    span: span()
+                };
 
-            assert_eq!(arr_access_expr_str, format!("x[{}]", expr_str))
+                let expr_str = holy_expr_to_rust_expr(&expr);
+                let arr_expr_str = holy_expr_to_rust_expr(&arr_expr);
+                let arr_access_expr_str = holy_expr_to_rust_expr(&arr_access_expr);
+
+                assert_eq!(arr_access_expr_str, format!("{}[{}]", arr_expr_str, expr_str))
+            }
         }
     }
 
     #[test]
-    fn dyn_arr_access_with_all_binop_on_var_expr() {
+    fn fixed_arr_with_const_size_access_with_all_binop_on_arr_expr() {
+        let literals = get_all_literals();
+
+        for t in ALL_TYPES_WITH_DYN_ARR.iter() {
+            let arr_t = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Const("x".to_string()));
+            for b in ALL_BIN_OP_KIND {
+                for left_expr in &literals {
+                    for right_expr in &literals {
+                        let arr_expr = Expr::ArrayLiteral {
+                            elements: vec![],
+                            type_name: Some(arr_t.clone()),
+                            span: span()
+                        };
+
+                        let bin_expr = Expr::BinOp {
+                            left: Box::new(left_expr.clone()),
+                            right: Box::new(right_expr.clone()),
+                            op: b.clone(),
+                            span: span()
+                        };
+
+                        let arr_access_expr = Expr::ArrayAccess {
+                            array: Box::new(arr_expr.clone()),
+                            index: Box::new(bin_expr.clone()),
+                            span: span()
+                        };
+
+                        let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+                        let arr_expr_str = holy_expr_to_rust_expr(&arr_expr);
+                        let arr_access_expr_str = holy_expr_to_rust_expr(&arr_access_expr);
+
+                        assert_eq!(arr_access_expr_str, format!("{}[{}]", arr_expr_str, bin_expr_str))
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn dyn_arr_access_with_all_literal_on_arr_expr() {
+        let literals = get_all_literals();
+        for t in ALL_TYPES_WITH_DYN_ARR.iter() {
+            let arr_t = Type::Array(Box::new(t.clone()));
+
+            for expr in &literals {
+                let arr_expr = Expr::ArrayLiteral {
+                    elements: vec![],
+                    type_name: Some(arr_t.clone()),
+                    span: span()
+                };
+
+                let arr_access_expr = Expr::ArrayAccess {
+                    array: Box::new(arr_expr.clone()),
+                    index: Box::new(expr.clone()),
+                    span: span()
+                };
+
+                let expr_str = holy_expr_to_rust_expr(&expr);
+                let arr_expr_str = holy_expr_to_rust_expr(&arr_expr);
+                let arr_access_expr_str = holy_expr_to_rust_expr(&arr_access_expr);
+
+                assert_eq!(arr_access_expr_str, format!("{}[{}]", arr_expr_str, expr_str))
+            }
+        }
+    }
+
+    #[test]
+    fn dyn_arr_access_with_all_binop_on_arr_expr() {
+        let literals = get_all_literals();
+
+        for t in ALL_TYPES_WITH_DYN_ARR.iter() {
+            let arr_t = Type::Array(Box::new(t.clone()));
+
+            for b in ALL_BIN_OP_KIND {
+                for left_expr in &literals {
+                    for right_expr in &literals {
+                        let arr_expr = Expr::ArrayLiteral {
+                            elements: vec![],
+                            type_name: Some(arr_t.clone()),
+                            span: span()
+                        };
+
+                        let bin_expr = Expr::BinOp {
+                            left: Box::new(left_expr.clone()),
+                            right: Box::new(right_expr.clone()),
+                            op: b.clone(),
+                            span: span()
+                        };
+
+                        let arr_access_expr = Expr::ArrayAccess {
+                            array: Box::new(arr_expr.clone()),
+                            index: Box::new(bin_expr.clone()),
+                            span: span()
+                        };
+
+                        let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+                        let arr_expr_str = holy_expr_to_rust_expr(&arr_expr);
+                        let arr_access_expr_str = holy_expr_to_rust_expr(&arr_access_expr);
+
+                        assert_eq!(arr_access_expr_str, format!("{}[{}]", arr_expr_str, bin_expr_str))
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+
+#[cfg(test)]
+mod holy_expr_to_rust_literals_fixed_array_slicing_exprs_tests {
+    use super::*;
+
+    #[test]
+    fn fixed_arr_with_literal_size_slicing_from_with_all_literal_on_arr_expr() {
+        let literals = get_all_literals();
+        for t in ALL_TYPES_WITH_DYN_ARR.iter() {
+            let arr_t = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(1));
+
+            for expr in &literals {
+                let arr_expr = Expr::ArrayLiteral {
+                    elements: vec![],
+                    type_name: Some(arr_t.clone()),
+                    span: span()
+                };
+
+                let arr_slicing_expr = Expr::ArraySlicing {
+                    array: Box::new(arr_expr.clone()),
+                    range: ArraySliceRange::From(Box::new(expr.clone())),
+                    span: span()
+                };
+
+                let expr_str = holy_expr_to_rust_expr(&expr);
+                let arr_expr_str = holy_expr_to_rust_expr(&arr_expr);
+                let arr_slicing_expr_str = holy_expr_to_rust_expr(&arr_slicing_expr);
+
+                assert_eq!(arr_slicing_expr_str, format!("{}[{}..].to_vec()", arr_expr_str, expr_str))
+            }
+        }
+    }
+
+    #[test]
+    fn fixed_arr_with_literal_size_slicing_to_with_all_literal_on_arr_expr() {
+        let literals = get_all_literals();
+        for t in ALL_TYPES_WITH_DYN_ARR.iter() {
+            let arr_t = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(1));
+
+            for expr in &literals {
+                let arr_expr = Expr::ArrayLiteral {
+                    elements: vec![],
+                    type_name: Some(arr_t.clone()),
+                    span: span()
+                };
+
+                let arr_slicing_expr = Expr::ArraySlicing {
+                    array: Box::new(arr_expr.clone()),
+                    range: ArraySliceRange::To(Box::new(expr.clone())),
+                    span: span()
+                };
+
+                let expr_str = holy_expr_to_rust_expr(&expr);
+                let arr_expr_str = holy_expr_to_rust_expr(&arr_expr);
+                let arr_slicing_expr_str = holy_expr_to_rust_expr(&arr_slicing_expr);
+
+                assert_eq!(arr_slicing_expr_str, format!("{}[..{}].to_vec()", arr_expr_str, expr_str))
+            }
+        }
+    }
+
+    #[test]
+    fn fixed_arr_with_literal_size_slicing_fromto_with_all_literal_on_arr_expr() {
+        let literals = get_all_literals();
+        for t in ALL_TYPES_WITH_DYN_ARR.iter() {
+            let arr_t = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(1));
+
+            for expr1 in &literals {
+                for expr2 in &literals {
+                    let arr_expr = Expr::ArrayLiteral {
+                        elements: vec![],
+                        type_name: Some(arr_t.clone()),
+                        span: span()
+                    };
+
+                    let arr_slicing_expr = Expr::ArraySlicing {
+                        array: Box::new(arr_expr.clone()),
+                        range: ArraySliceRange::FromTo(Box::new(expr1.clone()), Box::new(expr2.clone())),
+                        span: span()
+                    };
+
+                    let expr1_str = holy_expr_to_rust_expr(&expr1);
+                    let expr2_str = holy_expr_to_rust_expr(&expr2);
+
+                    let arr_expr_str = holy_expr_to_rust_expr(&arr_expr);
+                    let arr_slicing_expr_str = holy_expr_to_rust_expr(&arr_slicing_expr);
+
+                    assert_eq!(arr_slicing_expr_str, format!("{}[{}..{}].to_vec()", arr_expr_str, expr1_str, expr2_str))
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn fixed_arr_with_const_size_slicing_from_with_all_literal_on_arr_expr() {
+        let literals = get_all_literals();
+        for t in ALL_TYPES_WITH_DYN_ARR.iter() {
+            let arr_t = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Const("x".to_string()));
+
+            for expr in &literals {
+                let arr_expr = Expr::ArrayLiteral {
+                    elements: vec![],
+                    type_name: Some(arr_t.clone()),
+                    span: span()
+                };
+
+                let arr_slicing_expr = Expr::ArraySlicing {
+                    array: Box::new(arr_expr.clone()),
+                    range: ArraySliceRange::From(Box::new(expr.clone())),
+                    span: span()
+                };
+
+                let expr_str = holy_expr_to_rust_expr(&expr);
+                let arr_expr_str = holy_expr_to_rust_expr(&arr_expr);
+                let arr_slicing_expr_str = holy_expr_to_rust_expr(&arr_slicing_expr);
+
+                assert_eq!(arr_slicing_expr_str, format!("{}[{}..].to_vec()", arr_expr_str, expr_str))
+            }
+        }
+    }
+
+    #[test]
+    fn fixed_arr_with_const_size_slicing_to_with_all_literal_on_arr_expr() {
+        let literals = get_all_literals();
+        for t in ALL_TYPES_WITH_DYN_ARR.iter() {
+            let arr_t = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Const("x".to_string()));
+
+            for expr in &literals {
+                let arr_expr = Expr::ArrayLiteral {
+                    elements: vec![],
+                    type_name: Some(arr_t.clone()),
+                    span: span()
+                };
+
+                let arr_slicing_expr = Expr::ArraySlicing {
+                    array: Box::new(arr_expr.clone()),
+                    range: ArraySliceRange::To(Box::new(expr.clone())),
+                    span: span()
+                };
+
+                let expr_str = holy_expr_to_rust_expr(&expr);
+                let arr_expr_str = holy_expr_to_rust_expr(&arr_expr);
+                let arr_slicing_expr_str = holy_expr_to_rust_expr(&arr_slicing_expr);
+
+                assert_eq!(arr_slicing_expr_str, format!("{}[..{}].to_vec()", arr_expr_str, expr_str))
+            }
+        }
+    }
+
+    #[test]
+    fn fixed_arr_with_const_size_slicing_fromto_with_all_literal_on_arr_expr() {
+        let literals = get_all_literals();
+        for t in ALL_TYPES_WITH_DYN_ARR.iter() {
+            let arr_t = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Const("x".to_string()));
+
+            for expr1 in &literals {
+                for expr2 in &literals {
+                    let arr_expr = Expr::ArrayLiteral {
+                        elements: vec![],
+                        type_name: Some(arr_t.clone()),
+                        span: span()
+                    };
+
+                    let arr_slicing_expr = Expr::ArraySlicing {
+                        array: Box::new(arr_expr.clone()),
+                        range: ArraySliceRange::FromTo(Box::new(expr1.clone()), Box::new(expr2.clone())),
+                        span: span()
+                    };
+
+                    let expr1_str = holy_expr_to_rust_expr(&expr1);
+                    let expr2_str = holy_expr_to_rust_expr(&expr2);
+
+                    let arr_expr_str = holy_expr_to_rust_expr(&arr_expr);
+                    let arr_slicing_expr_str = holy_expr_to_rust_expr(&arr_slicing_expr);
+
+                    assert_eq!(arr_slicing_expr_str, format!("{}[{}..{}].to_vec()", arr_expr_str, expr1_str, expr2_str))
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn arr_slicing_from_with_all_literal_on_var_expr() {
+        let literals = get_all_literals();
+
+        for expr in literals {
+            let arr_slicing_expr = Expr::ArraySlicing {
+                array: Box::new(var_expr("x")),
+                range: ArraySliceRange::From(Box::new(expr.clone())),
+                span: span()
+            };
+
+            let expr_str = holy_expr_to_rust_expr(&expr);
+            let arr_slicing_expr_str = holy_expr_to_rust_expr(&arr_slicing_expr);
+
+            assert_eq!(arr_slicing_expr_str, format!("x[{}..].to_vec()", expr_str))
+        }
+    }
+
+    #[test]
+    fn arr_slicing_to_with_all_literal_on_var_expr() {
+        let literals = get_all_literals();
+
+        for expr in literals {
+            let arr_slicing_expr = Expr::ArraySlicing {
+                array: Box::new(var_expr("x")),
+                range: ArraySliceRange::To(Box::new(expr.clone())),
+                span: span()
+            };
+
+            let expr_str = holy_expr_to_rust_expr(&expr);
+            let arr_slicing_expr_str = holy_expr_to_rust_expr(&arr_slicing_expr);
+
+            assert_eq!(arr_slicing_expr_str, format!("x[..{}].to_vec()", expr_str))
+        }
+    }
+
+    #[test]
+    fn arr_slicing_fromto_with_all_literal_on_var_expr() {
+        let literals = get_all_literals();
+
+        for expr1 in &literals {
+            for expr2 in &literals {
+                let arr_slicing_expr = Expr::ArraySlicing {
+                    array: Box::new(var_expr("x")),
+                    range: ArraySliceRange::FromTo(Box::new(expr1.clone()), Box::new(expr2.clone())),
+                    span: span()
+                };
+
+                let expr1_str = holy_expr_to_rust_expr(&expr1);
+                let expr2_str = holy_expr_to_rust_expr(&expr2);
+
+                let arr_slicing_expr_str = holy_expr_to_rust_expr(&arr_slicing_expr);
+
+                assert_eq!(arr_slicing_expr_str, format!("x[{}..{}].to_vec()", expr1_str, expr2_str))
+            }
+        }
+    }
+
+    #[test]
+    fn arr_slicing_from_with_all_binop_on_var_expr() {
         let literals = get_all_literals();
 
         for b in ALL_BIN_OP_KIND {
@@ -982,17 +1478,77 @@ mod holy_expr_to_rust_literals_array_access_exprs_tests {
                         op: b.clone(),
                         span: span()
                     };
-
-                    let arr_access_expr = Expr::ArrayAccess {
+                
+                    let arr_slicing_expr = Expr::ArraySlicing {
                         array: Box::new(var_expr("x")),
-                        index: Box::new(bin_expr.clone()),
+                        range: ArraySliceRange::From(Box::new(bin_expr.clone())),
                         span: span()
                     };
 
                     let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
-                    let arr_access_expr_str = holy_expr_to_rust_expr(&arr_access_expr);
+                    let arr_slicing_expr_str = holy_expr_to_rust_expr(&arr_slicing_expr);
 
-                    assert_eq!(arr_access_expr_str, format!("x[{}]", bin_expr_str))
+                    assert_eq!(arr_slicing_expr_str, format!("x[{}..].to_vec()", bin_expr_str))
+                }
+            }
+        }
+    }
+
+
+    #[test]
+    fn arr_slicing_to_with_all_binop_on_var_expr() {
+        let literals = get_all_literals();
+
+        for b in ALL_BIN_OP_KIND {
+            for left_expr in &literals {
+                for right_expr in &literals {
+                    let bin_expr = Expr::BinOp {
+                        left: Box::new(left_expr.clone()),
+                        right: Box::new(right_expr.clone()),
+                        op: b.clone(),
+                        span: span()
+                    };
+                
+                    let arr_slicing_expr = Expr::ArraySlicing {
+                        array: Box::new(var_expr("x")),
+                        range: ArraySliceRange::To(Box::new(bin_expr.clone())),
+                        span: span()
+                    };
+
+                    let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+                    let arr_slicing_expr_str = holy_expr_to_rust_expr(&arr_slicing_expr);
+
+                    assert_eq!(arr_slicing_expr_str, format!("x[..{}].to_vec()", bin_expr_str))
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn arr_slicing_fromto_with_all_binop_on_var_expr() {
+        let literals = get_all_literals();
+
+        for b in ALL_BIN_OP_KIND {
+            for left_expr in &literals {
+                for right_expr in &literals {
+                    let bin_expr = Expr::BinOp {
+                        left: Box::new(left_expr.clone()),
+                        right: Box::new(right_expr.clone()),
+                        op: b.clone(),
+                        span: span()
+                    };
+                
+                    let arr_slicing_expr = Expr::ArraySlicing {
+                        array: Box::new(var_expr("x")),
+                        range: ArraySliceRange::FromTo(Box::new(bin_expr.clone()), Box::new(left_expr.clone())),
+                        span: span()
+                    };
+
+                    let bin_expr_str = holy_expr_to_rust_expr(&bin_expr);
+                    let left_expr_str = holy_expr_to_rust_expr(&left_expr);
+                    let arr_slicing_expr_str = holy_expr_to_rust_expr(&arr_slicing_expr);
+
+                    assert_eq!(arr_slicing_expr_str, format!("x[{}..{}].to_vec()", bin_expr_str, left_expr_str))
                 }
             }
         }
@@ -1000,4 +1556,184 @@ mod holy_expr_to_rust_literals_array_access_exprs_tests {
 }
 
 
+#[cfg(test)]
+mod holy_expr_to_rust_literals_dyn_array_slicing_exprs_tests {
+    use super::*;
+
+    #[test]
+    fn dyn_arr_slicing_from_with_all_literal_on_arr_expr() {
+        let literals = get_all_literals();
+        for t in ALL_TYPES_WITH_DYN_ARR.iter() {
+            let arr_t = Type::Array(Box::new(t.clone()));
+
+            for expr in &literals {
+                let arr_expr = Expr::ArrayLiteral {
+                    elements: vec![],
+                    type_name: Some(arr_t.clone()),
+                    span: span()
+                };
+
+                let arr_slicing_expr = Expr::ArraySlicing {
+                    array: Box::new(arr_expr.clone()),
+                    range: ArraySliceRange::From(Box::new(expr.clone())),
+                    span: span()
+                };
+
+                let expr_str = holy_expr_to_rust_expr(&expr);
+                let arr_expr_str = holy_expr_to_rust_expr(&arr_expr);
+                let arr_slicing_expr_str = holy_expr_to_rust_expr(&arr_slicing_expr);
+
+                assert_eq!(arr_slicing_expr_str, format!("{}[{}..].to_vec()", arr_expr_str, expr_str))
+            }
+        }
+    }
+
+    #[test]
+    fn dyn_arr_slicing_to_with_all_literal_on_arr_expr() {
+        let literals = get_all_literals();
+        for t in ALL_TYPES_WITH_DYN_ARR.iter() {
+            let arr_t = Type::Array(Box::new(t.clone()));
+
+            for expr in &literals {
+                let arr_expr = Expr::ArrayLiteral {
+                    elements: vec![],
+                    type_name: Some(arr_t.clone()),
+                    span: span()
+                };
+
+                let arr_slicing_expr = Expr::ArraySlicing {
+                    array: Box::new(arr_expr.clone()),
+                    range: ArraySliceRange::To(Box::new(expr.clone())),
+                    span: span()
+                };
+
+                let expr_str = holy_expr_to_rust_expr(&expr);
+                let arr_expr_str = holy_expr_to_rust_expr(&arr_expr);
+                let arr_slicing_expr_str = holy_expr_to_rust_expr(&arr_slicing_expr);
+
+                assert_eq!(arr_slicing_expr_str, format!("{}[..{}].to_vec()", arr_expr_str, expr_str))
+            }
+        }
+    }
+
+    #[test]
+    fn dyn_arr_slicing_fromto_with_all_literal_on_arr_expr() {
+        let literals = get_all_literals();
+        for t in ALL_TYPES_WITH_DYN_ARR.iter() {
+            let arr_t = Type::Array(Box::new(t.clone()));
+
+            for expr1 in &literals {
+                for expr2 in &literals {
+                    let arr_expr = Expr::ArrayLiteral {
+                        elements: vec![],
+                        type_name: Some(arr_t.clone()),
+                        span: span()
+                    };
+
+                    let arr_slicing_expr = Expr::ArraySlicing {
+                        array: Box::new(arr_expr.clone()),
+                        range: ArraySliceRange::FromTo(Box::new(expr1.clone()), Box::new(expr2.clone())),
+                        span: span()
+                    };
+
+                    let expr1_str = holy_expr_to_rust_expr(&expr1);
+                    let expr2_str = holy_expr_to_rust_expr(&expr2);
+
+                    let arr_expr_str = holy_expr_to_rust_expr(&arr_expr);
+                    let arr_slicing_expr_str = holy_expr_to_rust_expr(&arr_slicing_expr);
+
+                    assert_eq!(arr_slicing_expr_str, format!("{}[{}..{}].to_vec()", arr_expr_str, expr1_str, expr2_str))
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn dyn_arr_with_const_size_slicing_from_with_all_literal_on_arr_expr() {
+        let literals = get_all_literals();
+        for t in ALL_TYPES_WITH_DYN_ARR.iter() {
+            let arr_t = Type::Array(Box::new(t.clone()));
+
+            for expr in &literals {
+                let arr_expr = Expr::ArrayLiteral {
+                    elements: vec![],
+                    type_name: Some(arr_t.clone()),
+                    span: span()
+                };
+
+                let arr_slicing_expr = Expr::ArraySlicing {
+                    array: Box::new(arr_expr.clone()),
+                    range: ArraySliceRange::From(Box::new(expr.clone())),
+                    span: span()
+                };
+
+                let expr_str = holy_expr_to_rust_expr(&expr);
+                let arr_expr_str = holy_expr_to_rust_expr(&arr_expr);
+                let arr_slicing_expr_str = holy_expr_to_rust_expr(&arr_slicing_expr);
+
+                assert_eq!(arr_slicing_expr_str, format!("{}[{}..].to_vec()", arr_expr_str, expr_str))
+            }
+        }
+    }
+
+    #[test]
+    fn fixed_arr_with_const_size_slicing_to_with_all_literal_on_arr_expr() {
+        let literals = get_all_literals();
+        for t in ALL_TYPES_WITH_DYN_ARR.iter() {
+            let arr_t = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Const("x".to_string()));
+
+            for expr in &literals {
+                let arr_expr = Expr::ArrayLiteral {
+                    elements: vec![],
+                    type_name: Some(arr_t.clone()),
+                    span: span()
+                };
+
+                let arr_slicing_expr = Expr::ArraySlicing {
+                    array: Box::new(arr_expr.clone()),
+                    range: ArraySliceRange::To(Box::new(expr.clone())),
+                    span: span()
+                };
+
+                let expr_str = holy_expr_to_rust_expr(&expr);
+                let arr_expr_str = holy_expr_to_rust_expr(&arr_expr);
+                let arr_slicing_expr_str = holy_expr_to_rust_expr(&arr_slicing_expr);
+
+                assert_eq!(arr_slicing_expr_str, format!("{}[..{}].to_vec()", arr_expr_str, expr_str))
+            }
+        }
+    }
+
+    #[test]
+    fn fixed_arr_with_const_size_slicing_fromto_with_all_literal_on_arr_expr() {
+        let literals = get_all_literals();
+        for t in ALL_TYPES_WITH_DYN_ARR.iter() {
+            let arr_t = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Const("x".to_string()));
+
+            for expr1 in &literals {
+                for expr2 in &literals {
+                    let arr_expr = Expr::ArrayLiteral {
+                        elements: vec![],
+                        type_name: Some(arr_t.clone()),
+                        span: span()
+                    };
+
+                    let arr_slicing_expr = Expr::ArraySlicing {
+                        array: Box::new(arr_expr.clone()),
+                        range: ArraySliceRange::FromTo(Box::new(expr1.clone()), Box::new(expr2.clone())),
+                        span: span()
+                    };
+
+                    let expr1_str = holy_expr_to_rust_expr(&expr1);
+                    let expr2_str = holy_expr_to_rust_expr(&expr2);
+
+                    let arr_expr_str = holy_expr_to_rust_expr(&arr_expr);
+                    let arr_slicing_expr_str = holy_expr_to_rust_expr(&arr_slicing_expr);
+
+                    assert_eq!(arr_slicing_expr_str, format!("{}[{}..{}].to_vec()", arr_expr_str, expr1_str, expr2_str))
+                }
+            }
+        }
+    }
+}
 
