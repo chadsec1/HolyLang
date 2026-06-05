@@ -9,6 +9,7 @@
 [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=HolyLang_HolyLang-Bootstrap&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=HolyLang_HolyLang-Bootstrap)
 [![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=HolyLang_HolyLang-Bootstrap&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=HolyLang_HolyLang-Bootstrap)
 [![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=HolyLang_HolyLang-Bootstrap&metric=ncloc)](https://sonarcloud.io/summary/new_code?id=HolyLang_HolyLang-Bootstrap)
+[![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=HolyLang_HolyLang-Bootstrap&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=HolyLang_HolyLang-Bootstrap)
 
 
 **HolyLang** programming language: Rust's compile-time safety, with Golang's readability.
