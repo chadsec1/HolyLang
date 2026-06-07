@@ -9,7 +9,8 @@ use std::path::PathBuf;
 ///
 /// # Panics
 ///
-/// Will panic if it fails to create/write files/directories in user's local `TMP` folder.
+/// Will panic if it fails to create/write files/directories in current relative path the binary is
+/// run.
 ///
 pub fn compile(rcode: &str, target_dir: &str) {
     let unix_timestamp_str = SystemTime::now()
