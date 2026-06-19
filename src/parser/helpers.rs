@@ -2,6 +2,80 @@ use super::HolyError;
 
 use crate::consts;
 
+pub enum QuoteType {
+    DoubleQuotes,
+    SingleQuote
+}
+
+
+
+/// Takes a string and gives back a char, while correctly handling escapes, such as \n, etc.
+///
+pub fn get_char_from_string(s: &str) -> Result<char, HolyError> {
+    let mut chars = s.chars();
+
+    let first_char = chars.next().ok_or(HolyError::Parse("Expected a UTF-8 character, instead got nothing.".to_string()))?;
+
+    if first_char != '\\' {
+        if chars.next().is_some() {
+            return Err(HolyError::Parse("Expected a UTF-8 character, instead got nothing.".to_string()))
+        }
+
+        return Ok(first_char);
+    }
+    
+
+    let escape_char = chars.next().ok_or(HolyError::Parse("Expected an escape character after backlash, instead got nothing.".to_string()))?;
+
+    if chars.next().is_some() {
+        return Err(HolyError::Parse(format!("Expected a single escape character, instead got `{}` characters.", s.len() - 1)))
+    }
+    
+    match escape_char {
+        'n'   => Ok('\n'),
+        't'   => Ok('\t'),
+        'r'   => Ok('\r'),
+        '0'   => Ok('\0'),
+        '\\'  => Ok('\\'),
+        '\''  => Ok('\''),
+        '"'   => Ok('"'),
+
+        other => Err(HolyError::Parse(format!("Invalid escape character `{}`", other)))
+    }
+    
+}
+
+
+
+/// Get the closing quote in a string `s`, and returns `s` without quotes. i.e. the strings
+/// "content".
+/// `quote` is configurable, either a `QuoteType::DoubleQuote` or a `QuoteType::SingleQuote`
+///
+pub fn get_string_content(s: &str, quote: QuoteType) -> Result<Option<String>, HolyError> {
+    let mut chars = s.char_indices().skip(1);
+
+    let closing_quote_type = match quote {
+        QuoteType::DoubleQuotes => '"',
+        QuoteType::SingleQuote  => '\''
+    };
+
+    let closing = loop {
+        match chars.next() {
+            Some((_, '\\')) => { chars.next(); }
+            Some((i, c)) if c == closing_quote_type => break Some(i),
+            None => break None,
+            _ => {}
+        }
+    };
+
+    match closing {
+        None =>  Err(HolyError::Parse("String double quotes were never closed".to_string())),
+        Some(i) if i == s.len() - 1 => Ok(Some(s[1..s.len() - 1].to_string())),
+
+        // Not a string or, a string in binary operation, etc.
+        _ => Ok(None)
+    }
+}
 
 /// Gets parenthesis contents.
 /// I.e. ( .. EXPRESSIONS .. ) would give Some(EXPRESSIONS)
@@ -344,36 +418,6 @@ pub fn split_char_top_level(split_char: char, s: &str) -> Result<Vec<&str>, Holy
     parts.push(s[start..].trim());
     Ok(parts)
 }
-
-
-pub fn string_strip_outer_quotes_and_unescape(s: &str) -> Result<String, HolyError> {
-    assert!(s.len() >= 2 && s.starts_with('"') && s.ends_with('"'), "(Compiler bug) Malformed string is not double-quoted: {s:?}");
-
-    let inner = &s[1..s.len() - 1];
-    let mut out = String::with_capacity(inner.len());
-    let mut chars = inner.chars();
-
-    while let Some(c) = chars.next() {
-        match c {
-            '\\' => match chars.next() {
-                Some('n')  => out.push('\n'),
-                Some('r')  => out.push('\r'),
-                Some('t')  => out.push('\t'),
-                Some('\\') => out.push('\\'),
-                Some('"')  => out.push_str("\\\""),
-                Some('\'') => out.push('\''),
-                Some('0')  => out.push('\0'),
-                Some(other) => return Err(HolyError::Parse(format!("Unknown escape sequence `\\{other}`"))),
-                None => return Err(HolyError::Parse(format!("Trailing backslash in string: `{s}`"))),
-            },
-            '"' => return Err(HolyError::Parse(format!("Unexpected unescaped quote inside string: `{s}`"))),
-            _ => out.push(c),
-        }
-    }
-
-    Ok(out)
-}
-
 
 
 

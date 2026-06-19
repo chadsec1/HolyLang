@@ -14,12 +14,15 @@ mod unary_op_tests {
                 if *l == u128::MAX.to_string() {
                     continue
                 }
+
                 let stmts = parse_body(&format!("own x {} = -{}", t, l));
                 if let Stmt::VarDecl(v) = &stmts[0] {
                     assert_eq!(v.type_name, t.clone());
             
                     assert_eq!(v.name, "x");
-                    assert_ne!(v.type_name.get_default_value(span()), v.value);
+                    if v.type_name != Type::Char {
+                        assert_ne!(v.type_name.get_default_value(span()).unwrap(), v.value);
+                    }
 
                     // a negative value would produce unary though because - earlier makes it do
                     // so. since theres no expressions before it. (--1 is -1 negated, etc)
@@ -68,7 +71,10 @@ mod unary_op_tests {
                 assert_eq!(v.type_name, t.clone());
 
                 assert_eq!(v.name, "x");
-                assert_ne!(v.type_name.get_default_value(span()), v.value);
+
+                if v.type_name != Type::Char {
+                    assert_ne!(v.type_name.get_default_value(span()).unwrap(), v.value);
+                }
 
                 if let Expr::UnaryOp { op, expr, .. } = &v.value {
                     assert_eq!(*op, UnaryOpKind::Negate);
@@ -88,7 +94,9 @@ mod unary_op_tests {
                     assert_eq!(v.type_name, t.clone());
 
                     assert_eq!(v.name, "x");
-                    assert_ne!(v.type_name.get_default_value(span()), v.value);
+                    if v.type_name != Type::Char {
+                        assert_ne!(v.type_name.get_default_value(span()).unwrap(), v.value);
+                    }
 
                     if let Expr::UnaryOp { op, expr, .. } = &v.value {
                         assert_eq!(*op, UnaryOpKind::Negate);

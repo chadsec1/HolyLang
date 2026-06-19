@@ -45,10 +45,8 @@ mod var_assign_tests {
     }
 
 
-
-
     #[test]
-    fn var_assign_with_var_decl() {
+    fn var_assign_with_var_decl_no_value() {
         let literals_edge_cases = get_all_literals_edge_cases(); 
         let letters: Vec<char> = ('a'..='z')
             .chain('A'..='Z')
@@ -57,6 +55,10 @@ mod var_assign_tests {
          
         for l in letters {
             for t in ALL_TYPES_NO_ARR {
+                if *t == Type::Char {
+                    continue
+                }
+
                 for lit in &literals_edge_cases {
                     let stmts = parse_body(&format!("own {} {}\n{} = {}", l, t, l, lit));
                     assert_eq!(stmts.len(), 2);
@@ -64,7 +66,7 @@ mod var_assign_tests {
                     if let Stmt::VarDecl(v) = &stmts[0] {
                         assert_eq!(v.name, l.to_string());
                         assert_eq!(v.type_name, t.clone());
-                        assert_eq!(v.type_name.get_default_value(v.span), v.value);
+                        assert_eq!(v.type_name.get_default_value(v.span).unwrap(), v.value);
 
                         if let Stmt::VarAssign(va) = &stmts[1] {
                             assert_eq!(va.name, l.to_string());

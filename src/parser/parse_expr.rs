@@ -31,7 +31,6 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
 
     // String Literal ?
     if s.starts_with('"') {
-        // Find the matching closing quote
         //
         // The reason we do this here, instead of just letting up to
         // string_strip_outer_quotes_and_unescape due to fact it errors on invalid strings thinking
@@ -40,36 +39,27 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
         // so binary operations regarding strings fall through, but if this is truly a string
         // literal, we strip and unquote it.
         //
-        let mut chars = s.char_indices().skip(1);
-        let closing = loop {
-            match chars.next() {
-                Some((_, '\\')) => { chars.next(); }
-                Some((i, '"')) => break Some(i),
-                None => break None,
-                _ => {}
-            }
-        };
 
-        match closing {
-            None => {
-                return Err(HolyError::Parse(format!(
-                    "String double quotes were never closed (line {} column {})",
-                    span.line, span.column
-                )));
-            }
-            Some(i) if i == s.len() - 1 => {
-                // Escapes the string content (like \n, etc), and removes the outer double quotes
-                //
-                let str_unescaped = helpers::string_strip_outer_quotes_and_unescape(s)
+        let raw_str = helpers::get_string_content(s, helpers::QuoteType::DoubleQuotes)
                     .map_err(|e| HolyError::Parse(format!("{} (line {} column {})",
                         e, span.line, span.column)))?;
-
-                return Ok(Expr::StringLiteral { value: str_unescaped, span });
-            }
-            // Fall through
-            _ => {}
+        
+        if let Some(str_no_quotes) = raw_str {
+            return Ok(Expr::StringLiteral { value: str_no_quotes, span })
         }
+    }
 
+    // Char Literal ?
+    if s.starts_with('\'') {
+        let raw_str = helpers::get_string_content(s, helpers::QuoteType::SingleQuote)
+                    .map_err(|e| HolyError::Parse(format!("{} (line {} column {})",
+                        e, span.line, span.column)))?;
+        
+        if let Some(char_str_no_quotes) = raw_str {
+            let real_char = helpers::get_char_from_string(&char_str_no_quotes)?;
+
+            return Ok(Expr::CharLiteral { value: real_char, span })
+        }
     }
 
 

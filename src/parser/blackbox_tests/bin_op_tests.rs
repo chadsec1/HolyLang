@@ -40,7 +40,10 @@ mod bin_op_in_function_tests {
                         if let Stmt::VarDecl(v) = &stmts[0] {
                             assert_eq!(v.name, "x");
                             assert_eq!(v.type_name, t.clone());
-                            assert_ne!(v.type_name.get_default_value(span()), v.value);
+                            if v.type_name != Type::Char {
+                                assert_ne!(v.type_name.get_default_value(span()).unwrap(), v.value);
+                            }
+
                             if let Expr::BinOp { op, .. } = &v.value {
                                 assert_eq!(op, b);
                             } else {
@@ -139,7 +142,7 @@ mod bin_op_in_function_tests {
                     if let Stmt::VarDecl(v) = &stmts[0] {
                         assert_eq!(v.name, "x");
                         assert_eq!(v.type_name, et2.clone());
-                        assert_ne!(v.type_name.get_default_value(span()), v.value);
+                        assert_ne!(v.type_name.get_default_value(span()).unwrap(), v.value);
                         if let Expr::BinOp { left, right, op, .. } = &v.value {
                             assert_eq!(op, b);
 
@@ -282,7 +285,7 @@ mod bin_op_in_function_tests {
                     if let Stmt::VarDecl(v) = &stmts[0] {
                         assert_eq!(v.type_name, et2.clone());
                         assert_eq!(v.name, "x");
-                        assert_ne!(v.type_name.get_default_value(span()), v.value);
+                        assert_ne!(v.type_name.get_default_value(span()).unwrap(), v.value);
 
                         if let Expr::BinOp { left, right, op, .. } = &v.value {
                             assert_eq!(op, b);
@@ -349,8 +352,9 @@ mod bin_op_in_function_tests {
                     assert_eq!(v.type_name, t.clone());
 
                     assert_eq!(v.name, "x");
-                    assert_ne!(v.type_name.get_default_value(span()), v.value);
-
+                    if v.type_name != Type::Char {
+                        assert_ne!(v.type_name.get_default_value(span()).unwrap(), v.value);
+                    }
                     if let Expr::BinOp { left, right, op, .. } = &v.value {
                         assert_eq!(op, b);
 
@@ -468,7 +472,7 @@ mod bin_op_in_function_tests {
                     assert_eq!(v.type_name, et.clone());
 
                     assert_eq!(v.name, "x");
-                    assert_ne!(v.type_name.get_default_value(span()), v.value);
+                    assert_ne!(v.type_name.get_default_value(span()).unwrap(), v.value);
 
                     if let Expr::BinOp { left, right, op, .. } = &v.value {
                         assert_eq!(op, b);
@@ -499,7 +503,7 @@ mod bin_op_in_function_tests {
                     assert_eq!(v.type_name, et.clone());
 
                     assert_eq!(v.name, "x");
-                    assert_ne!(v.type_name.get_default_value(span()), v.value);
+                    assert_ne!(v.type_name.get_default_value(span()).unwrap(), v.value);
 
                     if let Expr::BinOp { left, right, op, .. } = &v.value {
                         assert_eq!(op, b);
@@ -564,7 +568,7 @@ mod bin_op_in_function_tests {
                     assert_eq!(v.type_name, et.clone());
 
                     assert_eq!(v.name, "x");
-                    assert_ne!(v.type_name.get_default_value(span()), v.value);
+                    assert_ne!(v.type_name.get_default_value(span()).unwrap(), v.value);
 
                     if let Expr::BinOp { left, right, op, .. } = &v.value {
                         assert_eq!(op, b);
@@ -597,7 +601,7 @@ mod bin_op_in_function_tests {
                     assert_eq!(v.type_name, et.clone());
 
                     assert_eq!(v.name, "x");
-                    assert_ne!(v.type_name.get_default_value(span()), v.value);
+                    assert_ne!(v.type_name.get_default_value(span()).unwrap(), v.value);
 
                     if let Expr::BinOp { left, right, op, .. } = &v.value {
                         assert_eq!(op, b);
@@ -719,7 +723,10 @@ mod bin_op_in_function_tests {
                         assert_eq!(v.type_name, t.clone());
 
                         assert_eq!(v.name, "x");
-                        assert_ne!(v.type_name.get_default_value(span()), v.value);
+                        if v.type_name != Type::Char {
+                            assert_ne!(v.type_name.get_default_value(span()).unwrap(), v.value);
+                        }
+
                         if let Expr::BinOp { op, left, .. } = &v.value {
                             assert_eq!(op, b);
                             assert!(matches!(**left, Expr::BinOp { .. }));

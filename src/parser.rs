@@ -725,7 +725,7 @@ fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
             .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
 
         let ty = parse_type(parts[1], &span)?;
-        let default_value = ty.get_default_value(span);
+        let default_value = ty.get_default_value(span)?;
 
         return Ok(Stmt::VarDecl(VariableDeclaration { name, type_name: ty, value: default_value, explicitly_initialized: false, span }))
     }
@@ -883,6 +883,7 @@ fn parse_base_type(token: &str, span: &Span) -> Result<Type, HolyError> {
         "usize"   => Ok(Type::Usize),
         "float64" => Ok(Type::Float64),
         "bool"    => Ok(Type::Bool),
+        "char"    => Ok(Type::Char),
         "string"  => Ok(Type::String),
         other     => Err(HolyError::Parse(format!(
             "Unknown type `{}` (line {} column {})",
