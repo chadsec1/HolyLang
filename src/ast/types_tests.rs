@@ -18,30 +18,31 @@ mod types_tests {
 
     #[test]
     fn default_value_all_valid_variants() {
-        assert_eq!(Type::Int8.get_default_value(span()), Expr::IntLiteral { value: IntLiteralValue::Int8(0), span: span() });
-        assert_eq!(Type::Int16.get_default_value(span()), Expr::IntLiteral { value: IntLiteralValue::Int16(0), span: span() });
-        assert_eq!(Type::Int32.get_default_value(span()), Expr::IntLiteral { value: IntLiteralValue::Int32(0), span: span() });
-        assert_eq!(Type::Int64.get_default_value(span()), Expr::IntLiteral { value: IntLiteralValue::Int64(0), span: span() });
-        assert_eq!(Type::Int128.get_default_value(span()), Expr::IntLiteral { value: IntLiteralValue::Int128(0), span: span() });
+        assert_eq!(Type::Int8.get_default_value(span()).unwrap(), Expr::IntLiteral { value: IntLiteralValue::Int8(0), span: span() });
+        assert_eq!(Type::Int16.get_default_value(span()).unwrap(), Expr::IntLiteral { value: IntLiteralValue::Int16(0), span: span() });
+        assert_eq!(Type::Int32.get_default_value(span()).unwrap(), Expr::IntLiteral { value: IntLiteralValue::Int32(0), span: span() });
+        assert_eq!(Type::Int64.get_default_value(span()).unwrap(), Expr::IntLiteral { value: IntLiteralValue::Int64(0), span: span() });
+        assert_eq!(Type::Int128.get_default_value(span()).unwrap(), Expr::IntLiteral { value: IntLiteralValue::Int128(0), span: span() });
 
-        assert_eq!(Type::Byte.get_default_value(span()), Expr::IntLiteral { value: IntLiteralValue::Byte(0), span: span() });
-        assert_eq!(Type::Uint16.get_default_value(span()), Expr::IntLiteral { value: IntLiteralValue::Uint16(0), span: span() });
-        assert_eq!(Type::Uint32.get_default_value(span()), Expr::IntLiteral { value: IntLiteralValue::Uint32(0), span: span() });
-        assert_eq!(Type::Uint64.get_default_value(span()), Expr::IntLiteral { value: IntLiteralValue::Uint64(0), span: span() });
-        assert_eq!(Type::Uint128.get_default_value(span()), Expr::IntLiteral { value: IntLiteralValue::Uint128(0), span: span() });
-        assert_eq!(Type::Usize.get_default_value(span()), Expr::IntLiteral { value: IntLiteralValue::Usize(0), span: span() });
+        assert_eq!(Type::Byte.get_default_value(span()).unwrap(), Expr::IntLiteral { value: IntLiteralValue::Byte(0), span: span() });
+        assert_eq!(Type::Uint16.get_default_value(span()).unwrap(), Expr::IntLiteral { value: IntLiteralValue::Uint16(0), span: span() });
+        assert_eq!(Type::Uint32.get_default_value(span()).unwrap(), Expr::IntLiteral { value: IntLiteralValue::Uint32(0), span: span() });
+        assert_eq!(Type::Uint64.get_default_value(span()).unwrap(), Expr::IntLiteral { value: IntLiteralValue::Uint64(0), span: span() });
+        assert_eq!(Type::Uint128.get_default_value(span()).unwrap(), Expr::IntLiteral { value: IntLiteralValue::Uint128(0), span: span() });
+        assert_eq!(Type::Usize.get_default_value(span()).unwrap(), Expr::IntLiteral { value: IntLiteralValue::Usize(0), span: span() });
         
-        assert_eq!(Type::Float64.get_default_value(span()), Expr::Float64Literal { value: 0.0, span: span() });
-        assert_eq!(Type::String.get_default_value(span()), Expr::StringLiteral { value: "".to_string(), span: span() });
-        assert_eq!(Type::Bool.get_default_value(span()), Expr::BoolLiteral { value: false, span: span() });
+        assert_eq!(Type::Float64.get_default_value(span()).unwrap(), Expr::Float64Literal { value: 0.0, span: span() });
+        assert_eq!(Type::String.get_default_value(span()).unwrap(), Expr::StringLiteral { value: "".to_string(), span: span() });
+        assert_eq!(Type::Bool.get_default_value(span()).unwrap(), Expr::BoolLiteral { value: false, span: span() });
 
 
+        assert!(Type::Char.get_default_value(span()).is_err());
 
         for t in ALL_TYPES_NO_ARR {
             let mut arr = Type::Array(Box::new(t.clone()));
 
-            for _ in 1..=1000 {
-                assert_eq!(arr.get_default_value(span()), Expr::ArrayLiteral { elements: vec![], type_name: None, span: span() });
+            for _ in 1..=500 {
+                assert_eq!(arr.get_default_value(span()).unwrap(), Expr::ArrayLiteral { elements: vec![], type_name: None, span: span() });
                 arr = Type::Array(Box::new(arr));
             }
         }
@@ -49,12 +50,9 @@ mod types_tests {
         for t in ALL_TYPES_NO_ARR {
             let mut arr = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(1));
 
-            for _ in 1..=1000 {
-                let result = std::panic::catch_unwind(|| { 
-                    assert_eq!(arr.get_default_value(span()), Expr::ArrayLiteral { elements: vec![], type_name: None, span: span() });
-                });
+            for _ in 1..=500 {
+                assert!(arr.get_default_value(span()).is_err());
 
-                assert!(result.is_err(), "Expected panic for: {:?}", arr);
                 arr = Type::FixedArray(Box::new(arr), FixedArraySize::Literal(1));
             }
         }

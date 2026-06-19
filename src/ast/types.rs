@@ -3,6 +3,7 @@
 use crate::ast::exprs::Expr;
 use crate::ast::span::Span;
 use crate::ast::int_literal_value::IntLiteralValue;
+use crate::error::HolyError;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FixedArraySize {
@@ -29,6 +30,7 @@ pub enum Type {
     
     Float64,
     Bool,
+    Char,
     String,
     Array(Box<Self>),
     FixedArray(Box<Self>, FixedArraySize)
@@ -135,27 +137,27 @@ impl Type {
     /// Do not call this function on fixed-arrays, it will panic.
     ///
     #[must_use]
-    pub fn get_default_value(&self, span: Span) -> Expr {
+    pub fn get_default_value(&self, span: Span) -> Result<Expr, HolyError> {
         match self {
-            Self::Int8 => Expr::IntLiteral { value: IntLiteralValue::Int8(0), span },
-            Self::Int16 => Expr::IntLiteral { value: IntLiteralValue::Int16(0), span },
-            Self::Int32 => Expr::IntLiteral { value: IntLiteralValue::Int32(0), span },
+            Self::Int8  => Ok(Expr::IntLiteral { value: IntLiteralValue::Int8(0), span }),
+            Self::Int16 => Ok(Expr::IntLiteral { value: IntLiteralValue::Int16(0), span }),
+            Self::Int32 => Ok(Expr::IntLiteral { value: IntLiteralValue::Int32(0), span }),
 
-            Self::Int64 => Expr::IntLiteral { value: IntLiteralValue::Int64(0), span },
-            Self::Int128 => Expr::IntLiteral { value: IntLiteralValue::Int128(0), span },
+            Self::Int64  => Ok(Expr::IntLiteral { value: IntLiteralValue::Int64(0), span }),
+            Self::Int128 => Ok(Expr::IntLiteral { value: IntLiteralValue::Int128(0), span }),
 
-            Self::Byte => Expr::IntLiteral { value: IntLiteralValue::Byte(0), span },
-            Self::Uint16 => Expr::IntLiteral { value: IntLiteralValue::Uint16(0), span },
-            Self::Uint32 => Expr::IntLiteral { value: IntLiteralValue::Uint32(0), span },
-            Self::Uint64 => Expr::IntLiteral { value: IntLiteralValue::Uint64(0), span },
-            Self::Uint128 => Expr::IntLiteral { value: IntLiteralValue::Uint128(0), span },
-            Self::Usize => Expr::IntLiteral { value: IntLiteralValue::Usize(0), span },
+            Self::Byte    => Ok(Expr::IntLiteral { value: IntLiteralValue::Byte(0), span }),
+            Self::Uint16  => Ok(Expr::IntLiteral { value: IntLiteralValue::Uint16(0), span }),
+            Self::Uint32  => Ok(Expr::IntLiteral { value: IntLiteralValue::Uint32(0), span }),
+            Self::Uint64  => Ok(Expr::IntLiteral { value: IntLiteralValue::Uint64(0), span }),
+            Self::Uint128 => Ok(Expr::IntLiteral { value: IntLiteralValue::Uint128(0), span }),
+            Self::Usize   => Ok(Expr::IntLiteral { value: IntLiteralValue::Usize(0), span }),
 
-            Self::Float64 => Expr::Float64Literal { value: 0.0, span },
-            Self::Bool => Expr::BoolLiteral { value: false, span },
-            Self::String => Expr::StringLiteral { value: String::new(), span },
+            Self::Float64 => Ok(Expr::Float64Literal { value: 0.0, span }),
+            Self::Bool => Ok(Expr::BoolLiteral { value: false, span }),
+            Self::String => Ok(Expr::StringLiteral { value: String::new(), span }),
 
-            Self::Array(t) => {
+            Self::Array(t) => Ok({
                 // This is just to ensure it doesnt have any fixedArrays with in.
                 if t.is_array_type() {
                     let _ = t.get_default_value(span);
@@ -166,8 +168,10 @@ impl Type {
                 // here just in case :).
                 //
                 Expr::ArrayLiteral { elements: Vec::new(), type_name: None, span }
-            },
-            Self::FixedArray(_, _) => panic!("(Compiler bug) Dont call get_default_value on fixed-size arrays.")
+            }),
+            Self::FixedArray(_, _) => Err(HolyError::Parse(format!("Fixed-size arrays must have explicit values (line {} column {})", span.line, span.column))),
+
+            Self::Char => Err(HolyError::Parse(format!("chars must have explicit values (line {} column {})",  span.line, span.column)))
         }
     }
 

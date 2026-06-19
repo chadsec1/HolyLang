@@ -20,6 +20,7 @@ impl fmt::Display for Type {
 
             Self::Float64 => "float64",
             Self::Bool => "bool",
+            Self::Char => "char",
             Self::String => "string",
             Self::Array(inner_ty) => &format!("[]{inner_ty}"),
             Self::FixedArray(inner_ty, size) => &format!("[{size}]{inner_ty}")
@@ -67,6 +68,7 @@ impl fmt::Display for Expr {
             Self::Float64Literal { .. } => "Float64 Literal",
             Self::BoolLiteral { .. } => "Bool Literal",
             Self::ArrayLiteral { .. } => "Array Literal",
+            Self::CharLiteral { .. } => "Char Literal",
             Self::StringLiteral { .. } => "String Literal",
             Self::Var { .. } => "Variable",
             Self::UnaryOp { .. } => "Unary Operation",

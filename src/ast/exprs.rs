@@ -25,6 +25,10 @@ pub enum Expr {
         type_name: Option<Type>, // This is just for the transpiler layer.
         span: Span
     },
+    CharLiteral {
+        value: char,
+        span: Span
+    },
     StringLiteral {
         value: String,
         span: Span
