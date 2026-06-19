@@ -56,8 +56,6 @@ mod fixed_array_tests;
 mod fixed_array_access_tests;
 mod fixed_array_slicing_tests;
 
-
-
 mod if_stmt_tests;
 
 mod for_stmt_tests;
@@ -88,6 +86,7 @@ static ALL_TYPES_WITH_DYN_ARR: LazyLock<Vec<Type>> = LazyLock::new(|| {
         Type::Usize,
         Type::Float64,
         Type::Bool,
+        Type::Char,
         Type::String,
 
         Type::Array(Box::new(Type::Int8)),
@@ -105,6 +104,7 @@ static ALL_TYPES_WITH_DYN_ARR: LazyLock<Vec<Type>> = LazyLock::new(|| {
 
         Type::Array(Box::new(Type::Float64)),
         Type::Array(Box::new(Type::Bool)),
+        Type::Array(Box::new(Type::Char)),
         Type::Array(Box::new(Type::String)),
     ]
 });
@@ -122,7 +122,7 @@ fn get_many_boolean_conditions() -> Vec<Expr> {
             // So that >= > <= < doesnt get performed on non integer/floats.
             if !ALL_BIN_OP_KIND_COMP_EQ.contains(&b) {
                 match l {
-                    Expr::StringLiteral { .. } | Expr::BoolLiteral { .. } | Expr::ArrayLiteral { .. } => {
+                    Expr::StringLiteral { .. } | Expr::CharLiteral { .. } | Expr::BoolLiteral { .. } | Expr::ArrayLiteral { .. } => {
                         continue
                     },
                     _ => {}
@@ -207,7 +207,7 @@ fn get_non_boolean_conditions() -> Vec<Expr> {
 }
 
 
-fn get_all_literals_no_arr_bool() -> [Expr; 13] {
+fn get_all_literals_no_arr_bool() -> [Expr; 14] {
     return [
         int8_lit(1),
         int16_lit(1),
@@ -225,17 +225,19 @@ fn get_all_literals_no_arr_bool() -> [Expr; 13] {
 
         float64_lit(1.0),
 
+        char_lit('f'),
         str_lit("Hi")
     ]
 }
 
 
-fn get_all_literals_no_arr_no_ints() -> [Expr; 3] {
+fn get_all_literals_no_arr_no_ints() -> [Expr; 4] {
     let literals = [
 
         float64_lit(1.0),
 
         bool_lit(false),
+        char_lit('f'),
         str_lit("Hi")
     ];
 
@@ -244,7 +246,7 @@ fn get_all_literals_no_arr_no_ints() -> [Expr; 3] {
 
 
 
-fn get_all_literals_no_arr_few_ints() -> [Expr; 5] {
+fn get_all_literals_no_arr_few_ints() -> [Expr; 6] {
     let literals = [
         uint128_lit(1),
         int128_lit(1),
@@ -252,6 +254,7 @@ fn get_all_literals_no_arr_few_ints() -> [Expr; 5] {
         float64_lit(1.0),
 
         bool_lit(false),
+        char_lit('f'),
         str_lit("Hi")
     ];
 
@@ -259,12 +262,13 @@ fn get_all_literals_no_arr_few_ints() -> [Expr; 5] {
 }
 
 
-fn get_all_literals_no_arr_few_ints_scattered() -> [Expr; 5] {
+fn get_all_literals_no_arr_few_ints_scattered() -> [Expr; 6] {
     let literals = [
         str_lit("Hi"),
 
         bool_lit(false),
         int128_lit(1),
+        char_lit('f'),
         float64_lit(1.0),
         uint128_lit(1),
     ];
@@ -384,8 +388,8 @@ fn get_all_literals_no_arr_str_bool_float() -> [Expr; 11] {
     return literals;
 }
 
-fn get_all_literals_no_arr() -> [Expr; 14] {
-    let literals = [
+fn get_all_literals_no_arr() -> [Expr; 15] {
+    [
         int8_lit(1),
         int16_lit(1),
         int32_lit(1),
@@ -403,14 +407,13 @@ fn get_all_literals_no_arr() -> [Expr; 14] {
         float64_lit(1.0),
 
         bool_lit(false),
+        char_lit('f'),
         str_lit("Hi")
-    ];
-
-    return literals;
+    ]
 }
 
-fn get_all_literals_no_arr_scattered_order() -> [Expr; 14] {
-    let literals = [
+fn get_all_literals_no_arr_scattered_order() -> [Expr; 15] {
+    [
         int128_lit(1),
         int8_lit(1),
         uint64_lit(1),
@@ -420,20 +423,19 @@ fn get_all_literals_no_arr_scattered_order() -> [Expr; 14] {
         uint128_lit(1),
         float64_lit(1.0),
         uint32_lit(1),
+        char_lit('f'),
         int16_lit(1),
         bool_lit(false),
         byte_lit(1),
         int32_lit(1),
         usize_lit(1)
-    ];
-
-    return literals;
+    ]
 }
 
 
 
-fn get_all_literals_no_arr_no_usize() -> [Expr; 13] {
-    let literals = [
+fn get_all_literals_no_arr_no_usize() -> [Expr; 14] {
+    return [
         int8_lit(1),
         int16_lit(1),
         int32_lit(1),
@@ -449,13 +451,12 @@ fn get_all_literals_no_arr_no_usize() -> [Expr; 13] {
         float64_lit(1.0),
 
         bool_lit(false),
+        char_lit('f'),
         str_lit("Hi")
-    ];
-
-    return literals;
+    ]
 }
 
-fn get_all_literals() -> [Expr; 28] {
+fn get_all_literals() -> [Expr; 30] {
     return [
         int8_lit(1),
         int16_lit(1),
@@ -474,6 +475,7 @@ fn get_all_literals() -> [Expr; 28] {
         float64_lit(1.0),
 
         bool_lit(false),
+        char_lit('f'),
         str_lit("Hi"),
 
         array_lit(vec![int8_lit(1), int8_lit(i8::MIN), int8_lit(i8::MAX) ], Some(Type::Array(Box::new(Type::Int8)))),
@@ -491,6 +493,8 @@ fn get_all_literals() -> [Expr; 28] {
 
         array_lit(vec![float64_lit(1.0), float64_lit(f64::MIN), float64_lit(f64::MAX) ], Some(Type::Array(Box::new(Type::Float64)))),
         array_lit(vec![bool_lit(false), bool_lit(true)], Some(Type::Array(Box::new(Type::Bool)))),
+        
+        array_lit(vec![char_lit('\n'), char_lit('H'), char_lit('!')], Some(Type::Array(Box::new(Type::Char)))),
         array_lit(vec![str_lit(""), str_lit("Hi"), str_lit(" !")], Some(Type::Array(Box::new(Type::String))))
     ];
 }
@@ -648,6 +652,10 @@ fn float64_lit(f: f64) -> Expr {
 
 fn bool_lit(b: bool) -> Expr {
     Expr::BoolLiteral { value: b, span: span() }
+}
+
+fn char_lit(c: char) -> Expr {
+    Expr::CharLiteral { value: c, span: span() }
 }
 
 fn str_lit(s: &str) -> Expr {
