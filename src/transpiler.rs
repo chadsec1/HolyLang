@@ -357,6 +357,11 @@ fn holy_expr_to_rust_expr(expr: &Expr) -> String {
 
         Expr::BoolLiteral { value, .. } => value.to_string(),
 
+        Expr::CharLiteral { value, .. } => {
+            let escaped_char = value.escape_default().to_string();
+
+            format!("'{escaped_char}'")
+        },
         Expr::StringLiteral { value, .. } => format!("\"{value}\".to_string()"),
         
         Expr::ArrayLiteral { elements, type_name, .. } => {
@@ -508,12 +513,13 @@ fn holy_type_to_rust_type_str(holy_type: &Type) -> String {
         
         Type::Float64 => "f64".to_string(),
         Type::Bool => "bool".to_string(),
+        Type::Char => "char".to_string(),
         Type::String => "String".to_string(),
         
         Type::Array(t) => format!("Vec<{}>", holy_type_to_rust_type_str(t)),
         Type::FixedArray(t, s) => match s {
-                FixedArraySize::Literal(n) => format!("[{}; {}]", holy_type_to_rust_type_str(t), n),
-                FixedArraySize::Const(c) => format!("[{}; {}]", holy_type_to_rust_type_str(t), c)
-            }
+            FixedArraySize::Literal(n) => format!("[{}; {}]", holy_type_to_rust_type_str(t), n),
+            FixedArraySize::Const(c) => format!("[{}; {}]", holy_type_to_rust_type_str(t), c)
         }
+    }
 }
