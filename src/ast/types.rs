@@ -133,10 +133,9 @@ impl Type {
     /// Integers are 0, Float64 is 0.0, Strings are "", and dynamic arrays are empty.
     /// Any other types produces a panic, because it requires programmer explicit initialization 
     ///
-    /// # Panics
-    /// Do not call this function on fixed-arrays, it will panic.
+    /// # Errors
+    /// Calling this on fixed-array types, or char types, will cause a `HolyError` to be returned.
     ///
-    #[must_use]
     pub fn get_default_value(&self, span: Span) -> Result<Expr, HolyError> {
         match self {
             Self::Int8  => Ok(Expr::IntLiteral { value: IntLiteralValue::Int8(0), span }),

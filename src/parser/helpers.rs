@@ -14,7 +14,7 @@ pub enum QuoteType {
 pub fn get_char_from_string(s: &str) -> Result<char, HolyError> {
     let mut chars = s.chars();
 
-    let first_char = chars.next().ok_or(HolyError::Parse("Expected a UTF-8 character, instead got nothing.".to_string()))?;
+    let first_char = chars.next().ok_or_else(|| HolyError::Parse("Expected a UTF-8 character, instead got nothing.".to_string()))?;
 
     if first_char != '\\' {
         if chars.next().is_some() {
@@ -25,7 +25,7 @@ pub fn get_char_from_string(s: &str) -> Result<char, HolyError> {
     }
     
 
-    let escape_char = chars.next().ok_or(HolyError::Parse("Expected an escape character after backlash, instead got nothing.".to_string()))?;
+    let escape_char = chars.next().ok_or_else(|| HolyError::Parse("Expected an escape character after backlash, instead got nothing.".to_string()))?;
 
     if chars.next().is_some() {
         return Err(HolyError::Parse(format!("Expected a single escape character, instead got `{}` characters.", s.len() - 1)))
@@ -40,7 +40,7 @@ pub fn get_char_from_string(s: &str) -> Result<char, HolyError> {
         '\''  => Ok('\''),
         '"'   => Ok('"'),
 
-        other => Err(HolyError::Parse(format!("Invalid escape character `{}`", other)))
+        other => Err(HolyError::Parse(format!("Invalid escape character `{other}`")))
     }
     
 }
@@ -51,7 +51,7 @@ pub fn get_char_from_string(s: &str) -> Result<char, HolyError> {
 /// "content".
 /// `quote` is configurable, either a `QuoteType::DoubleQuote` or a `QuoteType::SingleQuote`
 ///
-pub fn get_string_content(s: &str, quote: QuoteType) -> Result<Option<String>, HolyError> {
+pub fn get_string_content(s: &str, quote: &QuoteType) -> Result<Option<String>, HolyError> {
     let mut chars = s.char_indices().skip(1);
 
     let closing_quote_type = match quote {

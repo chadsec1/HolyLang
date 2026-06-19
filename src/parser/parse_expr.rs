@@ -40,7 +40,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
         // literal, we strip and unquote it.
         //
 
-        let raw_str = helpers::get_string_content(s, helpers::QuoteType::DoubleQuotes)
+        let raw_str = helpers::get_string_content(s, &helpers::QuoteType::DoubleQuotes)
                     .map_err(|e| HolyError::Parse(format!("{} (line {} column {})",
                         e, span.line, span.column)))?;
         
@@ -51,7 +51,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
 
     // Char Literal ?
     if s.starts_with('\'') {
-        let raw_str = helpers::get_string_content(s, helpers::QuoteType::SingleQuote)
+        let raw_str = helpers::get_string_content(s, &helpers::QuoteType::SingleQuote)
                     .map_err(|e| HolyError::Parse(format!("{} (line {} column {})",
                         e, span.line, span.column)))?;
         
