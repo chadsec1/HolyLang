@@ -104,6 +104,8 @@ pub fn infer_expr_type(
 
         Expr::BoolLiteral { .. } => Ok(Type::Bool),
 
+        Expr::CharLiteral { .. } => Ok(Type::Char),
+        
         Expr::StringLiteral { .. } => Ok(Type::String),
         
         Expr::ArrayLiteral { elements, type_name, span } => {
@@ -486,7 +488,6 @@ pub fn infer_expr_type(
             }
 
             Ok(expr_ty)
-        
         }
 
         Expr::BinOp { left, op, right, span } => {
@@ -531,31 +532,29 @@ pub fn infer_expr_type(
             // comparison
             } else if matches!(op, BinOpKind::Equal | BinOpKind::NotEqual ) {
                 if lty != rty {
-                    return Err(HolyError::Semantic(format!("Type mismatch in binary comparison operation: `{}` vs `{}` (line {} column {})", lty, rty, span.line, span.column)));
+                    return Err(HolyError::Semantic(format!("Type mismatch in binary comparison operation: `{}` vs `{}` (line {} column {})", lty, rty, span.line, span.column)))
                 }
                 Ok(Type::Bool)
             
             // arthemtic comparison (greater than, less than, etc)
             } else if matches!(op, BinOpKind::Greater | BinOpKind::GreaterEqual | BinOpKind::Less | BinOpKind::LessEqual) {
                 if lty != rty {
-                    return Err(HolyError::Semantic(format!("Type mismatch in binary comparison operation: `{}` vs `{}` (line {} column {})", lty, rty, span.line, span.column)));
+                    return Err(HolyError::Semantic(format!("Type mismatch in binary comparison operation: `{}` vs `{}` (line {} column {})", lty, rty, span.line, span.column)))
                 }
-                if !lty.is_numeric_type() {
-                    return Err(HolyError::Semantic(format!("You cannot perform arithmetic comparison on non-numeric types: `{}` vs `{}`. (line {} column {})", lty, rty, span.line, span.column)));
+                if (!lty.is_numeric_type()) && lty != Type::Char {
+                    return Err(HolyError::Semantic(format!("You cannot perform arithmetic comparison on non-numeric types: `{}` vs `{}`. (line {} column {})", lty, rty, span.line, span.column)))
                 }
 
                 Ok(Type::Bool)
 
-
-
             } else if matches!(op, BinOpKind::BitwiseShiftLeft | BinOpKind::BitwiseShiftRight | BinOpKind::BitwiseAnd | BinOpKind::BitwiseOr) {
                 if lty != rty {
-                    return Err(HolyError::Semantic(format!("Type mismatch in binary bitwise operation: `{}` vs `{}` (line {} column {})", lty, rty, span.line, span.column)));
+                    return Err(HolyError::Semantic(format!("Type mismatch in binary bitwise operation: `{}` vs `{}` (line {} column {})", lty, rty, span.line, span.column)))
                 }
 
                 // You can only perform bitwise operations on integer types
                 if !lty.is_integer_type() {
-                    return Err(HolyError::Semantic(format!("You cannot perform bitwise operations on non-integer types: `{}` vs `{}`. (line {} column {})", lty, rty, span.line, span.column)));
+                    return Err(HolyError::Semantic(format!("You cannot perform bitwise operations on non-integer types: `{}` vs `{}`. (line {} column {})", lty, rty, span.line, span.column)))
                 }
 
                 Ok(lty)
@@ -594,9 +593,11 @@ pub fn infer_expr_type(
             // Basically, copy call only works on variables.
             match &mut **e {
                 Expr::CopyCall {span: inner_span, ..} => Err(HolyError::Semantic(format!("Double copying is not needed. Remove the extra copy call. (line {} column {})", inner_span.line, inner_span.column))),
+
                 Expr::IntLiteral{span: inner_span, ..} | 
                 Expr::Float64Literal{span: inner_span, ..} | 
                 Expr::BoolLiteral{span: inner_span, ..} | 
+                Expr::CharLiteral{span: inner_span, ..} | 
                 Expr::StringLiteral{span: inner_span, ..} | 
                 Expr::ArrayLiteral{span: inner_span, ..} => Err(HolyError::Semantic(format!("Copying a literal is not needed. Remove the copy call and use the literal directly. (line {} column {})", inner_span.line, inner_span.column))),
                 
@@ -616,21 +617,21 @@ pub fn infer_expr_type(
                 // Catch the "makes no sense" calls, like only passing a literal in {..<expr>..} formating
                 // placeholders
                 match e {
-                    Expr::CopyCall {span: inner_span, ..} => {
-                        return Err(HolyError::Semantic(format!("Format calls copy by default, Remove the extra copy call. (line {} column {})", inner_span.line, inner_span.column)))
-                    }
-                    Expr::IntLiteral{span: inner_span, ..} | Expr::Float64Literal{span: inner_span, ..} | Expr::BoolLiteral{span: inner_span, ..} | Expr::StringLiteral{span: inner_span, ..} | Expr::ArrayLiteral{span: inner_span, ..}   => {
-                        return Err(HolyError::Semantic(format!(
+                    Expr::CopyCall {span: inner_span, ..} => return Err(HolyError::Semantic(format!(
+                                                "Format calls copy by default, Remove the extra copy call. (line {} column {})", inner_span.line, inner_span.column
+                                            ))),
+
+                    Expr::IntLiteral{span: inner_span, ..}     | 
+                    Expr::Float64Literal{span: inner_span, ..} |
+                    Expr::BoolLiteral{span: inner_span, ..}    | 
+                    Expr::StringLiteral{span: inner_span, ..}  | 
+                    Expr::CharLiteral{span: inner_span, ..}    | 
+                    Expr::ArrayLiteral{span: inner_span, ..}    => return Err(HolyError::Semantic(format!(
                                     "Plain literals are not allowed in formating! Remove the format placeholders and use the literal directly! (line {} column {})", 
                                     inner_span.line, inner_span.column
-                                )))
-                    }
+                                ))),
 
-                    Expr::FormatCall{span: inner_span, ..} => {
-                        return Err(HolyError::Semantic(format!("Nested FormatCalls are not allowed. (line {} column {})", inner_span.line, inner_span.column)))
-                    }
-
-
+                    Expr::FormatCall{span: inner_span, ..} => return Err(HolyError::Semantic(format!("Nested FormatCalls are not allowed. (line {} column {})", inner_span.line, inner_span.column))),
 
                     _ => {
                         // We call infer expr type here for it to validate the expression up to most

@@ -90,6 +90,7 @@ pub const fn expr_span(e: &Expr) -> Span {
         Expr::Float64Literal { span, .. } |
         Expr::BoolLiteral { span, .. } |
         Expr::ArrayLiteral { span, .. } |
+        Expr::CharLiteral { span, .. } |
         Expr::StringLiteral { span, .. } |
 
         Expr::ArrayAccess { span, .. } |
