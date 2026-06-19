@@ -174,6 +174,7 @@ pub const ALL_TYPES_NO_ARR_NO_FLOAT: &[Type] = &[
     Type::Uint128,
     Type::Usize,
     Type::Bool,
+    Type::Char,
     Type::String,
 ];
 
@@ -182,6 +183,7 @@ pub const ALL_TYPES_NO_ARR_NO_FLOAT: &[Type] = &[
 pub const ALL_TYPES_NO_INTS_NO_ARR: &[Type] = &[
     Type::Float64,
     Type::Bool,
+    Type::Char,
     Type::String,
 ];
 
@@ -203,6 +205,7 @@ pub const ALL_TYPES_NO_ARR_NO_BOOL: &[Type] = &[
     Type::Uint128,
     Type::Usize,
     Type::Float64,
+    Type::Char,
     Type::String,
 ];
 
@@ -255,6 +258,7 @@ pub const ALL_TYPES_NO_ARR: &[Type] = &[
     Type::Usize,
     Type::Float64,
     Type::Bool,
+    Type::Char,
     Type::String,
 ];
 
@@ -270,6 +274,7 @@ pub const ALL_TYPES_NO_ARR_SCATTERED: &[Type] = &[
     Type::Uint128,
     Type::Float64,
     Type::Uint32,
+    Type::Char,
     Type::Int16,
     Type::Bool,
     Type::Byte,
@@ -291,6 +296,7 @@ pub const ALL_TYPES_NO_ARR_NO_USIZE: &[Type] = &[
     Type::Uint128,
     Type::Float64,
     Type::Bool,
+    Type::Char,
     Type::String,
 ];
 
