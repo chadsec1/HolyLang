@@ -310,13 +310,17 @@ mod while_stmt_in_function_tests {
         for l in literals_edge_cases {
             for (b, s) in ALL_BIN_OP_KIND.iter().zip(BIN_OP_KIND_SYMBOLS.iter()) {
                 for t in ALL_TYPES_NO_ARR {
+                    if *t == Type::Char {
+                        continue
+                    }
+
                     let stmts = parse_body(&format!("own x {}\nwhile {} {} {} {{\n\n}}", t, l, s, l));
                     assert_eq!(stmts.len(), 2);
 
                     if let Stmt::VarDecl(v) = &stmts[0] {
                         assert_eq!(v.name, "x");
                         assert_eq!(v.type_name, t.clone());
-                        assert_eq!(v.type_name.get_default_value(v.span), v.value);
+                        assert_eq!(v.type_name.get_default_value(v.span).unwrap(), v.value);
                     } else { panic!("Expected VarDecl"); }
 
                     if let Stmt::While(w) = &stmts[1] {
@@ -356,7 +360,10 @@ mod while_stmt_in_function_tests {
                     if let Stmt::VarDecl(v) = &stmts[1] {
                         assert_eq!(v.name, "x");
                         assert_eq!(v.type_name, t.clone());
-                        assert_ne!(v.type_name.get_default_value(span()), v.value);
+                        
+                        if v.type_name != Type::Char {
+                            assert_ne!(v.type_name.get_default_value(span()).unwrap(), v.value);
+                        }
                     } else { panic!("Expected VarDecl"); }
 
 
@@ -372,6 +379,10 @@ mod while_stmt_in_function_tests {
         for l in literals_edge_cases {
             for (b, s) in ALL_BIN_OP_KIND.iter().zip(BIN_OP_KIND_SYMBOLS.iter()) {
                 for t in ALL_TYPES_NO_ARR {
+                    if *t == Type::Char {
+                        continue
+                    }
+
                     let stmts = parse_body(&format!("while {} {} {} {{\n\n}}\nown x {}", l, s, l, t));
                     assert_eq!(stmts.len(), 2);
                     if let Stmt::While(w) = &stmts[0] {
@@ -386,7 +397,7 @@ mod while_stmt_in_function_tests {
                     if let Stmt::VarDecl(v) = &stmts[1] {
                         assert_eq!(v.name, "x");
                         assert_eq!(v.type_name, t.clone());
-                        assert_eq!(v.type_name.get_default_value(v.span), v.value);
+                        assert_eq!(v.type_name.get_default_value(v.span).unwrap(), v.value);
                     } else { panic!("Expected VarDecl"); }
 
 

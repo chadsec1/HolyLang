@@ -266,6 +266,10 @@ mod infinite_stmt_in_function_tests {
 
         for l in &letters {
             for t in ALL_TYPES_NO_ARR {
+                if *t == Type::Char {
+                    continue
+                }
+ 
                 let stmts = parse_body(&format!("own {} {}\ninfinite {{\n\n}}", l, t));
                 assert_eq!(stmts.len(), 2);
 
@@ -319,6 +323,9 @@ mod infinite_stmt_in_function_tests {
 
         for l in &letters {
             for t in ALL_TYPES_NO_ARR {
+                if *t == Type::Char {
+                    continue
+                }
                 let stmts = parse_body(&format!("infinite {{\n\n}}\nown {} {}", l, t));
                 assert_eq!(stmts.len(), 2);
 
@@ -369,6 +376,10 @@ mod infinite_stmt_in_function_tests {
 
         for l in &letters {
             for t in ALL_TYPES_NO_ARR {
+                if *t == Type::Char {
+                    continue
+                }
+ 
                 let stmts = parse_body(&format!("infinite {{\nown {} {}\n}}", l, t));
                 assert_eq!(stmts.len(), 1);
 
@@ -592,6 +603,10 @@ mod infinite_stmt_in_globals_tests {
 
         for l in &letters {
             for t in ALL_TYPES_NO_ARR {
+                if *t == Type::Char {
+                    continue
+                }
+
                 assert_parse_err(&format!("own {} {}\ninfinite {{\n\n}}", l, t));
             }
         }

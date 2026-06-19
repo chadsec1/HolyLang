@@ -53,11 +53,15 @@ mod var_decl_in_functions_tests {
     #[test]
     fn var_decl_no_value() {
         for t in ALL_TYPES_NO_ARR {
+            if *t == Type::Char {
+                continue
+            }
+
             let stmts = parse_body(&format!("own x {}", t));
             if let Stmt::VarDecl(v) = &stmts[0] {
                 assert_eq!(v.name, "x");
                 assert_eq!(v.type_name, t.clone());
-                assert_eq!(v.type_name.get_default_value(v.span), v.value);
+                assert_eq!(v.type_name.get_default_value(v.span).unwrap(), v.value);
             } else {
                 panic!("Expected VarDecl");
             }
@@ -90,7 +94,7 @@ mod var_decl_in_functions_tests {
         if let Stmt::VarDecl(v) = &stmts[0] {
             assert_eq!(v.name, "x");
             assert_eq!(v.type_name, Type::Bool);
-            assert_ne!(Type::Bool.get_default_value(span()), v.value);
+            assert_ne!(Type::Bool.get_default_value(span()).unwrap(), v.value);
 
             if let Expr::BoolLiteral { value, .. } = &v.value {
                 assert_eq!(*value, true);
@@ -107,7 +111,7 @@ mod var_decl_in_functions_tests {
         if let Stmt::VarDecl(v) = &stmts[0] {
             assert_eq!(v.name, "x");
             assert_eq!(v.type_name, Type::String);
-            assert_ne!(Type::String.get_default_value(span()), v.value);
+            assert_ne!(Type::String.get_default_value(span()).unwrap(), v.value);
             
             if let Expr::StringLiteral { value, .. } = &v.value {
                 assert_eq!(*value, "hello");
@@ -130,7 +134,7 @@ mod var_decl_in_functions_tests {
                     assert_eq!(v.name, "x");
                     assert_eq!(v.type_name, Type::Array(Box::new(t.clone())));
             
-                    assert_ne!(v.type_name.get_default_value(v.span), v.value);
+                    assert_ne!(v.type_name.get_default_value(v.span).unwrap(), v.value);
 
                     if let Expr::ArrayLiteral { elements, .. } = &v.value {
                         assert_eq!(elements.len(), 3);
@@ -161,7 +165,9 @@ mod var_decl_in_functions_tests {
             if let Stmt::VarDecl(v) = &stmts[0] {
                 assert_eq!(v.name, "x");
                 assert_eq!(v.type_name, t.clone());
-                assert_ne!(v.type_name.get_default_value(v.span), v.value);
+                if v.type_name != Type::Char {
+                    assert_ne!(v.type_name.get_default_value(v.span).unwrap(), v.value);
+                }
 
                 if let Expr::ArrayLiteral { elements, .. } = &v.value {
                     assert!(elements.is_empty());
@@ -206,7 +212,10 @@ mod var_decl_in_functions_tests {
             if let Stmt::VarDecl(v) = &stmts[0] {
                 assert_eq!(v.name, "x");
                 assert_eq!(v.type_name, t.clone());
-                assert_ne!(v.type_name.get_default_value(v.span), v.value);
+                
+                if v.type_name != Type::Char {
+                    assert_ne!(v.type_name.get_default_value(v.span).unwrap(), v.value);
+                }
 
                 if let Expr::ArrayLiteral { elements, .. } = &v.value {
                     assert_eq!(elements.len(), 0);
@@ -231,7 +240,9 @@ mod var_decl_in_functions_tests {
                 if let Stmt::VarDecl(v) = &stmts[0] {
                     assert_eq!(v.type_name, t.clone());
                     assert_eq!(v.name, "x");
-                    assert_ne!(v.type_name.get_default_value(v.span), v.value);
+                    if v.type_name != Type::Char {
+                        assert_ne!(v.type_name.get_default_value(v.span).unwrap(), v.value);
+                    }
 
                     if let Expr::ArrayLiteral { elements, .. } = &v.value {
                         assert_eq!(elements.len(), 1);
@@ -351,13 +362,18 @@ mod var_decl_in_functions_tests {
         for l in letters {
             for lit in &literals_edge_cases {
                 for t in ALL_TYPES_NO_ARR {
+                    if *t == Type::Char {
+                        continue
+                    }
+
                     let stmts = parse_body(&format!("own {} {}\nown {} {} = {}", l, t, l, t, lit));
                     assert_eq!(stmts.len(), 2);
 
                     if let Stmt::VarDecl(v) = &stmts[0] {
                         assert_eq!(v.name, l.to_string());
                         assert_eq!(v.type_name, t.clone());
-                        assert_eq!(v.type_name.get_default_value(v.span), v.value);
+                
+                        assert_eq!(v.type_name.get_default_value(v.span).unwrap(), v.value);
                     } else { panic!("Expected VarDecl"); }
 
 

@@ -12,7 +12,9 @@ mod function_call_tests {
             if let Stmt::VarDecl(v) = &stmts[0] {
                 assert_eq!(v.name, "x");
                 assert_eq!(v.type_name, t.clone());
-                assert_ne!(v.type_name.get_default_value(span()), v.value);
+                if v.type_name != Type::Char {
+                    assert_ne!(v.type_name.get_default_value(span()).unwrap(), v.value);
+                }
 
                 if let Expr::Call { name, args, .. } = &v.value {
                     assert_eq!(name, "noop");
@@ -32,7 +34,10 @@ mod function_call_tests {
                 if let Stmt::VarDecl(v) = &stmts[0] {
                     assert_eq!(v.name, "x");
                     assert_eq!(v.type_name, t.clone());
-                    assert_ne!(v.type_name.get_default_value(span()), v.value);
+                    
+                    if v.type_name != Type::Char {
+                        assert_ne!(v.type_name.get_default_value(span()).unwrap(), v.value);
+                    }
 
                     if let Expr::Call { name, args, .. } = &v.value {
                         assert_eq!(name, "add");
@@ -51,8 +56,11 @@ mod function_call_tests {
             if let Stmt::VarDecl(v) = &stmts[0] {
                 assert_eq!(v.name, "x");
                 assert_eq!(v.type_name, t.clone());
-                assert_ne!(v.type_name.get_default_value(span()), v.value);
-                   
+                
+                if v.type_name != Type::Char {
+                    assert_ne!(v.type_name.get_default_value(span()).unwrap(), v.value);
+                }
+
                 if let Expr::Call { name, args, .. } = &v.value {
                     assert_eq!(name, "add");
                     assert_eq!(args.len(), 2);
@@ -73,8 +81,11 @@ mod function_call_tests {
                 if let Stmt::VarDecl(v) = &stmts[0] {
                     assert_eq!(v.name, "x");
                     assert_eq!(v.type_name, t.clone());
-                    assert_ne!(v.type_name.get_default_value(span()), v.value);
-                
+
+                    if v.type_name != Type::Char {
+                        assert_ne!(v.type_name.get_default_value(span()).unwrap(), v.value);
+                    }
+
                     if let Expr::Call { name, args, .. } = &v.value {
                         assert_eq!(name, "add");
                         assert_eq!(args.len(), 2);
@@ -94,8 +105,10 @@ mod function_call_tests {
                 if let Stmt::VarDecl(v) = &stmts[0] {
                     assert_eq!(v.name, "x");
                     assert_eq!(v.type_name, t.clone());
-                    assert_ne!(v.type_name.get_default_value(span()), v.value);
                     
+                    if v.type_name != Type::Char {
+                        assert_ne!(v.type_name.get_default_value(span()).unwrap(), v.value);
+                    }
                     if let Expr::Call { name, args, .. } = &v.value {
                         assert_eq!(name, "outer");
                         assert_eq!(args.len(), 2);

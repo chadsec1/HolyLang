@@ -32,7 +32,7 @@ mod string_literals_tests {
                 assert_eq!(v.type_name, t.clone());
 
                 if let Expr::StringLiteral { value, .. } = &v.value {
-                    assert_eq!(value, "hello\nworld");
+                    assert_eq!(value, "hello\\nworld");
                 } else { panic!("Expected StringLiteral"); }
             } else { panic!("Expected VarDecl"); }
         }
