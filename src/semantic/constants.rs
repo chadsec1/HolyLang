@@ -207,45 +207,17 @@ pub fn eval_const_expr_and_fold_it_hazmat(
 
 
                     match op {
-                        BinOpKind::Equal => {
-                            let result: bool = left_value == right_value;
+                        BinOpKind::Equal    => Ok(Expr::BoolLiteral { value: left_value == right_value, span }),
+                        BinOpKind::NotEqual => Ok(Expr::BoolLiteral { value: left_value != right_value, span }),
 
-                            Ok(Expr::BoolLiteral { value: result, span })
-                        },
+                        BinOpKind::Greater      => Ok(Expr::BoolLiteral { value: left_value > right_value, span }),
+                        BinOpKind::GreaterEqual => Ok(Expr::BoolLiteral { value: left_value >= right_value, span }),
 
-                        BinOpKind::NotEqual => {
-                            let result: bool = left_value != right_value;
-
-                            Ok(Expr::BoolLiteral { value: result, span })
-                        },
-
-                        BinOpKind::Greater => {
-                            let result: bool = left_value > right_value;
-
-                            return Ok(Expr::BoolLiteral { value: result, span })
-                        },
-                        BinOpKind::GreaterEqual => {
-                            let result: bool = left_value >= right_value;
-
-                            return Ok(Expr::BoolLiteral { value: result, span })
-                        },
-
-
-                        BinOpKind::Less => {
-                            let result: bool = left_value < right_value;
-
-                            return Ok(Expr::BoolLiteral { value: result, span })
-                        },
-
-                        BinOpKind::LessEqual => {
-                            let result: bool = left_value <= right_value;
-
-                            return Ok(Expr::BoolLiteral { value: result, span })
-                        },
+                        BinOpKind::Less      => Ok(Expr::BoolLiteral { value: left_value < right_value, span }),
+                        BinOpKind::LessEqual => Ok(Expr::BoolLiteral { value: left_value <= right_value, span }),
 
                         other => panic!("(Compiler bug) infer_expr_type should've caught illegal BinOpKind on char.\nLeft: {left:?}\nRight: {right:?}\nBinOpKind: {other:?}")
                     }
-
                 },
 
 
