@@ -26,6 +26,10 @@ pub fn compile_holylang_src(source: &str, compile_info: CompileInfo) -> String {
 
     // Ensures that the source code contains a `main` function
     //
+    // The reason this check is here, and not in semantics layer, is because if I were to add it to
+    // semantics layer, all unit tests for semantics analysis layer would require a main function
+    // and im frankly too lazy to redo them, and honestly, this isn't too too bad ;)
+    //
     assert!(ast.functions.iter().any(|f| f.name == "main"), "Missing `main` function");
 
     // Run semantic checks, enforce language rules, modify AST to remove inferred and replace with explicit types, etc.
