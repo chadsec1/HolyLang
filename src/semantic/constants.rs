@@ -83,7 +83,7 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                         return Err(HolyError::Semantic(format!(
                                         "Constant out-of-bounds access on array of `{}` size, found `{}`. (line {} column {})",
                                         elements.len(), index_usize, span.line, span.column
-                                    )));
+                                    )))
                     }
             
                     Ok(elements[index_usize].clone())
@@ -100,17 +100,13 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                     if value.is_signed() {
                         let mut result: i128 = value.as_i128();
                         match op {
-                            UnaryOpKind::Negate => {
-                                result = result.checked_neg().ok_or_else(|| {
-                                        HolyError::Semantic(format!(
-                                            "Constant unary negate result would cause an integer overflow. Integer: {}  (line {} column {})",
-                                            result, span.line, span.column
-                                        ))
-                                    })?;
-                            },
-                            UnaryOpKind::BitwiseNot => {
-                                result = !result;
-                            },
+                            UnaryOpKind::Negate => result = result.checked_neg().ok_or_else(|| {
+                                                        HolyError::Semantic(format!(
+                                                            "Constant unary negate result would cause an integer overflow. Integer: {}  (line {} column {})",
+                                                            result, span.line, span.column
+                                                        ))
+                                                    })?,
+                            UnaryOpKind::BitwiseNot => result = !result,
                             UnaryOpKind::Not => panic!("(Compiler bug) Illegal unary operation detected. this shouldve errored when the wrapper called `infer_expr_type`")
                         }
                         
@@ -123,10 +119,8 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                     } else {
                         let mut result: u128 = value.as_u128();
                         match op {
-                            UnaryOpKind::BitwiseNot => {
-                                result = !result;
-                            },
-                            _ => panic!("(Compiler bug) Illegal unary operation detected. this shouldve errored when the wrapper called infer_expr_type")
+                            UnaryOpKind::BitwiseNot => result = !result,
+                            other => panic!("(Compiler bug) Illegal unary operation `{other:?}` detected. this shouldve errored when the wrapper called infer_expr_type")
                         }
 
                         // We truncate via the hazmat helper instead of trying to coerce, because otherwise, the result of
@@ -140,9 +134,7 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                 Expr::Float64Literal { value, span } => {
                     let mut result: f64 = value;
                     match op {
-                        UnaryOpKind::Negate => {
-                            result = -result;
-                        },
+                        UnaryOpKind::Negate => result = -result,
 
                         other => panic!("(Compiler bug) Got `{other:?}` on a floating point `{expr_evaled:?}, this is illegal and should've been caught by `infer_expr_type`.\nNON-EVALED EXPR: {expr:?}")
                     }
@@ -151,16 +143,14 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                         return Err(HolyError::Semantic(format!(
                             "Constant floating unary result would cause floating point `{}` to produce non-finite result like `infinite` or `NaN`. (line {} column {})",
                             value, span.line, span.column
-                        )));
+                        )))
                     }
 
                     Ok(Expr::Float64Literal { value: result, span })
                 },
                 Expr::BoolLiteral{ value, span } => {
                     match op {
-                        UnaryOpKind::Not => {
-                            Ok(Expr::BoolLiteral { value: !value, span })
-                        },
+                        UnaryOpKind::Not => Ok(Expr::BoolLiteral { value: !value, span }),
                         other => panic!("(Compiler bug) Illegal unary operation detected `{other:?}`. this shouldve errored when the wrapper called `infer_expr_type`")
                     }
                 },
@@ -181,17 +171,8 @@ pub fn eval_const_expr_and_fold_it_hazmat(
 
 
                     match op {
-                        BinOpKind::Equal => {
-                            let result: bool = left_value == right_value;
-
-                            Ok(Expr::BoolLiteral { value: result, span })
-                        },
-
-                        BinOpKind::NotEqual => {
-                            let result: bool = left_value != right_value;
-
-                            Ok(Expr::BoolLiteral { value: result, span })
-                        },
+                        BinOpKind::Equal    => Ok(Expr::BoolLiteral { value: left_value == right_value, span }),
+                        BinOpKind::NotEqual => Ok(Expr::BoolLiteral { value: left_value != right_value, span }),
 
                         other => panic!("(Compiler bug) infer_expr_type should've caught illegal BinOpKind on string.\nLeft: {left:?}\nRight: {right:?}\nBinOpKind: {other:?}")
                     }
@@ -229,28 +210,11 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                     };
 
                     match op {
-                        BinOpKind::And => {
-                            let result: bool = left_value && right_value;
+                        BinOpKind::Equal    => Ok(Expr::BoolLiteral { value: left_value == right_value, span }),
+                        BinOpKind::NotEqual => Ok(Expr::BoolLiteral { value: left_value != right_value, span }),
 
-                            Ok(Expr::BoolLiteral { value: result, span })
-                        },
-
-                        BinOpKind::Or => {
-                            let result: bool = left_value || right_value;
-
-                            Ok(Expr::BoolLiteral { value: result, span })
-                        },
-                        BinOpKind::Equal => {
-                            let result: bool = left_value == right_value;
-
-                            Ok(Expr::BoolLiteral { value: result, span })
-                        },
-
-                        BinOpKind::NotEqual => {
-                            let result: bool = left_value != right_value;
-
-                            Ok(Expr::BoolLiteral { value: result, span })
-                        },
+                        BinOpKind::And => Ok(Expr::BoolLiteral { value: left_value && right_value, span }),
+                        BinOpKind::Or  => Ok(Expr::BoolLiteral { value: left_value || right_value, span }),
 
                         other => panic!(
                             "(Compiler bug) infer_expr_type should've caught illegal BinOpKind on string.\nLeft: {left:?}\nRight: {right:?}\nBinOpKind: {other:?}")
@@ -270,61 +234,22 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                     let result: f64;
 
                     match op {
-                        BinOpKind::Add => {
-                            result = left_value + right_value; 
-                        },
-
-                        BinOpKind::Subtract => {
-                            result = left_value - right_value; 
-                        },
-
-                        BinOpKind::Multiply => {
-                            result = left_value * right_value; 
-                        },
-
-                        BinOpKind::Divide => {
-                            result = left_value / right_value; 
-                        },
+                        BinOpKind::Add      => result = left_value + right_value,
+                        BinOpKind::Subtract => result = left_value - right_value,
+                        BinOpKind::Multiply => result = left_value * right_value,
+                        BinOpKind::Divide   => result = left_value / right_value,
 
                         #[allow(clippy::float_cmp)]
-                        BinOpKind::Equal => {
-                            let result: bool = left_value == right_value;
-
-                            return Ok(Expr::BoolLiteral { value: result, span })
-                        },
+                        BinOpKind::Equal => return Ok(Expr::BoolLiteral { value: left_value == right_value, span }),
 
                         #[allow(clippy::float_cmp)]
-                        BinOpKind::NotEqual => {
-                            let result: bool = left_value != right_value;
+                        BinOpKind::NotEqual => return Ok(Expr::BoolLiteral { value: left_value != right_value, span }),
 
-                            return Ok(Expr::BoolLiteral { value: result, span })
-                        },
+                        BinOpKind::Greater      => return Ok(Expr::BoolLiteral { value: left_value > right_value, span }),
+                        BinOpKind::GreaterEqual => return Ok(Expr::BoolLiteral { value: left_value >= right_value, span }),
 
-                        BinOpKind::Greater => {
-                            let result: bool = left_value > right_value;
-
-                            return Ok(Expr::BoolLiteral { value: result, span })
-                        },
-
-                        BinOpKind::GreaterEqual => {
-                            let result: bool = left_value >= right_value;
-
-                            return Ok(Expr::BoolLiteral { value: result, span })
-                        },
-
-
-                        BinOpKind::Less => {
-                            let result: bool = left_value < right_value;
-
-                            return Ok(Expr::BoolLiteral { value: result, span })
-                        },
-
-                        BinOpKind::LessEqual => {
-                            let result: bool = left_value <= right_value;
-
-                            return Ok(Expr::BoolLiteral { value: result, span })
-                        },
-
+                        BinOpKind::Less      => return Ok(Expr::BoolLiteral { value: left_value < right_value, span }),
+                        BinOpKind::LessEqual => return Ok(Expr::BoolLiteral { value: left_value <= right_value, span }),
 
                         other => panic!("(Compiler bug) infer_expr_type should've caught illegal BinOpKind on float.\nLeft: {left:?}\nRight: {right:?}\nBinOpKind: {other:?}")
                     }
@@ -357,42 +282,30 @@ pub fn eval_const_expr_and_fold_it_hazmat(
 
                         let result: i128;
                         match op {
-                            BinOpKind::Add => {
-                                result = left_val.checked_add(right_val).ok_or_else(|| {
-                                    HolyError::Semantic(format!(
-                                        "Constant arithemtic addition result would cause an integer overflow. Left: `{}`, Right: `{}`. (line {} column {})",
-                                        left_val, right_val, span.line, span.column
-                                    ))
-                                })?;
-                            },
-
-                            BinOpKind::Subtract => {
-                                result = left_val.checked_sub(right_val).ok_or_else(|| {
-                                    HolyError::Semantic(format!(
-                                        "Constant arithemtic subtraction result would cause an integer overflow. Left: `{}`, Right: `{}`. (line {} column {})",
-                                        left_val, right_val, span.line, span.column
-                                    ))
-                                })?;
-                            },
-
-                            BinOpKind::Multiply => {
-                                result = left_val.checked_mul(right_val).ok_or_else(|| {
-                                    HolyError::Semantic(format!(
-                                        "Constant arithemtic multiplication result would cause an integer overflow. Left: `{}`, Right: `{}`. (line {} column {})",
-                                        left_val, right_val, span.line, span.column
-                                    ))
-                                })?;
-                            },
-
-                            BinOpKind::Divide => {
-                                result = left_val.checked_div(right_val).ok_or_else(|| {
-                                    HolyError::Semantic(format!(
-                                        "Constant arithemtic division result would cause an integer overflow. Left: `{}`, Right: `{}`. (line {} column {})",
-                                        left_val, right_val, span.line, span.column
-                                    ))
-                                })?;
-                            },
-
+                            BinOpKind::Add => result = left_val.checked_add(right_val).ok_or_else(|| {
+                                                HolyError::Semantic(format!(
+                                                    "Constant arithemtic addition result would cause an integer overflow. Left: `{}`, Right: `{}`. (line {} column {})",
+                                                    left_val, right_val, span.line, span.column
+                                                ))
+                                            })?,
+                            BinOpKind::Subtract => result = left_val.checked_sub(right_val).ok_or_else(|| {
+                                                HolyError::Semantic(format!(
+                                                    "Constant arithemtic subtraction result would cause an integer overflow. Left: `{}`, Right: `{}`. (line {} column {})",
+                                                    left_val, right_val, span.line, span.column
+                                                ))
+                                            })?,
+                            BinOpKind::Multiply => result = left_val.checked_mul(right_val).ok_or_else(|| {
+                                                HolyError::Semantic(format!(
+                                                    "Constant arithemtic multiplication result would cause an integer overflow. Left: `{}`, Right: `{}`. (line {} column {})",
+                                                    left_val, right_val, span.line, span.column
+                                                ))
+                                            })?,
+                            BinOpKind::Divide => result = left_val.checked_div(right_val).ok_or_else(|| {
+                                                HolyError::Semantic(format!(
+                                                    "Constant arithemtic division result would cause an integer overflow. Left: `{}`, Right: `{}`. (line {} column {})",
+                                                    left_val, right_val, span.line, span.column
+                                                ))
+                                            })?,
                             BinOpKind::BitwiseShiftLeft => {
                                 let bit_width: u32 = left_value.bit_width();
 
@@ -444,51 +357,18 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                                 // expected.
                                 return Ok(truncate_to_int_type_hazmat(result, left_value.get_type(), span))
                             },
-                            BinOpKind::BitwiseAnd => {
-                                result = left_val & right_val;
-                            },
 
-                            BinOpKind::BitwiseOr => {
-                                result = left_val | right_val;
-                            },
+                            BinOpKind::BitwiseAnd => result = left_val & right_val,
+                            BinOpKind::BitwiseOr  => result = left_val | right_val,
 
-                            BinOpKind::Equal => {
-                                let result: bool = left_val == right_val;
+                            BinOpKind::Equal    => return Ok(Expr::BoolLiteral { value: left_val == right_val, span }),
+                            BinOpKind::NotEqual => return Ok(Expr::BoolLiteral { value: left_val != right_val, span }),
 
-                                return Ok(Expr::BoolLiteral { value: result, span });
-                            },
+                            BinOpKind::Greater      => return Ok(Expr::BoolLiteral { value: left_val > right_val, span }),
+                            BinOpKind::GreaterEqual => return Ok(Expr::BoolLiteral { value: left_val >= right_val, span }),
 
-                            BinOpKind::NotEqual => {
-                                let result: bool = left_val != right_val;
-
-                                return Ok(Expr::BoolLiteral { value: result, span });
-                            },
-
-                            BinOpKind::Greater => {
-                                let result: bool = left_val > right_val;
-
-                                return Ok(Expr::BoolLiteral { value: result, span });
-                            },
-
-                            BinOpKind::GreaterEqual => {
-                                let result: bool = left_val >= right_val;
-
-                                return Ok(Expr::BoolLiteral { value: result, span });
-                            },
-
-
-                            BinOpKind::Less => {
-                                let result: bool = left_val < right_val;
-
-                                return Ok(Expr::BoolLiteral { value: result, span });
-                            },
-
-                            BinOpKind::LessEqual => {
-                                let result: bool = left_val <= right_val;
-
-                                return Ok(Expr::BoolLiteral { value: result, span });
-                            },
-
+                            BinOpKind::Less      => return Ok(Expr::BoolLiteral { value: left_val < right_val, span }),
+                            BinOpKind::LessEqual => return Ok(Expr::BoolLiteral { value: left_val <= right_val, span }),
 
                             other => panic!(
                                 "(Compiler bug) infer_expr_type should've caught illegal BinOpKind on integer.\nLeft: {left:?}\nRight: {right:?}\nBinOpKind: {other:?}"
@@ -508,41 +388,33 @@ pub fn eval_const_expr_and_fold_it_hazmat(
 
                         let result: u128;
                         match op {
-                            BinOpKind::Add => {
-                                result = left_val.checked_add(right_val).ok_or_else(|| {
-                                    HolyError::Semantic(format!(
-                                        "Constant arithemtic addition result would cause an integer overflow. Left: `{}`, Right: `{}`. (line {} column {})",
-                                        left_val, right_val, span.line, span.column
-                                    ))
-                                })?;
-                            },
+                            BinOpKind::Add => result = left_val.checked_add(right_val).ok_or_else(|| {
+                                                HolyError::Semantic(format!(
+                                                    "Constant arithemtic addition result would cause an integer overflow. Left: `{}`, Right: `{}`. (line {} column {})",
+                                                    left_val, right_val, span.line, span.column
+                                                ))
+                                            })?,
 
-                            BinOpKind::Subtract => {
-                                result = left_val.checked_sub(right_val).ok_or_else(|| {
-                                    HolyError::Semantic(format!(
-                                        "Constant arithemtic subtraction result would cause an integer overflow. Left: `{}`, Right: `{}`. (line {} column {})",
-                                        left_val, right_val, span.line, span.column
-                                    ))
-                                })?;
-                            },
+                            BinOpKind::Subtract => result = left_val.checked_sub(right_val).ok_or_else(|| {
+                                                HolyError::Semantic(format!(
+                                                    "Constant arithemtic subtraction result would cause an integer overflow. Left: `{}`, Right: `{}`. (line {} column {})",
+                                                    left_val, right_val, span.line, span.column
+                                                ))
+                                            })?,
 
-                            BinOpKind::Multiply => {
-                                result = left_val.checked_mul(right_val).ok_or_else(|| {
-                                    HolyError::Semantic(format!(
-                                        "Constant arithemtic multiplication result would cause an integer overflow. Left: `{}`, Right: `{}`. (line {} column {})",
-                                        left_val, right_val, span.line, span.column
-                                    ))
-                                })?;
-                            },
+                            BinOpKind::Multiply => result = left_val.checked_mul(right_val).ok_or_else(|| {
+                                                HolyError::Semantic(format!(
+                                                    "Constant arithemtic multiplication result would cause an integer overflow. Left: `{}`, Right: `{}`. (line {} column {})",
+                                                    left_val, right_val, span.line, span.column
+                                                ))
+                                            })?,
 
-                            BinOpKind::Divide => {
-                                result = left_val.checked_div(right_val).ok_or_else(|| {
-                                    HolyError::Semantic(format!(
-                                        "Constant arithemtic division result would cause an integer overflow. Left: `{}`, Right: `{}`. (line {} column {})",
-                                        left_val, right_val, span.line, span.column
-                                    ))
-                                })?;
-                            },
+                            BinOpKind::Divide => result = left_val.checked_div(right_val).ok_or_else(|| {
+                                                HolyError::Semantic(format!(
+                                                    "Constant arithemtic division result would cause an integer overflow. Left: `{}`, Right: `{}`. (line {} column {})",
+                                                    left_val, right_val, span.line, span.column
+                                                ))
+                                            })?,
 
                             BinOpKind::BitwiseShiftLeft => {
                                 let bit_width: u32 = left_value.bit_width();
@@ -581,45 +453,18 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                                 // expected.
                                 return Ok(truncate_to_uint_type_hazmat(result, left_value.get_type(), span))
                             },
+
                             BinOpKind::BitwiseAnd => result = left_val & right_val,
-                            BinOpKind::BitwiseOr => result = left_val | right_val,
+                            BinOpKind::BitwiseOr  => result = left_val | right_val,
 
-                            BinOpKind::Equal => {
-                                let result: bool = left_val == right_val;
+                            BinOpKind::Equal      => return Ok(Expr::BoolLiteral { value: left_val == right_val, span }),
+                            BinOpKind::NotEqual => return Ok(Expr::BoolLiteral { value: left_val != right_val, span }),
 
-                                return Ok(Expr::BoolLiteral { value: result, span });
-                            },
+                            BinOpKind::Greater      => return Ok(Expr::BoolLiteral { value: left_val > right_val, span }),
+                            BinOpKind::GreaterEqual => return Ok(Expr::BoolLiteral { value: left_val >= right_val, span }),
 
-                            BinOpKind::NotEqual => {
-                                let result: bool = left_val != right_val;
-
-                                return Ok(Expr::BoolLiteral { value: result, span });
-                            },
-
-                            BinOpKind::Greater => {
-                                let result: bool = left_val > right_val;
-
-                                return Ok(Expr::BoolLiteral { value: result, span });
-                            },
-
-                            BinOpKind::GreaterEqual => {
-                                let result: bool = left_val >= right_val;
-
-                                return Ok(Expr::BoolLiteral { value: result, span });
-                            },
-
-
-                            BinOpKind::Less => {
-                                let result: bool = left_val < right_val;
-
-                                return Ok(Expr::BoolLiteral { value: result, span });
-                            },
-
-                            BinOpKind::LessEqual => {
-                                let result: bool = left_val <= right_val;
-
-                                return Ok(Expr::BoolLiteral { value: result, span });
-                            },
+                            BinOpKind::Less      => return Ok(Expr::BoolLiteral { value: left_val < right_val, span }),
+                            BinOpKind::LessEqual => return Ok(Expr::BoolLiteral { value: left_val <= right_val, span }),
 
                             other => panic!(
                                 "(Compiler bug) infer_expr_type should've caught illegal BinOpKind on integer.\nLeft: {left:?}\nRight: {right:?}\nBinOpKind: {other:?}"
@@ -669,12 +514,12 @@ pub fn eval_const_expr_and_fold_it_hazmat(
 #[allow(clippy::cast_possible_truncation)]
 fn truncate_to_uint_type_hazmat(target: u128, ty: Type, span: Span) -> Expr {
     match ty {
-        Type::Byte => Expr::IntLiteral { value: IntLiteralValue::Byte(target as u8), span},
-        Type::Uint16 => Expr::IntLiteral { value: IntLiteralValue::Uint16(target as u16), span},
-        Type::Uint32 => Expr::IntLiteral { value: IntLiteralValue::Uint32(target as u32), span},
-        Type::Uint64 => Expr::IntLiteral { value: IntLiteralValue::Uint64(target as u64), span},
+        Type::Byte    => Expr::IntLiteral { value: IntLiteralValue::Byte(target as u8), span},
+        Type::Uint16  => Expr::IntLiteral { value: IntLiteralValue::Uint16(target as u16), span},
+        Type::Uint32  => Expr::IntLiteral { value: IntLiteralValue::Uint32(target as u32), span},
+        Type::Uint64  => Expr::IntLiteral { value: IntLiteralValue::Uint64(target as u64), span},
         Type::Uint128 => Expr::IntLiteral { value: IntLiteralValue::Uint128(target), span },
-        Type::Usize => Expr::IntLiteral { value: IntLiteralValue::Usize(target as usize), span },
+        Type::Usize   => Expr::IntLiteral { value: IntLiteralValue::Usize(target as usize), span },
 
         other => panic!("(Compiler bug) Expected target to be of an unsigned integer type, instead got `{other:?}`. Target: {target:?}")
     }
@@ -687,10 +532,10 @@ fn truncate_to_uint_type_hazmat(target: u128, ty: Type, span: Span) -> Expr {
 #[allow(clippy::cast_possible_truncation)]
 fn truncate_to_int_type_hazmat(target: i128, ty: Type, span: Span) -> Expr {
     match ty {
-        Type::Int8 => Expr::IntLiteral { value: IntLiteralValue::Int8(target as i8), span},
-        Type::Int16 => Expr::IntLiteral { value: IntLiteralValue::Int16(target as i16), span},
-        Type::Int32 => Expr::IntLiteral { value: IntLiteralValue::Int32(target as i32), span},
-        Type::Int64 => Expr::IntLiteral { value: IntLiteralValue::Int64(target as i64), span},
+        Type::Int8   => Expr::IntLiteral { value: IntLiteralValue::Int8(target as i8), span},
+        Type::Int16  => Expr::IntLiteral { value: IntLiteralValue::Int16(target as i16), span},
+        Type::Int32  => Expr::IntLiteral { value: IntLiteralValue::Int32(target as i32), span},
+        Type::Int64  => Expr::IntLiteral { value: IntLiteralValue::Int64(target as i64), span},
         Type::Int128 => Expr::IntLiteral { value: IntLiteralValue::Int128(target), span },
 
         other => panic!("(Compiler bug) Expected target to be of an signed integer type, instead got `{other:?}`. Target: {target:?}")
