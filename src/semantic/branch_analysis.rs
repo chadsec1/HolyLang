@@ -5,7 +5,6 @@ use super::{
     Function
 };
 
-#[allow(clippy::too_many_lines)]
 pub fn dead_code_analysis(block: &Vec<Stmt>, in_loop: bool) -> Result<bool, HolyError> {
     // Instead of returning error here, we panic, because if we returned an error here
     // we would not have ability to pinpoint to the empty branch line. leaving responsiblity to
@@ -131,7 +130,7 @@ pub fn dead_code_analysis(block: &Vec<Stmt>, in_loop: bool) -> Result<bool, Holy
 }
 
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 pub fn return_branch_analysis(
     func: &Function,
     last_stmt: &Stmt,

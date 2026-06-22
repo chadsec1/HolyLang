@@ -129,8 +129,8 @@ pub fn coerce_integer_literal_to_type_helper(expected_ty: Type, value: IntLitera
     let fits_signed   = |min: i128, max: i128| as_signed.filter(|&v| v >= min && v <= max).ok_or_else(range_err);
     let fits_unsigned = |max: u128|            as_unsigned.filter(|&v| v <= max).ok_or_else(range_err);
 
-    #[allow(clippy::cast_lossless)]
-    #[allow(clippy::cast_possible_truncation)]
+    #[expect(clippy::cast_lossless, reason = "I think casting here should be ok as we did checks above")]
+    #[expect(clippy::cast_possible_truncation, reason = "I think casting here should be ok as we did checks above")]
     match expected_ty {
         Type::Int8   => Ok(IntLiteralValue::Int8  (fits_signed(i8::MIN   as i128, i8::MAX   as i128)? as i8)),
         Type::Int16  => Ok(IntLiteralValue::Int16 (fits_signed(i16::MIN  as i128, i16::MAX  as i128)? as i16)),

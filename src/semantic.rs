@@ -130,7 +130,7 @@ fn check_function(
         upstream_var_names.push(parameter.name.clone());
     }
 
-    check_stmts(func.clone(), &mut func.body, locals, upstream_var_names, fun_sigs, false)?;
+    check_stmts(&func.clone(), &mut func.body, locals, &upstream_var_names, fun_sigs, false)?;
 
 
     // Branch analysis to determine if function returns in all branches
@@ -228,13 +228,12 @@ fn check_const(
 /// Parse holylang statements in a block, it does:
 /// Enforce language semantics, and ownership safety model, check function calls, etc.
 ///
-#[allow(clippy::too_many_lines)]
-#[allow(clippy::needless_pass_by_value)]
+#[expect(clippy::too_many_lines)]
 fn check_stmts(
-    func: Function, 
+    func: &Function, 
     block: &mut Vec<Stmt>, 
     locals: &mut HashMap<String, BindingInfo>, 
-    upstream_var_names: Vec<String>, 
+    upstream_var_names: &[String], 
     fun_sigs: &HashMap<String, (Vec<Type>, Option<Vec<Type>>)>,
     in_loop: bool
 
@@ -846,7 +845,7 @@ fn check_stmts(
 
                 // This gets all upstream variable names, and passes it to check stmts to ensure
                 // you cannot overshadow them.
-                let mut upstream = upstream_var_names.clone();
+                let mut upstream = upstream_var_names.to_owned();
                 for var_name in locals_clone.keys() {
                     upstream.push(var_name.clone());
                 }
@@ -856,7 +855,7 @@ fn check_stmts(
                 upstream.push(for_stmt.holder_name.clone());
 
                     
-                check_stmts(func.clone(), &mut for_stmt.branch, &mut locals_clone, upstream.clone(), fun_sigs, true)?;
+                check_stmts(func, &mut for_stmt.branch, &mut locals_clone, upstream.as_slice(), fun_sigs, true)?;
                 update_local_assignments_from_clone(locals, locals_clone);
             }
 
@@ -873,13 +872,13 @@ fn check_stmts(
 
                 // This gets all upstream variable names, and passes it to check stmts to ensure
                 // you cannot overshadow them.
-                let mut upstream = upstream_var_names.clone();
+                let mut upstream = upstream_var_names.to_owned();
                 for var_name in locals.keys() {
                     upstream.push(var_name.clone());
                 }
 
                 let mut locals_clone = locals.clone();
-                check_stmts(func.clone(), &mut while_stmt.branch, &mut locals_clone, upstream.clone(), fun_sigs, true)?;
+                check_stmts(func, &mut while_stmt.branch, &mut locals_clone, upstream.as_slice(), fun_sigs, true)?;
                 update_local_assignments_from_clone(locals, locals_clone);
                 
             }
@@ -887,13 +886,13 @@ fn check_stmts(
             Stmt::Infinite(infinite_stmt) => {
                 // This gets all upstream variable names, and passes it to check stmts to ensure
                 // you cannot overshadow them.
-                let mut upstream = upstream_var_names.clone();
+                let mut upstream = upstream_var_names.to_owned();
                 for var_name in locals.keys() {
                     upstream.push(var_name.clone());
                 }
                     
                 let mut locals_clone = locals.clone();
-                check_stmts(func.clone(), &mut infinite_stmt.branch, &mut locals_clone, upstream.clone(), fun_sigs, true)?;
+                check_stmts(func, &mut infinite_stmt.branch, &mut locals_clone, upstream.as_slice(), fun_sigs, true)?;
                 update_local_assignments_from_clone(locals, locals_clone);
                 
             }
@@ -931,7 +930,7 @@ fn check_stmts(
 
                 // This gets all upstream variable names, and passes it to check stmts to ensure
                 // you cannot overshadow them.
-                let mut upstream = upstream_var_names.clone();
+                let mut upstream = upstream_var_names.to_owned();
                 for var_name in locals.keys() {
                     upstream.push(var_name.clone());
                 }
@@ -944,7 +943,7 @@ fn check_stmts(
                 let mut main_locals_clone = locals.clone();
                 let mut else_locals_clone = locals.clone();
 
-                check_stmts(func.clone(), &mut if_stmt.if_branch, &mut main_locals_clone, upstream.clone(), fun_sigs, in_loop)?;
+                check_stmts(func, &mut if_stmt.if_branch, &mut main_locals_clone, upstream.as_slice(), fun_sigs, in_loop)?;
                 update_local_assignments_from_clone(locals, main_locals_clone);
                 
 
@@ -960,12 +959,12 @@ fn check_stmts(
 
                 
                     let mut elif_locals_clone = locals_clone.clone();
-                    check_stmts(func.clone(), &mut s.1, &mut elif_locals_clone, upstream.clone(), fun_sigs, in_loop)?;
+                    check_stmts(func, &mut s.1, &mut elif_locals_clone, upstream.as_slice(), fun_sigs, in_loop)?;
                     update_local_assignments_from_clone(locals, elif_locals_clone);
                 }
 
                 if let Some(else_stmts) = if_stmt.else_branch.as_mut() {
-                    check_stmts(func.clone(), else_stmts, &mut else_locals_clone, upstream, fun_sigs, in_loop)?;
+                    check_stmts(func, else_stmts, &mut else_locals_clone, upstream.as_slice(), fun_sigs, in_loop)?;
                     update_local_assignments_from_clone(locals, else_locals_clone);
                 }
                 
@@ -1061,7 +1060,7 @@ fn check_call(
     }
 
     // return handling
-    #[allow(clippy::option_if_let_else)]
+    #[expect(clippy::option_if_let_else)]
     match ret_ty_opt {
         Some(rt) => Ok(Some(rt.clone())),
         None => {

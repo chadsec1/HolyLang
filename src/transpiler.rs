@@ -97,7 +97,7 @@ fn transpile_function(func: &Function) -> String {
 
 /// Transpiles a statement into equivlent Rust code
 ///
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 fn transpile_stmt(stmt: &Stmt) -> String {
     match stmt {
         Stmt::Const(cons) => parse_const(cons),
@@ -337,8 +337,8 @@ fn parse_const(cons: &Constant) -> String {
 
 /// Turns a HolyLang expression, into equvilent Rust expression
 ///
-#[allow(clippy::doc_markdown)]
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::doc_markdown)]
+#[expect(clippy::too_many_lines)]
 fn holy_expr_to_rust_expr(expr: &Expr) -> String {
     match expr {
         Expr::IntLiteral { value, .. } => {
