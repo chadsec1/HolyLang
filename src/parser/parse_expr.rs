@@ -18,7 +18,7 @@ use crate::ast::{
 /// - Array slicing
 /// - Variables
 ///
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines, reason = "Splitting this function into multiple smaller functions cannot be done cleanly, nor is worth doing imho.. I think it is clean as it is for now at least")]
 pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
     let s = s.trim();
 
@@ -51,7 +51,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
 
     // Char Literal ?
     if s.starts_with('\'') {
-        let raw_str = helpers::get_string_content(s, &helpers::QuoteType::SingleQuote)
+        let raw_str = helpers::get_string_content(s, &helpers::QuoteType::SingleQuotes)
                     .map_err(|e| HolyError::Parse(format!("{} (line {} column {})",
                         e, span.line, span.column)))?;
         

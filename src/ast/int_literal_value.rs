@@ -37,7 +37,7 @@ impl IntLiteralValue {
     /// Get the `bit_width` of an integer literal value
     /// e.g. an  i32 bit-width is 32, etc.
     ///
-    #[allow(clippy::match_same_arms)]
+    #[expect(clippy::match_same_arms, reason = "some integer types bit width happen to be same as some different integer bit width.. this just silences clippy, readability > satisifying a linter.")]
     #[must_use]
     pub const fn bit_width(self) -> u32 {
         match self {

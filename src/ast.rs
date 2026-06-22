@@ -39,6 +39,5 @@ pub struct AST {
 pub enum GlobalStmt {
     Const(Constant),
 
-    #[allow(dead_code)]
     _PlaceholderDummyUntilIAddMoreStmtsHereLikeStructsAndEnums // prevents irrefutable pattern warnings
 }

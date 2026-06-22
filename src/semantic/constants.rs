@@ -44,7 +44,7 @@ pub fn eval_const_expr_and_fold_it(
 ///
 /// IMPORTANT NOTE: Do NOT call this function directly unless you 1000% know what youre doing.
 ///
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 pub fn eval_const_expr_and_fold_it_hazmat(
     expr: &Expr, 
     storage: &HashMap<String, BindingInfo>
@@ -223,14 +223,14 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                 },
 
                 Expr::Float64Literal { value: left_value, span, ..} => {
-                    #[allow(clippy::manual_let_else)]
+                    #[expect(clippy::manual_let_else)]
                     let right_value = match right_lit_expr {
                         Expr::Float64Literal { value: right_value, .. } => right_value,
                         _ => panic!(
                             "(Compiler bug) eval_const_expr_and_fold_hazmat, infer_expr_type should've been called and verified both left and right binary operations are same type, but apparently not.\nLeft: {left:?}\nRight: {right:?}")
                     };
 
-                    #[allow(clippy::needless_late_init)]
+                    #[expect(clippy::needless_late_init)]
                     let result: f64;
 
                     match op {
@@ -239,10 +239,10 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                         BinOpKind::Multiply => result = left_value * right_value,
                         BinOpKind::Divide   => result = left_value / right_value,
 
-                        #[allow(clippy::float_cmp)]
+                        #[expect(clippy::float_cmp)]
                         BinOpKind::Equal => return Ok(Expr::BoolLiteral { value: left_value == right_value, span }),
 
-                        #[allow(clippy::float_cmp)]
+                        #[expect(clippy::float_cmp)]
                         BinOpKind::NotEqual => return Ok(Expr::BoolLiteral { value: left_value != right_value, span }),
 
                         BinOpKind::Greater      => return Ok(Expr::BoolLiteral { value: left_value > right_value, span }),
@@ -511,7 +511,7 @@ pub fn eval_const_expr_and_fold_it_hazmat(
 /// Takes a `target` which is an uint128, and a type to try to coerce it to.
 /// The reason this function exists is purely only for bitwise shift operations
 ///
-#[allow(clippy::cast_possible_truncation)]
+#[expect(clippy::cast_possible_truncation, reason = "expected because this is a hazmat function")]
 fn truncate_to_uint_type_hazmat(target: u128, ty: Type, span: Span) -> Expr {
     match ty {
         Type::Byte    => Expr::IntLiteral { value: IntLiteralValue::Byte(target as u8), span},
@@ -529,7 +529,7 @@ fn truncate_to_uint_type_hazmat(target: u128, ty: Type, span: Span) -> Expr {
 /// Takes a `target` which is an int128, and a type to try to coerce it to.
 /// The reason this function exists is purely only for bitwise shift operations
 ///
-#[allow(clippy::cast_possible_truncation)]
+#[expect(clippy::cast_possible_truncation, reason = "expected because this is a hazmat function")]
 fn truncate_to_int_type_hazmat(target: i128, ty: Type, span: Span) -> Expr {
     match ty {
         Type::Int8   => Expr::IntLiteral { value: IntLiteralValue::Int8(target as i8), span},

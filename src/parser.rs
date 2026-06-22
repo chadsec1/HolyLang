@@ -557,7 +557,7 @@ fn parse_stmt_at(lines: &Vec<&str>, start_i: usize) -> Result<(Stmt, usize), Hol
 
 /// Parse a single statement from a comments-removed trimmed line. `line_no` used for error messages.
 ///
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 fn parse_stmt_line(line: &str, line_no: usize) -> Result<Stmt, HolyError> {
     let span = Span { line: line_no, column: 0 };
 

@@ -13,9 +13,6 @@ use crate::ast::{
 ///
 /// If left nor right are neither integer literals, no ceorcion is attempted.
 ///
-// NOTE: This just for now... until I come back to the semantics layer to clean it up later..
-//
-#[allow(clippy::needless_pass_by_value)]
 pub fn advanced_infer_2_types(
     left: &mut Expr, 
     right: &mut Expr,
@@ -60,7 +57,7 @@ pub fn advanced_infer_2_types(
 /// the same function. I could hide this uglyness behind layers of abstraction, but the uglyness
 /// will always boil down to one function responsible for all three.
 ///
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 pub fn infer_expr_type(
     expr: &mut Expr,
     locals: &mut HashMap<String, BindingInfo>,
@@ -680,7 +677,7 @@ pub fn infer_expr_type(
 
 // helper: check an expression that's allowed to be an IntLiteral::Usize
 //
-#[allow(clippy::trivially_copy_pass_by_ref)]
+#[expect(clippy::trivially_copy_pass_by_ref, reason = "i dont care about performance lol, references help ensure that i dont accidently modify anything")]
 pub fn check_usize_literal_to_src(expr: &Expr, len: &usize, span: &Span, locals: &HashMap<String, BindingInfo>) -> Result<(), HolyError> {
     match expr {
         Expr::IntLiteral { value, .. } => match value {

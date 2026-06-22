@@ -93,7 +93,7 @@ fn span() -> Span {
 // all literals (ints, floats, array, strings literals of ints, floats, strings, other arrays, and variable names, and array access and slicing.
 // Some of these literals are illegal semantically, but syntaxally, should be valid.
 //
-fn get_all_literals_edge_cases() -> [String; 143] {
+fn get_all_literals_edge_cases() -> [String; 152] {
     return [
         i8::MIN.to_string(), i8::MAX.to_string(),
         i16::MIN.to_string(), i16::MAX.to_string(),
@@ -121,6 +121,13 @@ fn get_all_literals_edge_cases() -> [String; 143] {
         "\"\\\"]foo\"".to_string(), "\"\\\"[foo[\"".to_string(),
         "\"foo)\"".to_string(), "\"foo(\"".to_string(),
         "\")foo\"".to_string(), "\"(foo\"".to_string(),
+        
+        "\"\\tfoo\\n]\"".to_string(), "\"\\tfoo\\n[\"".to_string(),
+        
+        "'a'".to_string(), "'F'".to_string(),
+        "'😇'".to_string(), "'🥰'".to_string(),
+        "'\\n'".to_string(), "'\\t'".to_string(),
+
         "i".to_string(), "arr".to_string(), "x".to_string(), "y".to_string(), "xyz".to_string(),
         
         format!("arr[{}]", i8::MIN.to_string()), format!("arr[{}]", i8::MAX.to_string()), 
@@ -132,9 +139,11 @@ fn get_all_literals_edge_cases() -> [String; 143] {
         format!("arr[:{}]", usize::MIN.to_string()), format!("arr[:{}]", usize::MAX.to_string()), 
         format!("arr[{}:]", usize::MIN.to_string()), format!("arr[{}:]", usize::MAX.to_string()), 
         format!("arr[{0}:{0}]", usize::MIN.to_string()), format!("arr[{0}:{0}]", usize::MAX.to_string()), 
+        
 
         "arr[i]".to_string(), "arr[:i]".to_string(), "arr[i:]".to_string(), "arr[e:h]".to_string(),
         
+        format!("idk(arr[eh[{} / j]:ah[{} + f]])", u32::MAX.to_string(), i128::MIN.to_string()), 
         "idk()".to_string(), 
         format!("idk({})", i8::MIN.to_string()), format!("idk({})", i8::MAX.to_string()), 
         format!("idk({})", i16::MIN.to_string()), format!("idk({})", i16::MAX.to_string()), 

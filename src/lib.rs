@@ -17,7 +17,7 @@ pub enum CompileInfo {
 /// # Panics
 /// Panics if there are parsig errors, semantic errors, or compile errors.
 ///
-#[allow(clippy::must_use_candidate)]
+#[expect(clippy::must_use_candidate, reason = "I dont want force ppl to use return value from this function")]
 pub fn compile_holylang_src(source: &str, compile_info: CompileInfo) -> String {
     // Parse source code
     let mut ast = parser::parse(source).expect("Parsing failed");

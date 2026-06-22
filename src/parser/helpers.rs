@@ -4,7 +4,7 @@ use crate::consts;
 
 pub enum QuoteType {
     DoubleQuotes,
-    SingleQuote
+    SingleQuotes
 }
 
 
@@ -21,7 +21,7 @@ pub fn get_char_from_string(s: &str) -> Result<char, HolyError> {
             return Err(HolyError::Parse("Expected a UTF-8 character, instead got nothing.".to_string()))
         }
 
-        return Ok(first_char);
+        return Ok(first_char)
     }
     
 
@@ -51,14 +51,20 @@ pub fn get_char_from_string(s: &str) -> Result<char, HolyError> {
 /// "content".
 /// `quote` is configurable, either a `QuoteType::DoubleQuote` or a `QuoteType::SingleQuote`
 ///
+/// NOTE: This assumes the string already started with quotes.
+///
 pub fn get_string_content(s: &str, quote: &QuoteType) -> Result<Option<String>, HolyError> {
-    let mut chars = s.char_indices().skip(1);
-
     let closing_quote_type = match quote {
         QuoteType::DoubleQuotes => '"',
-        QuoteType::SingleQuote  => '\''
+        QuoteType::SingleQuotes  => '\''
     };
 
+    if !s.starts_with(closing_quote_type) {
+        return Err(HolyError::Parse(format!("Expected string opening quotes `{closing_quote_type}`, instead got `{s}`")))
+    }
+
+    let mut chars = s.char_indices().skip(1);
+    
     let closing = loop {
         match chars.next() {
             Some((_, '\\')) => { chars.next(); }
@@ -69,7 +75,7 @@ pub fn get_string_content(s: &str, quote: &QuoteType) -> Result<Option<String>, 
     };
 
     match closing {
-        None =>  Err(HolyError::Parse("String double quotes were never closed".to_string())),
+        None =>  Err(HolyError::Parse("String quotes were never closed".to_string())),
         Some(i) if i == s.len() - 1 => Ok(Some(s[1..s.len() - 1].to_string())),
 
         // Not a string or, a string in binary operation, etc.
