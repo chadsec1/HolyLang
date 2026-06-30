@@ -12,17 +12,21 @@
 
 **HolyLang** programming language: Rust's compile-time safety, with Golang's readability.
 
+- **HolyLang** is more secure than Rust, but not as performant as Rust. The purpose of HolyLang is memory and logic safety, not speed.
+
+
 ## HolyLang features:
-- **HolyLang** is more secure than Rust, but not as performant as Rust. The purpose of HolyLang is security, not speed.
-- **HolyLang** has readable syntax, and semantics.
-- **HolyLang** has no borrow checker, and yet is still more secure than Rust. programs can be easily reasoned about due to the simple binary safey model of "move, or copy". 
-- **HolyLang** arithmetic is always checked, including bitwise. Floating point arithmetic is also always checked.
-- **HolyLang** has no warnings, only errors. Unreachable code? Error. Unused variable? Error. Etc.
-- **HolyLang** forces documentation for functions, structs, and constants.
-- **HolyLang** has no type inference, everything must be explicilty stated.
-- **HolyLang** does not allow overshadowing at all. Making codebases look cleaner, and reducing likelyhood of logic bugs.
-- **HolyLang** `lock` and `unlock` statements allow you to declare "zones" where variables behave as constants, dynamically.
-- **HolyLang**'s bootstrap compiler transpiles down to pure Rust for a mathematical guarantee of safety: `"If Rust is safe, then HolyLang must also be at least as safe as Rust"`.
+- Readable syntax, and semantics.
+- No borrow checker, and yet is still more secure than Rust. programs can be easily reasoned about due to the simple binary safey model of "move, or copy". 
+- Aarithmetic is always checked, including bitwise. Floating point arithmetic is also always checked (against inf/nan).
+- No optional warnings, only errors. Unreachable code? Error. Unused variable? Error. Etc.
+- Documentation is forced for functions, structs, and constants.
+- No type inference, everything must be explicilty stated (this prevents common errors that stems especially from numeric types and assumptions.).
+- No overshadowing allowed. Making codebases easier to audit, and reducing likelyhood of logic bugs.
+- lock` and `unlock` statements allow you to declare "zones" where variables behave as constants.
+
+
+**HolyLang**'s bootstrap compiler transpiles down to pure Rust for a mathematical guarantee of safety: `"If Rust is safe, then HolyLang must also be at least as safe as Rust"`.
 
 .. and a lot more! This is just the bootstrap compiler, the actual compiler will have even more security features, such as static stack analyzes that guarantee (at compile-time!) a program cannot overflow the stack, allowing for even stricter security than Rust, and even other formally verified languages like Ada SPARK, whom have no stack overflow protection.
 
