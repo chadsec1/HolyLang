@@ -341,7 +341,6 @@ fn check_stmts(
             Stmt::VarDeclMulti(var_list, call_expr) => {
                 // Expect the right-hand side to be a function Call expression
                 if let Expr::Call { name, args, span } = call_expr {
-                    // check_call with require_ret = true -> Option<Vec<Type>>
                     let ret_vec = check_call(name, args, locals, fun_sigs, true, *span)?.unwrap();
 
                     if ret_vec.len() != var_list.len() {
@@ -494,7 +493,6 @@ fn check_stmts(
 
             Stmt::VarAssignMulti(expr) => {
                 if let Expr::Call { name, args, span } = &mut expr.value {
-                    // check_call with require_ret = true -> Option<Vec<Type>>
                     let ret_vec = check_call(name, args, locals, fun_sigs, true, *span)?.unwrap();
 
                     if ret_vec.len() != expr.names.len() {
@@ -559,7 +557,7 @@ fn check_stmts(
                     let _ = check_call(name, args, locals, fun_sigs, false, *span)?;
                     // no returned type expected; ok to ignore
                 } else {
-                    // other expressions-as-statements: fully type-check
+                    // other expressions ass tatements is fully type-checked
                     let _ = infer::infer_expr_type(expr, locals, fun_sigs, None)?;
                 }
             }
@@ -615,9 +613,9 @@ fn check_stmts(
 
 
                 for var_name in var_names_to_lock {
-                    let var = locals.get_mut(&var_name).ok_or_else(|| {
+                    let var = locals.get_mut(&var_name).unwrap_or_else(|| {
                         panic!("(Compiler bug) Variable doesnt exist in locals despite our earlier call to infer_expr_type shouldve checked the variable thourghly, including its existence, but apparently it didnt. expr_vec: `{expr_vec:?}`, var_name: {var_name:?}");
-                    })?;
+                    });
 
                     match &mut var.kind {
                         BindingKind::Var { locked, .. } => {
@@ -693,9 +691,9 @@ fn check_stmts(
 
 
                 for var_name in var_names_to_unlock {
-                    let var = locals.get_mut(&var_name).ok_or_else(|| {
+                    let var = locals.get_mut(&var_name).unwrap_or_else(|| {
                         panic!("(Compiler bug) Variable doesnt exist in locals despite our earlier call to infer_expr_type shouldve checked the variable thourghly, including its existence, but apparently it didnt. expr_vec: `{expr_vec:?}`, var_name: {var_name:?}")
-                    })?;
+                    });
 
                     match &mut var.kind {
                         BindingKind::Var { locked, .. } => {
@@ -1005,6 +1003,7 @@ fn update_local_assignments_from_clone(upstream: &mut HashMap<String, BindingInf
 /// - `require_ret`: if true, the function must declare a return type (otherwise Err).
 /// - returns `Ok(Some(return_type))` when function has a return type,
 ///   `Ok(None)` when no return type (allowed only when `require_ret == false`).
+///
 fn check_call(
     name: &str,
     args: &mut [Expr],
