@@ -12,23 +12,31 @@
 
 **HolyLang** programming language: Rust's compile-time safety, with Golang's readability.
 
-- **HolyLang** is more secure than Rust, but not as performant as Rust. The purpose of HolyLang is memory and logic safety, not speed.
+**HolyLang** is more secure than Rust, but not as performant as Rust. The purpose of HolyLang is memory and logic safety, not speed.
+
 
 
 ## HolyLang features:
 - Readable syntax, and semantics.
 - No borrow checker, and yet is still more secure than Rust. programs can be easily reasoned about due to the simple binary safey model of "move, or copy". 
-- Aarithmetic is always checked, including bitwise. Floating point arithmetic is also always checked (against inf/nan).
+- Arithmetic is always checked, including bitwise. Floating point arithmetic is also always checked (against inf/nan).
 - No optional warnings, only errors. Unreachable code? Error. Unused variable? Error. Etc.
 - Documentation is forced for functions, structs, and constants.
 - No type inference, everything must be explicilty stated (this prevents common errors that stems especially from numeric types and assumptions.).
 - No overshadowing allowed. Making codebases easier to audit, and reducing likelyhood of logic bugs.
-- lock` and `unlock` statements allow you to declare "zones" where variables behave as constants.
+- `lock` and `unlock` statements allow you to declare "zones" where variables behave as constants.
 
 
 **HolyLang**'s bootstrap compiler transpiles down to pure Rust for a mathematical guarantee of safety: `"If Rust is safe, then HolyLang must also be at least as safe as Rust"`.
 
-.. and a lot more! This is just the bootstrap compiler, the actual compiler will have even more security features, such as static stack analyzes that guarantee (at compile-time!) a program cannot overflow the stack, allowing for even stricter security than Rust, and even other formally verified languages like Ada SPARK, whom have no stack overflow protection.
+.. and a lot more! This is just the bootstrap compiler, the actual compiler will have even more security features, such as static stack analyzes that guarantee (at compile-time!) a program cannot overflow the stack, allowing for even stricter security than Rust, and even other formally verified languages like Ada SPARK, whom have weak stack overflow protection without an OS's help.
+
+
+**IMPORTANT NOTE**: The name `HolyLang` is just a name, it does not mean it's holy, it is just a nod to Terry Davis's "HolyC". Language design and feature-wise, the only common thing with HolyLang and HolyC, is the fact we don't have a float32 type.
+If you want real holiness (God's word), read the [Quran](https://quran.com/al-fatihah).
+
+**NOTE**: **This project is just a hobby language** with design objective of being the safest and most readable systems programming language!
+**There is no guarantees that comes with using this project.**
 
 
 # Work-in-progress
