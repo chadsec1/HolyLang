@@ -12,6 +12,7 @@ mod int_literal_tests;
 mod float64_literal_tests;
 mod bool_literal_tests;
 mod string_literal_tests;
+mod char_literal_tests;
 mod array_literal_tests;
 
 mod array_access_tests;
@@ -33,11 +34,10 @@ mod format_call_tests;
 // Test helper functions
 //
 
-
-// all literals (ints, floats, array, strings literals of ints, floats, strings, other arrays, and variable names, and array access and slicing.
+// all literals (ints, floats, array, strings literals of ints, floats, strings, other arrays, and variable names, and array access and slicing).
 // Some of these literals are illegal semantically, but syntaxally, should be valid.
 //
-fn get_all_literals_edge_cases() -> [String; 126] {
+fn get_all_literals_edge_cases() -> [String; 163] {
     return [
         i8::MIN.to_string(), i8::MAX.to_string(),
         i16::MIN.to_string(), i16::MAX.to_string(),
@@ -56,7 +56,26 @@ fn get_all_literals_edge_cases() -> [String; 126] {
 
         "false".to_string(), "true".to_string(),
         "\"\"".to_string(), "\"h\"".to_string(), "\"hi\"".to_string(),
-        "\"hi, lmao\"".to_string(),
+        "\"hi, lmao\"".to_string(),  "\"hi ] lmao\"".to_string(), "\"hi [ lmao\"".to_string(), 
+        "\"foo]\"".to_string(), "\"foo[\"".to_string(),
+        "\"]foo\"".to_string(), "\"[foo\"".to_string(),
+        "\"]foo]\"".to_string(), "\"[foo[\"".to_string(),
+        "\"[foo]\"".to_string(),
+        "\"foo\\\"]\"".to_string(), "\"foo\\\"[\"".to_string(),
+        "\"\\\"]foo\"".to_string(), "\"\\\"[foo[\"".to_string(),
+        "\"foo)\"".to_string(), "\"foo(\"".to_string(),
+        "\")foo\"".to_string(), "\"(foo\"".to_string(),
+
+        "\"\\n\"".to_string(), "\"\\t\"".to_string(), "\"\\r\"".to_string(),  "\"\\0\"".to_string(),
+        "\"\\\\\"".to_string(), "\"\\'\"".to_string(), "\"\\\"\"".to_string(),
+        
+        "\"\\tfoo\\n]\"".to_string(), "\"\\tfoo\\n[\"".to_string(),
+        
+        "'a'".to_string(), "'F'".to_string(),
+        "'😇'".to_string(), "'🥰'".to_string(),
+        "'\\n'".to_string(), "'\\t'".to_string(), "'\\r'".to_string(), "'\\0'".to_string(), 
+        "'\\\\'".to_string(), "'\\''".to_string(),
+
         "i".to_string(), "arr".to_string(), "x".to_string(), "y".to_string(), "xyz".to_string(),
         
         format!("arr[{}]", i8::MIN.to_string()), format!("arr[{}]", i8::MAX.to_string()), 
@@ -68,9 +87,11 @@ fn get_all_literals_edge_cases() -> [String; 126] {
         format!("arr[:{}]", usize::MIN.to_string()), format!("arr[:{}]", usize::MAX.to_string()), 
         format!("arr[{}:]", usize::MIN.to_string()), format!("arr[{}:]", usize::MAX.to_string()), 
         format!("arr[{0}:{0}]", usize::MIN.to_string()), format!("arr[{0}:{0}]", usize::MAX.to_string()), 
+        
 
         "arr[i]".to_string(), "arr[:i]".to_string(), "arr[i:]".to_string(), "arr[e:h]".to_string(),
         
+        format!("idk(arr[eh[{} / j]:ah[{} + f]])", u32::MAX.to_string(), i128::MIN.to_string()), 
         "idk()".to_string(), 
         format!("idk({})", i8::MIN.to_string()), format!("idk({})", i8::MAX.to_string()), 
         format!("idk({})", i16::MIN.to_string()), format!("idk({})", i16::MAX.to_string()), 
@@ -118,6 +139,34 @@ fn get_all_literals_edge_cases() -> [String; 126] {
         "[1, 2.0, \"hi\", false, -0, heh([1, 2.0, \"hi\", false, -0, heh()])]".to_string(),
     ]
 }
+
+// all integer literals
+fn get_all_non_string_literals_edge_cases() -> [String; 39] {
+    return [
+        i8::MIN.to_string(), i8::MAX.to_string(),
+        i16::MIN.to_string(), i16::MAX.to_string(),
+        i32::MIN.to_string(), i32::MAX.to_string(),
+        i64::MIN.to_string(), i64::MAX.to_string(),
+        i128::MIN.to_string(), i128::MAX.to_string(),
+        
+        u8::MIN.to_string(), u8::MAX.to_string(),
+        u16::MAX.to_string(),
+        u32::MAX.to_string(),
+        u64::MAX.to_string(),
+        u128::MAX.to_string(),
+        usize::MAX.to_string(),
+        
+        
+        f64::MIN.to_string(), f64::MAX.to_string(),
+        "false".to_string(), "true".to_string(),
+        "[]".to_string(), "()".to_string(), "{}".to_string(), 
+        "[".to_string(), "]".to_string(), "][".to_string(), "]]".to_string(), "[[".to_string(), 
+        "(".to_string(), ")".to_string(), ")(".to_string(), "))".to_string(), "((".to_string(), 
+        "{".to_string(), "}".to_string(), "}{".to_string(), "}}".to_string(), "{{".to_string(), 
+    ]
+}
+
+
 
 fn span() -> Span {
     Span { line: 1, column: 1 }

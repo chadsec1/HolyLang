@@ -7,6 +7,8 @@ mod var_decl_tests {
     // TODO: Add new test that hyper focuses on integers coericon, instead of this weak tests
     // I mean I already added such tests in int_internal_inference but idk.. maybe need more..
     //
+    // TODO: Add check_call tests here.
+    //
 
     #[test]
     fn literals() {

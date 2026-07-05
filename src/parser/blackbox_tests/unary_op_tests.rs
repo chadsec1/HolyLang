@@ -1,7 +1,7 @@
 use super::*;
 
 #[cfg(test)]
-mod unary_op_tests {
+mod unary_negate_tests {
     use super::*;
 
     #[test]
