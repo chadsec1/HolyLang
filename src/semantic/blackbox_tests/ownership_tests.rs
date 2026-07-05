@@ -1820,7 +1820,7 @@ mod ownership_tests {
     }
 
     #[test]
-    fn test_uninited_vars_assign_moving_upstream_var_in_for_loop_errors() {
+    fn uninited_vars_assign_moving_upstream_var_in_for_loop_errors() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -1849,7 +1849,7 @@ mod ownership_tests {
     }
 
     #[test]
-    fn test_multi_assign_to_initied_vars_use_of_moved_vars_errors() {
+    fn multi_assign_to_initied_vars_use_of_moved_vars_errors() {
         let literals = get_all_literals_no_arr();
         let literals_scattered = get_all_literals_no_arr_scattered_order();
 

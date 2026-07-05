@@ -70,7 +70,7 @@ mod happy_path_tests;
 // Helper functions for all the test submodules
 //
 
-// With dynamic array types 
+// All types with dynamic array types 
 static ALL_TYPES_WITH_DYN_ARR: LazyLock<Vec<Type>> = LazyLock::new(|| {
     vec![
         Type::Int8,
@@ -108,6 +108,47 @@ static ALL_TYPES_WITH_DYN_ARR: LazyLock<Vec<Type>> = LazyLock::new(|| {
         Type::Array(Box::new(Type::String)),
     ]
 });
+
+// All types, with only few integers (signed, and unsigned) with dynamic array types 
+//
+
+
+static ALL_TYPES_FEW_INTS_WITH_DYN_ARR: LazyLock<Vec<Type>> = LazyLock::new(|| {
+    vec![
+        Type::Uint128,
+        Type::Int128,
+        Type::Float64,
+        Type::Bool,
+        Type::Char,
+        Type::String,
+
+        Type::Array(Box::new(Type::Uint128)),
+        Type::Array(Box::new(Type::Int128)),
+        Type::Array(Box::new(Type::Float64)),
+        Type::Array(Box::new(Type::Bool)),
+        Type::Array(Box::new(Type::Char)),
+        Type::Array(Box::new(Type::String)),
+    ]
+});
+
+static ALL_TYPES_FEW_INTS_WITH_DYN_ARR_SCATTERED: LazyLock<Vec<Type>> = LazyLock::new(|| {
+    vec![
+        Type::Array(Box::new(Type::Bool)),
+        Type::Char,
+        Type::Bool,
+        Type::Uint128,
+        Type::Array(Box::new(Type::Float64)),
+        Type::Array(Box::new(Type::Char)),
+        Type::Float64,
+        Type::Array(Box::new(Type::Uint128)),
+        Type::Array(Box::new(Type::String)),
+        Type::Array(Box::new(Type::Int128)),
+        Type::Int128,
+        Type::String
+    ]
+});
+
+
 
 fn get_many_boolean_conditions() -> Vec<Expr> {
     let literals = get_all_literals();
@@ -244,7 +285,46 @@ fn get_all_literals_no_arr_no_ints() -> [Expr; 4] {
     return literals;
 }
 
+fn get_all_literals_few_ints() -> [Expr; 12] {
+    [
+        uint128_lit(1),
+        int128_lit(1),
 
+        float64_lit(1.0),
+
+        bool_lit(false),
+        char_lit('f'),
+        str_lit("Hi"),
+
+        array_lit(vec![uint128_lit(1), uint128_lit(u128::MIN), uint128_lit(u128::MAX) ], Some(Type::Array(Box::new(Type::Uint128)))),
+        array_lit(vec![int128_lit(1), int128_lit(i128::MIN), int128_lit(i128::MAX) ], Some(Type::Array(Box::new(Type::Int128)))),
+        array_lit(vec![float64_lit(1.0), float64_lit(f64::MIN), float64_lit(f64::MAX) ], Some(Type::Array(Box::new(Type::Float64)))),
+        
+        array_lit(vec![bool_lit(false), bool_lit(true) ], Some(Type::Array(Box::new(Type::Float64)))),
+        array_lit(vec![char_lit('\n'), char_lit('H'), char_lit('!')], Some(Type::Array(Box::new(Type::Char)))),
+        array_lit(vec![str_lit(""), str_lit("Hi"), str_lit(" !")], Some(Type::Array(Box::new(Type::String))))
+    ]
+}
+
+
+fn get_all_literals_few_ints_scattered() -> [Expr; 12] {
+    [
+        array_lit(vec![bool_lit(false), bool_lit(true) ], Some(Type::Array(Box::new(Type::Bool)))),
+        char_lit('f'),
+
+        bool_lit(false),
+        uint128_lit(1),
+        array_lit(vec![float64_lit(1.0), float64_lit(f64::MIN), float64_lit(f64::MAX) ], Some(Type::Array(Box::new(Type::Float64)))),
+        array_lit(vec![char_lit('\n'), char_lit('H'), char_lit('!')], Some(Type::Array(Box::new(Type::Char)))),
+        float64_lit(1.0),
+
+        array_lit(vec![uint128_lit(1), uint128_lit(u128::MIN), uint128_lit(u128::MAX) ], Some(Type::Array(Box::new(Type::Uint128)))),
+        array_lit(vec![str_lit(""), str_lit("Hi"), str_lit(" !")], Some(Type::Array(Box::new(Type::String)))),
+        array_lit(vec![int128_lit(1), int128_lit(i128::MIN), int128_lit(i128::MAX) ], Some(Type::Array(Box::new(Type::Int128)))),
+        int128_lit(1),
+        str_lit("Hi")
+    ]
+}
 
 fn get_all_literals_no_arr_few_ints() -> [Expr; 6] {
     let literals = [

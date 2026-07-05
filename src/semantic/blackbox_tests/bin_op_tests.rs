@@ -63,7 +63,6 @@ mod bin_op_tests {
         let literals = get_all_literals_no_arr_few_ints();
         let literals_scattered = get_all_literals_no_arr_few_ints_scattered();
 
-
         for ((l1, t), l2) in literals.iter()
             .zip(ALL_TYPES_NO_ARR.iter())
             .zip(literals_scattered.iter())
@@ -113,7 +112,6 @@ mod bin_op_tests {
     fn test_all_literals_binop_comp_arth_mixed_errors() {
         let literals = get_all_literals_no_arr_few_ints();
         let literals_scattered = get_all_literals_no_arr_few_ints_scattered();
-
 
         for ((l1, t), l2) in literals.iter()
             .zip(ALL_TYPES_NO_ARR.iter())

@@ -1033,7 +1033,7 @@ fn check_call(
         let arg_ty = infer::infer_expr_type(arg_expr, locals, fun_sigs, Some(param_ty.clone()))?;
         if arg_ty != *param_ty {
             return Err(HolyError::Semantic(format!(
-                "Argument number `{}` type mismatch in call to `{}`: expected `{}`, got `{}` (line {} column {})",
+                "Argument number `{}` type mismatch in call to function `{}`: expected `{}`, got `{}` (line {} column {})",
                 i + 1, name, param_ty, arg_ty, span.line, span.column,
             )));
         }

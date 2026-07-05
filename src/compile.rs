@@ -9,8 +9,8 @@ use std::path::PathBuf;
 ///
 /// # Panics
 ///
-/// Will panic if it fails to create/write files/directories in current relative path the binary is
-/// run.
+/// Will panic if it fails to create/write files/directories in the path where the compiler binary
+/// is being run from.
 ///
 pub fn compile(rcode: &str, target_dir: &str) {
     let unix_timestamp_str = SystemTime::now()
