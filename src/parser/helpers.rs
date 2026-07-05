@@ -18,7 +18,7 @@ pub fn get_char_from_string(s: &str) -> Result<char, HolyError> {
 
     if first_char != '\\' {
         if chars.next().is_some() {
-            return Err(HolyError::Parse("Expected a UTF-8 character, instead got nothing.".to_string()))
+            return Err(HolyError::Parse(format!("Expected a single UTF-8 character, instead got `{}` characters.", s.len() - 1)))
         }
 
         return Ok(first_char)
@@ -38,8 +38,6 @@ pub fn get_char_from_string(s: &str) -> Result<char, HolyError> {
         '0'   => Ok('\0'),
         '\\'  => Ok('\\'),
         '\''  => Ok('\''),
-        '"'   => Ok('"'),
-
         other => Err(HolyError::Parse(format!("Invalid escape character `{other}`")))
     }
     
@@ -50,8 +48,6 @@ pub fn get_char_from_string(s: &str) -> Result<char, HolyError> {
 /// Get the closing quote in a string `s`, and returns `s` without quotes. i.e. the strings
 /// "content".
 /// `quote` is configurable, either a `QuoteType::DoubleQuote` or a `QuoteType::SingleQuote`
-///
-/// NOTE: This assumes the string already started with quotes.
 ///
 pub fn get_string_content(s: &str, quote: &QuoteType) -> Result<Option<String>, HolyError> {
     let closing_quote_type = match quote {
@@ -83,6 +79,50 @@ pub fn get_string_content(s: &str, quote: &QuoteType) -> Result<Option<String>, 
     }
 }
 
+
+
+/// Gets matching closing character, and returns its position
+///
+fn get_matching_close(s: &str, opening_char: char, closing_char: char) -> Option<usize> {
+    assert_ne!(opening_char, closing_char, "(Compiler bug) You are misusing `get_matching_close` because `opening_char` and `closing_char` are both the same `{opening_char}`");
+    
+    assert!( (opening_char == '(' || opening_char == '['),"(Compiler bug) You are misusing `get_matching_close` because `opening_char` is `{opening_char}`");
+    assert!( (closing_char == ')' || closing_char == ']'),"(Compiler bug) You are misusing `get_matching_close` because `closing_char` is `{closing_char}`");
+
+    if !s.starts_with(opening_char) {
+        return None
+    }
+
+    let mut depth = 0usize;
+    let mut found = None;
+    let mut in_string = false;
+    let mut in_escape = false;
+    for (i, c) in s[1..].char_indices() {
+        if in_escape {
+            in_escape = false;
+            continue;
+        }
+
+        match c {
+            '"' => in_string = !in_string,
+            '\\' => in_escape = true,
+            
+            _ if (c == opening_char) && !in_string => depth += 1,
+            _ if (c == closing_char) && !in_string => {
+                if depth == 0 {
+                    found = Some(1 + i);
+                    break;
+                }
+                depth -= 1;
+            },
+
+            _ => {}
+        }
+    }
+
+    found
+}
+
 /// Gets parenthesis contents.
 /// I.e. ( .. EXPRESSIONS .. ) would give Some(EXPRESSIONS)
 ///
@@ -90,42 +130,8 @@ pub fn get_string_content(s: &str, quote: &QuoteType) -> Result<Option<String>, 
 /// like, ( .. EXPRESSIONS ..) is ok but ( .. EXPRESSIONS .. ) == EXPRESSION, etc, is not.
 ///
 ///
-pub fn get_parenthesis_contents(s: &str) -> Option<&str> {
-    if s.is_empty() {
-        return None
-    }
-
-    let matching_close = {
-        let mut depth = 0usize;
-        let mut found = None;
-        let mut in_string = false;
-        let mut in_escape = false;
-        for (i, c) in s[1..].char_indices() {
-            if in_escape {
-                in_escape = false;
-                continue;
-            }
-
-            match c {
-                '(' if !in_string => {
-                    depth += 1;
-                },
-                '"' => in_string = !in_string,
-                '\\' => in_escape = true,
-                ')' if !in_string => {
-                    if depth == 0 {
-                        found = Some(1 + i);
-                        break;
-                    }
-                    depth -= 1;
-                }
-                
-                _ => {}
-            }
-        }
-        found
-    };
-
+pub fn get_parenthesis_contents(s: &str) -> Option<&str> { 
+    let matching_close = get_matching_close(s, '(', ')');
 
     if let Some(close_pos) = matching_close && close_pos == s.len() - 1 {
         let parenthesis_str = &s[1.. s.len() - 1];
@@ -138,81 +144,20 @@ pub fn get_parenthesis_contents(s: &str) -> Option<&str> {
 
 
 /// Gets array contents.
-/// I.e. [ .. EXPRESSIONS .. ] would give Some(EXPRESSIONS, `opening_bracket_position`)
+/// I.e. [ .. EXPRESSIONS .. ] would give Some(EXPRESSIONS)
 ///
-/// This only gets array content if the array extends to the end of the string
-/// like, [ .. EXPRESSIONS ..] is ok but [ .. EXPRESSIONS .. ] == EXPRESSION, etc, is not.
+/// NOTE: This function Doesnt care about splits (i.e. ',') between expressions, 
+///       it only cares about valid matching openings and closing.
 ///
 ///
-pub fn get_array_contents(s: &str) -> Option<(&str, usize)> {
-    let bracket_opening = {
-            let mut depth = 0usize;
-            let mut found = None;
-            let mut in_string = false;
-            let mut in_escape = false;
-            for (i, c) in s.char_indices() {
-                if in_escape {
-                    in_escape = false;
-                    continue;
-                }
+///
+pub fn get_array_contents(s: &str) -> Option<&str> {
+    let matching_close = get_matching_close(s, '[', ']');
 
-                match c {
-                    ']' if !in_string => {
-                        depth += 1;
-                    },
-                    '"' => in_string = !in_string,
-                    '\\' => in_escape = true,
-                    '[' if !in_string => {
-                        if depth == 0 {
-                            found = Some(i + 1);
-                            break;
-                        }
-                        depth -= 1;
-                    }
-                    _ => {}
-                }
-            }
-            found
-        };
+    if let Some(close_pos) = matching_close && close_pos == s.len() - 1 {
+        let elems_str = &s[1.. s.len() - 1];
 
-
-    if let Some(first_bracket) = bracket_opening {
-        let matching_close = {
-            let mut depth = 0usize;
-            let mut found = None;
-            let mut in_string = false;
-            let mut in_escape = false;
-            for (i, c) in s[first_bracket..].char_indices() {
-                if in_escape {
-                    in_escape = false;
-                    continue;
-                }
-
-                match c {
-                    '[' if !in_string => {
-                        depth += 1;
-                    },
-                    '"' => in_string = !in_string,
-                    '\\' => in_escape = true,
-                    ']' if !in_string => {
-                        if depth == 0 {
-                            found = Some(first_bracket + i);
-                            break;
-                        }
-                        depth -= 1;
-                    }
-                    _ => {}
-                }
-            }
-            found
-        };
-
-
-        if let Some(close_pos) = matching_close && close_pos == s.len() - 1 {
-            let elems_str = &s[first_bracket .. s.len() - 1];
-
-            return Some((elems_str, first_bracket - 1))
-        }
+        return Some(elems_str)
     }
 
     None
@@ -302,7 +247,7 @@ pub fn find_top_level_op_any(s: &str) -> Option<(usize, &str)> {
                     };
 
                     if let Some(op) = op_str {
-                        // Skip unary  (negate, logical not,m bitwise not)
+                        // Skip unary (negate, `logical not`, and `bitwise not`)
                         if op == "-" || op == "!" || op == "~" {
                             let prev_non_ws = (0..i).rev()
                                 .map(|j| chars[j].1)
@@ -339,7 +284,7 @@ pub fn find_top_level_op_any(s: &str) -> Option<(usize, &str)> {
 
 
 /// Split "char"-separated args at top-level only (i.e. ignores nested (), [], {})
-/// - respects backslash escapes
+/// and respects backslash escapes
 ///
 pub fn split_char_top_level(split_char: char, s: &str) -> Result<Vec<&str>, HolyError> {
     assert!(

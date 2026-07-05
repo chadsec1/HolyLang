@@ -251,7 +251,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
     // e.g. "[1, 2, 3]", "[]", "[1, [2, 3], 4, 5]"
     // detect pattern: "[ ... ]"
     //
-    if s.starts_with('[') && let Some((elems_str, _)) = helpers::get_array_contents(s) {
+    if s.starts_with('[') && let Some(elems_str) = helpers::get_array_contents(s) {
         let mut elems: Vec<Expr> = Vec::new();
         if !elems_str.trim().is_empty() {
             let split_parts = helpers::split_char_top_level(',', elems_str)
@@ -277,7 +277,9 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
     // Array access
     // e.g. "x[0]", "x[0:1]", etc.
     //
-    if let Some((inner_str, first_bracket)) = helpers::get_array_contents(s) {
+    
+    if let Some(first_bracket) = s.find('[') 
+    && let Some(inner_str) = helpers::get_array_contents(&s[first_bracket..]) {
         // The array holder expression
         let arr_expr = parse_expr(&s[..first_bracket], span)?;
 
