@@ -15,6 +15,19 @@ mod for_stmt_tests {
         assert_parse_err(&wrap("for range) {{\n\n}}"));    
         assert_parse_err(&wrap("for range( {{\n\n}}"));    
 
+        assert_parse_err(&wrap("for range(,) in i {{\n\n}}"));    
+        assert_parse_err(&wrap("for range() in i {{\n\n}}"));    
+        assert_parse_err(&wrap("for range) in i {{\n\n}}"));    
+        assert_parse_err(&wrap("for range( in i {{\n\n}}")); 
+
+
+        assert_parse_err(&wrap("for i in range(,) {{\n\n}}"));    
+        assert_parse_err(&wrap("for i in range() {{\n\n}}"));    
+        assert_parse_err(&wrap("for i in range) {{\n\n}}"));    
+        assert_parse_err(&wrap("for i in range( {{\n\n}}"));    
+
+
+
         for l in &literals_edge_cases {
             assert_parse_err(&wrap(&format!("for i in {} {{\n\n{}}}", l, l)));    
             assert_parse_err(&wrap(&format!("for range({}) {{\n\n}}", l)));    

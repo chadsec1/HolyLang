@@ -5,10 +5,10 @@ use crate::tests_consts::{
     BIN_OP_KIND_SYMBOLS
 };
 
-// all literals (ints, floats, array, strings literals of ints, floats, strings, other arrays, and variable names, and array access and slicing.
+// all literals (ints, floats, array, strings literals of ints, floats, strings, other arrays, and variable names, and array access and slicing).
 // Some of these literals are illegal semantically, but syntaxally, should be valid.
 //
-fn get_all_literals_edge_cases() -> [String; 152] {
+fn get_all_literals_edge_cases() -> [String; 163] {
     return [
         i8::MIN.to_string(), i8::MAX.to_string(),
         i16::MIN.to_string(), i16::MAX.to_string(),
@@ -36,12 +36,16 @@ fn get_all_literals_edge_cases() -> [String; 152] {
         "\"\\\"]foo\"".to_string(), "\"\\\"[foo[\"".to_string(),
         "\"foo)\"".to_string(), "\"foo(\"".to_string(),
         "\")foo\"".to_string(), "\"(foo\"".to_string(),
+
+        "\"\\n\"".to_string(), "\"\\t\"".to_string(), "\"\\r\"".to_string(),  "\"\\0\"".to_string(),
+        "\"\\\\\"".to_string(), "\"\\'\"".to_string(), "\"\\\"\"".to_string(),
         
         "\"\\tfoo\\n]\"".to_string(), "\"\\tfoo\\n[\"".to_string(),
         
         "'a'".to_string(), "'F'".to_string(),
         "'😇'".to_string(), "'🥰'".to_string(),
-        "'\\n'".to_string(), "'\\t'".to_string(),
+        "'\\n'".to_string(), "'\\t'".to_string(), "'\\r'".to_string(), "'\\0'".to_string(), 
+        "'\\\\'".to_string(), "'\\''".to_string(),
 
         "i".to_string(), "arr".to_string(), "x".to_string(), "y".to_string(), "xyz".to_string(),
         
@@ -54,6 +58,7 @@ fn get_all_literals_edge_cases() -> [String; 152] {
         format!("arr[:{}]", usize::MIN.to_string()), format!("arr[:{}]", usize::MAX.to_string()), 
         format!("arr[{}:]", usize::MIN.to_string()), format!("arr[{}:]", usize::MAX.to_string()), 
         format!("arr[{0}:{0}]", usize::MIN.to_string()), format!("arr[{0}:{0}]", usize::MAX.to_string()), 
+        
 
         "arr[i]".to_string(), "arr[:i]".to_string(), "arr[i:]".to_string(), "arr[e:h]".to_string(),
         
@@ -71,6 +76,7 @@ fn get_all_literals_edge_cases() -> [String; 152] {
         format!("idk({})", u64::MAX.to_string()), 
         format!("idk({})", u128::MAX.to_string()), 
         format!("idk({})", usize::MAX.to_string()), 
+
 
         format!("idk({0}, {0}, {0})", i8::MIN.to_string()), format!("idk({0}, {0}, {0})", i8::MAX.to_string()), 
         format!("idk({0}, {0}, {0})", i16::MIN.to_string()), format!("idk({0}, {0}, {0})", i16::MAX.to_string()), 
@@ -95,6 +101,7 @@ fn get_all_literals_edge_cases() -> [String; 152] {
         "idk([1, 2.0, \"hi\", false, -0, heh()])".to_string(),
         "idk([1, 2.0, \"hi\", false, -0, heh([1, 2.0, \"hi\", false, -0, heh()])])".to_string(),
 
+
         "[1, 2, 3]".to_string(), "[-1, -2, -3]".to_string(), "[-1, 2, -3]".to_string(), "[1, -2, 3]".to_string(),
         "[1.0, 2.0, 3.0]".to_string(), "[-1.0, -2.0, -3.0]".to_string(), "[-1.0, 2.0, -3.0]".to_string(), "[1.0, -2.0, 3.0]".to_string(),
         "[1, 2.0, 3]".to_string(), "[-1, -2.0, -3]".to_string(), "[-1, 2.0, -3]".to_string(), "[1, -2.0, 3]".to_string(),
@@ -105,10 +112,10 @@ fn get_all_literals_edge_cases() -> [String; 152] {
 }
 
 
+
 #[cfg(test)]
 mod tests {
     use super::*;
-
 
     // get_char_from_string
     //
@@ -118,8 +125,63 @@ mod tests {
         // const MAX_SPACES: usize = 10000;
 
         #[test]
-        fn empty_errors() {
+        fn empty_char_errors() {
             assert!(helpers::get_char_from_string(&"").is_err());
+        }
+
+        #[test]
+        fn test_all_valid_chars() {
+            let chars: Vec<char> = (0u32..=0x10FFFF)
+                .filter_map(char::from_u32)
+                .filter(|&c| c != '\\')
+                .collect();
+
+            for c in chars {
+                assert_eq!(helpers::get_char_from_string(&format!("{c}")).unwrap(), c);
+            }
+
+            assert_eq!(helpers::get_char_from_string(&"\\\\").unwrap(), '\\');
+            assert_eq!(helpers::get_char_from_string(&"\\n").unwrap(), '\n');
+            assert_eq!(helpers::get_char_from_string(&"\\t").unwrap(), '\t');
+            assert_eq!(helpers::get_char_from_string(&"\\r").unwrap(), '\r');
+            assert_eq!(helpers::get_char_from_string(&"\\0").unwrap(), '\0');
+            assert_eq!(helpers::get_char_from_string(&"\\'").unwrap(), '\'');
+        }
+
+        #[test]
+        fn test_invalid_escapes() {
+            let exclude = ['n', '0', 'r', 't', '\\', '\''];
+            let chars: Vec<char> = (0u32..=0x10FFFF)
+                .filter_map(char::from_u32)
+                .filter(|c| !exclude.contains(c))
+                .collect();
+
+            for c in chars {
+                assert!(helpers::get_char_from_string(&format!("\\{c}")).is_err());
+            }
+        }
+
+        #[test]
+        fn more_than_single_char_errors() {
+            let letters: Vec<char> = ('a'..='z').chain('A'..='Z').collect();
+            for l1 in &letters {
+                for l2 in &letters {
+                    assert!(helpers::get_char_from_string(&format!("{l1}{l2}")).is_err());
+                }
+            }
+        }
+
+        #[test]
+        fn backlash_empty_errors() {
+            assert!(helpers::get_char_from_string(&"\\").is_err());
+        }
+
+        #[test]
+        fn backlash_more_than_single_char_errors() {
+            let escapes = ['n', 't', 'r', '0', '\\', '\'', '"'];
+            for e in escapes {
+                assert!(helpers::get_char_from_string(&format!("\\{e}{e}")).is_err());
+            }
         }
     }
 
@@ -289,6 +351,45 @@ mod tests {
                 }
             }
         }
+
+        #[test]
+        fn parenthesis_missing_start_parenthesis() {
+            let literals = get_all_literals_edge_cases(); 
+
+            for l in literals {
+                assert_eq!(helpers::get_parenthesis_contents(&")"), None);
+                assert_eq!(helpers::get_parenthesis_contents(&format!("{})", l)), None);
+                for s in BIN_OP_KIND_SYMBOLS {
+                    assert_eq!(helpers::get_parenthesis_contents(&format!("{}{})", l, s)), None);
+                }
+            }
+        }
+
+        #[test]
+        fn parenthesis_missing_closing_parenthesis() {
+            let literals = get_all_literals_edge_cases(); 
+
+            for l in literals {
+                assert_eq!(helpers::get_parenthesis_contents(&"("), None);
+                assert_eq!(helpers::get_parenthesis_contents(&format!("({}", l)), None);
+                for s in BIN_OP_KIND_SYMBOLS {
+                    assert_eq!(helpers::get_parenthesis_contents(&format!("({}{}", l, s)), None);
+                }
+            }
+        }
+
+        #[test]
+        fn parenthesis_missing_both_parenthesis() {
+            let literals = get_all_literals_edge_cases(); 
+
+            for l in literals {
+                assert_eq!(helpers::get_parenthesis_contents(&""), None);
+                assert_eq!(helpers::get_parenthesis_contents(&format!("{}", l)), None);
+                for s in BIN_OP_KIND_SYMBOLS {
+                    assert_eq!(helpers::get_parenthesis_contents(&format!("{}{}", l, s)), None);
+                }
+            }
+        }
     }
 
 
@@ -310,7 +411,7 @@ mod tests {
         fn array_literal_empty() {
             assert_eq!(
                 helpers::get_array_contents(&"[]"),
-                Some(("", 0))
+                Some("")
             );
         }
 
@@ -318,7 +419,7 @@ mod tests {
         fn array_literal_empty_inside_array_literal() {
             assert_eq!(
                 helpers::get_array_contents(&"[[]]"),
-                Some(("[]", 0))
+                Some("[]")
             );
         }
 
@@ -327,7 +428,7 @@ mod tests {
         fn two_array_literal_empty_inside_array_literal() {
             assert_eq!(
                 helpers::get_array_contents(&"[[] []]"),
-                Some(("[] []", 0))
+                Some("[] []")
             );
         }
 
@@ -347,7 +448,7 @@ mod tests {
                 for s in [',', ':'] {
                     assert_eq!(
                         helpers::get_array_contents(&format!("[{}{} {}{} {}]", l, s, l, s, l)),
-                        Some((format!("{}{} {}{} {}", l, s, l, s, l).as_str(), 0))
+                        Some(format!("{}{} {}{} {}", l, s, l, s, l).as_str())
                     );
                 }
             }
@@ -375,7 +476,7 @@ mod tests {
                 for s in BIN_OP_KIND_SYMBOLS {
                     assert_eq!(
                         helpers::get_array_contents(&format!("[{}{} {}{} {}]", l, s, l, s, l)),
-                        Some((format!("{}{} {}{} {}", l, s, l, s, l).as_str(), 0))
+                        Some(format!("{}{} {}{} {}", l, s, l, s, l).as_str())
                     );
                 }
             }
@@ -396,14 +497,25 @@ mod tests {
         }
 
         #[test]
+        fn array_after_literal() {
+            let literals = get_all_literals_edge_cases(); 
+
+            for l in literals {
+                assert_eq!(helpers::get_array_contents(&format!("{} [{} {}]", l, l, l)), None);
+                for s in BIN_OP_KIND_SYMBOLS {
+                    assert_eq!(helpers::get_array_contents(&format!("{} [{} {} {}]", l, l, s, l)), None);
+
+                    assert_eq!(helpers::get_array_contents(&format!("{} {} [{} {} {}]", l, s, l, s, l)), None);
+                }
+            }
+        }
+
+        #[test]
         fn array_access() {
             let literals = get_all_literals_edge_cases(); 
 
             for l in literals {
-                assert_eq!(
-                    helpers::get_array_contents(&format!("x[{}]", l)),
-                    Some((format!("{}", l).as_str(), 1))
-                );
+                assert_eq!(helpers::get_array_contents(&format!("x[{}]", l)), None);
             }
         }
     }
@@ -522,56 +634,112 @@ mod tests {
 
         #[test]
         fn empty_string_gives_one_empty_part() {
-            let result = helpers::split_char_top_level(',', "").unwrap();
-            assert_eq!(result, vec![""]);
+            assert_eq!(helpers::split_char_top_level(',', "").unwrap(), vec![""]);
         }
 
         #[test]
-        fn single_arg_no_comma() {
-            let result = helpers::split_char_top_level(',', "hello").unwrap();
-            assert_eq!(result, vec!["hello"]);
+        fn single_string_arg() {
+            assert_eq!(helpers::split_char_top_level(',', "\"hello\"").unwrap(), vec!["\"hello\""]);
+        }
+
+        #[test]
+        fn single_string_with_in_string_split() {
+            assert_eq!(helpers::split_char_top_level(',', "\"hi,hey\"").unwrap(), vec!["\"hi,hey\""]);
+            assert_eq!(helpers::split_char_top_level(',', "\"hi,hey,hello\"").unwrap(), vec!["\"hi,hey,hello\""]);
+
+            assert_eq!(helpers::split_char_top_level(':', "\"hi:hey\"").unwrap(), vec!["\"hi:hey\""]);
+            assert_eq!(helpers::split_char_top_level(':', "\"hi:hey:hello\"").unwrap(), vec!["\"hi:hey:hello\""]);
+
+            const MAX_SPACES: usize = 10000;
+            let mut spaces = String::with_capacity(MAX_SPACES);
+            for _ in 0..=MAX_SPACES {
+                spaces.push(' ');
+                assert_eq!(helpers::split_char_top_level(',', &format!("\"hi,{spaces}hey\"")).unwrap(), vec![&format!("\"hi,{spaces}hey\"")]);
+                assert_eq!(helpers::split_char_top_level(',', &format!("\"hi{spaces},hey\"")).unwrap(), vec![&format!("\"hi{spaces},hey\"")]);
+                assert_eq!(helpers::split_char_top_level(',', &format!("\"hi,{spaces}hey,{spaces}hello\"")).unwrap(), vec![&format!("\"hi,{spaces}hey,{spaces}hello\"")]);
+                assert_eq!(helpers::split_char_top_level(',', &format!("\"hi{spaces},hey{spaces},hello\"")).unwrap(), vec![&format!("\"hi{spaces},hey{spaces},hello\"")]);
+
+                assert_eq!(helpers::split_char_top_level(':', &format!("\"hi:{spaces}hey\"")).unwrap(), vec![&format!("\"hi:{spaces}hey\"")]);
+                assert_eq!(helpers::split_char_top_level(':', &format!("\"hi{spaces}:hey\"")).unwrap(), vec![&format!("\"hi{spaces}:hey\"")]);
+                assert_eq!(helpers::split_char_top_level(':', &format!("\"hi:{spaces}hey:{spaces}hello\"")).unwrap(), vec![&format!("\"hi:{spaces}hey:{spaces}hello\"")]);
+                assert_eq!(helpers::split_char_top_level(':', &format!("\"hi{spaces}:hey{spaces}:hello\"")).unwrap(), vec![&format!("\"hi{spaces}:hey{spaces}:hello\"")]);
+            }
+        }
+
+        #[test]
+        fn single_unclosed_string_arg() {
+            assert!(helpers::split_char_top_level(',', "\"hello").is_err());
+            assert!(helpers::split_char_top_level(':', "\"hello").is_err());
+        }
+
+        #[test]
+        fn single_unopened_string_arg() {
+            assert!(helpers::split_char_top_level(',', "hello\"").is_err());
+            assert!(helpers::split_char_top_level(':', "hello\"").is_err());
+        }
+
+        #[test]
+        fn single_string_with_unescaped_quotes_arg() {
+            assert!(helpers::split_char_top_level(',', "\"hello\"\"").is_err());
+            assert!(helpers::split_char_top_level(':', "\"hello\"\"").is_err());
+            assert!(helpers::split_char_top_level(',', "\"\"hello\"").is_err());
+            assert!(helpers::split_char_top_level(':', "\"\"hello\"").is_err());
+        }
+
+        #[test]
+        fn single_arg() {
+            assert_eq!(helpers::split_char_top_level(',', "hello").unwrap(), vec!["hello"]);
+            assert_eq!(helpers::split_char_top_level(':', "hello").unwrap(), vec!["hello"]);
         }
 
         #[test]
         fn two_simple_args() {
-            let result = helpers::split_char_top_level(',', "a, b").unwrap();
-            assert_eq!(result, vec!["a", "b"]);
+            assert_eq!(helpers::split_char_top_level(',', "a,b").unwrap(), vec!["a", "b"]);
+            assert_eq!(helpers::split_char_top_level(',', "a,b,c").unwrap(), vec!["a", "b", "c"]);
+            assert_eq!(helpers::split_char_top_level(':', "a:b").unwrap(), vec!["a", "b"]);
+            assert_eq!(helpers::split_char_top_level(':', "a:b:c").unwrap(), vec!["a", "b", "c"]);
+
+
+            const MAX_SPACES: usize = 10000;
+            let mut spaces = String::with_capacity(MAX_SPACES);
+            for _ in 0..=MAX_SPACES {
+                spaces.push(' ');
+                assert_eq!(helpers::split_char_top_level(',', &format!("a,{spaces}b")).unwrap(), vec!["a", "b"]);
+                assert_eq!(helpers::split_char_top_level(',', &format!("a,{spaces}b,{spaces}c")).unwrap(), vec!["a", "b", "c"]);
+
+                assert_eq!(helpers::split_char_top_level(':', &format!("a:{spaces}b")).unwrap(), vec!["a", "b"]);
+                assert_eq!(helpers::split_char_top_level(':', &format!("a:{spaces}b:{spaces}c")).unwrap(), vec!["a", "b", "c"]);
+            }
         }
 
         #[test]
         fn three_args_with_whitespace() {
-            let result = helpers::split_char_top_level(',', "  x ,  y ,  z  ").unwrap();
-            assert_eq!(result, vec!["x", "y", "z"]);
+            assert_eq!(helpers::split_char_top_level(',', "  x ,  y ,  z  ").unwrap(), vec!["x", "y", "z"]);
         }
 
         #[test]
         fn nested_parens_hide_comma() {
-            let result = helpers::split_char_top_level(',', "f(a, b), c").unwrap();
-            assert_eq!(result, vec!["f(a, b)", "c"]);
+            assert_eq!(helpers::split_char_top_level(',', "f(a, b), c").unwrap(), vec!["f(a, b)", "c"]);
         }
 
         #[test]
         fn nested_square_brackets_hide_comma() {
-            let result = helpers::split_char_top_level(',', "[1, 2], [3, 4]").unwrap();
-            assert_eq!(result, vec!["[1, 2]", "[3, 4]"]);
+            assert_eq!(helpers::split_char_top_level(',', "[1, 2], [3, 4]").unwrap(), vec!["[1, 2]", "[3, 4]"]);
         }
 
         #[test]
         fn nested_curly_braces_hide_comma() {
-            let result = helpers::split_char_top_level(',', "{a: 1, b: 2}, c").unwrap();
-            assert_eq!(result, vec!["{a: 1, b: 2}", "c"]);
+            assert_eq!(helpers::split_char_top_level(',', "{a: 1, b: 2}, c").unwrap(), vec!["{a: 1, b: 2}", "c"]);
         }
 
         #[test]
         fn double_quoted_string_hides_comma() {
-            let result = helpers::split_char_top_level(',', r#""hello, world", x"#).unwrap();
-            assert_eq!(result, vec![r#""hello, world""#, "x"]);
+            assert_eq!(helpers::split_char_top_level(',', r#""hello, world", x"#).unwrap(), vec![r#""hello, world""#, "x"]);
         }
 
         #[test]
         fn single_quoted_string_hides_comma() {
-            let result = helpers::split_char_top_level(',', "'a, b', c").unwrap();
-            assert_eq!(result, vec!["'a, b'", "c"]);
+            assert_eq!(helpers::split_char_top_level(',', "'a, b', c").unwrap(), vec!["'a, b'", "c"]);
         }
 
         #[test]

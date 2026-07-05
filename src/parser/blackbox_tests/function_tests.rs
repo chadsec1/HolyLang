@@ -150,7 +150,6 @@ mod function_tests {
 
             assert!(result.is_err());
             let assert_cond = result.unwrap_err().to_string();
-            println!("wtf? {:?}", assert_cond);
 
             let assert_cond = assert_cond.contains("Unknown type") || 
                 assert_cond.contains("Missing opening parentheses for return type")

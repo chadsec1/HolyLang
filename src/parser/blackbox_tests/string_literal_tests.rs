@@ -48,7 +48,6 @@ mod string_literals_tests {
                 assert_eq!(v.name, "x");
                 assert_eq!(v.type_name, t.clone());
 
-                println!("huh {:?}", v.value);
                 if let Expr::StringLiteral { value, .. } = &v.value {
                     assert_eq!(value, r#"say \"hi\""#);
                 } else { panic!(); }
