@@ -41,6 +41,39 @@ mod var_multi_decl_tests {
         }
     }
 
+    #[test]
+    fn type_mismatch_in_func_call_args_errors() {
+        let literals = get_all_literals_few_ints();
+        let literals_scattered = get_all_literals_few_ints_scattered();
+
+
+        for (((l1, t1), l2), t2) in literals.iter()
+                .zip(ALL_TYPES_FEW_INTS_WITH_DYN_ARR.iter())
+                .zip(literals_scattered.iter())
+                .zip(ALL_TYPES_FEW_INTS_WITH_DYN_ARR_SCATTERED.iter()) 
+        {
+            let pair_body = vec![return_stmt(vec![l1.clone(), l2.clone()])];
+            let pair = returning_func("pair", vec![param("x", t1.clone()), param("y", t2.clone())], vec![t1.clone(), t2.clone()], pair_body);
+
+            let vars = vec![
+                MultiVariableDeclaration { name: "a".to_string(), type_name: t1.clone(), span: span() },
+                MultiVariableDeclaration { name: "b".to_string(), type_name: t2.clone(), span: span() }
+            ];
+
+            let body = vec![Stmt::VarDeclMulti(vars, call_expr("pair", vec![l2.clone(), l1.clone()]))];
+            let main = void_func("main", vec![], body);
+
+            let mut ast = AST { functions: vec![main, pair], globals: vec![] };
+            let result = check_semantics(&mut ast);
+            assert!(result.is_err());
+
+            let err_str = result.unwrap_err().to_string();
+
+            assert!(err_str.contains("type mismatch") || (err_str.contains("Integer literal") && err_str.contains("out of range")) );
+        }
+    }
+
+
 
     #[test]
     fn wrong_arg_arity_errors() {
