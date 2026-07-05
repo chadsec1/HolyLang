@@ -728,16 +728,14 @@ fn check_stmts(
                             func.name,
                             stmt_span.line,
                             stmt_span.column,
-                        )));
+                        )))
                     }
                     Some(declared_ty_vec) => {
-
                         if declared_ty_vec.len() != expr_vec.len() {
                             return Err(HolyError::Semantic(format!(
                                     "Return length mismatch in `{}`: got `{}` expressions, expected `{}` expressions (line {} column {})",
                                     func.name, expr_vec.len(), declared_ty_vec.len(), stmt_span.line, stmt_span.column,
-                                )));
-                        
+                                )))
                         }
 
                         for (i, expr) in expr_vec.iter_mut().enumerate() {
@@ -748,7 +746,7 @@ fn check_stmts(
                                 return Err(HolyError::Semantic(format!(
                                     "Return type mismatch in `{}`: got `{}`, expected `{}` (line {} column {})",
                                     func.name, expr_ty, declared_ty_vec[i], stmt_span.line, stmt_span.column,
-                                )));
+                                )))
                             }
                             
                         }
