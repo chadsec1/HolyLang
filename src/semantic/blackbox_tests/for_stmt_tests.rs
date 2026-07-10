@@ -4,9 +4,8 @@ use super::*;
 mod for_stmt_tests {
     use super::*;
 
-    // Test for statements with array dynamic variables, no literals.
     #[test]
-    fn for_stmts_with_dyn_arrays() {
+    fn for_stmts_value_is_var() {
         let literals = get_all_literals();
 
         for (l, t) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
@@ -25,6 +24,34 @@ mod for_stmt_tests {
                             // of empty branch.
                             var_decl(true, "z", t.clone(), l.clone()),
                         ],
+                        span: span(),
+                    }),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                let result = check_semantics(&mut ast);
+
+                assert!(result.is_ok())
+            }
+        }
+    }
+
+    #[test]
+    fn for_stmts_value_is_array_literal() {
+        let literals = get_all_literals();
+
+        for (l, t) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
+            for i in 0..=100 {
+                let elements = vec![l.clone(); i];
+
+                let arr_lit = array_lit(elements.clone(), Some(t.clone()));
+
+                let body = vec![ 
+                    Stmt::For(ForStmt{
+                        holder_name: "x".to_string(),
+                        value: arr_lit,
+                        // Just dummy declaration, so we don't get flagged by dead code because of empty branch.
+                        branch: vec![var_decl(true, "z", t.clone(), l.clone())],
                         span: span(),
                     }),
                 ];
@@ -105,7 +132,6 @@ mod for_stmt_tests {
     #[test]
     fn for_stmts_with_range_non_int_literals_errors() {
         let literals_no_ints = get_all_literals_no_arr_no_ints();
-
 
         for (l, t) in literals_no_ints.iter().zip(ALL_TYPES_NO_INTS_NO_ARR.iter()) {
             let body = vec![ 
