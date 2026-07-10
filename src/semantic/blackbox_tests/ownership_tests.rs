@@ -1023,7 +1023,7 @@ mod ownership_tests {
     }
 
     #[test]
-    fn test_pass_variable_to_call_marks_it_moved() {
+    fn pass_variable_to_func_call_marks_it_moved() {
         // bar takes one t.
         // own a t = EXPRESSION
         // bar(a)       (moves a)
@@ -1048,7 +1048,7 @@ mod ownership_tests {
 
 
     #[test]
-    fn test_vardecl_moving_local_var_in_while_loop() {
+    fn vardecl_moving_local_var_in_while_loop() {
         let literals = get_all_literals_no_arr();
         let boolean_conditions = get_many_boolean_conditions();
         
@@ -1095,7 +1095,7 @@ mod ownership_tests {
     }
 
     #[test]
-    fn test_vardecl_moving_local_var_in_infinite_loop() {
+    fn vardecl_moving_local_var_in_infinite_loop() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -1135,7 +1135,7 @@ mod ownership_tests {
     }
 
     #[test]
-    fn test_vardecl_moving_local_var_in_for_loop() {
+    fn vardecl_moving_local_var_in_for_loop() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -1188,7 +1188,7 @@ mod ownership_tests {
     }
 
     #[test]
-    fn test_vardecl_moving_local_var_in_for_range_loop() {
+    fn vardecl_moving_local_var_in_for_range_loop() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -1203,6 +1203,200 @@ mod ownership_tests {
                             value: Expr::RangeCall{ start: Box::new(usize_lit(0)), end: Box::new(usize_lit(i)), span: span()},
                             branch: vec![
                                 var_decl(true, "y", t.clone(), var_expr("x"))
+                            ],
+                            span: span(),
+                        }),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+
+                let result = check_semantics(&mut ast);
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("variable `x` is potentially moved multiple times"));
+            }
+        }
+    }
+
+    #[test]
+    fn varassign_moving_local_var_in_while_loop() {
+        let literals = get_all_literals_no_arr();
+        let boolean_conditions = get_many_boolean_conditions();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for bl in &boolean_conditions {
+                let body = vec![
+                    Stmt::While(WhileStmt{
+                            condition: bl.clone(),
+                            branch: vec![
+                                var_decl(true, "x", t.clone(), l.clone()),
+                                var_decl(false, "y", t.clone(), l.clone()),
+                                var_assign("y", var_expr("x"))
+                            ],
+                            span: span(),
+                        }),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+                check_semantics(&mut ast).unwrap();
+
+                assert_eq!(ast.functions.len(), 1);
+                assert_eq!(ast.functions[0].body.len(), 1);
+                assert_eq!(ast.globals.len(), 0);
+                
+                if let Stmt::While(w) = &ast.functions[0].body[0] {
+                    if !contains_array_literal(&bl) {
+                        assert_eq!(w.condition, bl.clone());
+                    }
+
+                    assert_eq!(w.branch.len(), 3);
+                    if let Stmt::VarDecl(v) = &w.branch[0] {
+                        assert_eq!(v.name, "x");
+                        assert_eq!(v.type_name, t.clone());
+                        assert_eq!(v.value, l.clone());
+                    } else { panic!("expected VarDecl, got {:?}", ast); }
+                    
+                    if let Stmt::VarDecl(v) = &w.branch[1] {
+                        assert_eq!(v.name, "y");
+                        assert_eq!(v.type_name, t.clone());
+                        assert_eq!(v.value, l.clone());
+                    } else { panic!("expected VarDecl, got {:?}", ast); }
+
+
+                    if let Stmt::VarAssign(va) = &w.branch[2] {
+                        assert_eq!(va.name, "y");
+                        assert_eq!(va.value, var_expr("x"));
+                    } else { panic!("expected VarAssign, got {:?}", ast); }
+
+                } else { panic!("expected While loop statement, got {:?}", ast); }
+            }
+        }
+    }
+
+    #[test]
+    fn varassign_moving_local_var_in_infinite_loop() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let body = vec![
+                Stmt::Infinite(InfiniteStmt{
+                        branch: vec![
+                            var_decl(true, "x", t.clone(), l.clone()),
+                            var_decl(false, "y", t.clone(), l.clone()),
+                            var_assign("y", var_expr("x"))
+                        ],
+                        span: span(),
+                    }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            check_semantics(&mut ast).unwrap();
+
+            assert_eq!(ast.functions.len(), 1);
+            assert_eq!(ast.functions[0].body.len(), 1);
+            assert_eq!(ast.globals.len(), 0);
+
+            
+            if let Stmt::Infinite(i) = &ast.functions[0].body[0] {
+                assert_eq!(i.branch.len(), 3);
+                if let Stmt::VarDecl(v) = &i.branch[0] {
+                    assert_eq!(v.name, "x");
+                    assert_eq!(v.type_name, t.clone());
+                    assert_eq!(v.value, l.clone());
+                } else { panic!("expected VarDecl, got {:?}", ast); }
+                
+                if let Stmt::VarDecl(v) = &i.branch[1] {
+                    assert_eq!(v.name, "y");
+                    assert_eq!(v.type_name, t.clone());
+                    assert_eq!(v.value, l.clone());
+
+                } else { panic!("expected VarDecl, got {:?}", ast); }
+
+                if let Stmt::VarAssign(va) = &i.branch[2] {
+                    assert_eq!(va.name, "y");
+                    assert_eq!(va.value, var_expr("x"));
+                } else { panic!("expected VarAssign, got {:?}", ast); }
+
+            } else { panic!("expected Infinite loop statement, got {:?}", ast); }
+        }
+    }
+
+    #[test]
+    fn varassign_moving_local_var_in_for_loop() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let arr_lit = array_lit(vec![], Some(Type::Array(Box::new(t.clone()))));
+
+            let body = vec![
+                var_decl(true, "a", Type::Array(Box::new(t.clone())), arr_lit.clone()),
+                Stmt::For(ForStmt{
+                        holder_name: "e".to_string(),
+                        value: var_expr("a"),
+                        branch: vec![
+                            var_decl(true, "x", t.clone(), l.clone()),
+                            var_decl(false, "y", t.clone(), l.clone()),
+                            var_assign("y", var_expr("x"))
+                        ],
+                        span: span(),
+                    }),
+            ];
+            let func = void_func("foo", vec![], body);
+            let mut ast = ast_one(func);
+            check_semantics(&mut ast).unwrap();
+
+            assert_eq!(ast.functions.len(), 1);
+            assert_eq!(ast.functions[0].body.len(), 2);
+            assert_eq!(ast.globals.len(), 0);
+
+            if let Stmt::VarDecl(v) = &ast.functions[0].body[0] {
+                assert_eq!(v.name, "a");
+                assert_eq!(v.type_name, Type::Array(Box::new(t.clone())));
+                assert_eq!(v.value, arr_lit);
+            } else { panic!("expected VarDecl, got {:?}", ast); }
+        
+            if let Stmt::For(i) = &ast.functions[0].body[1] {
+                assert_eq!(i.holder_name, "e");
+                assert_eq!(i.value, var_expr("a"));
+
+                assert_eq!(i.branch.len(), 3);
+                if let Stmt::VarDecl(v) = &i.branch[0] {
+                    assert_eq!(v.name, "x");
+                    assert_eq!(v.type_name, t.clone());
+                    assert_eq!(v.value, l.clone());
+                } else { panic!("expected VarDecl, got {:?}", ast); }
+                
+                if let Stmt::VarDecl(v) = &i.branch[1] {
+                    assert_eq!(v.name, "y");
+                    assert_eq!(v.type_name, t.clone());
+                    assert_eq!(v.value, l.clone());
+                } else { panic!("expected VarDecl, got {:?}", ast); }
+
+                if let Stmt::VarAssign(va) = &i.branch[2] {
+                    assert_eq!(va.name, "y");
+                    assert_eq!(va.value, var_expr("x"));
+                } else { panic!("expected VarAssign, got {:?}", ast); }
+
+            } else { panic!("expected For loop statement, got {:?}", ast); }
+        }
+    }
+
+    #[test]
+    fn varassign_moving_local_var_in_for_range_loop() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            let arr_lit = array_lit(vec![], Some(t.clone()));
+
+            for i in 0usize..=1000usize {
+                let body = vec![
+                    var_decl(true, "x", t.clone(), l.clone()),
+                    var_decl(true, "a", Type::Array(Box::new(t.clone())), arr_lit.clone()),
+                    Stmt::For(ForStmt{
+                            holder_name: "e".to_string(),
+                            value: Expr::RangeCall{ start: Box::new(usize_lit(0)), end: Box::new(usize_lit(i)), span: span()},
+                            branch: vec![
+                                var_decl(false, "y", t.clone(), l.clone()),
+                                var_assign("y", var_expr("x")),
                             ],
                             span: span(),
                         }),
@@ -1422,7 +1616,7 @@ mod ownership_tests {
     //
 
     #[test]
-    fn test_vardecl_moving_upstream_var_in_while_loop_errors() {
+    fn vardecl_moving_upstream_var_in_while_loop_errors() {
         let literals = get_all_literals_no_arr();
         let boolean_conditions = get_many_boolean_conditions();
         
@@ -1450,7 +1644,7 @@ mod ownership_tests {
 
 
     #[test]
-    fn test_vardecl_moving_upstream_var_in_infinite_loop_errors() {
+    fn vardecl_moving_upstream_var_in_infinite_loop_errors() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -1473,7 +1667,7 @@ mod ownership_tests {
     }
 
     #[test]
-    fn test_vardecl_moving_upstream_var_in_for_loop_errors() {
+    fn vardecl_moving_upstream_var_in_for_loop_errors() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -1501,7 +1695,7 @@ mod ownership_tests {
     }
 
     #[test]
-    fn test_vardecl_moving_upstream_var_in_for_range_loop_errors() {
+    fn vardecl_moving_upstream_var_in_for_range_loop_errors() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -1531,7 +1725,7 @@ mod ownership_tests {
     }
 
     #[test]
-    fn test_varassign_to_moved_var_errors() {
+    fn varassign_to_moved_var_errors() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -1552,7 +1746,7 @@ mod ownership_tests {
     }
 
     #[test]
-    fn test_initied_var_assign_to_self_doesnt_move() {
+    fn initied_var_assign_to_self_doesnt_move() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -1575,7 +1769,7 @@ mod ownership_tests {
     }
 
     #[test]
-    fn test_uninitied_var_assign_to_self_doesnt_move() {
+    fn uninitied_var_assign_to_self_doesnt_move() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -1596,7 +1790,7 @@ mod ownership_tests {
     }
 
     #[test]
-    fn test_dynamic_array_access_on_moved_variable_errors() {
+    fn dynamic_array_access_on_moved_variable_errors() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -1628,7 +1822,7 @@ mod ownership_tests {
     }
 
     #[test]
-    fn test_fix_array_access_on_moved_variable_errors() {
+    fn fix_array_access_on_moved_variable_errors() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -1664,7 +1858,7 @@ mod ownership_tests {
 
 
     #[test]
-    fn test_varassign_uses_moved_var_errors() {
+    fn varassign_uses_moved_var_errors() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -1689,7 +1883,7 @@ mod ownership_tests {
     //
 
     #[test]
-    fn test_initied_var_assign_moving_upstream_var_in_infinite_loop_errors() {
+    fn initied_var_assign_moving_upstream_var_in_infinite_loop_errors() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -1714,7 +1908,7 @@ mod ownership_tests {
     }
 
     #[test]
-    fn test_uninitied_var_assign_moving_upstream_var_in_infinite_loop_errors() {
+    fn uninitied_var_assign_moving_upstream_var_in_infinite_loop_errors() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -1738,7 +1932,7 @@ mod ownership_tests {
     }
 
     #[test]
-    fn test_initied_var_assign_moving_upstream_var_in_while_loop_errors() {
+    fn initied_var_assign_moving_upstream_var_in_while_loop_errors() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -1764,7 +1958,7 @@ mod ownership_tests {
     }
 
     #[test]
-    fn test_uninitied_var_assign_moving_upstream_var_in_while_loop_errors() {
+    fn uninitied_var_assign_moving_upstream_var_in_while_loop_errors() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -1790,7 +1984,7 @@ mod ownership_tests {
 
 
     #[test]
-    fn test_inited_vars_assign_moving_upstream_var_in_for_loop_errors() {
+    fn inited_vars_assign_moving_upstream_var_in_for_loop_errors() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -1955,7 +2149,7 @@ mod ownership_tests {
 
 
     #[test]
-    fn test_array_valid_multiple_access_both_ends_on_moved_var_errors() {
+    fn array_valid_multiple_access_both_ends_on_moved_var_errors() {
         let literals = get_all_literals_no_arr();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
