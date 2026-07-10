@@ -37,6 +37,7 @@ mod ownership_tests {
     }
 
 
+
     #[test]
     fn function_call_arg_does_not_move_const() {
         let literals = get_all_literals_no_arr();
@@ -2181,3 +2182,273 @@ mod ownership_tests {
     }
 }
 
+#[cfg(test)]
+mod for_loop_ownership_tests {
+    use super::*;
+
+    // If the for loop's value is a var, and it is not copied, it should get moved. and any use of
+    // it in the loop or outside of it should cause a semantics analysis error.
+    //
+    #[test]
+    fn for_loop_use_of_non_copied_value_var_in_loop_errors() {
+        let literals = get_all_literals();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
+            for i in 0..=100 {
+                let arr_lit = array_lit(vec![l.clone();i], Some(t.clone()));
+
+                let body = vec![
+                    var_decl(true, "arr", Type::Array(Box::new(t.clone())), arr_lit),
+                    Stmt::For(ForStmt{
+                            holder_name: "i".to_string(),
+                            value: var_expr("arr"),
+                            branch: vec![
+                                var_decl(true, "x", t.clone(), var_expr("arr"))
+                            ],
+                            span: span(),
+                        }),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+
+                let result = check_semantics(&mut ast);
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("Use of moved variable `arr`"));
+            }
+        }
+    }
+
+    #[test]
+    fn for_loop_use_of_non_copied_value_var_outside_loop_errors() {
+        let literals = get_all_literals();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
+            for i in 0..=100 {
+                let arr_lit = array_lit(vec![l.clone();i], Some(t.clone()));
+
+                let body = vec![
+                    var_decl(true, "arr", Type::Array(Box::new(t.clone())), arr_lit),
+                    Stmt::For(ForStmt{
+                            holder_name: "i".to_string(),
+                            value: var_expr("arr"),
+                            // Dummy branch
+                            branch: vec![var_decl(true, "e", t.clone(), l.clone())],
+                            span: span(),
+                        }),
+                    var_decl(true, "x", t.clone(), var_expr("arr"))
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+
+                let result = check_semantics(&mut ast);
+                assert!(result.is_err());
+                assert!(result.unwrap_err().to_string().contains("Use of moved variable `arr`"));
+            }
+        }
+    }
+
+    // Same tests as above test(s), except this time it's opposite,
+    // checking to see if the "ownership rules dont apply to consts" rule is actually enforced
+    //
+    #[test]
+    fn for_loop_use_of_non_copied_value_local_const_with_literal_size_in_loop_not_moved() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for i in 0..=100 {
+                let arr_t = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i));
+                let arr_lit = array_lit(vec![l.clone();i], Some(arr_t.clone()));
+
+                let body = vec![
+                    const_define_locally("arr", arr_t.clone(), arr_lit.clone()),
+                    Stmt::For(ForStmt{
+                            holder_name: "i".to_string(),
+                            value: var_expr("arr"),
+                            branch: vec![
+                                var_decl(true, "x", arr_t.clone(), var_expr("arr"))
+                            ],
+                            span: span(),
+                        }),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+
+                check_semantics(&mut ast).unwrap();
+
+                assert_eq!(ast.functions.len(), 1);
+                assert_eq!(ast.functions[0].body.len(), 2);
+                assert_eq!(ast.globals.len(), 0);
+
+                if let Stmt::Const(c) = &ast.functions[0].body[0] {
+                    assert_eq!(c.name, "arr");
+                    assert_eq!(c.type_name, arr_t.clone());
+                    assert_eq!(c.value, arr_lit.clone());
+                } else { panic!("expected Const, got {:?}", ast); }
+
+                if let Stmt::For(i) = &ast.functions[0].body[1] {
+                    assert_eq!(i.holder_name, "i");
+                    assert_eq!(i.value, var_expr("arr"));
+
+                    assert_eq!(i.branch.len(), 1);
+                } else { panic!("expected For loop statement, got {:?}", ast); }
+            }
+        }
+    }
+
+    #[test]
+    fn for_loop_use_of_non_copied_value_local_const_with_const_size_in_loop_not_moved() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for i in 0..=100 {
+                let arr_t = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Const("b".to_string()));
+                let arr_lit = array_lit(vec![l.clone();i], Some(arr_t.clone()));
+
+                let body = vec![
+                    const_define_locally("b", Type::Usize, usize_lit(i)),
+                    const_define_locally("arr", arr_t.clone(), arr_lit.clone()),
+                    Stmt::For(ForStmt{
+                            holder_name: "i".to_string(),
+                            value: var_expr("arr"),
+                            branch: vec![
+                                var_decl(true, "x", arr_t.clone(), var_expr("arr"))
+                            ],
+                            span: span(),
+                        }),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = ast_one(func);
+
+                check_semantics(&mut ast).unwrap();
+
+                assert_eq!(ast.functions.len(), 1);
+                assert_eq!(ast.functions[0].body.len(), 3);
+                assert_eq!(ast.globals.len(), 0);
+
+                if let Stmt::Const(c) = &ast.functions[0].body[0] {
+                    assert_eq!(c.name, "b");
+                    assert_eq!(c.type_name, Type::Usize);
+                    assert_eq!(c.value, usize_lit(i));
+                } else { panic!("expected Const, got {:?}", ast); }
+
+                if let Stmt::Const(c) = &ast.functions[0].body[1] {
+                    assert_eq!(c.name, "arr");
+                    assert_eq!(c.type_name, arr_t.clone());
+                    assert_eq!(c.value, arr_lit.clone());
+                } else { panic!("expected Const, got {:?}", ast); }
+
+                if let Stmt::For(i) = &ast.functions[0].body[2] {
+                    assert_eq!(i.holder_name, "i");
+                    assert_eq!(i.value, var_expr("arr"));
+
+                    assert_eq!(i.branch.len(), 1);
+                } else { panic!("expected For loop statement, got {:?}", ast); }
+
+            }
+        }
+    }
+
+
+    #[test]
+    fn for_loop_use_of_non_copied_value_global_const_with_literal_size_in_loop_not_moved() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for i in 0..=100 {
+                let arr_t = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Literal(i));
+                let arr_lit = array_lit(vec![l.clone();i], Some(arr_t.clone()));
+
+                let body = vec![
+                    Stmt::For(ForStmt{
+                            holder_name: "i".to_string(),
+                            value: var_expr("arr"),
+                            branch: vec![
+                                var_decl(true, "x", arr_t.clone(), var_expr("arr"))
+                            ],
+                            span: span(),
+                        }),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = AST { functions: vec![func] , globals: vec![
+                    const_define_globally("arr", arr_t.clone(), arr_lit.clone()),
+                ] };
+
+                check_semantics(&mut ast).unwrap();
+
+                assert_eq!(ast.functions.len(), 1);
+                assert_eq!(ast.functions[0].body.len(), 1);
+                assert_eq!(ast.globals.len(), 1);
+
+                if let GlobalStmt::Const(c) = &ast.globals[0] {
+                    assert_eq!(c.name, "arr"); 
+                    assert_eq!(c.type_name, arr_t.clone());
+                    assert_eq!(c.value, arr_lit.clone());
+                } else { panic!("expected Const, got {:?}", ast); }
+
+                if let Stmt::For(i) = &ast.functions[0].body[0] {
+                    assert_eq!(i.holder_name, "i");
+                    assert_eq!(i.value, var_expr("arr"));
+
+                    assert_eq!(i.branch.len(), 1);
+                } else { panic!("expected For loop statement, got {:?}", ast); }
+            }
+        }
+    }
+
+    #[test]
+    fn for_loop_use_of_non_copied_value_global_const_with_const_size_in_loop_not_moved() {
+        let literals = get_all_literals_no_arr();
+        
+        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+            for i in 0..=100 {
+                let arr_t = Type::FixedArray(Box::new(t.clone()), FixedArraySize::Const("b".to_string()));
+                let arr_lit = array_lit(vec![l.clone();i], Some(arr_t.clone()));
+
+                let body = vec![
+                    Stmt::For(ForStmt{
+                            holder_name: "i".to_string(),
+                            value: var_expr("arr"),
+                            branch: vec![
+                                var_decl(true, "x", arr_t.clone(), var_expr("arr"))
+                            ],
+                            span: span(),
+                        }),
+                ];
+                let func = void_func("foo", vec![], body);
+                let mut ast = AST { functions: vec![func] , globals: vec![
+                    const_define_globally("b", Type::Usize, usize_lit(i)),
+                    const_define_globally("arr", arr_t.clone(), arr_lit.clone()),
+                ] };
+
+                check_semantics(&mut ast).unwrap();
+
+                assert_eq!(ast.functions.len(), 1);
+                assert_eq!(ast.functions[0].body.len(), 1);
+                assert_eq!(ast.globals.len(), 2);
+
+                if let GlobalStmt::Const(c) = &ast.globals[0] {
+                    assert_eq!(c.name, "b"); 
+                    assert_eq!(c.type_name, Type::Usize);
+                    assert_eq!(c.value, usize_lit(i));
+                } else { panic!("expected Const, got {:?}", ast); }
+
+                if let GlobalStmt::Const(c) = &ast.globals[1] {
+                    assert_eq!(c.name, "arr"); 
+                    assert_eq!(c.type_name, arr_t.clone());
+                    assert_eq!(c.value, arr_lit.clone());
+                } else { panic!("expected Const, got {:?}", ast); }
+
+
+                if let Stmt::For(i) = &ast.functions[0].body[0] {
+                    assert_eq!(i.holder_name, "i");
+                    assert_eq!(i.value, var_expr("arr"));
+
+                    assert_eq!(i.branch.len(), 1);
+                } else { panic!("expected For loop statement, got {:?}", ast); }
+            }
+        }
+    }
+
+
+
+}
