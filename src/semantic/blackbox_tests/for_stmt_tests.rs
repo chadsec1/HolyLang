@@ -6,10 +6,10 @@ mod for_stmt_tests {
 
     // Test for statements with array dynamic variables, no literals.
     #[test]
-    fn test_for_statements_with_dyn_arrays() {
-        let literals = get_all_literals_no_arr();
+    fn for_stmts_with_dyn_arrays() {
+        let literals = get_all_literals();
 
-        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+        for (l, t) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
             for i in 0..=100 {
                 let elements = vec![l.clone(); i];
 
@@ -38,10 +38,10 @@ mod for_stmt_tests {
     }
 
     #[test]
-    fn test_for_statements_with_fixed_arrays() {
-        let literals = get_all_literals_no_arr();
+    fn for_stmts_with_fixed_arrays() {
+        let literals = get_all_literals();
 
-        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+        for (l, t) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
             for i in 0..=100 {
                 let elements = vec![l.clone(); i];
 
@@ -72,7 +72,7 @@ mod for_stmt_tests {
 
     // Test for statements with rangecall, with only integer literals, no variables.
     #[test]
-    fn test_for_statements_with_range_int_literals() {
+    fn for_stmts_with_range_int_literals() {
         let literals = get_all_literals_no_arr_str_bool_float();
 
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -103,7 +103,7 @@ mod for_stmt_tests {
 
 
     #[test]
-    fn test_for_statements_with_range_non_int_literals_errors() {
+    fn for_stmts_with_range_non_int_literals_errors() {
         let literals_no_ints = get_all_literals_no_arr_no_ints();
 
 
@@ -136,7 +136,7 @@ mod for_stmt_tests {
 
 
     #[test]
-    fn test_for_statements_with_range_mixed_literals_errors() {
+    fn for_stmts_with_range_mixed_literals_errors() {
         let literals_no_ints = get_all_literals_no_arr_no_ints();
         let literals = get_all_literals_no_arr();
 
@@ -203,7 +203,7 @@ mod for_stmt_tests {
 
 
     #[test]
-    fn test_for_statements_with_range_holder_name_is_already_taken_errors() {
+    fn for_stmts_with_range_holder_name_is_already_taken_errors() {
         let literals = get_all_literals_no_arr_str_bool_float();
 
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -236,10 +236,10 @@ mod for_stmt_tests {
 
 
     #[test]
-    fn test_for_statements_with_fixed_array_holder_name_is_already_taken_errors() {
-        let literals = get_all_literals_no_arr();
+    fn for_stmts_with_fixed_array_holder_name_is_already_taken_errors() {
+        let literals = get_all_literals();
 
-        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+        for (l, t) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
             for i in 0..=100 {
                 let elements = vec![l.clone(); i];
 
@@ -271,7 +271,7 @@ mod for_stmt_tests {
     }
 
     #[test]
-    fn test_for_statements_with_dyn_array_holder_name_is_already_taken_errors() {
+    fn for_stmts_with_dyn_array_holder_name_is_already_taken_errors() {
         let literals = get_all_literals_no_arr();
 
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
@@ -307,7 +307,7 @@ mod for_stmt_tests {
 
 
     #[test]
-    fn test_for_statements_with_no_array_no_range() {
+    fn for_stmts_with_no_array_no_range() {
         let literals = get_all_literals_no_arr();
 
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter())
@@ -335,10 +335,10 @@ mod for_stmt_tests {
 
 
     #[test]
-    fn test_for_statements_fixed_arr_empty_branch_errors() {
-        let literals = get_all_literals_no_arr();
+    fn for_stmts_fixed_arr_empty_branch_errors() {
+        let literals = get_all_literals();
 
-        for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {
+        for (l, t) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
             for i in 0..=100 {
                 let elements = vec![l.clone(); i];
 
@@ -365,7 +365,7 @@ mod for_stmt_tests {
     }
 
     #[test]
-    fn test_for_statements_dyn_arr_empty_branch_errors() {
+    fn for_stmts_dyn_arr_empty_branch_errors() {
         let literals = get_all_literals_no_arr();
 
         for (l, t) in literals.iter().zip(ALL_TYPES_NO_ARR.iter()) {

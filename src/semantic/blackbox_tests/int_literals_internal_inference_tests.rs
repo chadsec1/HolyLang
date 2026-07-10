@@ -15,6 +15,8 @@ mod int_literal_internal_inference_tests {
     #[test]
     fn test_floating_literal_is_64_but_type_is_integer_errors() {
         let float64_lits = [
+            float64_lit(f64::MIN),
+            float64_lit(f64::MAX),
             float64_lit(1.0),
             float64_lit(1e12)
         ];
