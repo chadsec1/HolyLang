@@ -1,18 +1,13 @@
-# HolyLang
-![Unit Tests](https://github.com/HolyLang/HolyLang-Bootstrap/actions/workflows/unit_tests_with_coverage.yml/badge.svg)
-![Clippy](https://github.com/HolyLang/HolyLang-Bootstrap/actions/workflows/clippy.yml/badge.svg)
-![CodeQL](https://github.com/HolyLang/HolyLang-Bootstrap/actions/workflows/codeql.yml/badge.svg)
-[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=HolyLang_HolyLang-Bootstrap&metric=coverage)](https://sonarcloud.io/summary/new_code?id=HolyLang_HolyLang-Bootstrap)
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=HolyLang_HolyLang-Bootstrap&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=HolyLang_HolyLang-Bootstrap)
-[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=HolyLang_HolyLang-Bootstrap&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=HolyLang_HolyLang-Bootstrap)
-[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=HolyLang_HolyLang-Bootstrap&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=HolyLang_HolyLang-Bootstrap)
-[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=HolyLang_HolyLang-Bootstrap&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=HolyLang_HolyLang-Bootstrap)
-[![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=HolyLang_HolyLang-Bootstrap&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=HolyLang_HolyLang-Bootstrap)
+# GoldLang
+![Unit Tests](https://github.com/GoldLang/GoldLang-Bootstrap/actions/workflows/unit_tests_with_coverage.yml/badge.svg)
+![Clippy](https://github.com/GoldLanguage/GoldLang-Bootstrap/actions/workflows/clippy.yml/badge.svg)
+![CodeQL](https://github.com/GoldLanguage/GoldLang-Bootstrap/actions/workflows/codeql.yml/badge.svg)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/3cf0e9ea7c134f188480fc68c1b464fe)](https://app.codacy.com/gh/GoldLanguage/GoldLang-Bootstrap/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 
 
-**HolyLang** programming language: Pure and strict compile-time safety, with readable syntax and semantics.
+**GoldLang** programming language: Pure and strict compile-time safety, with readable syntax and semantics.
 
-**HolyLang** is more secure than Rust, but not as performant as Rust. The purpose of HolyLang is memory and logic safety, not speed.
+**GoldLang** is more secure than Rust, but not as performant as Rust. The purpose of HolyLang is memory and logic safety, not speed.
 
 
 ## GoldLang features:
@@ -26,10 +21,7 @@
 - `lock` and `unlock` statements allow you to declare "zones" where variables behave as constants.
 
 
-**HolyLang**'s bootstrap compiler transpiles down to pure Rust for a mathematical guarantee of safety: `"If Rust is safe, then HolyLang must also be at least as safe as Rust"`.
-
-.. and a lot more! This is just the bootstrap compiler, the actual compiler will have even more security features, such as static stack analyzes that guarantee (at compile-time!) a program cannot overflow the stack, allowing for even stricter security than Rust, and even other formally verified languages like Ada SPARK, whom have weak stack overflow protection without an OS's help.
-
+**GoldLang**'s bootstrap compiler transpiles down to pure Rust for a mathematical guarantee of safety: `"If Rust is safe, then HolyLang must also be at least as safe as Rust"`.
 
 # Work-in-progress
 This bootstrap compiler implements parser, semantic analysis and enforcement, and the transpiler.
@@ -39,7 +31,7 @@ It still lacks: structs and methods, enums, sin (unsafe) blocks.
 **Note**: The latest commit in main branch is always the latest stable release.
 1. Clone the repository:
    ```bash
-   git clone https://github.com/chadsec1/HolyLang.git
+   git clone https://github.com/GoldLanguage/GoldLang-Bootstrap.git
    ```
 2. Compile the compiler:
    ```bash
@@ -48,11 +40,11 @@ It still lacks: structs and methods, enums, sin (unsafe) blocks.
 
 The compiler binary will be located in `target/release/goldlang`. Feel free to move it wherever you like.
 
-# Compiling a HolyLang program
+# Compiling a GoldLang program
 ```bash
 ./goldlang SOURCE_CODE_PATH.gold TARGET_BINARY_PATH
 ```
-That will compile a HolyLang file, and produce a binary at `TARGET_BINARY_PATH`.
+That will compile a GoldLang file, and produce a binary at `TARGET_BINARY_PATH`.
 
 
 **NOTE**: **This project is just a hobby language** with design objective of being the safest and most readable systems programming language!
@@ -137,7 +129,7 @@ func main() {
 
 
     # Example of the move-or-copy safety model, where there is only one owner of a variable,
-    # Holylang does not support references, borrowing, aliases, etc.
+    # Goldlang does not support references, borrowing, aliases, etc.
     # You either move a variable, or copy it.
     #
 
