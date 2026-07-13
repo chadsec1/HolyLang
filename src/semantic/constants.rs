@@ -20,16 +20,16 @@ pub fn eval_const_expr_and_fold_it(
     if expr_ty != cons.type_name {
         return Err(GoldError::Semantic(format!(
             "Type mismatch assigning to `{}`: got `{}`, expected `{}` (line {} column {})",
-            &cons.name, expr_ty, cons.type_name, cons.span.line, cons.span.column
-        )));
+            cons.name, expr_ty, cons.type_name, cons.span.line, cons.span.column
+        )))
     }
 
     // Dynamic arrays cannot be evaluated at compile-time.
     if expr_ty.is_array_type() && (!expr_ty.is_fully_fixed_array_type()) {
         return Err(GoldError::Semantic(format!(
             "Dynamic arrays cannot be evaluated at compile time, therefore you cannot assign them to constant `{}` of type `{}` (line {} column {})",
-            &cons.name, expr_ty, cons.span.line, cons.span.column
-        )));
+            cons.name, expr_ty, cons.span.line, cons.span.column
+        )))
     }
 
     // Validate the constant value expression to ensure it is known at compile-time, and

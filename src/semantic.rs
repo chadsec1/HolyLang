@@ -107,8 +107,8 @@ fn check_function(
         if locals.contains_key(&parameter.name) {
             return Err(GoldError::Semantic(format!(
                         "Cannot use `{}` as function parameter name, because it is already declared globally (line {} column {})", 
-                        &parameter.name, parameter.span.line, parameter.span.column
-                    )));
+                        parameter.name, parameter.span.line, parameter.span.column
+                    )))
         }
         locals.insert(
             parameter.name.clone(), 
@@ -191,15 +191,15 @@ fn check_const(
     if fun_sigs.contains_key(&cons.name) {
         return Err(GoldError::Semantic(format!(
                     "Constant identifier name `{}` is already taken by a function. (line {} column {})", 
-                    &cons.name, cons.span.line, cons.span.column
-                )));
+                    cons.name, cons.span.line, cons.span.column
+                )))
     }
 
     if storage.contains_key(&cons.name) {
         return Err(GoldError::Semantic(format!(
                 "Cannot use `{}` as the constant identifier name as it is already declared. Overshadowing is not allowed. (line {} column {})", 
-                &cons.name, cons.span.line, cons.span.column
-            )));
+                cons.name, cons.span.line, cons.span.column
+            )))
     }
 
 
@@ -262,8 +262,8 @@ fn check_stmts(
                 if fun_sigs.contains_key(&var.name) {
                     return Err(GoldError::Semantic(format!(
                                 "Variable identifier name `{}` is already taken by a function. (line {} column {})", 
-                                &var.name, var.span.line, var.span.column
-                            )));
+                                var.name, var.span.line, var.span.column
+                            )))
                 }
 
                 let expr_ty = infer::infer_expr_type(&mut var.value, locals, fun_sigs, Some(var.type_name.clone()))?;
@@ -278,8 +278,8 @@ fn check_stmts(
                 if locals.contains_key(&var.name) {
                     return Err(GoldError::Semantic(format!(
                             "Variable `{}` is already declared, overshadowing is not allowed. (line {} column {})", 
-                            &var.name, var.span.line, var.span.column
-                        )));
+                            var.name, var.span.line, var.span.column
+                        )))
                 }
 
 
@@ -299,7 +299,7 @@ fn check_stmts(
                             if in_loop && upstream_var_names.contains(src_name) {
                                 return Err(GoldError::Semantic(format!(
                                             "Upstream variable `{}` is potentially moved multiple times, because you are in a loop. Consider using `copy()` (line {} column {})", 
-                                            &src_name, span.line, span.column
+                                            src_name, span.line, span.column
                                         )))
                             }
 
@@ -364,7 +364,7 @@ fn check_stmts(
                         if locals.contains_key(&var.name) {
                             return Err(GoldError::Semantic(format!(
                                     "Variable `{}` is already declared, overshadowing is not allowed. (line {} column {})", 
-                                    &var.name, var.span.line, var.span.column
+                                    var.name, var.span.line, var.span.column
                                 )))
                         }
 
@@ -418,8 +418,8 @@ fn check_stmts(
                         if moved {
                             return Err(GoldError::Semantic(format!(
                                 "Value assignment to moved variable `{}` (line {} column {})",
-                                &assign.name, assign.span.line, assign.span.column
-                            )));
+                                assign.name, assign.span.line, assign.span.column
+                            )))
                         }
 
                 
@@ -427,14 +427,14 @@ fn check_stmts(
                         if locked {
                             return Err(GoldError::Semantic(format!(
                                     "Variable `{}` is locked, therefore you cannot assign to it (line {} column {})", 
-                                    &assign.name, assign.span.line, assign.span.column
-                                )));
+                                    assign.name, assign.span.line, assign.span.column
+                                )))
                         }
                     },
                     BindingKind::Const { .. } => {
                         return Err(GoldError::Semantic(format!(
                             "You cannot assign to constant `{}` (line {} column {})",
-                            &assign.name, assign.span.line, assign.span.column
+                            assign.name, assign.span.line, assign.span.column
                         )))
                     }
                 }
@@ -453,8 +453,8 @@ fn check_stmts(
                             if in_loop && upstream_var_names.contains(src_name) {
                                 return Err(GoldError::Semantic(format!(
                                             "Upstream variable `{}` is potentially moved multiple times, because you are in a loop. Consider using `copy()` (line {} column {})", 
-                                            &src_name, span.line, span.column
-                                        )));
+                                            src_name, span.line, span.column
+                                        )))
                             }
 
                             assert!(!*src_moved, "(Compiler bug) infer_expr_type should've already errored if source variable is moved, but it didnt. assign: {assign:?}");
@@ -524,8 +524,8 @@ fn check_stmts(
                                 if locked {
                                     return Err(GoldError::Semantic(format!(
                                             "Variable `{}` is locked, therefore you cannot assign to it (line {} column {})", 
-                                            &var_name, expr.span.line, expr.span.column
-                                        )));
+                                            var_name, expr.span.line, expr.span.column
+                                        )))
                                 }
                             },
                             BindingKind::Const { .. } => {
