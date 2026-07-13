@@ -7,7 +7,7 @@
 
 **GoldLang** programming language: Pure and strict compile-time safety, with readable syntax and semantics.
 
-**GoldLang** is more secure than Rust, but not as performant as Rust. The purpose of HolyLang is memory and logic safety, not speed.
+**GoldLang** is more secure than Rust, but not as performant as Rust. The purpose of GoldLang is memory *and* logic safety, not performance.
 
 
 ## GoldLang features:
@@ -21,7 +21,7 @@
 - `lock` and `unlock` statements allow you to declare "zones" where variables behave as constants.
 
 
-**GoldLang**'s bootstrap compiler transpiles down to pure Rust for a mathematical guarantee of safety: `"If Rust is safe, then HolyLang must also be at least as safe as Rust"`.
+**GoldLang**'s bootstrap compiler transpiles down to pure Rust for a mathematical guarantee of safety: `"If Rust is safe, then GoldLang must also be at least as safe as Rust"`.
 
 # Work-in-progress
 This bootstrap compiler implements parser, semantic analysis and enforcement, and the transpiler.
