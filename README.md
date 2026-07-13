@@ -2,6 +2,7 @@
 ![Unit Tests](https://github.com/HolyLang/HolyLang-Bootstrap/actions/workflows/unit_tests_with_coverage.yml/badge.svg)
 ![Clippy](https://github.com/HolyLang/HolyLang-Bootstrap/actions/workflows/clippy.yml/badge.svg)
 ![CodeQL](https://github.com/HolyLang/HolyLang-Bootstrap/actions/workflows/codeql.yml/badge.svg)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/54660f2f91d844cf8e951aab5af36344)](https://app.codacy.com/gh/GoldLanguage/GoldLang-Bootstrap?utm_source=github.com&utm_medium=referral&utm_content=GoldLanguage/GoldLang-Bootstrap&utm_campaign=Badge_Grade)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=HolyLang_HolyLang-Bootstrap&metric=coverage)](https://sonarcloud.io/summary/new_code?id=HolyLang_HolyLang-Bootstrap)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=HolyLang_HolyLang-Bootstrap&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=HolyLang_HolyLang-Bootstrap)
 [![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=HolyLang_HolyLang-Bootstrap&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=HolyLang_HolyLang-Bootstrap)
