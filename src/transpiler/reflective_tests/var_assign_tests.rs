@@ -28,7 +28,7 @@ mod var_assign_in_void_func_tests {
                 assert!(rcode.starts_with(&internals));
                 let rcode = rcode[internals.len()..].replace('\n', "");
 
-                let bin_str = holy_expr_to_rust_expr(&bin);
+                let bin_str = gold_expr_to_rust_expr(&bin);
 
                 assert_eq!(rcode, format!("fn foo() {{ x = {};}}", bin_str));
             }
@@ -51,7 +51,7 @@ mod var_assign_in_void_func_tests {
             assert!(rcode.starts_with(&internals));
             let rcode = rcode[internals.len()..].replace('\n', "");
 
-            let l_str = holy_expr_to_rust_expr(&l);
+            let l_str = gold_expr_to_rust_expr(&l);
 
             assert_eq!(rcode, format!("fn foo() {{ x = {};}}", l_str));
         }

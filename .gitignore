@@ -6,8 +6,8 @@ TODO.*
 
 dev_builds
 
-# Temporary files holylang transpiler creates.
-holylang-*
+# Temporary files goldlang transpiler creates.
+goldlang-*
 
 # Vim
 *.sw*

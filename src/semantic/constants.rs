@@ -1,5 +1,5 @@
 use super::{
-    HashMap, BindingInfo, Type, HolyError, infer, Expr, helpers, BindingKind, Span
+    HashMap, BindingInfo, Type, GoldError, infer, Expr, helpers, BindingKind, Span
 };
 use crate::ast::{
     IntLiteralValue, UnaryOpKind, BinOpKind, Constant
@@ -14,11 +14,11 @@ pub fn eval_const_expr_and_fold_it(
     cons: &mut Constant,
     storage: &mut HashMap<String, BindingInfo>,
     fun_sigs: &HashMap<String, (Vec<Type>, Option<Vec<Type>>)>,
-) -> Result<(), HolyError> {
+) -> Result<(), GoldError> {
     // Validate, and get the type of the value expression.
     let expr_ty = infer::infer_expr_type(&mut cons.value, storage, fun_sigs, Some(cons.type_name.clone()))?;
     if expr_ty != cons.type_name {
-        return Err(HolyError::Semantic(format!(
+        return Err(GoldError::Semantic(format!(
             "Type mismatch assigning to `{}`: got `{}`, expected `{}` (line {} column {})",
             &cons.name, expr_ty, cons.type_name, cons.span.line, cons.span.column
         )));
@@ -26,7 +26,7 @@ pub fn eval_const_expr_and_fold_it(
 
     // Dynamic arrays cannot be evaluated at compile-time.
     if expr_ty.is_array_type() && (!expr_ty.is_fully_fixed_array_type()) {
-        return Err(HolyError::Semantic(format!(
+        return Err(GoldError::Semantic(format!(
             "Dynamic arrays cannot be evaluated at compile time, therefore you cannot assign them to constant `{}` of type `{}` (line {} column {})",
             &cons.name, expr_ty, cons.span.line, cons.span.column
         )));
@@ -48,7 +48,7 @@ pub fn eval_const_expr_and_fold_it(
 pub fn eval_const_expr_and_fold_it_hazmat(
     expr: &Expr, 
     storage: &HashMap<String, BindingInfo>
-) -> Result<Expr, HolyError> {
+) -> Result<Expr, GoldError> {
     let expr_span = helpers::expr_span(expr);
 
     match expr {
@@ -80,7 +80,7 @@ pub fn eval_const_expr_and_fold_it_hazmat(
             match array_evaled {
                 Expr::ArrayLiteral { elements, .. } => {
                     if index_usize >= elements.len() {
-                        return Err(HolyError::Semantic(format!(
+                        return Err(GoldError::Semantic(format!(
                                         "Constant out-of-bounds access on array of `{}` size, found `{}`. (line {} column {})",
                                         elements.len(), index_usize, span.line, span.column
                                     )))
@@ -101,7 +101,7 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                         let mut result: i128 = value.as_i128();
                         match op {
                             UnaryOpKind::Negate => result = result.checked_neg().ok_or_else(|| {
-                                                        HolyError::Semantic(format!(
+                                                        GoldError::Semantic(format!(
                                                             "Constant unary negate result would cause an integer overflow. Integer: {}  (line {} column {})",
                                                             result, span.line, span.column
                                                         ))
@@ -140,7 +140,7 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                     }
                     
                     if !result.is_finite() {
-                        return Err(HolyError::Semantic(format!(
+                        return Err(GoldError::Semantic(format!(
                             "Constant floating unary result would cause floating point `{}` to produce non-finite result like `infinite` or `NaN`. (line {} column {})",
                             value, span.line, span.column
                         )))
@@ -255,7 +255,7 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                     }
 
                     if !result.is_finite() {
-                        return Err(HolyError::Semantic(format!(
+                        return Err(GoldError::Semantic(format!(
                             "Constant floating arithemtic result would cause floating point to produce non-finite result like `infinite` or `NaN`. Left: `{}`, Right: `{}`. (line {} column {})",
                             left_value, right_value, span.line, span.column
                         )));
@@ -283,25 +283,25 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                         let result: i128;
                         match op {
                             BinOpKind::Add => result = left_val.checked_add(right_val).ok_or_else(|| {
-                                                HolyError::Semantic(format!(
+                                                GoldError::Semantic(format!(
                                                     "Constant arithemtic addition result would cause an integer overflow. Left: `{}`, Right: `{}`. (line {} column {})",
                                                     left_val, right_val, span.line, span.column
                                                 ))
                                             })?,
                             BinOpKind::Subtract => result = left_val.checked_sub(right_val).ok_or_else(|| {
-                                                HolyError::Semantic(format!(
+                                                GoldError::Semantic(format!(
                                                     "Constant arithemtic subtraction result would cause an integer overflow. Left: `{}`, Right: `{}`. (line {} column {})",
                                                     left_val, right_val, span.line, span.column
                                                 ))
                                             })?,
                             BinOpKind::Multiply => result = left_val.checked_mul(right_val).ok_or_else(|| {
-                                                HolyError::Semantic(format!(
+                                                GoldError::Semantic(format!(
                                                     "Constant arithemtic multiplication result would cause an integer overflow. Left: `{}`, Right: `{}`. (line {} column {})",
                                                     left_val, right_val, span.line, span.column
                                                 ))
                                             })?,
                             BinOpKind::Divide => result = left_val.checked_div(right_val).ok_or_else(|| {
-                                                HolyError::Semantic(format!(
+                                                GoldError::Semantic(format!(
                                                     "Constant arithemtic division result would cause an integer overflow. Left: `{}`, Right: `{}`. (line {} column {})",
                                                     left_val, right_val, span.line, span.column
                                                 ))
@@ -310,14 +310,14 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                                 let bit_width: u32 = left_value.bit_width();
 
                                 if right_val < 0 {
-                                    return Err(HolyError::Semantic(format!(
+                                    return Err(GoldError::Semantic(format!(
                                         "Constant bitwise shift to the left's right-side value cannot be negative. Left: `{}`, Right: `{}`. (line {} column {})",
                                         left_val, right_val, span.line, span.column
                                     )));
                                 }
 
                                 if right_val >= (i128::from(bit_width)) {
-                                    return Err(HolyError::Semantic(format!(
+                                    return Err(GoldError::Semantic(format!(
                                         "Constant bitwise shift to the left's right-side value cannot exceed `{}`. Left: `{}`, Right: `{}`. (line {} column {})",
                                         bit_width - 1, left_val, right_val, span.line, span.column
                                     )));
@@ -336,14 +336,14 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                                 let bit_width: u32 = left_value.bit_width();
 
                                 if right_val < 0 {
-                                    return Err(HolyError::Semantic(format!(
+                                    return Err(GoldError::Semantic(format!(
                                         "Constant bitwise shift to the right's right-side value cannot be negative. Left: `{}`, Right: `{}`. (line {} column {})",
                                         left_val, right_val, span.line, span.column
                                     )));
                                 }
 
                                 if right_val >= (i128::from(bit_width)) {
-                                    return Err(HolyError::Semantic(format!(
+                                    return Err(GoldError::Semantic(format!(
                                         "Constant bitwise shift to the right's right-side value cannot exceed `{}`. Left: `{}`, Right: `{}`. (line {} column {})",
                                         bit_width - 1, left_val, right_val, span.line, span.column
                                     )));
@@ -389,28 +389,28 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                         let result: u128;
                         match op {
                             BinOpKind::Add => result = left_val.checked_add(right_val).ok_or_else(|| {
-                                                HolyError::Semantic(format!(
+                                                GoldError::Semantic(format!(
                                                     "Constant arithemtic addition result would cause an integer overflow. Left: `{}`, Right: `{}`. (line {} column {})",
                                                     left_val, right_val, span.line, span.column
                                                 ))
                                             })?,
 
                             BinOpKind::Subtract => result = left_val.checked_sub(right_val).ok_or_else(|| {
-                                                HolyError::Semantic(format!(
+                                                GoldError::Semantic(format!(
                                                     "Constant arithemtic subtraction result would cause an integer overflow. Left: `{}`, Right: `{}`. (line {} column {})",
                                                     left_val, right_val, span.line, span.column
                                                 ))
                                             })?,
 
                             BinOpKind::Multiply => result = left_val.checked_mul(right_val).ok_or_else(|| {
-                                                HolyError::Semantic(format!(
+                                                GoldError::Semantic(format!(
                                                     "Constant arithemtic multiplication result would cause an integer overflow. Left: `{}`, Right: `{}`. (line {} column {})",
                                                     left_val, right_val, span.line, span.column
                                                 ))
                                             })?,
 
                             BinOpKind::Divide => result = left_val.checked_div(right_val).ok_or_else(|| {
-                                                HolyError::Semantic(format!(
+                                                GoldError::Semantic(format!(
                                                     "Constant arithemtic division result would cause an integer overflow. Left: `{}`, Right: `{}`. (line {} column {})",
                                                     left_val, right_val, span.line, span.column
                                                 ))
@@ -420,7 +420,7 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                                 let bit_width: u32 = left_value.bit_width();
 
                                 if right_val >= u128::from(bit_width) {
-                                    return Err(HolyError::Semantic(format!(
+                                    return Err(GoldError::Semantic(format!(
                                         "Constant bitwise shift to the left's right-side value cannot exceed `{}`. Left: `{}`, Right: `{}`. (line {} column {})",
                                         bit_width - 1, left_val, right_val, span.line, span.column
                                     )));
@@ -439,7 +439,7 @@ pub fn eval_const_expr_and_fold_it_hazmat(
                                 let bit_width: u32 = left_value.bit_width();
 
                                 if right_val >= u128::from(bit_width) {
-                                    return Err(HolyError::Semantic(format!(
+                                    return Err(GoldError::Semantic(format!(
                                         "Constant bitwise shift to the right's right-side value cannot exceed `{}`. Left: `{}`, Right: `{}`. (line {} column {})",
                                         bit_width - 1, left_val, right_val, span.line, span.column
                                     )));
@@ -488,7 +488,7 @@ pub fn eval_const_expr_and_fold_it_hazmat(
         Expr::Var { name, .. } => {
             if let Some(info) = storage.get(name).cloned() {
                 match info.kind {
-                    BindingKind::Var { .. } => Err(HolyError::Semantic(format!(
+                    BindingKind::Var { .. } => Err(GoldError::Semantic(format!(
                                         "You cannot use variable `{}` in a constant value expression. You can only use literals and or other constants (line {} column {})", 
                                         name, expr_span.line, expr_span.column
                                     ))),
@@ -499,7 +499,7 @@ pub fn eval_const_expr_and_fold_it_hazmat(
             }
         }
 
-        _ => Err(HolyError::Semantic(format!(
+        _ => Err(GoldError::Semantic(format!(
                         "{} expression cannot be evaluated at compile-time, therefore it cannot be assigned to a constant. (line {} column {})",
                         expr, expr_span.line, expr_span.column
                     )))

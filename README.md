@@ -10,18 +10,12 @@
 [![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=HolyLang_HolyLang-Bootstrap&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=HolyLang_HolyLang-Bootstrap)
 
 
-**HolyLang** programming language: Rust's compile-time safety, with Golang's readability.
+**HolyLang** programming language: Pure and strict compile-time safety, with readable syntax and semantics.
 
 **HolyLang** is more secure than Rust, but not as performant as Rust. The purpose of HolyLang is memory and logic safety, not speed.
 
-**IMPORTANT NOTE**: The name `HolyLang` is just a name, it does not mean it's holy, it is just a nod to Terry Davis's "HolyC". Language design and feature-wise, the only common thing with HolyLang and HolyC, is the fact we don't have a float32 type.
-If you want real holiness (God's word), read the [Quran](https://quran.com/al-fatihah).
 
-**NOTE**: **This project is just a hobby language** with design objective of being the safest and most readable systems programming language!
-**There is no guarantees that comes with using this project.**
-
-
-## HolyLang features:
+## GoldLang features:
 - Readable syntax, and semantics.
 - No borrow checker, and yet is still more secure than Rust. programs can be easily reasoned about due to the simple binary safey model of "move, or copy". 
 - Arithmetic is always checked, including bitwise. Floating point arithmetic is also always checked (against inf/nan).
@@ -52,13 +46,20 @@ It still lacks: structs and methods, enums, sin (unsafe) blocks.
    cargo build --release
    ```
 
-The compiler binary will be located in `target/release/holylang`. Feel free to move it wherever you like.
+The compiler binary will be located in `target/release/goldlang`. Feel free to move it wherever you like.
 
 # Compiling a HolyLang program
 ```bash
-./holylang HOLY_SOURCE_CODE_PATH.holy TARGET_BINARY_PATH
+./goldlang SOURCE_CODE_PATH.gold TARGET_BINARY_PATH
 ```
 That will compile a HolyLang file, and produce a binary at `TARGET_BINARY_PATH`.
+
+
+**NOTE**: **This project is just a hobby language** with design objective of being the safest and most readable systems programming language!
+**There is no guarantees that comes with using this project, I am just 1 person making this programming language for myself, and I've decided to open-source it for others, because I was looking for a language just like this, and I couldn't find, so I decided to make it.**
+
+**NOTE**: **This compiler is a phase 1 bootstrap compiler, it's not meant for systems development. it's only meant for bootstrapping the language**
+
 
 
 # Example syntax
@@ -224,7 +225,7 @@ func main() {
 
     # For loops
 
-    own names []string = ["john", "jane", "jack", "jeffrey", "epstein"]
+    own names []string = ["john", "jane", "jack", "jeffrey"]
     for s in names {
         if s == "jack" {
             break
@@ -233,7 +234,7 @@ func main() {
 
 
     for i in range(1, 10) {
-        if i == 7 {
+        if i == 8 {
             continue
         }
     }

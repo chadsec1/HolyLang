@@ -1,4 +1,4 @@
-use super::HolyError;
+use super::GoldError;
 
 use crate::consts;
 
@@ -11,24 +11,24 @@ pub enum QuoteType {
 
 /// Takes a string and gives back a char, while correctly handling escapes, such as \n, etc.
 ///
-pub fn get_char_from_string(s: &str) -> Result<char, HolyError> {
+pub fn get_char_from_string(s: &str) -> Result<char, GoldError> {
     let mut chars = s.chars();
 
-    let first_char = chars.next().ok_or_else(|| HolyError::Parse("Expected a UTF-8 character, instead got nothing.".to_string()))?;
+    let first_char = chars.next().ok_or_else(|| GoldError::Parse("Expected a UTF-8 character, instead got nothing.".to_string()))?;
 
     if first_char != '\\' {
         if chars.next().is_some() {
-            return Err(HolyError::Parse(format!("Expected a single UTF-8 character, instead got `{}` characters.", s.len() - 1)))
+            return Err(GoldError::Parse(format!("Expected a single UTF-8 character, instead got `{}` characters.", s.len() - 1)))
         }
 
         return Ok(first_char)
     }
     
 
-    let escape_char = chars.next().ok_or_else(|| HolyError::Parse("Expected an escape character after backlash, instead got nothing.".to_string()))?;
+    let escape_char = chars.next().ok_or_else(|| GoldError::Parse("Expected an escape character after backlash, instead got nothing.".to_string()))?;
 
     if chars.next().is_some() {
-        return Err(HolyError::Parse(format!("Expected a single escape character, instead got `{}` characters.", s.len() - 1)))
+        return Err(GoldError::Parse(format!("Expected a single escape character, instead got `{}` characters.", s.len() - 1)))
     }
     
     match escape_char {
@@ -38,7 +38,7 @@ pub fn get_char_from_string(s: &str) -> Result<char, HolyError> {
         '0'   => Ok('\0'),
         '\\'  => Ok('\\'),
         '\''  => Ok('\''),
-        other => Err(HolyError::Parse(format!("Invalid escape character `{other}`")))
+        other => Err(GoldError::Parse(format!("Invalid escape character `{other}`")))
     }
     
 }
@@ -49,14 +49,14 @@ pub fn get_char_from_string(s: &str) -> Result<char, HolyError> {
 /// "content".
 /// `quote` is configurable, either a `QuoteType::DoubleQuote` or a `QuoteType::SingleQuote`
 ///
-pub fn get_string_content(s: &str, quote: &QuoteType) -> Result<Option<String>, HolyError> {
+pub fn get_string_content(s: &str, quote: &QuoteType) -> Result<Option<String>, GoldError> {
     let closing_quote_type = match quote {
         QuoteType::DoubleQuotes => '"',
         QuoteType::SingleQuotes  => '\''
     };
 
     if !s.starts_with(closing_quote_type) {
-        return Err(HolyError::Parse(format!("Expected string opening quotes `{closing_quote_type}`, instead got `{s}`")))
+        return Err(GoldError::Parse(format!("Expected string opening quotes `{closing_quote_type}`, instead got `{s}`")))
     }
 
     let mut chars = s.char_indices().skip(1);
@@ -71,7 +71,7 @@ pub fn get_string_content(s: &str, quote: &QuoteType) -> Result<Option<String>, 
     };
 
     match closing {
-        None =>  Err(HolyError::Parse("String quotes were never closed".to_string())),
+        None =>  Err(GoldError::Parse("String quotes were never closed".to_string())),
         Some(i) if i == s.len() - 1 => Ok(Some(s[1..s.len() - 1].to_string())),
 
         // Not a string or, a string in binary operation, etc.
@@ -286,7 +286,7 @@ pub fn find_top_level_op_any(s: &str) -> Option<(usize, &str)> {
 /// Split "char"-separated args at top-level only (i.e. ignores nested (), [], {})
 /// and respects backslash escapes
 ///
-pub fn split_char_top_level(split_char: char, s: &str) -> Result<Vec<&str>, HolyError> {
+pub fn split_char_top_level(split_char: char, s: &str) -> Result<Vec<&str>, GoldError> {
     assert!(
         !((split_char != ',') && (split_char != ':')), 
         "(Compiler bug) You are most likely misusing split_char_top_level, we expected char to be one of ':', ',', ' ', but instead we got `{split_char}`"
@@ -322,7 +322,7 @@ pub fn split_char_top_level(split_char: char, s: &str) -> Result<Vec<&str>, Holy
         // if we just closed a string, reject any immediate new quote
         if just_closed_string {
             if c == '"' || c == '\'' {
-                return Err(HolyError::Parse(format!(
+                return Err(GoldError::Parse(format!(
                     "Unexpected adjacent string literal at character index {i}",
                 )))
             }
@@ -362,7 +362,7 @@ pub fn split_char_top_level(split_char: char, s: &str) -> Result<Vec<&str>, Holy
     }
 
     if in_string.is_some() {
-        return Err(HolyError::Parse("Unclosed string literal".into()));
+        return Err(GoldError::Parse("Unclosed string literal".into()));
     }
 
     // push last part
@@ -377,18 +377,18 @@ pub fn split_char_top_level(split_char: char, s: &str) -> Result<Vec<&str>, Holy
 /// - Can contain letters, digits, and underscore
 /// - Must not start with a digit
 /// - Must not contain a reserved language keyword (i.e. `own`, etc)
-pub fn validate_identifier_name(name: &str) -> Result<(), HolyError> {
+pub fn validate_identifier_name(name: &str) -> Result<(), GoldError> {
     assert!(!name.trim().is_empty(), "(Compiler bug) `validate_identifier_name` got fed an empty string, indicating a bug in the caller's code.");
 
     // Check first character is not a number
     let first = name.chars().next().unwrap();
     if first.is_ascii_digit() {
-        return Err(HolyError::Parse(format!("Binding identifier name `{name}` cannot start with a number!")))
+        return Err(GoldError::Parse(format!("Binding identifier name `{name}` cannot start with a number!")))
     }
 
     // Check allowed characters: a-z, A-Z, 0-9, _
     if !name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
-        return Err(HolyError::Parse(format!("Binding identifier name `{name}` contains invalid characters (only letters, numbers, and `_` allowed)")))
+        return Err(GoldError::Parse(format!("Binding identifier name `{name}` contains invalid characters (only letters, numbers, and `_` allowed)")))
     }
 
     // Check against keywords and error even if name is not the 
@@ -397,7 +397,7 @@ pub fn validate_identifier_name(name: &str) -> Result<(), HolyError> {
     let name_lower = name.to_string();
     let name_lower = name_lower.to_lowercase(); 
     if consts::RESERVED_KEYWORDS.contains(&name_lower.as_ref()) {
-        return Err(HolyError::Parse(format!("Binding identifier name `{name}` is a reserved keyword")))
+        return Err(GoldError::Parse(format!("Binding identifier name `{name}` is a reserved keyword")))
     }
 
     Ok(())
@@ -488,7 +488,7 @@ pub fn count_braces_outside_strings(line: &str) -> (usize, usize) {
 
 
 
-pub fn parse_format_string(s: &str) -> Result<(String, Vec<String>), HolyError> {
+pub fn parse_format_string(s: &str) -> Result<(String, Vec<String>), GoldError> {
     let mut chars = s.chars().peekable();
     let mut buffer = String::new();
     let mut expressions_str: Vec<String> = vec![];
@@ -518,11 +518,11 @@ pub fn parse_format_string(s: &str) -> Result<(String, Vec<String>), HolyError> 
                 }
 
                 if !closed {
-                    return Err(HolyError::Parse("Unclosed '{' in input".to_string()))
+                    return Err(GoldError::Parse("Unclosed '{' in input".to_string()))
                 }
 
                 if inner.is_empty() {
-                    return Err(HolyError::Parse("Empty string format {} placeholder is not allowed".to_string()))
+                    return Err(GoldError::Parse("Empty string format {} placeholder is not allowed".to_string()))
                 }
 
                 expressions_str.push(inner);
@@ -538,7 +538,7 @@ pub fn parse_format_string(s: &str) -> Result<(String, Vec<String>), HolyError> 
                     buffer.push('}');
                     buffer.push('}');
                 } else {
-                    return Err(HolyError::Parse("Unmatched '}' in input".to_string()))
+                    return Err(GoldError::Parse("Unmatched '}' in input".to_string()))
                 }
             }
 

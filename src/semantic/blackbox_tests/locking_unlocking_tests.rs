@@ -627,7 +627,7 @@ mod locking_unlocking_tests {
         }
     }
 
-    // overshadowing is not allowed at all in holylang, this just ensures that unlocking doesnt
+    // overshadowing is not allowed at all in goldlang, this just ensures that unlocking doesnt
     // somehow break this rule.
     #[test]
     fn shadowing_unlocked_variable_errors() {

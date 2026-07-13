@@ -47,7 +47,7 @@ fn transpile_function(func: &Function) -> String {
     func_rcode.push('(');
 
     for param in &func.params {
-        let param_type = holy_type_to_rust_type_str(&param.type_name);
+        let param_type = gold_type_to_rust_type_str(&param.type_name);
         func_rcode.push_str(&param.name);
         func_rcode.push_str(": ");
         func_rcode.push_str(&param_type);
@@ -64,11 +64,11 @@ fn transpile_function(func: &Function) -> String {
     if let Some(ret_types) = &func.return_type {
         func_rcode.push_str(" -> ");
         if ret_types.len() == 1 {
-            func_rcode.push_str(&holy_type_to_rust_type_str(&ret_types[0]));
+            func_rcode.push_str(&gold_type_to_rust_type_str(&ret_types[0]));
         } else {
             func_rcode.push('(');
             for t in ret_types {
-                func_rcode.push_str(&holy_type_to_rust_type_str(t));
+                func_rcode.push_str(&gold_type_to_rust_type_str(t));
                 func_rcode.push_str(", ");
             }
             
@@ -102,8 +102,8 @@ fn transpile_stmt(stmt: &Stmt) -> String {
     match stmt {
         Stmt::Const(cons) => parse_const(cons),
         Stmt::VarDecl(var) => {
-            let var_type = holy_type_to_rust_type_str(&var.type_name);
-            let var_value = holy_expr_to_rust_expr(&var.value);
+            let var_type = gold_type_to_rust_type_str(&var.type_name);
+            let var_value = gold_expr_to_rust_expr(&var.value);
 
             if var.explicitly_initialized {
                 format!("let {}: {} = {};", var.name, var_type, var_value)
@@ -129,7 +129,7 @@ fn transpile_stmt(stmt: &Stmt) -> String {
             multi_decl_stmt_str.push_str("): (");
 
             for var in multi_var {
-                let var_type = holy_type_to_rust_type_str(&var.type_name);
+                let var_type = gold_type_to_rust_type_str(&var.type_name);
 
                 multi_decl_stmt_str.push_str(&var_type);
                 multi_decl_stmt_str.push_str(", ");
@@ -142,14 +142,14 @@ fn transpile_stmt(stmt: &Stmt) -> String {
 
             multi_decl_stmt_str.push(')');
             multi_decl_stmt_str.push_str(" = ");
-            multi_decl_stmt_str.push_str(&holy_expr_to_rust_expr(expr));
+            multi_decl_stmt_str.push_str(&gold_expr_to_rust_expr(expr));
             multi_decl_stmt_str.push(';');
 
             multi_decl_stmt_str
         },
 
         Stmt::VarAssign(va) => {
-            let va_value = holy_expr_to_rust_expr(&va.value);
+            let va_value = gold_expr_to_rust_expr(&va.value);
 
             format!("{} = {};", va.name, va_value)
         },
@@ -170,7 +170,7 @@ fn transpile_stmt(stmt: &Stmt) -> String {
             
             multi_assign_stmt_str.push(')');
             multi_assign_stmt_str.push_str(" = ");
-            multi_assign_stmt_str.push_str(&holy_expr_to_rust_expr(&multi_assignment.value));
+            multi_assign_stmt_str.push_str(&gold_expr_to_rust_expr(&multi_assignment.value));
             multi_assign_stmt_str.push(';');
 
             multi_assign_stmt_str
@@ -225,11 +225,11 @@ fn transpile_stmt(stmt: &Stmt) -> String {
             let mut ret_exprs_str = String::new();
 
             if expr_vec.len() == 1 {
-                ret_exprs_str.push_str(&holy_expr_to_rust_expr(&expr_vec[0]));
+                ret_exprs_str.push_str(&gold_expr_to_rust_expr(&expr_vec[0]));
             } else {
                 ret_exprs_str.push('(');
                 for e in expr_vec {
-                    let expr_str = holy_expr_to_rust_expr(e);
+                    let expr_str = gold_expr_to_rust_expr(e);
                     ret_exprs_str.push_str(&expr_str);
                     ret_exprs_str.push_str(", ");
                 }
@@ -263,7 +263,7 @@ fn transpile_stmt(stmt: &Stmt) -> String {
                 w_branch_stmts_str.push('\n');
             }
 
-            format!("while {} {{\n{}}}", holy_expr_to_rust_expr(&w.condition), w_branch_stmts_str)
+            format!("while {} {{\n{}}}", gold_expr_to_rust_expr(&w.condition), w_branch_stmts_str)
         },
 
         Stmt::For(f) => {
@@ -274,7 +274,7 @@ fn transpile_stmt(stmt: &Stmt) -> String {
                 f_branch_stmts_str.push('\n');
             }
 
-            format!("for {} in {} {{\n{}}}", f.holder_name, holy_expr_to_rust_expr(&f.value), f_branch_stmts_str)
+            format!("for {} in {} {{\n{}}}", f.holder_name, gold_expr_to_rust_expr(&f.value), f_branch_stmts_str)
         },
 
         Stmt::If(i) => {
@@ -285,7 +285,7 @@ fn transpile_stmt(stmt: &Stmt) -> String {
                 if_branch_stmts_str.push('\n');
             }
 
-            let mut if_stmt = format!("if {} {{\n{}}}", holy_expr_to_rust_expr(&i.condition), if_branch_stmts_str);
+            let mut if_stmt = format!("if {} {{\n{}}}", gold_expr_to_rust_expr(&i.condition), if_branch_stmts_str);
 
             for elif_branch in &i.elif_branches {
                 let mut elif_branch_stmts_str = String::new();
@@ -295,7 +295,7 @@ fn transpile_stmt(stmt: &Stmt) -> String {
                     elif_branch_stmts_str.push('\n');
                 }
 
-                if_stmt = format!("{} else if {} {{\n{}}}", if_stmt, holy_expr_to_rust_expr(&elif_branch.0), elif_branch_stmts_str);
+                if_stmt = format!("{} else if {} {{\n{}}}", if_stmt, gold_expr_to_rust_expr(&elif_branch.0), elif_branch_stmts_str);
             }
 
             if let Some(else_branch) = &i.else_branch {
@@ -313,7 +313,7 @@ fn transpile_stmt(stmt: &Stmt) -> String {
         },
 
 
-        Stmt::Expr(expr) => format!("{};", holy_expr_to_rust_expr(expr))
+        Stmt::Expr(expr) => format!("{};", gold_expr_to_rust_expr(expr))
     }
 }
 
@@ -329,20 +329,20 @@ fn transpile_global_stmt(global_stmt: &GlobalStmt) -> String {
 }
 
 fn parse_const(cons: &Constant) -> String {
-    let const_type = holy_type_to_rust_type_str(&cons.type_name);
-    let const_value = holy_expr_to_rust_expr(&cons.value);
+    let const_type = gold_type_to_rust_type_str(&cons.type_name);
+    let const_value = gold_expr_to_rust_expr(&cons.value);
 
     format!("const {}: {} = {};", cons.name, const_type, const_value)
 }
 
-/// Turns a HolyLang expression, into equvilent Rust expression
+/// Turns a GoldLang expression, into equvilent Rust expression
 ///
 #[expect(clippy::doc_markdown)]
 #[expect(clippy::too_many_lines)]
-fn holy_expr_to_rust_expr(expr: &Expr) -> String {
+fn gold_expr_to_rust_expr(expr: &Expr) -> String {
     match expr {
         Expr::IntLiteral { value, .. } => {
-            let value_ty = holy_type_to_rust_type_str(&value.get_type());
+            let value_ty = gold_type_to_rust_type_str(&value.get_type());
 
             if value.is_signed() {
                 let value_raw: i128 = value.as_i128();
@@ -374,7 +374,7 @@ fn holy_expr_to_rust_expr(expr: &Expr) -> String {
             }
 
             for e in elements {
-                let elem_expr = holy_expr_to_rust_expr(e);
+                let elem_expr = gold_expr_to_rust_expr(e);
                 elems.push_str(&elem_expr);
                 elems.push(',');
             }
@@ -387,21 +387,21 @@ fn holy_expr_to_rust_expr(expr: &Expr) -> String {
             elems
         },
 
-        Expr::ArrayAccess { array, index, .. } => format!("{}[{}]", holy_expr_to_rust_expr(array), holy_expr_to_rust_expr(index)),
+        Expr::ArrayAccess { array, index, .. } => format!("{}[{}]", gold_expr_to_rust_expr(array), gold_expr_to_rust_expr(index)),
 
-        // to_vec() safe here because HolyLang always returns a dynamic array when you slice any
+        // to_vec() safe here because GoldLang always returns a dynamic array when you slice any
         // array regardless if its fixed sized, or dynamic.
         //
         Expr::ArraySlicing { array, range, .. } => match range {
-            ArraySliceRange::From(from) => format!("{}[{}..].to_vec()", holy_expr_to_rust_expr(array), holy_expr_to_rust_expr(from)),
-            ArraySliceRange::To(to) => format!("{}[..{}].to_vec()", holy_expr_to_rust_expr(array), holy_expr_to_rust_expr(to)),
-            ArraySliceRange::FromTo(from, to) => format!("{}[{}..{}].to_vec()", holy_expr_to_rust_expr(array), holy_expr_to_rust_expr(from), holy_expr_to_rust_expr(to)),
+            ArraySliceRange::From(from) => format!("{}[{}..].to_vec()", gold_expr_to_rust_expr(array), gold_expr_to_rust_expr(from)),
+            ArraySliceRange::To(to) => format!("{}[..{}].to_vec()", gold_expr_to_rust_expr(array), gold_expr_to_rust_expr(to)),
+            ArraySliceRange::FromTo(from, to) => format!("{}[{}..{}].to_vec()", gold_expr_to_rust_expr(array), gold_expr_to_rust_expr(from), gold_expr_to_rust_expr(to)),
         },
 
         Expr::Var { name, .. } => name.clone(),
 
         Expr::UnaryOp { op, expr, .. } => {
-            let expr_str = holy_expr_to_rust_expr(expr);
+            let expr_str = gold_expr_to_rust_expr(expr);
 
             match op {
                 UnaryOpKind::Negate => format!("{expr_str}.checked_neg().unwrap_or_else(|| panic!(\"unary negate integer overflow\"))"),
@@ -411,8 +411,8 @@ fn holy_expr_to_rust_expr(expr: &Expr) -> String {
         },
 
         Expr::BinOp { op, left, right, .. } => {
-            let left_str = holy_expr_to_rust_expr(left);
-            let right_str = holy_expr_to_rust_expr(right);
+            let left_str = gold_expr_to_rust_expr(left);
+            let right_str = gold_expr_to_rust_expr(right);
 
             match op {
                 // Arithemtic
@@ -455,7 +455,7 @@ fn holy_expr_to_rust_expr(expr: &Expr) -> String {
             args_str.push('(');
 
             for arg_expr in args {
-                args_str.push_str(&holy_expr_to_rust_expr(arg_expr));
+                args_str.push_str(&gold_expr_to_rust_expr(arg_expr));
                 args_str.push(',');
             }
 
@@ -467,9 +467,9 @@ fn holy_expr_to_rust_expr(expr: &Expr) -> String {
             args_str
         },
 
-        Expr::RangeCall { start, end, ..} => format!("{}..{}", holy_expr_to_rust_expr(start), holy_expr_to_rust_expr(end)),
+        Expr::RangeCall { start, end, ..} => format!("{}..{}", gold_expr_to_rust_expr(start), gold_expr_to_rust_expr(end)),
 
-        Expr::CopyCall { expr, .. } => format!("{}.clone()", holy_expr_to_rust_expr(expr)),
+        Expr::CopyCall { expr, .. } => format!("{}.clone()", gold_expr_to_rust_expr(expr)),
         Expr::FormatCall { template, expressions, .. } => {
             assert!(!expressions.is_empty(), "(Compiler bug) `expressions` is empty, indicating a bug in semantics layer. template: {template:?}");
             assert!(!template.is_empty(), "(Compiler bug) `template` is empty, indicating a bug in semantics layer. expressions: {expressions:?}");
@@ -482,7 +482,7 @@ fn holy_expr_to_rust_expr(expr: &Expr) -> String {
 
             for expr in expressions {
                 format_expr_str.push_str(", ");
-                format_expr_str.push_str(&holy_expr_to_rust_expr(expr));
+                format_expr_str.push_str(&gold_expr_to_rust_expr(expr));
             }
             
             format_expr_str.push(')');
@@ -494,10 +494,10 @@ fn holy_expr_to_rust_expr(expr: &Expr) -> String {
 }
 
 
-/// Turns a holylang type e.g. Int32, Int64, etc, into equvilent Rust type
+/// Turns a goldlang type e.g. Int32, Int64, etc, into equvilent Rust type
 ///
-fn holy_type_to_rust_type_str(holy_type: &Type) -> String {
-    match holy_type {
+fn gold_type_to_rust_type_str(gold_type: &Type) -> String {
+    match gold_type {
         Type::Int8   => "i8".to_string(),
         Type::Int16  => "i16".to_string(),
         Type::Int32  => "i32".to_string(),
@@ -516,10 +516,10 @@ fn holy_type_to_rust_type_str(holy_type: &Type) -> String {
         Type::Char => "char".to_string(),
         Type::String => "String".to_string(),
         
-        Type::Array(t) => format!("Vec<{}>", holy_type_to_rust_type_str(t)),
+        Type::Array(t) => format!("Vec<{}>", gold_type_to_rust_type_str(t)),
         Type::FixedArray(t, s) => match s {
-            FixedArraySize::Literal(n) => format!("[{}; {}]", holy_type_to_rust_type_str(t), n),
-            FixedArraySize::Const(c) => format!("[{}; {}]", holy_type_to_rust_type_str(t), c)
+            FixedArraySize::Literal(n) => format!("[{}; {}]", gold_type_to_rust_type_str(t), n),
+            FixedArraySize::Const(c) => format!("[{}; {}]", gold_type_to_rust_type_str(t), c)
         }
     }
 }

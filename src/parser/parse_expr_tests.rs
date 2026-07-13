@@ -172,7 +172,7 @@ fn span() -> Span {
     Span { line: 1, column: 1 }
 }
 
-fn parse(s: &str) -> Result<Expr, HolyError> {
+fn parse(s: &str) -> Result<Expr, GoldError> {
     parse_expr(s, span())
 }
 

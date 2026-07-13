@@ -1,5 +1,5 @@
 use super::{
-    HolyError, helpers
+    GoldError, helpers
 };
 use crate::ast::{
     Span, Expr, IntLiteralValue, BinOpKind, UnaryOpKind, ArraySliceRange
@@ -19,11 +19,11 @@ use crate::ast::{
 /// - Variables
 ///
 #[expect(clippy::too_many_lines, reason = "Splitting this function into multiple smaller functions cannot be done cleanly, nor is worth doing imho.. I think it is clean as it is for now at least")]
-pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
+pub fn parse_expr(s: &str, span: Span) -> Result<Expr, GoldError> {
     let s = s.trim();
 
     if s.is_empty() {
-        return Err(HolyError::Parse(format!(
+        return Err(GoldError::Parse(format!(
                 "Empty expression at line {}, column {}",
                 span.line, span.column
         )));
@@ -41,7 +41,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
         //
 
         let raw_str = helpers::get_string_content(s, &helpers::QuoteType::DoubleQuotes)
-                    .map_err(|e| HolyError::Parse(format!("{} (line {} column {})",
+                    .map_err(|e| GoldError::Parse(format!("{} (line {} column {})",
                         e, span.line, span.column)))?;
         
         if let Some(str_no_quotes) = raw_str {
@@ -52,7 +52,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
     // Char Literal ?
     if s.starts_with('\'') {
         let raw_str = helpers::get_string_content(s, &helpers::QuoteType::SingleQuotes)
-                    .map_err(|e| HolyError::Parse(format!("{} (line {} column {})",
+                    .map_err(|e| GoldError::Parse(format!("{} (line {} column {})",
                         e, span.line, span.column)))?;
         
         if let Some(char_str_no_quotes) = raw_str {
@@ -107,14 +107,14 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
     // float literal?
     if let Ok(f64_val) = s.parse::<f64>() {
         if f64_val.is_nan() {
-            return Err(HolyError::Parse(format!(
+            return Err(GoldError::Parse(format!(
                 "Floating point literal `{}` is NaN (line {} column {})",
                 s, span.line, span.column
             )));
         }
 
         if f64_val.is_infinite() {
-            return Err(HolyError::Parse(format!(
+            return Err(GoldError::Parse(format!(
                 "Floating point literal `{}` is Infinite (line {} column {})",
                 s, span.line, span.column
             )));
@@ -135,13 +135,13 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
         let right = s[pos + op.len()..].trim();
 
         if left.is_empty() {
-            return Err(HolyError::Parse(format!(
+            return Err(GoldError::Parse(format!(
                 "Expected expression before '{}' at line {} column {}",
                 op, span.line, span.column
             )));
         }
         if right.is_empty() {
-            return Err(HolyError::Parse(format!(
+            return Err(GoldError::Parse(format!(
                 "Expected expression after '{}' at line {} column {}",
                 op, span.line, span.column
             )));
@@ -183,7 +183,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
         let rest = rest.trim();
 
         if rest.is_empty() {
-            return Err(HolyError::Parse(format!(
+            return Err(GoldError::Parse(format!(
                 "Expected expression before '-' at line {} column {}",
                 span.line, span.column
             )));
@@ -206,7 +206,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
         let rest = rest.trim();
 
         if rest.is_empty() {
-            return Err(HolyError::Parse(format!(
+            return Err(GoldError::Parse(format!(
                 "Expected expression before '!' at line {} column {}",
                 span.line, span.column
             )));
@@ -229,7 +229,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
         let rest = rest.trim();
 
         if rest.is_empty() {
-            return Err(HolyError::Parse(format!(
+            return Err(GoldError::Parse(format!(
                 "Expected expression before '~' at line {} column {}",
                 span.line, span.column
             )));
@@ -255,7 +255,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
         let mut elems: Vec<Expr> = Vec::new();
         if !elems_str.trim().is_empty() {
             let split_parts = helpers::split_char_top_level(',', elems_str)
-                                .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
+                                .map_err(|e| GoldError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
 
             for part in split_parts {
                 let part = part.trim();
@@ -284,7 +284,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
         let arr_expr = parse_expr(&s[..first_bracket], span)?;
 
         let indx_parts = helpers::split_char_top_level(':', inner_str)
-                                    .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
+                                    .map_err(|e| GoldError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
         
         // If only one part, treat as access to a single element. 
         if indx_parts.len() == 1 {
@@ -302,7 +302,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
         // access/slicing. 
 
         if indx_parts.len() != 2 {
-            return Err(HolyError::Parse(format!(
+            return Err(GoldError::Parse(format!(
                         "Invalid array slicing syntax `{}` ! (line {} column {})",
                         s, span.line, span.column
                     )));
@@ -312,7 +312,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
         let end = indx_parts[indx_parts.len() - 1].trim();
 
         if start.is_empty() && end.is_empty() {
-            return Err(HolyError::Parse(format!(
+            return Err(GoldError::Parse(format!(
                         "Start and end expressions are both missing from array slice expression! (line {} column {})",
                         span.line, span.column
                     )));
@@ -361,7 +361,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
         let mut args = vec![];
         if !args_str.trim().is_empty() {
             let split_args = helpers::split_char_top_level(',', args_str)
-                                .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
+                                .map_err(|e| GoldError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
 
             for a in split_args {
                 args.push(parse_expr(a.trim(), span)?);
@@ -376,14 +376,14 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
         // and argument type are part of the language syntax its self.
         //
         match name.as_ref() {
-            "range" => return Err(HolyError::Parse(format!(
+            "range" => return Err(GoldError::Parse(format!(
                         "range() can only be used in for loop statements construction! (line {} column {})",
                         span.line, span.column
                     ))),
 
             "copy" => {
                 if args.len() != 1 {
-                    return Err(HolyError::Parse(format!(
+                    return Err(GoldError::Parse(format!(
                         "copy() takes exactly 1 argument, instead found {} arguments provided (line {} column {})",
                         args.len(), span.line, span.column
                     )));
@@ -394,7 +394,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
 
             "format" => {
                 if args.len() != 1 {
-                    return Err(HolyError::Parse(format!(
+                    return Err(GoldError::Parse(format!(
                         "format() takes exactly 1 string argument, instead found `{}` arguments provided (line {} column {})",
                         args.len(), span.line, span.column
                     )));
@@ -406,7 +406,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
                 let raw_str: String = if let Expr::StringLiteral { value: s, .. } = format_arg_raw {
                         s
                     } else {
-                        return Err(HolyError::Parse(format!(
+                        return Err(GoldError::Parse(format!(
                             "Expected a string literal, instead found `{}` (line {} column {})",
                             format_arg_raw, span.line, span.column
                         )));
@@ -415,7 +415,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
 
 
                 let (template_str, expr_str_vec) = helpers::parse_format_string(&raw_str)
-                                                    .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
+                                                    .map_err(|e| GoldError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
 
                 // Parse expressions from string to Expr
                 let mut expr_vec: Vec<Expr> = vec![];
@@ -424,7 +424,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
                 }
 
                 if expr_vec.is_empty() {
-                    return Err(HolyError::Parse(format!(
+                    return Err(GoldError::Parse(format!(
                             "format() must have at least one embedded expression! (line {} column {})",
                             span.line, span.column
                         )));
@@ -437,7 +437,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
 
             _ => {
                 helpers::validate_identifier_name(&name)
-                    .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
+                    .map_err(|e| GoldError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
 
 
                 return Ok(Expr::Call { name, args, span })   
@@ -449,7 +449,7 @@ pub fn parse_expr(s: &str, span: Span) -> Result<Expr, HolyError> {
     // otherwise a variable name
 
     helpers::validate_identifier_name(s)
-        .map_err(|e| HolyError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
+        .map_err(|e| GoldError::Parse(format!("{} (line {} column {})", e, span.line, span.column)))?;
 
     Ok(Expr::Var { name: s.to_string(), span})
 }

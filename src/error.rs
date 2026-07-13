@@ -1,9 +1,9 @@
 use std::fmt;
 
-/// The main holylang compiler error type
+/// The main goldlang compiler error type
 ///
 #[derive(Debug, Clone)]
-pub enum HolyError {
+pub enum GoldError {
     /// Parsing errors (invalid syntax, unknown token, etc.)
     Parse(String),
 
@@ -11,7 +11,7 @@ pub enum HolyError {
     Semantic(String),
 }
 
-impl fmt::Display for HolyError {
+impl fmt::Display for GoldError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Parse(msg) => write!(f, "Parse error: {msg}"),
@@ -20,4 +20,4 @@ impl fmt::Display for HolyError {
     }
 }
 
-impl std::error::Error for HolyError {}
+impl std::error::Error for GoldError {}

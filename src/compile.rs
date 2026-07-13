@@ -19,7 +19,7 @@ pub fn compile(rcode: &str, target_dir: &str) {
         .as_millis()
         .to_string();
 
-    let main_dir = PathBuf::from(format!("holylang-{unix_timestamp_str}"));
+    let main_dir = PathBuf::from(format!("goldlang-{unix_timestamp_str}"));
     let src_dir = main_dir.join("src");
     fs::create_dir_all(&main_dir)
         .unwrap_or_else(|e| panic!("Compile error: Couldnt create directory `{}`, please check permissions. Error: {:?}", main_dir.display(), e));
@@ -32,7 +32,7 @@ pub fn compile(rcode: &str, target_dir: &str) {
         .unwrap_or_else(|e| panic!("Compile error: Couldnt create file `{}`, please check permissions. Error: {:?}", cargo_file_path.display(), e));
 
     let cargo_content = r#"[package]
-name = "holyprogram"
+name = "goldprogram"
 version = "0.0.1"
 edition = "2024"
 
@@ -69,7 +69,7 @@ panic = "abort"
     let mut binary_path = main_dir.clone();
     binary_path.push("target");
     binary_path.push("release");
-    binary_path.push("holyprogram");
+    binary_path.push("goldprogram");
 
     assert!(compile_proc_output.status.success(), 
         "This is likely a compiler bug in the transpiler, which is expected because the transpiler is still very experimental.\nBut please open an issue on Github with the following:\nmain_file: {main_file:#?}\nrcode: {rcode:#}\nstderr: {stderr:#}"

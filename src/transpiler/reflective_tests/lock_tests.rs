@@ -168,7 +168,7 @@ mod lock_in_void_func_with_params_tests {
                     let expected_rcode = format!("let {} = {};", l, l);
                     let expected_rcode = expected_rcode.repeat(i);
 
-                    let t_str = holy_type_to_rust_type_str(&t);
+                    let t_str = gold_type_to_rust_type_str(&t);
                     
                     assert_eq!(rcode, format!("fn foo(a: {}, b: {}) {{ {}}}", t_str, t_str, expected_rcode));
                 }
@@ -260,7 +260,7 @@ mod lock_in_returning_func_tests {
                     let expected_rcode = format!("let {} = {};", l, l);
                     let expected_rcode = expected_rcode.repeat(i);
                     
-                    let t_str = holy_type_to_rust_type_str(&t);
+                    let t_str = gold_type_to_rust_type_str(&t);
 
                     assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ {}}}", t_str, t_str, t_str, expected_rcode));
                 }
