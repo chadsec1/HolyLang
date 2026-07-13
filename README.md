@@ -1,9 +1,9 @@
 # GoldLang
-![Unit Tests](https://github.com/GoldLang/GoldLang-Bootstrap/actions/workflows/unit_tests_with_coverage.yml/badge.svg)
+![Unit Tests](https://github.com/GoldLanguage/GoldLang-Bootstrap/actions/workflows/unit_tests_with_coverage.yml/badge.svg)
 ![Clippy](https://github.com/GoldLanguage/GoldLang-Bootstrap/actions/workflows/clippy.yml/badge.svg)
 ![CodeQL](https://github.com/GoldLanguage/GoldLang-Bootstrap/actions/workflows/codeql.yml/badge.svg)
-[![Codacy Badge](https://app.codacy.com/project/badge/Grade/3cf0e9ea7c134f188480fc68c1b464fe)](https://app.codacy.com/gh/GoldLanguage/GoldLang-Bootstrap/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
-
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/a2834d47ebd34dfc93a4d78c2d6e0285)](https://app.codacy.com/gh/GoldLanguage/GoldLang-Bootstrap/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
+[![Codacy Badge](https://app.codacy.com/project/badge/Coverage/a2834d47ebd34dfc93a4d78c2d6e0285)](https://app.codacy.com/gh/GoldLanguage/GoldLang-Bootstrap/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_coverage)
 
 **GoldLang** programming language: Pure and strict compile-time safety, with readable syntax and semantics.
 
