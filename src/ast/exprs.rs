@@ -11,7 +11,7 @@ pub enum Expr {
         span: Span,
     },
     /// Float64 literal value
-    /// holylang only supports float64.
+    /// goldlang only supports float64.
     Float64Literal {
         value: f64,
         span: Span,

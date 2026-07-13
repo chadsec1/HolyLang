@@ -1,11 +1,11 @@
 use super::{
     Stmt, 
-    HolyError, 
+    GoldError, 
     helpers, 
     Function
 };
 
-pub fn dead_code_analysis(block: &Vec<Stmt>, in_loop: bool) -> Result<bool, HolyError> {
+pub fn dead_code_analysis(block: &Vec<Stmt>, in_loop: bool) -> Result<bool, GoldError> {
     // Instead of returning error here, we panic, because if we returned an error here
     // we would not have ability to pinpoint to the empty branch line. leaving responsiblity to
     // caller is best.
@@ -18,7 +18,7 @@ pub fn dead_code_analysis(block: &Vec<Stmt>, in_loop: bool) -> Result<bool, Holy
         if end_detected {
             let stmt_span = helpers::stmt_span(stmt);
 
-            return Err(HolyError::Semantic(format!(
+            return Err(GoldError::Semantic(format!(
                         "Dead code detected starting from line `{}` up to the end of the scope",
                         stmt_span.line,
                     )));
@@ -33,7 +33,7 @@ pub fn dead_code_analysis(block: &Vec<Stmt>, in_loop: bool) -> Result<bool, Holy
             Stmt::Infinite(infinite_stmt) => {
                 let body = &infinite_stmt.branch;
                 if body.is_empty() {
-                    return Err(HolyError::Semantic(format!(
+                    return Err(GoldError::Semantic(format!(
                             "Infinite loop branch has no statements. Empty branches are not allowed (line {} column {})",
                             infinite_stmt.span.line, infinite_stmt.span.column,
                         )));
@@ -51,7 +51,7 @@ pub fn dead_code_analysis(block: &Vec<Stmt>, in_loop: bool) -> Result<bool, Holy
             Stmt::While(while_stmt) => {
                 let body = &while_stmt.branch;
                 if body.is_empty() {
-                    return Err(HolyError::Semantic(format!(
+                    return Err(GoldError::Semantic(format!(
                             "While loop branch has no statements. Empty branches are not allowed (line {} column {})",
                             while_stmt.span.line, while_stmt.span.column,
                         )));
@@ -65,7 +65,7 @@ pub fn dead_code_analysis(block: &Vec<Stmt>, in_loop: bool) -> Result<bool, Holy
             Stmt::For(for_stmt) => {
                 let body = &for_stmt.branch;
                 if body.is_empty() {
-                    return Err(HolyError::Semantic(format!(
+                    return Err(GoldError::Semantic(format!(
                             "For loop branch has no statements. Empty branches are not allowed (line {} column {})",
                             for_stmt.span.line, for_stmt.span.column,
                         )));
@@ -78,7 +78,7 @@ pub fn dead_code_analysis(block: &Vec<Stmt>, in_loop: bool) -> Result<bool, Holy
 
             Stmt::If(if_stmt) => {
                 if if_stmt.if_branch.is_empty() {
-                    return Err(HolyError::Semantic(format!(
+                    return Err(GoldError::Semantic(format!(
                             "If statement main branch has no statements. Empty branches are not allowed (line {} column {})",
                             if_stmt.span.line, if_stmt.span.column,
                         )));
@@ -92,7 +92,7 @@ pub fn dead_code_analysis(block: &Vec<Stmt>, in_loop: bool) -> Result<bool, Holy
                     let expr_span = helpers::expr_span(&s_vec.0);
 
                     if s_vec.1.is_empty() {
-                        return Err(HolyError::Semantic(format!(
+                        return Err(GoldError::Semantic(format!(
                             "If statement `elif` branch has no statements. Empty branches are not allowed (line {} column {})",
                             expr_span.line, expr_span.column,
                         )));
@@ -107,7 +107,7 @@ pub fn dead_code_analysis(block: &Vec<Stmt>, in_loop: bool) -> Result<bool, Holy
                 //
                 if let Some(else_branch) = &if_stmt.else_branch {
                     if else_branch.is_empty() {
-                        return Err(HolyError::Semantic(format!(
+                        return Err(GoldError::Semantic(format!(
                             "If statement `else` branch has no statements. Empty branches are not allowed (line {} column {})",
                             if_stmt.span.line, if_stmt.span.column,
                         )));
@@ -136,7 +136,7 @@ pub fn return_branch_analysis(
     last_stmt: &Stmt,
     is_loop: bool,
     forbid_break: bool
-) -> Result<(), HolyError> {
+) -> Result<(), GoldError> {
     let ret_ty = func.return_type.as_ref().unwrap_or_else(|| panic!("(Compiler bug) Dont call return_branch_analysis on functions that dont have declared return type(s)!"));
 
     assert!(!func.body.is_empty(), "(Compiler bug) do not call return_branch_analysis on functions with empty bodies! Always check body size");
@@ -147,7 +147,7 @@ pub fn return_branch_analysis(
             assert!(is_loop, "(Compiler bug) check_stmts shouldve errored before we even got called. We got a break statement when we arent even in a loop!");
 
             if forbid_break {
-                return Err(HolyError::Semantic(format!(
+                return Err(GoldError::Semantic(format!(
                         "You cannot `break` out of a infinite loop if its the last statement in a function that returns. Use a return statement instead. (line {} column {})",
                         break_stmt.span.line, break_stmt.span.column,
                     )));
@@ -177,7 +177,7 @@ pub fn return_branch_analysis(
                 for s in &infinite_stmt.branch {
                     match s {
                         Stmt::Break(break_stmt) => {
-                            return Err(HolyError::Semantic(format!(
+                            return Err(GoldError::Semantic(format!(
                                 "You cannot `break` out of a infinite loop if its the last statement in a function that returns. Use a return statement instead. (line {} column {})",
                                 break_stmt.span.line, break_stmt.span.column,
                             )));
@@ -211,7 +211,7 @@ pub fn return_branch_analysis(
                 "(Compiler bug) all branches must contain at least one statement, this shouldve been caught by dead_code_analyse before calling us:\nFunc: {func:?}\nwhile_stmt: {while_stmt:?}");
 
             if !is_loop {
-                return Err(HolyError::Semantic(format!(
+                return Err(GoldError::Semantic(format!(
                         "While loops may or may not execute at all, therefore you need a return statement outside the loop scope, or consider using `infinite` loops instead. (line {} column {})",
                         while_stmt.span.line, while_stmt.span.column,
                     )))
@@ -223,7 +223,7 @@ pub fn return_branch_analysis(
             assert!(!for_stmt.branch.is_empty(), "(Compiler bug) all branches must contain at least one statement, this shouldve been caught by dead_code_analyse before calling us:\nFunc: {func:?}\nfor_stmt: {for_stmt:?}");
 
             if !is_loop {
-                return Err(HolyError::Semantic(format!(
+                return Err(GoldError::Semantic(format!(
                         "For loops may or may not execute at all, therefore you need a return statement outside the loop scope. (line {} column {})",
                         for_stmt.span.line, for_stmt.span.column,
                     )))
@@ -267,7 +267,7 @@ pub fn return_branch_analysis(
 
                     return_branch_analysis(func, else_branch_last_stmt, is_loop, forbid_break)?;
                 } else {
-                    return Err(HolyError::Semantic(format!(
+                    return Err(GoldError::Semantic(format!(
                         "Function `{}` only returns in if statement branches, which might not always execute. Add an `else` branch (line {} column {})",
                         func.name, if_stmt.span.line, if_stmt.span.column,
                     )));
@@ -285,7 +285,7 @@ pub fn return_branch_analysis(
             if !is_loop {
                 let branch_span = helpers::stmt_span(other);
 
-                return Err(HolyError::Semantic(format!(
+                return Err(GoldError::Semantic(format!(
                     "Function `{}` declares return type(s) `{:?}`, but statement branch body does not end with a return statement (line {} column {})",
                     func.name, ret_ty, branch_span.line, branch_span.column,
                 ))) 

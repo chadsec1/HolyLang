@@ -1,4 +1,4 @@
-/// This file content will be included directly in all transpiled holylang programs source code
+/// This file content will be included directly in all transpiled goldlang programs source code
 /// It implements things like checked arthiemtic on floating point64
 ///
 

@@ -9,8 +9,8 @@ mod multi_return_tests {
         let literals = get_all_literals();
         
         for (l1, t1) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
-            let t1_str = holy_type_to_rust_type_str(&t1);
-            let l1_str = holy_expr_to_rust_expr(&l1);
+            let t1_str = gold_type_to_rust_type_str(&t1);
+            let l1_str = gold_expr_to_rust_expr(&l1);
 
             for (l2, t2) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
                 let pair_body = vec![return_stmt(vec![l1.clone(), l2.clone()])];
@@ -30,8 +30,8 @@ mod multi_return_tests {
                 assert!(rcode.starts_with(&internals));
                 let rcode = rcode[internals.len()..].replace('\n', "");
 
-                let t2_str = holy_type_to_rust_type_str(&t2);
-                let l2_str = holy_expr_to_rust_expr(&l2);
+                let t2_str = gold_type_to_rust_type_str(&t2);
+                let l2_str = gold_expr_to_rust_expr(&l2);
 
                 assert_eq!(
                     rcode, 
@@ -49,10 +49,10 @@ mod multi_return_tests {
         let boolean_conds = get_many_boolean_conditions();
         
         let t = Type::Bool;
-        let t_str = holy_type_to_rust_type_str(&t);
+        let t_str = gold_type_to_rust_type_str(&t);
         
         for bl in boolean_conds {
-            let bl_str = holy_expr_to_rust_expr(&bl);
+            let bl_str = gold_expr_to_rust_expr(&bl);
 
             let pair_body = vec![return_stmt(vec![bl.clone();3])];
             let pair = returning_func("pair", vec![], vec![t.clone(); 3], pair_body);
@@ -88,7 +88,7 @@ mod multi_return_tests {
         let literals = get_all_literals();
 
         for (l, t) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
-            let t_str = holy_type_to_rust_type_str(&t);
+            let t_str = gold_type_to_rust_type_str(&t);
             
             for b in ALL_BIN_OP_KIND {
                 let bin = Expr::BinOp {
@@ -116,7 +116,7 @@ mod multi_return_tests {
                 assert!(rcode.starts_with(&internals));
                 let rcode = rcode[internals.len()..].replace('\n', "");
 
-                let bin_str = holy_expr_to_rust_expr(&bin);
+                let bin_str = gold_expr_to_rust_expr(&bin);
 
                 assert_eq!(
                     rcode, 
@@ -134,7 +134,7 @@ mod multi_return_tests {
         let literals = get_all_literals();
 
         for (l, t) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
-            let t_str = holy_type_to_rust_type_str(&t);
+            let t_str = gold_type_to_rust_type_str(&t);
             
             for b in ALL_BIN_OP_KIND {
                 let bin = Expr::BinOp {
@@ -163,7 +163,7 @@ mod multi_return_tests {
                 assert!(rcode.starts_with(&internals));
                 let rcode = rcode[internals.len()..].replace('\n', "");
 
-                let bin_str = holy_expr_to_rust_expr(&bin);
+                let bin_str = gold_expr_to_rust_expr(&bin);
 
                 assert_eq!(
                     rcode, 

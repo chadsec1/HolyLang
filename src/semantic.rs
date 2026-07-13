@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::error::HolyError;
+use crate::error::GoldError;
 use crate::ast::{
     AST, Expr, Function, GlobalStmt, Stmt, Type, Span, Constant 
 };
@@ -54,23 +54,23 @@ struct BindingInfo {
 ///
 /// # Errors
 ///
-/// Will return a `HolyError` error if any AST nodes breaks holylang's semantics and rules.
+/// Will return a `GoldError` error if any AST nodes breaks goldlang's semantics and rules.
 ///
-pub fn check_semantics(ast: &mut AST) -> Result<(), HolyError> {
+pub fn check_semantics(ast: &mut AST) -> Result<(), GoldError> {
     // First pass: collect function signatures (params types and return types (possible multiple))
     let mut fun_sigs: HashMap<String, (Vec<Type>, Option<Vec<Type>>)> = HashMap::new();
     for f in &ast.functions {
         let param_tys = f.params.iter().map(|p| p.type_name.clone()).collect();
         if fun_sigs.insert(f.name.clone(), (param_tys, f.return_type.clone())).is_some() {
-            return Err(HolyError::Semantic(format!("Duplicate function declaration: {}", f.name)))
+            return Err(GoldError::Semantic(format!("Duplicate function declaration: {}", f.name)))
         }
 
         if f.name == "main" && f.return_type.is_some() {
-            return Err(HolyError::Semantic("function `main` must not return.".to_string()))
+            return Err(GoldError::Semantic("function `main` must not return.".to_string()))
         }
 
         if f.name == "main" && !f.params.is_empty() {
-            return Err(HolyError::Semantic("function `main` must not have any parameters.".to_string()))
+            return Err(GoldError::Semantic("function `main` must not have any parameters.".to_string()))
         }
 
     }
@@ -99,13 +99,13 @@ fn check_function(
     func: &mut Function, 
     fun_sigs: &HashMap<String, (Vec<Type>, Option<Vec<Type>>)>,
     locals: &mut HashMap<String, BindingInfo>
-) -> Result<(), HolyError> {
+) -> Result<(), GoldError> {
     // Build local symbol table starting with params
     let mut upstream_var_names: Vec<String> = vec![];
 
     for parameter in &func.params {
         if locals.contains_key(&parameter.name) {
-            return Err(HolyError::Semantic(format!(
+            return Err(GoldError::Semantic(format!(
                         "Cannot use `{}` as function parameter name, because it is already declared globally (line {} column {})", 
                         &parameter.name, parameter.span.line, parameter.span.column
                     )));
@@ -142,7 +142,7 @@ fn check_function(
     //
     let last_func_stmt = func.body.last();
     if last_func_stmt.is_none() {
-        return Err(HolyError::Semantic(format!(
+        return Err(GoldError::Semantic(format!(
                         "Function `{}` has no statements, empty functions are not allowed! (line {} column {})",
                         func.name, func.span.line, func.span.column,
                     )));
@@ -175,7 +175,7 @@ fn check_global_stmt(
     globalstmt: &mut GlobalStmt,
     storage: &mut HashMap<String, BindingInfo>, 
     fun_sigs: &HashMap<String, (Vec<Type>, Option<Vec<Type>>)>,
-) -> Result<(), HolyError> { 
+) -> Result<(), GoldError> { 
     match globalstmt {
         GlobalStmt::Const(cons) => check_const(cons, storage, fun_sigs),
 
@@ -187,16 +187,16 @@ fn check_const(
     cons: &mut Constant,
     storage: &mut HashMap<String, BindingInfo>, 
     fun_sigs: &HashMap<String, (Vec<Type>, Option<Vec<Type>>)>,
-) -> Result<(), HolyError> {
+) -> Result<(), GoldError> {
     if fun_sigs.contains_key(&cons.name) {
-        return Err(HolyError::Semantic(format!(
+        return Err(GoldError::Semantic(format!(
                     "Constant identifier name `{}` is already taken by a function. (line {} column {})", 
                     &cons.name, cons.span.line, cons.span.column
                 )));
     }
 
     if storage.contains_key(&cons.name) {
-        return Err(HolyError::Semantic(format!(
+        return Err(GoldError::Semantic(format!(
                 "Cannot use `{}` as the constant identifier name as it is already declared. Overshadowing is not allowed. (line {} column {})", 
                 &cons.name, cons.span.line, cons.span.column
             )));
@@ -225,7 +225,7 @@ fn check_const(
 }
 
 
-/// Parse holylang statements in a block, it does:
+/// Parse goldlang statements in a block, it does:
 /// Enforce language semantics, and ownership safety model, check function calls, etc.
 ///
 #[expect(clippy::too_many_lines)]
@@ -237,7 +237,7 @@ fn check_stmts(
     fun_sigs: &HashMap<String, (Vec<Type>, Option<Vec<Type>>)>,
     in_loop: bool
 
-) -> Result<(), HolyError> {
+) -> Result<(), GoldError> {
 
 
     // Special rule: Despite fact you cannot lock/unlock variables declared upstream,
@@ -260,7 +260,7 @@ fn check_stmts(
             },
             Stmt::VarDecl(var) => {
                 if fun_sigs.contains_key(&var.name) {
-                    return Err(HolyError::Semantic(format!(
+                    return Err(GoldError::Semantic(format!(
                                 "Variable identifier name `{}` is already taken by a function. (line {} column {})", 
                                 &var.name, var.span.line, var.span.column
                             )));
@@ -268,15 +268,15 @@ fn check_stmts(
 
                 let expr_ty = infer::infer_expr_type(&mut var.value, locals, fun_sigs, Some(var.type_name.clone()))?;
                 if expr_ty != var.type_name {
-                    return Err(HolyError::Semantic(format!(
+                    return Err(GoldError::Semantic(format!(
                         "Type mismatch assigning to `{}`: got `{}`, expected `{}` (line {} column {})",
                         var.name, expr_ty, var.type_name, var.span.line, var.span.column
                     )));
                 }
 
-                // HolyLang commandment 1. You shall not overshadow variables
+                // GoldLang commandment 1. You shall not overshadow variables
                 if locals.contains_key(&var.name) {
-                    return Err(HolyError::Semantic(format!(
+                    return Err(GoldError::Semantic(format!(
                             "Variable `{}` is already declared, overshadowing is not allowed. (line {} column {})", 
                             &var.name, var.span.line, var.span.column
                         )));
@@ -297,7 +297,7 @@ fn check_stmts(
 
                             // Error if we are in loop, and we tried to take ownership of an upstream variable
                             if in_loop && upstream_var_names.contains(src_name) {
-                                return Err(HolyError::Semantic(format!(
+                                return Err(GoldError::Semantic(format!(
                                             "Upstream variable `{}` is potentially moved multiple times, because you are in a loop. Consider using `copy()` (line {} column {})", 
                                             &src_name, span.line, span.column
                                         )))
@@ -344,7 +344,7 @@ fn check_stmts(
                     let ret_vec = check_call(name, args, locals, fun_sigs, true, *span)?.unwrap();
 
                     if ret_vec.len() != var_list.len() {
-                        return Err(HolyError::Semantic(format!(
+                        return Err(GoldError::Semantic(format!(
                             "Return length mismatch: {} variables on the left side, but the call returns {} values (line {} column {})",
                             var_list.len(), ret_vec.len(), span.line, span.column
                         )));
@@ -353,16 +353,16 @@ fn check_stmts(
                     // assign types and register locals
                     for (var, ret_ty) in var_list.iter_mut().zip(ret_vec.iter()) {
                         if var.type_name != *ret_ty {
-                            return Err(HolyError::Semantic(format!(
+                            return Err(GoldError::Semantic(format!(
                                 "Type mismatch for variable `{}`: declared `{}` but call returns `{}` (line {} column {})",
                                 var.name, var.type_name, ret_ty, var.span.line, var.span.column
                             )));
                         }
 
 
-                        // HolyLang commandment 1. You shall not overshadow variables
+                        // GoldLang commandment 1. You shall not overshadow variables
                         if locals.contains_key(&var.name) {
-                            return Err(HolyError::Semantic(format!(
+                            return Err(GoldError::Semantic(format!(
                                     "Variable `{}` is already declared, overshadowing is not allowed. (line {} column {})", 
                                     &var.name, var.span.line, var.span.column
                                 )))
@@ -384,7 +384,7 @@ fn check_stmts(
                         );
                     }
                 } else {
-                    return Err(HolyError::Semantic(format!(
+                    return Err(GoldError::Semantic(format!(
                         "Multi-declarement requires only a single function call on the right-hand side (line {} column {})",
                         stmt_span.line, stmt_span.column
                     )));
@@ -396,7 +396,7 @@ fn check_stmts(
                 // we need it to satisify rust borrow checker
                 //
                 let varinfo = locals.get(&assign.name).ok_or_else(|| {
-                    HolyError::Semantic(format!(
+                    GoldError::Semantic(format!(
                         "Use of undeclared variable `{}` (line {} column {})",
                         assign.name, assign.span.line, assign.span.column
                     ))
@@ -405,7 +405,7 @@ fn check_stmts(
 
                 let expr_ty = infer::infer_expr_type(&mut assign.value, locals, fun_sigs, Some(varinfo.ty.clone()))?;
                 if expr_ty != varinfo.ty {
-                    return Err(HolyError::Semantic(format!(
+                    return Err(GoldError::Semantic(format!(
                             "Type mismatch assigning to `{}`: got `{}`, expected `{}` (line {} column {})",
                             assign.name, expr_ty, varinfo.ty, assign.span.line, assign.span.column
                     )));
@@ -416,7 +416,7 @@ fn check_stmts(
                     BindingKind::Var { moved, locked, .. } => {
                         // Check if our variable is moved
                         if moved {
-                            return Err(HolyError::Semantic(format!(
+                            return Err(GoldError::Semantic(format!(
                                 "Value assignment to moved variable `{}` (line {} column {})",
                                 &assign.name, assign.span.line, assign.span.column
                             )));
@@ -425,14 +425,14 @@ fn check_stmts(
                 
                         // Check if our variable is locked.
                         if locked {
-                            return Err(HolyError::Semantic(format!(
+                            return Err(GoldError::Semantic(format!(
                                     "Variable `{}` is locked, therefore you cannot assign to it (line {} column {})", 
                                     &assign.name, assign.span.line, assign.span.column
                                 )));
                         }
                     },
                     BindingKind::Const { .. } => {
-                        return Err(HolyError::Semantic(format!(
+                        return Err(GoldError::Semantic(format!(
                             "You cannot assign to constant `{}` (line {} column {})",
                             &assign.name, assign.span.line, assign.span.column
                         )))
@@ -451,7 +451,7 @@ fn check_stmts(
                         BindingKind::Var { moved: src_moved, len: src_len, .. } => {
                             // Error if we are in loop, and we tried to take ownership of an upstream variable
                             if in_loop && upstream_var_names.contains(src_name) {
-                                return Err(HolyError::Semantic(format!(
+                                return Err(GoldError::Semantic(format!(
                                             "Upstream variable `{}` is potentially moved multiple times, because you are in a loop. Consider using `copy()` (line {} column {})", 
                                             &src_name, span.line, span.column
                                         )));
@@ -496,7 +496,7 @@ fn check_stmts(
                     let ret_vec = check_call(name, args, locals, fun_sigs, true, *span)?.unwrap();
 
                     if ret_vec.len() != expr.names.len() {
-                        return Err(HolyError::Semantic(format!(
+                        return Err(GoldError::Semantic(format!(
                             "Return length mismatch: {} variables on the left side, but the call returns {} values (line {} column {})",
                             expr.names.len(), ret_vec.len(), span.line, span.column
                         )));
@@ -505,7 +505,7 @@ fn check_stmts(
                     // assign types and register locals
                     for (var_name, ret_ty) in expr.names.iter_mut().zip(ret_vec.iter()) {
                         let varinfo = locals.get(var_name).ok_or_else(|| {
-                            HolyError::Semantic(format!(
+                            GoldError::Semantic(format!(
                                 "Use of undeclared variable `{}` (line {} column {})",
                                 var_name, expr.span.line, expr.span.column
                             ))
@@ -514,7 +514,7 @@ fn check_stmts(
                         match varinfo.kind {
                             BindingKind::Var { moved, locked, .. } => {
                                 if moved {
-                                    return Err(HolyError::Semantic(format!(
+                                    return Err(GoldError::Semantic(format!(
                                         "Value assignment to moved variable `{}` (line {} column {})",
                                         var_name, expr.span.line, expr.span.column
                                     )));
@@ -522,14 +522,14 @@ fn check_stmts(
 
                                 // Check if variable is locked.
                                 if locked {
-                                    return Err(HolyError::Semantic(format!(
+                                    return Err(GoldError::Semantic(format!(
                                             "Variable `{}` is locked, therefore you cannot assign to it (line {} column {})", 
                                             &var_name, expr.span.line, expr.span.column
                                         )));
                                 }
                             },
                             BindingKind::Const { .. } => {
-                                return Err(HolyError::Semantic(format!(
+                                return Err(GoldError::Semantic(format!(
                                     "You cannot assign to constant `{}` (line {} column {})",
                                     var_name, stmt_span.line, stmt_span.column
                                 )))
@@ -537,14 +537,14 @@ fn check_stmts(
                         }
                         
                         if &varinfo.ty != ret_ty {
-                            return Err(HolyError::Semantic(format!(
+                            return Err(GoldError::Semantic(format!(
                                 "Type mismatch for variable `{}`: declared `{}` but call returns `{}` (line {} column {})",
                                 var_name, varinfo.ty, ret_ty, expr.span.line, expr.span.column
                             )));
                         }
                     }
                 } else {
-                    return Err(HolyError::Semantic(format!(
+                    return Err(GoldError::Semantic(format!(
                         "Multi-assignment requires only a single function call on the right-hand side (line {} column {})",
                         expr.span.line, expr.span.column
                     )));
@@ -569,7 +569,7 @@ fn check_stmts(
                     match expr {
                         Expr::Var { name, span} => {
                             if var_names_to_lock.contains(name) {
-                                return Err(HolyError::Semantic(format!(
+                                return Err(GoldError::Semantic(format!(
                                     "Lock arguments have duplicated variable `{}` (line {} column {})",
                                     name, span.line, span.column
                                 )))
@@ -586,7 +586,7 @@ fn check_stmts(
 
 
                                 if is_nested_scope || (!func.params.iter().any(|p| p.name == *name)) {
-                                    return Err(HolyError::Semantic(format!(
+                                    return Err(GoldError::Semantic(format!(
                                             "You cannot lock variable `{}` because it is declared upstream (line {} column {})", 
                                             name, span.line, span.column
                                         )));
@@ -603,7 +603,7 @@ fn check_stmts(
 
 
                         _ => {
-                            return Err(HolyError::Semantic(format!(
+                            return Err(GoldError::Semantic(format!(
                                 "Expected variable name, instead got `{}` (line {} column {})",
                                 expr, stmt_span.line, stmt_span.column
                             )))
@@ -620,7 +620,7 @@ fn check_stmts(
                     match &mut var.kind {
                         BindingKind::Var { locked, .. } => {
                             if *locked {
-                                return Err(HolyError::Semantic(format!(
+                                return Err(GoldError::Semantic(format!(
                                         "Variable `{}` is already locked (line {} column {})",
                                         var_name, stmt_span.line, stmt_span.column
                                     )))
@@ -630,7 +630,7 @@ fn check_stmts(
                             *locked = true;
                         },
                         BindingKind::Const { .. } => {
-                            return Err(HolyError::Semantic(format!(
+                            return Err(GoldError::Semantic(format!(
                                 "Expected variable name, instead got a constant name `{}` (line {} column {})",
                                 var_name, stmt_span.line, stmt_span.column
                             )))
@@ -649,7 +649,7 @@ fn check_stmts(
                     match expr {
                         Expr::Var { name, span} => {
                             if var_names_to_unlock.contains(name) {
-                                return Err(HolyError::Semantic(format!(
+                                return Err(GoldError::Semantic(format!(
                                     "Unlock arguments have duplicated variable `{}` (line {} column {})",
                                     name, span.line, span.column
                                 )))
@@ -664,7 +664,7 @@ fn check_stmts(
                                 // arguments though.
                                 //
                                 if is_nested_scope || (!func.params.iter().any(|p| p.name == *name)) {
-                                    return Err(HolyError::Semantic(format!(
+                                    return Err(GoldError::Semantic(format!(
                                             "You cannot unlock variable `{}` because it is declared upstream (line {} column {})", 
                                             name, span.line, span.column
                                         )));
@@ -681,7 +681,7 @@ fn check_stmts(
 
 
                         _ => {
-                            return Err(HolyError::Semantic(format!(
+                            return Err(GoldError::Semantic(format!(
                                 "Expected variable name, instead got `{}` (line {} column {})",
                                 expr, stmt_span.line, stmt_span.column
                             )))
@@ -698,7 +698,7 @@ fn check_stmts(
                     match &mut var.kind {
                         BindingKind::Var { locked, .. } => {
                             if !*locked {
-                                return Err(HolyError::Semantic(format!(
+                                return Err(GoldError::Semantic(format!(
                                         "Variable `{}` is already unlocked (line {} column {})",
                                         var_name, stmt_span.line, stmt_span.column
                                     )))
@@ -707,7 +707,7 @@ fn check_stmts(
                             *locked = false;
                         },
                         BindingKind::Const { .. } => {
-                            return Err(HolyError::Semantic(format!(
+                            return Err(GoldError::Semantic(format!(
                                 "Expected variable name, instead got a constant name `{}` (line {} column {})",
                                 var_name, stmt_span.line, stmt_span.column
                             )))
@@ -723,7 +723,7 @@ fn check_stmts(
                 // If function has no declared return type, we error.
                 match &func.return_type {
                     None => {
-                        return Err(HolyError::Semantic(format!(
+                        return Err(GoldError::Semantic(format!(
                             "Function `{}` contains return but has no declared return type (line {} column {})",
                             func.name,
                             stmt_span.line,
@@ -732,7 +732,7 @@ fn check_stmts(
                     }
                     Some(declared_ty_vec) => {
                         if declared_ty_vec.len() != expr_vec.len() {
-                            return Err(HolyError::Semantic(format!(
+                            return Err(GoldError::Semantic(format!(
                                     "Return length mismatch in `{}`: got `{}` expressions, expected `{}` expressions (line {} column {})",
                                     func.name, expr_vec.len(), declared_ty_vec.len(), stmt_span.line, stmt_span.column,
                                 )))
@@ -743,7 +743,7 @@ fn check_stmts(
                             let expr_ty = infer::infer_expr_type(expr, locals, fun_sigs, Some(declared_ty.clone()))?;
 
                             if expr_ty != declared_ty {
-                                return Err(HolyError::Semantic(format!(
+                                return Err(GoldError::Semantic(format!(
                                     "Return type mismatch in `{}`: got `{}`, expected `{}` (line {} column {})",
                                     func.name, expr_ty, declared_ty_vec[i], stmt_span.line, stmt_span.column,
                                 )))
@@ -759,7 +759,7 @@ fn check_stmts(
                 let expr_ty = infer::infer_expr_type(&mut for_stmt.value, locals, fun_sigs, None)?;
 
                 if (!expr_ty.is_array_type()) && (!matches!(for_stmt.value, Expr::RangeCall{ .. })) {
-                    return Err(HolyError::Semantic(format!(
+                    return Err(GoldError::Semantic(format!(
                         "For loop statement require an expression to be evaulatable to any `Array` type, or `range(expr1, expr2)`, instead we got `{}` (line {} column {})",
                         expr_ty, stmt_span.line, stmt_span.column,
                     )));
@@ -767,7 +767,7 @@ fn check_stmts(
 
 
                 if locals.contains_key(&for_stmt.holder_name) {
-                    return Err(HolyError::Semantic(format!(
+                    return Err(GoldError::Semantic(format!(
                         "Cannot use variable name `{}` in for loop statement as it is already declared. (line {} column {})",
                         for_stmt.holder_name, stmt_span.line, stmt_span.column,
                     )))
@@ -860,7 +860,7 @@ fn check_stmts(
                 let expr_ty = infer::infer_expr_type(&mut while_stmt.condition, locals, fun_sigs, Some(Type::Bool))?;
                 
                 if expr_ty != Type::Bool {
-                    return Err(HolyError::Semantic(format!(
+                    return Err(GoldError::Semantic(format!(
                         "While statement require an expression to be evaulatable to type `bool`, instead we got `{}` (line {} column {})",
                         expr_ty, stmt_span.line, stmt_span.column,
                     )));
@@ -897,7 +897,7 @@ fn check_stmts(
 
             Stmt::Break(break_stmt) => {
                 if !in_loop {
-                    return Err(HolyError::Semantic(format!(
+                    return Err(GoldError::Semantic(format!(
                         "Break can only be used in loops! (line {} column {})",
                         break_stmt.span.line, break_stmt.span.column,
                     )));
@@ -907,7 +907,7 @@ fn check_stmts(
 
             Stmt::Continue(continue_stmt) => {
                 if !in_loop {
-                    return Err(HolyError::Semantic(format!(
+                    return Err(GoldError::Semantic(format!(
                         "Continue can only be used in loops! (line {} column {})",
                         continue_stmt.span.line, continue_stmt.span.column,
                     )));
@@ -918,7 +918,7 @@ fn check_stmts(
                 let main_expr_ty = infer::infer_expr_type(&mut if_stmt.condition, locals, fun_sigs, Some(Type::Bool))?;
                 
                 if main_expr_ty != Type::Bool {
-                    return Err(HolyError::Semantic(format!(
+                    return Err(GoldError::Semantic(format!(
                         "If statement require an expression to be evaulatable to type `bool`, instead we got `{}` (line {} column {})",
                         main_expr_ty, stmt_span.line, stmt_span.column,
                     )));
@@ -947,7 +947,7 @@ fn check_stmts(
                     let elif_expr_ty = infer::infer_expr_type(&mut s.0, locals, fun_sigs, Some(Type::Bool))?; 
 
                     if elif_expr_ty != Type::Bool {
-                        return Err(HolyError::Semantic(format!(
+                        return Err(GoldError::Semantic(format!(
                             "Elif statements require an expression to be evaulatable to type `bool`, instead we got `{}` (line {} column {})",
                             elif_expr_ty, stmt_span.line, stmt_span.column,
                         )));
@@ -1009,16 +1009,16 @@ fn check_call(
     fun_sigs: &HashMap<String, (Vec<Type>, Option<Vec<Type>>)>,
     require_ret: bool,
     span: Span,
-) -> Result<Option<Vec<Type>>, HolyError> {
+) -> Result<Option<Vec<Type>>, GoldError> {
     // lookup signature
     let sig = fun_sigs.get(name).ok_or_else(|| {
-        HolyError::Semantic(format!("Call to unknown function `{}` (line {} column {})", name, span.line, span.column))
+        GoldError::Semantic(format!("Call to unknown function `{}` (line {} column {})", name, span.line, span.column))
     })?;
     let (param_tys, ret_ty_opt) = sig;
 
     // arity check
     if args.len() != param_tys.len() {
-        return Err(HolyError::Semantic(format!(
+        return Err(GoldError::Semantic(format!(
             "Function `{}` expects {} arguments, got {} (line {} column {})",
             name,
             param_tys.len(),
@@ -1032,7 +1032,7 @@ fn check_call(
     for (i, (arg_expr, param_ty)) in args.iter_mut().zip(param_tys.iter()).enumerate() {
         let arg_ty = infer::infer_expr_type(arg_expr, locals, fun_sigs, Some(param_ty.clone()))?;
         if arg_ty != *param_ty {
-            return Err(HolyError::Semantic(format!(
+            return Err(GoldError::Semantic(format!(
                 "Argument number `{}` type mismatch in call to function `{}`: expected `{}`, got `{}` (line {} column {})",
                 i + 1, name, param_ty, arg_ty, span.line, span.column,
             )));
@@ -1062,7 +1062,7 @@ fn check_call(
         Some(rt) => Ok(Some(rt.clone())),
         None => {
             if require_ret {
-                Err(HolyError::Semantic(format!(
+                Err(GoldError::Semantic(format!(
                     "Function `{}` has no return type declared but is used in an expression (line {} column {})",
                     name, span.line, span.column
                 )))

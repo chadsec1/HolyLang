@@ -9,8 +9,8 @@ mod return_tests {
         let literals = get_all_literals();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
-            let t_str = holy_type_to_rust_type_str(&t);
-            let l_str = holy_expr_to_rust_expr(&l);
+            let t_str = gold_type_to_rust_type_str(&t);
+            let l_str = gold_expr_to_rust_expr(&l);
 
             let pair_body = vec![return_stmt(vec![l.clone()])];
             let pair = returning_func("pair", vec![], vec![t.clone()], pair_body);
@@ -42,8 +42,8 @@ mod return_tests {
         let literals = get_all_literals();
         
         for (l, t) in literals.iter().zip(ALL_TYPES_WITH_DYN_ARR.iter()) {
-            let t_str = holy_type_to_rust_type_str(&t);
-            let l_str = holy_expr_to_rust_expr(&l);
+            let t_str = gold_type_to_rust_type_str(&t);
+            let l_str = gold_expr_to_rust_expr(&l);
 
             let pair_body = vec![return_stmt(vec![l.clone()])];
             let pair = returning_func("pair", vec![], vec![t.clone()], pair_body);
@@ -75,10 +75,10 @@ mod return_tests {
         let boolean_conds = get_many_boolean_conditions();
         
         let t = Type::Bool;
-        let t_str = holy_type_to_rust_type_str(&t);
+        let t_str = gold_type_to_rust_type_str(&t);
         
         for bl in boolean_conds {
-            let bl_str = holy_expr_to_rust_expr(&bl);
+            let bl_str = gold_expr_to_rust_expr(&bl);
 
             let pair_body = vec![return_stmt(vec![bl.clone()])];
             let pair = returning_func("pair", vec![], vec![t.clone()], pair_body);
@@ -110,10 +110,10 @@ mod return_tests {
         let boolean_conds = get_many_boolean_conditions();
         
         let t = Type::Bool;
-        let t_str = holy_type_to_rust_type_str(&t);
+        let t_str = gold_type_to_rust_type_str(&t);
         
         for bl in boolean_conds {
-            let bl_str = holy_expr_to_rust_expr(&bl);
+            let bl_str = gold_expr_to_rust_expr(&bl);
 
             let pair_body = vec![return_stmt(vec![bl.clone()])];
             let pair = returning_func("pair", vec![], vec![t.clone()], pair_body);

@@ -3,7 +3,7 @@ use super::{
     Stmt, 
     Span, 
     Expr, 
-    HolyError
+    GoldError
 };
 
 use crate::ast::{
@@ -106,10 +106,10 @@ pub const fn expr_span(e: &Expr) -> Span {
 }
 
 
-pub fn coerce_integer_literal_to_type_helper(expected_ty: Type, value: IntLiteralValue, span: Span) -> Result<IntLiteralValue, HolyError> {
+pub fn coerce_integer_literal_to_type_helper(expected_ty: Type, value: IntLiteralValue, span: Span) -> Result<IntLiteralValue, GoldError> {
     assert!(value.get_type().is_integer_type(), "(Compiler bug) Value `{}` of type `{}` is not an integer type", value, value.get_type());
 
-    let range_err = || HolyError::Semantic(format!(
+    let range_err = || GoldError::Semantic(format!(
         "Integer literal `{}` out of range for type `{}` (line {} column {})",
         value, expected_ty, span.line, span.column
     ));

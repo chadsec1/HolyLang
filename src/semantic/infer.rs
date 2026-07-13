@@ -1,5 +1,5 @@
 use super::{
-    Expr, HashMap, BindingInfo, Type, HolyError, helpers, BindingKind, constants, check_call, Span
+    Expr, HashMap, BindingInfo, Type, GoldError, helpers, BindingKind, constants, check_call, Span
 };
 use crate::ast::{
     IntLiteralValue, UnaryOpKind, BinOpKind, FixedArraySize, ArraySliceRange
@@ -19,7 +19,7 @@ pub fn advanced_infer_2_types(
     locals: &mut HashMap<String, BindingInfo>,
     fun_sigs: &HashMap<String, (Vec<Type>, Option<Vec<Type>>)>,
     infer_hint: Option<Type>
-) -> Result<(Type, Type), HolyError> {
+) -> Result<(Type, Type), GoldError> {
     let mut lty = infer_expr_type(left, locals, fun_sigs, infer_hint.clone())?;
 
     let mut rty = infer_expr_type(right, locals, fun_sigs, infer_hint)?;
@@ -63,7 +63,7 @@ pub fn infer_expr_type(
     locals: &mut HashMap<String, BindingInfo>,
     fun_sigs: &HashMap<String, (Vec<Type>, Option<Vec<Type>>)>,
     infer_hint: Option<Type> // For type coercion
-) -> Result<Type, HolyError> {
+) -> Result<Type, GoldError> {
     match expr {
         // NOTE: If `infer_hint` is set, we **TRY** to coerce the expression value into infer_hint (if
         // possible), and error if we can't (BUT we do NOT error if we didnt attempt coercion)
@@ -89,7 +89,6 @@ pub fn infer_expr_type(
 
         Expr::IntLiteral { value, span } => {
             if let Some(infer_hint) = infer_hint {
-
                 // If the hint is an integer, we try to coerce and error if we can't. if hint is not integer, we simply return type of value
                 if infer_hint.is_integer_type() {
                     *value = helpers::coerce_integer_literal_to_type_helper(infer_hint, *value, *span)?;
@@ -141,7 +140,7 @@ pub fn infer_expr_type(
                         };
 
                         if fixed_inner != arr_inner {
-                               return Err(HolyError::Semantic(format!(
+                               return Err(GoldError::Semantic(format!(
                                     "Array literal is of `{}` type, but we expected `{}` type (line {} column {})",
                                     array_ty, t, span.line, span.column
                                 )))
@@ -160,7 +159,7 @@ pub fn infer_expr_type(
                 for e in elements.iter_mut() {
                     let ety = infer_expr_type(e, locals, fun_sigs, Some(elem_expected_ty.clone()))?;
                     if ety != elem_expected_ty {
-                        return Err(HolyError::Semantic(format!(
+                        return Err(GoldError::Semantic(format!(
                             "Array element type mismatch: expected `{}` got `{}` (line {} column {})",
                             elem_expected_ty, ety, span.line, span.column
                         )));
@@ -169,13 +168,13 @@ pub fn infer_expr_type(
 
                 if let Some(Type::FixedArray(t, size)) = infer_hint.clone() {
                     // Get size of the array if its fixed sized array.
-                    let size_usize: usize = (|| -> Result<usize, HolyError> {
+                    let size_usize: usize = (|| -> Result<usize, GoldError> {
                         match size.clone() {
                             FixedArraySize::Literal(n) => Ok(n),
                             FixedArraySize::Const(const_name) => {
                                 if let Some(info) = locals.get(&const_name) {
                                     match &info.kind {
-                                        BindingKind::Var { .. } => Err(HolyError::Semantic(format!(
+                                        BindingKind::Var { .. } => Err(GoldError::Semantic(format!(
                                                     "Expected a Usize literal or a const binding, found variable name `{}` instead. (line {} column {})", 
                                                                                                           const_name, span.line, span.column))),
                                         BindingKind::Const { value } => {
@@ -185,13 +184,13 @@ pub fn infer_expr_type(
                                                     if let IntLiteralValue::Usize(n) = value {
                                                         Ok(n)
                                                     } else {
-                                                        Err(HolyError::Semantic(format!(
+                                                        Err(GoldError::Semantic(format!(
                                                             "Expected array index constant `{}` to be of type `usize`, instead we got `{}` (line {} column {})", 
                                                             const_name, value.get_type(), span.line, span.column
                                                         )))
                                                     }
                                                 },
-                                                other => Err(HolyError::Semantic(format!(
+                                                other => Err(GoldError::Semantic(format!(
                                                         "Expected array index constant `{}` to be an int literal, instead we got `{}` (line {} column {})", 
                                                         const_name, other, span.line, span.column
                                                     )))
@@ -200,14 +199,14 @@ pub fn infer_expr_type(
                                     }
                                 
                                 } else {
-                                    Err(HolyError::Semantic(format!("Use of undeclared binding `{}` (line {} column {})", const_name, span.line, span.column)))
+                                    Err(GoldError::Semantic(format!("Use of undeclared binding `{}` (line {} column {})", const_name, span.line, span.column)))
                                 }
                             }
                         }
                     })()?;
 
                     if elements.len() != size_usize {
-                        return Err(HolyError::Semantic(format!(
+                        return Err(GoldError::Semantic(format!(
                             "Expected array of `{}` size, instead found with `{}` size (line {} column {})",
                             size_usize, elements.len(), span.line, span.column
                         )));
@@ -241,7 +240,7 @@ pub fn infer_expr_type(
             if let Expr::Var { name, span: inner_span } = &**array {
                 if let Some(info) = locals.get(name).cloned() {
                     if !info.ty.is_array_type() {
-                        return Err(HolyError::Semantic(format!(
+                        return Err(GoldError::Semantic(format!(
                                     "Array access on non-array variable `{}` of type `{}` (line {} column {})",
                                     name, info.ty, span.line, span.column)));
                     }
@@ -249,7 +248,7 @@ pub fn infer_expr_type(
                     // Ensure that the type of the index expression is usize.
                     let ety = infer_expr_type(index, locals, fun_sigs, Some(Type::Usize))?;
                     if ety != Type::Usize {
-                        return Err(HolyError::Semantic(format!(
+                        return Err(GoldError::Semantic(format!(
                                     "Expected array index to be of type `usize`, instead we got `{}` (line {} column {})", 
                                     ety, span.line, span.column)));
                     }
@@ -258,7 +257,7 @@ pub fn infer_expr_type(
                     match info.kind {
                         BindingKind::Var { moved, len, .. } => {
                             if moved {
-                                return Err(HolyError::Semantic(format!(
+                                return Err(GoldError::Semantic(format!(
                                             "Array access on moved variable `{}` (line {} column {})", 
                                             name, inner_span.line, inner_span.column
                                         )));
@@ -294,10 +293,10 @@ pub fn infer_expr_type(
                     }
 
                 } else {
-                    Err(HolyError::Semantic(format!("Array access on undeclared variable `{}` (line {} column {})", name, span.line, span.column)))
+                    Err(GoldError::Semantic(format!("Array access on undeclared variable `{}` (line {} column {})", name, span.line, span.column)))
                 }
             } else {
-                Err(HolyError::Semantic(format!(
+                Err(GoldError::Semantic(format!(
                         "Expected variable of any `array` type, instead got an `{}` (line {} column {})", 
                         array, span.line, span.column
                     )))
@@ -309,7 +308,7 @@ pub fn infer_expr_type(
             if let Expr::Var { name, span: inner_span } = &**array {
                 if let Some(info) = locals.get(name).cloned() {
                     if !info.ty.is_array_type() {
-                        return Err(HolyError::Semantic(format!("Array access on non-array variable `{}` (line {} column {})", name, span.line, span.column)));
+                        return Err(GoldError::Semantic(format!("Array access on non-array variable `{}` (line {} column {})", name, span.line, span.column)));
                     }
 
                     // If the range is FromTo (e.g. x[1:10])
@@ -324,7 +323,7 @@ pub fn infer_expr_type(
                             if let Expr::IntLiteral { value: IntLiteralValue::Usize(start_num), .. } = &**start 
                                 && let Expr::IntLiteral { value: IntLiteralValue::Usize(end_num), .. } = &**end
                                 && start_num > end_num {
-                                    return Err(HolyError::Semantic(format!(
+                                    return Err(GoldError::Semantic(format!(
                                         "Start index `{}` cannot be larger than end index `{}` (line {} column {})", 
                                         start_num, end_num, span.line, span.column
                                     )))
@@ -334,7 +333,7 @@ pub fn infer_expr_type(
                             // convert it if possible.
                             let start_ety = infer_expr_type(start, locals, fun_sigs, Some(Type::Usize))?;
                             if start_ety != Type::Usize { 
-                                return Err(HolyError::Semantic(format!(
+                                return Err(GoldError::Semantic(format!(
                                                 "Expected start index to be of type `usize` for array `{}`, instead we got `{}` (line {} column {})", 
                                                 name, start_ety, span.line, span.column
                                             )));
@@ -343,7 +342,7 @@ pub fn infer_expr_type(
                             // Same as above, for end index.
                             let end_ety = infer_expr_type(end, locals, fun_sigs, Some(Type::Usize))?;
                             if end_ety != Type::Usize { 
-                                return Err(HolyError::Semantic(format!(
+                                return Err(GoldError::Semantic(format!(
                                             "Expected end index to be of type `usize` for array `{}`, instead we got `{}` (line {} column {})", 
                                             name, end_ety, span.line, span.column
                                         )));
@@ -353,7 +352,7 @@ pub fn infer_expr_type(
                         ArraySliceRange::From(start) => {
                             let start_ety = infer_expr_type(start, locals, fun_sigs, Some(Type::Usize))?;
                             if start_ety != Type::Usize { 
-                                return Err(HolyError::Semantic(format!(
+                                return Err(GoldError::Semantic(format!(
                                                 "Expected start index to be of type `usize` for array `{}`, instead we got `{}` (line {} column {})", 
                                                 name, start_ety, span.line, span.column
                                             )));
@@ -364,7 +363,7 @@ pub fn infer_expr_type(
                             // Same as above, for end index.
                             let end_ety = infer_expr_type(end, locals, fun_sigs, Some(Type::Usize))?;
                             if end_ety != Type::Usize { 
-                                return Err(HolyError::Semantic(format!(
+                                return Err(GoldError::Semantic(format!(
                                             "Expected end index to be of type `usize` for array `{}`, instead we got `{}` (line {} column {})", 
                                             name, end_ety, span.line, span.column
                                         )));
@@ -376,7 +375,7 @@ pub fn infer_expr_type(
                     match info.kind {
                         BindingKind::Var { moved, len, .. } => {
                             if moved {
-                                return Err(HolyError::Semantic(format!(
+                                return Err(GoldError::Semantic(format!(
                                             "Array access on moved variable `{}` (line {} column {})", 
                                             name, inner_span.line, inner_span.column
                                         )));
@@ -421,10 +420,10 @@ pub fn infer_expr_type(
 
 
                  } else {
-                    Err(HolyError::Semantic(format!("Array access on undeclared variable `{}` (line {} column {})", name, span.line, span.column)))
+                    Err(GoldError::Semantic(format!("Array access on undeclared variable `{}` (line {} column {})", name, span.line, span.column)))
                 }
             } else {
-                Err(HolyError::Semantic(format!(
+                Err(GoldError::Semantic(format!(
                         "Expected variable of `array` or `fixed array` type, instead got `{}` (line {} column {})", 
                         array, span.line, span.column
                     )))
@@ -435,7 +434,7 @@ pub fn infer_expr_type(
                 match info.kind {
                     BindingKind::Var { moved, .. } => {
                         if moved {
-                            return Err(HolyError::Semantic(format!(
+                            return Err(GoldError::Semantic(format!(
                                         "Use of moved variable `{}` (line {} column {})", 
                                         name, span.line, span.column
                                     )));
@@ -454,7 +453,7 @@ pub fn infer_expr_type(
                 
                 Ok(info.ty.clone())
             } else {
-                Err(HolyError::Semantic(format!("Use of undeclared binding `{}` (line {} column {})", name, span.line, span.column)))
+                Err(GoldError::Semantic(format!("Use of undeclared binding `{}` (line {} column {})", name, span.line, span.column)))
             }
         }
 
@@ -465,20 +464,20 @@ pub fn infer_expr_type(
             match *op {
                 UnaryOpKind::Not => {
                     if !matches!(expr_ty, Type::Bool) {
-                        return Err(HolyError::Semantic(format!("Expression of type `{}` cannot have unary `not` operation. (line {} column {})", expr_ty, span.line, span.column)))
+                        return Err(GoldError::Semantic(format!("Expression of type `{}` cannot have unary `not` operation. (line {} column {})", expr_ty, span.line, span.column)))
                     }
                 },
                 UnaryOpKind::Negate => {
                     // Ensure that negate unary operations is only allowed on floating points, and signed integers.
                     //
                     if !matches!(expr_ty, Type::Int8 | Type::Int16 | Type::Int32 | Type::Int64 | Type::Int128 | Type::Float64) {
-                        return Err(HolyError::Semantic(format!("Expression of type `{}` cannot have unary `negate` operation. (line {} column {})", expr_ty, span.line, span.column)))
+                        return Err(GoldError::Semantic(format!("Expression of type `{}` cannot have unary `negate` operation. (line {} column {})", expr_ty, span.line, span.column)))
                     }
                 },
 
                 UnaryOpKind::BitwiseNot => {
                     if !expr_ty.is_integer_type() {
-                        return Err(HolyError::Semantic(format!("Expression of type `{}` cannot have unary `bitwise not` operation. (line {} column {})", expr_ty, span.line, span.column)))
+                        return Err(GoldError::Semantic(format!("Expression of type `{}` cannot have unary `bitwise not` operation. (line {} column {})", expr_ty, span.line, span.column)))
                     }
 
                 }
@@ -494,7 +493,7 @@ pub fn infer_expr_type(
             let (lty, rty) = advanced_infer_2_types(left, right, locals, fun_sigs, infer_hint.clone())?;
                 
             if matches!(**left, Expr::CopyCall { .. }) || matches!(**right, Expr::CopyCall { .. }) {
-                return Err(HolyError::Semantic(format!(
+                return Err(GoldError::Semantic(format!(
                         "Copying is not needed for variables in binary operations, because they're always copied. Remove the copy call. (line {} column {})", 
                         span.line, span.column)))
             }
@@ -505,11 +504,11 @@ pub fn infer_expr_type(
             //
             if matches!(op, BinOpKind::Add | BinOpKind::Subtract | BinOpKind::Multiply | BinOpKind::Divide) { 
                 if lty != rty { 
-                    return Err(HolyError::Semantic(format!("Type mismatch in binary arithmetic operation: `{}` vs `{}` (line {} column {})", lty, rty, span.line, span.column)));
+                    return Err(GoldError::Semantic(format!("Type mismatch in binary arithmetic operation: `{}` vs `{}` (line {} column {})", lty, rty, span.line, span.column)));
                 }
 
                 if !lty.is_numeric_type() {
-                    return Err(HolyError::Semantic(format!("Expected numeric types in binary arithmetic operation, instead we got: `{}` vs `{}` (line {} column {})", lty, rty, span.line, span.column)));
+                    return Err(GoldError::Semantic(format!("Expected numeric types in binary arithmetic operation, instead we got: `{}` vs `{}` (line {} column {})", lty, rty, span.line, span.column)));
                 }
 
 
@@ -518,7 +517,7 @@ pub fn infer_expr_type(
             // Logical 'OR' and 'AND'
             } else if matches!(op, BinOpKind::Or | BinOpKind::And) {
                 if !( (lty == Type::Bool) && (rty == Type::Bool) ) {
-                    return Err(HolyError::Semantic(format!(
+                    return Err(GoldError::Semantic(format!(
                                 "Logical binary operation require both expressions to be evalutable to type `bool`, but we got: `{}` vs `{}` (line {} column {})", 
                                 lty, rty, span.line, span.column
                             )));
@@ -529,29 +528,29 @@ pub fn infer_expr_type(
             // comparison
             } else if matches!(op, BinOpKind::Equal | BinOpKind::NotEqual ) {
                 if lty != rty {
-                    return Err(HolyError::Semantic(format!("Type mismatch in binary comparison operation: `{}` vs `{}` (line {} column {})", lty, rty, span.line, span.column)))
+                    return Err(GoldError::Semantic(format!("Type mismatch in binary comparison operation: `{}` vs `{}` (line {} column {})", lty, rty, span.line, span.column)))
                 }
                 Ok(Type::Bool)
             
             // arthemtic comparison (greater than, less than, etc)
             } else if matches!(op, BinOpKind::Greater | BinOpKind::GreaterEqual | BinOpKind::Less | BinOpKind::LessEqual) {
                 if lty != rty {
-                    return Err(HolyError::Semantic(format!("Type mismatch in binary comparison operation: `{}` vs `{}` (line {} column {})", lty, rty, span.line, span.column)))
+                    return Err(GoldError::Semantic(format!("Type mismatch in binary comparison operation: `{}` vs `{}` (line {} column {})", lty, rty, span.line, span.column)))
                 }
                 if (!lty.is_numeric_type()) && lty != Type::Char {
-                    return Err(HolyError::Semantic(format!("You cannot perform arithmetic comparison on non-numeric types: `{}` vs `{}`. (line {} column {})", lty, rty, span.line, span.column)))
+                    return Err(GoldError::Semantic(format!("You cannot perform arithmetic comparison on non-numeric types: `{}` vs `{}`. (line {} column {})", lty, rty, span.line, span.column)))
                 }
 
                 Ok(Type::Bool)
 
             } else if matches!(op, BinOpKind::BitwiseShiftLeft | BinOpKind::BitwiseShiftRight | BinOpKind::BitwiseAnd | BinOpKind::BitwiseOr) {
                 if lty != rty {
-                    return Err(HolyError::Semantic(format!("Type mismatch in binary bitwise operation: `{}` vs `{}` (line {} column {})", lty, rty, span.line, span.column)))
+                    return Err(GoldError::Semantic(format!("Type mismatch in binary bitwise operation: `{}` vs `{}` (line {} column {})", lty, rty, span.line, span.column)))
                 }
 
                 // You can only perform bitwise operations on integer types
                 if !lty.is_integer_type() {
-                    return Err(HolyError::Semantic(format!("You cannot perform bitwise operations on non-integer types: `{}` vs `{}`. (line {} column {})", lty, rty, span.line, span.column)))
+                    return Err(GoldError::Semantic(format!("You cannot perform bitwise operations on non-integer types: `{}` vs `{}`. (line {} column {})", lty, rty, span.line, span.column)))
                 }
 
                 Ok(lty)
@@ -566,7 +565,7 @@ pub fn infer_expr_type(
             let (start_ty, end_ty) = advanced_infer_2_types(start_expr, end_expr, locals, fun_sigs, infer_hint.clone())?;
 
             if start_ty != end_ty {
-                return Err(HolyError::Semantic(format!(
+                return Err(GoldError::Semantic(format!(
                         "Expected range arguments to be of the same type, instead we got: `{}` and `{}` (line {} column {})", 
                         start_ty, end_ty, span.line, span.column)))
             }
@@ -575,7 +574,7 @@ pub fn infer_expr_type(
             //
             
             if !start_ty.is_integer_type() {
-                return Err(HolyError::Semantic(format!(
+                return Err(GoldError::Semantic(format!(
                         "Expected range arguments to be any Integer type, instead we got: `{}` (line {} column {})", 
                         start_ty, span.line, span.column)))
             }
@@ -589,21 +588,21 @@ pub fn infer_expr_type(
             // and print helpful error messages
             // Basically, copy call only works on variables.
             match &mut **e {
-                Expr::CopyCall {span: inner_span, ..} => Err(HolyError::Semantic(format!("Double copying is not needed. Remove the extra copy call. (line {} column {})", inner_span.line, inner_span.column))),
+                Expr::CopyCall {span: inner_span, ..} => Err(GoldError::Semantic(format!("Double copying is not needed. Remove the extra copy call. (line {} column {})", inner_span.line, inner_span.column))),
 
                 Expr::IntLiteral{span: inner_span, ..} | 
                 Expr::Float64Literal{span: inner_span, ..} | 
                 Expr::BoolLiteral{span: inner_span, ..} | 
                 Expr::CharLiteral{span: inner_span, ..} | 
                 Expr::StringLiteral{span: inner_span, ..} | 
-                Expr::ArrayLiteral{span: inner_span, ..} => Err(HolyError::Semantic(format!("Copying a literal is not needed. Remove the copy call and use the literal directly. (line {} column {})", inner_span.line, inner_span.column))),
+                Expr::ArrayLiteral{span: inner_span, ..} => Err(GoldError::Semantic(format!("Copying a literal is not needed. Remove the copy call and use the literal directly. (line {} column {})", inner_span.line, inner_span.column))),
                 
                 Expr::ArrayAccess{span: inner_span, ..} | 
-                Expr::ArraySlicing{span: inner_span, ..} => Err(HolyError::Semantic(format!("Copying is not needed for array access, when you access or slice an array or a string, a new copy is made. Remove the copy call and use operation directly. (line {} column {})", inner_span.line, inner_span.column))),
+                Expr::ArraySlicing{span: inner_span, ..} => Err(GoldError::Semantic(format!("Copying is not needed for array access, when you access or slice an array or a string, a new copy is made. Remove the copy call and use operation directly. (line {} column {})", inner_span.line, inner_span.column))),
 
                 Expr::Var {..} => Ok(infer_expr_type(e, locals, fun_sigs, infer_hint.clone())?),
 
-                other => Err(HolyError::Semantic(format!("Copy call expects a variable, instead we got `{}` (line {} column {})", other, span.line, span.column)))
+                other => Err(GoldError::Semantic(format!("Copy call expects a variable, instead we got `{}` (line {} column {})", other, span.line, span.column)))
             }
         }
 
@@ -614,7 +613,7 @@ pub fn infer_expr_type(
                 // Catch the "makes no sense" calls, like only passing a literal in {..<expr>..} formating
                 // placeholders
                 match e {
-                    Expr::CopyCall {span: inner_span, ..} => return Err(HolyError::Semantic(format!(
+                    Expr::CopyCall {span: inner_span, ..} => return Err(GoldError::Semantic(format!(
                                                 "Format calls copy by default, Remove the extra copy call. (line {} column {})", inner_span.line, inner_span.column
                                             ))),
 
@@ -623,12 +622,12 @@ pub fn infer_expr_type(
                     Expr::BoolLiteral{span: inner_span, ..}    | 
                     Expr::StringLiteral{span: inner_span, ..}  | 
                     Expr::CharLiteral{span: inner_span, ..}    | 
-                    Expr::ArrayLiteral{span: inner_span, ..}    => return Err(HolyError::Semantic(format!(
+                    Expr::ArrayLiteral{span: inner_span, ..}    => return Err(GoldError::Semantic(format!(
                                     "Plain literals are not allowed in formating! Remove the format placeholders and use the literal directly! (line {} column {})", 
                                     inner_span.line, inner_span.column
                                 ))),
 
-                    Expr::FormatCall{span: inner_span, ..} => return Err(HolyError::Semantic(format!("Nested FormatCalls are not allowed. (line {} column {})", inner_span.line, inner_span.column))),
+                    Expr::FormatCall{span: inner_span, ..} => return Err(GoldError::Semantic(format!("Nested FormatCalls are not allowed. (line {} column {})", inner_span.line, inner_span.column))),
 
                     _ => {
                         // We call infer expr type here for it to validate the expression up to most
@@ -654,7 +653,7 @@ pub fn infer_expr_type(
                     if ret_vec.len() == 1 {
                         Ok(ret_vec[0].clone())
                     } else {
-                        Err(HolyError::Semantic(format!(
+                        Err(GoldError::Semantic(format!(
                             "Call to function `{}` returns {} values but is used in a single-value expression (line {} column {})",
                             name, ret_vec.len(), span.line, span.column
                         )))
@@ -663,7 +662,7 @@ pub fn infer_expr_type(
                 None => {
                     // check_call should already error when require_ret == true,
                     // but to be defensive:
-                    Err(HolyError::Semantic(format!(
+                    Err(GoldError::Semantic(format!(
                         "Call to function `{}` has no declared return type but is used in an expression (line {} column {})",
                         name, span.line, span.column
                     )))
@@ -678,12 +677,12 @@ pub fn infer_expr_type(
 // helper: check an expression that's allowed to be an IntLiteral::Usize
 //
 #[expect(clippy::trivially_copy_pass_by_ref, reason = "i dont care about performance lol, references help ensure that i dont accidently modify anything")]
-pub fn check_usize_literal_to_src(expr: &Expr, len: &usize, span: &Span, locals: &HashMap<String, BindingInfo>) -> Result<(), HolyError> {
+pub fn check_usize_literal_to_src(expr: &Expr, len: &usize, span: &Span, locals: &HashMap<String, BindingInfo>) -> Result<(), GoldError> {
     match expr {
         Expr::IntLiteral { value, .. } => match value {
             IntLiteralValue::Usize(n) => {
                 if *n >= *len {
-                    return Err(HolyError::Semantic(format!(
+                    return Err(GoldError::Semantic(format!(
                         "Index `{}` is out-of-bounds for array length `{}`! Out-of-bounds access will cause a forced panic at runtime! Always check your array length before accessing it! (line {} column {})",
                         n, len, span.line, span.column
                     )));
@@ -725,7 +724,7 @@ pub fn check_usize_literal_to_src(expr: &Expr, len: &usize, span: &Span, locals:
             }
         },
 
-        Expr::CopyCall{..} => Err(HolyError::Semantic(format!(
+        Expr::CopyCall{..} => Err(GoldError::Semantic(format!(
                         "You do not need to Copy an index when you are accessing an array, it is always copied. Remove the copy call. (line {} column {})"
                         ,span.line, span.column
                     ))),

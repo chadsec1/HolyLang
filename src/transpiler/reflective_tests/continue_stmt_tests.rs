@@ -67,7 +67,7 @@ mod continue_stmt_in_void_func_tests {
             assert!(rcode.starts_with(&internals));
             let rcode = rcode[internals.len()..].replace('\n', "");
 
-            let l_str = holy_expr_to_rust_expr(&l);
+            let l_str = gold_expr_to_rust_expr(&l);
 
             assert_eq!(rcode, format!("fn foo() {{ while {} {{continue;}}}}", l_str));
         }
@@ -105,7 +105,7 @@ mod continue_stmt_in_void_func_tests {
                 assert!(rcode.starts_with(&internals));
                 let rcode = rcode[internals.len()..].replace('\n', "");
 
-                let bin_str = holy_expr_to_rust_expr(&bin);
+                let bin_str = gold_expr_to_rust_expr(&bin);
 
                 assert_eq!(rcode, format!("fn foo() {{ while {} {{continue;}}}}", bin_str));
             }
@@ -160,7 +160,7 @@ mod continue_stmt_in_void_func_tests {
             assert!(rcode.starts_with(&internals));
             let rcode = rcode[internals.len()..].replace('\n', "");
 
-            let l_str = holy_expr_to_rust_expr(&l);
+            let l_str = gold_expr_to_rust_expr(&l);
 
             assert_eq!(rcode, format!("fn foo() {{ for x in {} {{continue;}}}}", l_str));
         }
@@ -199,7 +199,7 @@ mod continue_stmt_in_void_func_tests {
                 assert!(rcode.starts_with(&internals));
                 let rcode = rcode[internals.len()..].replace('\n', "");
 
-                let bin_str = holy_expr_to_rust_expr(&bin);
+                let bin_str = gold_expr_to_rust_expr(&bin);
 
                 assert_eq!(rcode, format!("fn foo() {{ for x in {} {{continue;}}}}", bin_str));
             }
@@ -231,7 +231,7 @@ mod continue_stmt_in_void_func_tests {
             assert!(rcode.starts_with(&internals));
             let rcode = rcode[internals.len()..].replace('\n', "");
 
-            let l_str = holy_expr_to_rust_expr(&l);
+            let l_str = gold_expr_to_rust_expr(&l);
 
             assert_eq!(rcode, format!("fn foo() {{ if {} {{continue;}}}}", l_str));
         }
@@ -271,7 +271,7 @@ mod continue_stmt_in_void_func_tests {
                 assert!(rcode.starts_with(&internals));
                 let rcode = rcode[internals.len()..].replace('\n', "");
 
-                let bin_str = holy_expr_to_rust_expr(&bin);
+                let bin_str = gold_expr_to_rust_expr(&bin);
 
                 assert_eq!(rcode, format!("fn foo() {{ if {} {{continue;}}}}", bin_str));
             }
@@ -306,7 +306,7 @@ mod continue_stmt_in_void_func_tests {
             assert!(rcode.starts_with(&internals));
             let rcode = rcode[internals.len()..].replace('\n', "");
 
-            let l_str = holy_expr_to_rust_expr(&l);
+            let l_str = gold_expr_to_rust_expr(&l);
 
             assert_eq!(rcode, format!("fn foo() {{ if {} {{continue;}} else {{continue;}}}}", l_str));
         }
@@ -348,7 +348,7 @@ mod continue_stmt_in_void_func_tests {
                 assert!(rcode.starts_with(&internals));
                 let rcode = rcode[internals.len()..].replace('\n', "");
 
-                let bin_str = holy_expr_to_rust_expr(&bin);
+                let bin_str = gold_expr_to_rust_expr(&bin);
 
                 assert_eq!(rcode, format!("fn foo() {{ if {} {{continue;}} else {{continue;}}}}", bin_str));
             }
@@ -384,7 +384,7 @@ mod continue_stmt_in_void_func_tests {
             assert!(rcode.starts_with(&internals));
             let rcode = rcode[internals.len()..].replace('\n', "");
 
-            let l_str = holy_expr_to_rust_expr(&l);
+            let l_str = gold_expr_to_rust_expr(&l);
 
             assert_eq!(rcode, format!("fn foo() {{ if {} {{continue;}} else if {} {{continue;}} else {{continue;}}}}", l_str, l_str));
         }
@@ -428,7 +428,7 @@ mod continue_stmt_in_void_func_tests {
                 assert!(rcode.starts_with(&internals));
                 let rcode = rcode[internals.len()..].replace('\n', "");
 
-                let bin_str = holy_expr_to_rust_expr(&bin);
+                let bin_str = gold_expr_to_rust_expr(&bin);
 
                 assert_eq!(rcode, format!("fn foo() {{ if {} {{continue;}} else if {} {{continue;}} else {{continue;}}}}", bin_str, bin_str));
             }
@@ -456,7 +456,7 @@ mod continue_stmt_in_void_func_with_params_tests {
             assert!(rcode.starts_with(&internals));
             let rcode = rcode[internals.len()..].replace('\n', "");
 
-            let t_str = holy_type_to_rust_type_str(&t);
+            let t_str = gold_type_to_rust_type_str(&t);
 
             assert_eq!(rcode, format!("fn foo(a: {}, b: {}) {{ continue;}}", t_str, t_str));
         }
@@ -483,7 +483,7 @@ mod continue_stmt_in_void_func_with_params_tests {
             assert!(rcode.starts_with(&internals));
             let rcode = rcode[internals.len()..].replace('\n', "");
 
-            let t_str = holy_type_to_rust_type_str(&t);
+            let t_str = gold_type_to_rust_type_str(&t);
             
             assert_eq!(rcode, format!("fn foo(a: {}, b: {}) {{ loop {{continue;}}}}", t_str, t_str));
         }
@@ -504,7 +504,7 @@ mod continue_stmt_in_void_func_with_params_tests {
                         span: span(),
                     }),
             ];
-            let l_str = holy_expr_to_rust_expr(&l);
+            let l_str = gold_expr_to_rust_expr(&l);
 
             for t in ALL_TYPES_WITH_DYN_ARR.iter() {    
                 let func = void_func("foo", vec![param("a", t.clone()), param("b", t.clone())], body.clone());
@@ -515,7 +515,7 @@ mod continue_stmt_in_void_func_with_params_tests {
                 assert!(rcode.starts_with(&internals));
                 let rcode = rcode[internals.len()..].replace('\n', "");
 
-                let t_str = holy_type_to_rust_type_str(&t);
+                let t_str = gold_type_to_rust_type_str(&t);
 
                 assert_eq!(rcode, format!("fn foo(a: {}, b: {}) {{ while {} {{continue;}}}}", t_str, t_str, l_str));
             }
@@ -546,7 +546,7 @@ mod continue_stmt_in_void_func_with_params_tests {
                         }),
                 ];
                 
-                let bin_str = holy_expr_to_rust_expr(&bin);
+                let bin_str = gold_expr_to_rust_expr(&bin);
                 
                 for t in ALL_TYPES_WITH_DYN_ARR.iter() {    
                     let func = void_func("foo", vec![param("a", t.clone()), param("b", t.clone())], body.clone());
@@ -557,7 +557,7 @@ mod continue_stmt_in_void_func_with_params_tests {
                     assert!(rcode.starts_with(&internals));
                     let rcode = rcode[internals.len()..].replace('\n', "");
 
-                    let t_str = holy_type_to_rust_type_str(&t);
+                    let t_str = gold_type_to_rust_type_str(&t);
 
                     assert_eq!(rcode, format!("fn foo(a: {}, b: {}) {{ while {} {{continue;}}}}", t_str, t_str, bin_str));
                 }
@@ -587,7 +587,7 @@ mod continue_stmt_in_void_func_with_params_tests {
             assert!(rcode.starts_with(&internals));
             let rcode = rcode[internals.len()..].replace('\n', "");
 
-            let t_str = holy_type_to_rust_type_str(&t);
+            let t_str = gold_type_to_rust_type_str(&t);
 
             assert_eq!(rcode, format!("fn foo(a: {}, b: {}) {{ for x in arr {{continue;}}}}", t_str, t_str));
         }
@@ -609,7 +609,7 @@ mod continue_stmt_in_void_func_with_params_tests {
                     }),
             ];
             
-            let l_str = holy_expr_to_rust_expr(&l);
+            let l_str = gold_expr_to_rust_expr(&l);
 
             for t in ALL_TYPES_WITH_DYN_ARR.iter() {    
                 let func = void_func("foo", vec![param("a", t.clone()), param("b", t.clone())], body.clone());
@@ -620,7 +620,7 @@ mod continue_stmt_in_void_func_with_params_tests {
                 assert!(rcode.starts_with(&internals));
                 let rcode = rcode[internals.len()..].replace('\n', "");
 
-                let t_str = holy_type_to_rust_type_str(&t);
+                let t_str = gold_type_to_rust_type_str(&t);
 
                 assert_eq!(rcode, format!("fn foo(a: {}, b: {}) {{ for x in {} {{continue;}}}}", t_str, t_str, l_str));
             }
@@ -651,7 +651,7 @@ mod continue_stmt_in_void_func_with_params_tests {
                         }),
                 ];
 
-                let bin_str = holy_expr_to_rust_expr(&bin);
+                let bin_str = gold_expr_to_rust_expr(&bin);
                 
                 for t in ALL_TYPES_WITH_DYN_ARR.iter() {
                     let func = void_func("foo", vec![param("a", t.clone()), param("b", t.clone())], body.clone());
@@ -662,7 +662,7 @@ mod continue_stmt_in_void_func_with_params_tests {
                     assert!(rcode.starts_with(&internals));
                     let rcode = rcode[internals.len()..].replace('\n', "");
 
-                    let t_str = holy_type_to_rust_type_str(&t);
+                    let t_str = gold_type_to_rust_type_str(&t);
 
                     assert_eq!(rcode, format!("fn foo(a: {}, b: {}) {{ for x in {} {{continue;}}}}", t_str, t_str, bin_str));
                 }
@@ -687,7 +687,7 @@ mod continue_stmt_in_void_func_with_params_tests {
                     }),
             ];
             
-            let l_str = holy_expr_to_rust_expr(&l);
+            let l_str = gold_expr_to_rust_expr(&l);
 
             for t in ALL_TYPES_WITH_DYN_ARR.iter() {
                 let func = void_func("foo", vec![param("a", t.clone()), param("b", t.clone())], body.clone());
@@ -698,7 +698,7 @@ mod continue_stmt_in_void_func_with_params_tests {
                 assert!(rcode.starts_with(&internals));
                 let rcode = rcode[internals.len()..].replace('\n', "");
 
-                let t_str = holy_type_to_rust_type_str(&t);
+                let t_str = gold_type_to_rust_type_str(&t);
 
                 assert_eq!(rcode, format!("fn foo(a: {}, b: {}) {{ if {} {{continue;}}}}", t_str, t_str, l_str));
             }
@@ -730,7 +730,7 @@ mod continue_stmt_in_void_func_with_params_tests {
                         }),
                 ];
                 
-                let bin_str = holy_expr_to_rust_expr(&bin);
+                let bin_str = gold_expr_to_rust_expr(&bin);
 
                 for t in ALL_TYPES_WITH_DYN_ARR.iter() {
                     let func = void_func("foo", vec![param("a", t.clone()), param("b", t.clone())], body.clone());
@@ -741,7 +741,7 @@ mod continue_stmt_in_void_func_with_params_tests {
                     assert!(rcode.starts_with(&internals));
                     let rcode = rcode[internals.len()..].replace('\n', "");
 
-                    let t_str = holy_type_to_rust_type_str(&t);
+                    let t_str = gold_type_to_rust_type_str(&t);
 
                     assert_eq!(rcode, format!("fn foo(a: {}, b: {}) {{ if {} {{continue;}}}}", t_str, t_str, bin_str));
                 }
@@ -769,7 +769,7 @@ mod continue_stmt_in_void_func_with_params_tests {
                     }),
             ];
             
-            let l_str = holy_expr_to_rust_expr(&l);
+            let l_str = gold_expr_to_rust_expr(&l);
 
             for t in ALL_TYPES_WITH_DYN_ARR.iter() {
                 let func = void_func("foo", vec![param("a", t.clone()), param("b", t.clone())], body.clone());
@@ -780,7 +780,7 @@ mod continue_stmt_in_void_func_with_params_tests {
                 assert!(rcode.starts_with(&internals));
                 let rcode = rcode[internals.len()..].replace('\n', "");
 
-                let t_str = holy_type_to_rust_type_str(&t);
+                let t_str = gold_type_to_rust_type_str(&t);
 
                 assert_eq!(rcode, format!("fn foo(a: {}, b: {}) {{ if {} {{continue;}} else {{continue;}}}}", t_str, t_str, l_str));
             }
@@ -814,7 +814,7 @@ mod continue_stmt_in_void_func_with_params_tests {
                             span: span(),
                         }),
                 ];
-                let bin_str = holy_expr_to_rust_expr(&bin);
+                let bin_str = gold_expr_to_rust_expr(&bin);
 
 
                 for t in ALL_TYPES_WITH_DYN_ARR.iter() {
@@ -826,7 +826,7 @@ mod continue_stmt_in_void_func_with_params_tests {
                     assert!(rcode.starts_with(&internals));
                     let rcode = rcode[internals.len()..].replace('\n', "");
 
-                    let t_str = holy_type_to_rust_type_str(&t);
+                    let t_str = gold_type_to_rust_type_str(&t);
 
                     assert_eq!(rcode, format!("fn foo(a: {}, b: {}) {{ if {} {{continue;}} else {{continue;}}}}", t_str, t_str, bin_str));
                 }
@@ -855,7 +855,7 @@ mod continue_stmt_in_void_func_with_params_tests {
                     }),
             ];
             
-            let l_str = holy_expr_to_rust_expr(&l);
+            let l_str = gold_expr_to_rust_expr(&l);
 
             for t in ALL_TYPES_WITH_DYN_ARR.iter() {
                 let func = void_func("foo", vec![param("a", t.clone()), param("b", t.clone())], body.clone());
@@ -866,7 +866,7 @@ mod continue_stmt_in_void_func_with_params_tests {
                 assert!(rcode.starts_with(&internals));
                 let rcode = rcode[internals.len()..].replace('\n', "");
 
-                let t_str = holy_type_to_rust_type_str(&t);
+                let t_str = gold_type_to_rust_type_str(&t);
 
                 assert_eq!(rcode, format!("fn foo(a: {}, b: {}) {{ if {} {{continue;}} else if {} {{continue;}} else {{continue;}}}}", t_str, t_str, l_str, l_str));
             }
@@ -903,7 +903,7 @@ mod continue_stmt_in_void_func_with_params_tests {
                         }),
                 ];
                     
-                let bin_str = holy_expr_to_rust_expr(&bin);
+                let bin_str = gold_expr_to_rust_expr(&bin);
 
                 for t in ALL_TYPES_WITH_DYN_ARR.iter() {
                     let func = void_func("foo", vec![param("a", t.clone()), param("b", t.clone())], body.clone());
@@ -915,7 +915,7 @@ mod continue_stmt_in_void_func_with_params_tests {
                     let rcode = rcode[internals.len()..].replace('\n', "");
 
                 
-                    let t_str = holy_type_to_rust_type_str(&t);
+                    let t_str = gold_type_to_rust_type_str(&t);
 
                     assert_eq!(rcode, format!("fn foo(a: {}, b: {}) {{ if {} {{continue;}} else if {} {{continue;}} else {{continue;}}}}", t_str, t_str, bin_str, bin_str));
                 }
@@ -944,7 +944,7 @@ mod continue_stmt_in_returning_func_with_params_tests {
             assert!(rcode.starts_with(&internals));
             let rcode = rcode[internals.len()..].replace('\n', "");
 
-            let t_str = holy_type_to_rust_type_str(&t);
+            let t_str = gold_type_to_rust_type_str(&t);
 
             assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ continue;}}", t_str, t_str, t_str));
         }
@@ -971,7 +971,7 @@ mod continue_stmt_in_returning_func_with_params_tests {
             assert!(rcode.starts_with(&internals));
             let rcode = rcode[internals.len()..].replace('\n', "");
 
-            let t_str = holy_type_to_rust_type_str(&t);
+            let t_str = gold_type_to_rust_type_str(&t);
             
             assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ loop {{continue;}}}}", t_str, t_str, t_str));
         }
@@ -992,7 +992,7 @@ mod continue_stmt_in_returning_func_with_params_tests {
                         span: span(),
                     }),
             ];
-            let l_str = holy_expr_to_rust_expr(&l);
+            let l_str = gold_expr_to_rust_expr(&l);
 
             for t in ALL_TYPES_WITH_DYN_ARR.iter() {    
                 let func = returning_func("foo", vec![param("a", t.clone()), param("b", t.clone())], vec![t.clone()], body.clone());
@@ -1003,7 +1003,7 @@ mod continue_stmt_in_returning_func_with_params_tests {
                 assert!(rcode.starts_with(&internals));
                 let rcode = rcode[internals.len()..].replace('\n', "");
 
-                let t_str = holy_type_to_rust_type_str(&t);
+                let t_str = gold_type_to_rust_type_str(&t);
 
                 assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ while {} {{continue;}}}}", t_str, t_str, t_str, l_str));
             }
@@ -1034,7 +1034,7 @@ mod continue_stmt_in_returning_func_with_params_tests {
                         }),
                 ];
                 
-                let bin_str = holy_expr_to_rust_expr(&bin);
+                let bin_str = gold_expr_to_rust_expr(&bin);
                 
                 for t in ALL_TYPES_WITH_DYN_ARR.iter() {
                     let func = returning_func("foo", vec![param("a", t.clone()), param("b", t.clone())], vec![t.clone()], body.clone());
@@ -1045,7 +1045,7 @@ mod continue_stmt_in_returning_func_with_params_tests {
                     assert!(rcode.starts_with(&internals));
                     let rcode = rcode[internals.len()..].replace('\n', "");
 
-                    let t_str = holy_type_to_rust_type_str(&t);
+                    let t_str = gold_type_to_rust_type_str(&t);
 
                     assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ while {} {{continue;}}}}", t_str, t_str, t_str, bin_str));
                 }
@@ -1075,7 +1075,7 @@ mod continue_stmt_in_returning_func_with_params_tests {
             assert!(rcode.starts_with(&internals));
             let rcode = rcode[internals.len()..].replace('\n', "");
 
-            let t_str = holy_type_to_rust_type_str(&t);
+            let t_str = gold_type_to_rust_type_str(&t);
 
             assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ for x in arr {{continue;}}}}", t_str, t_str, t_str));
         }
@@ -1097,7 +1097,7 @@ mod continue_stmt_in_returning_func_with_params_tests {
                     }),
             ];
             
-            let l_str = holy_expr_to_rust_expr(&l);
+            let l_str = gold_expr_to_rust_expr(&l);
 
             for t in ALL_TYPES_WITH_DYN_ARR.iter() {
                 let func = returning_func("foo", vec![param("a", t.clone()), param("b", t.clone())], vec![t.clone()], body.clone());
@@ -1108,7 +1108,7 @@ mod continue_stmt_in_returning_func_with_params_tests {
                 assert!(rcode.starts_with(&internals));
                 let rcode = rcode[internals.len()..].replace('\n', "");
 
-                let t_str = holy_type_to_rust_type_str(&t);
+                let t_str = gold_type_to_rust_type_str(&t);
 
                 assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ for x in {} {{continue;}}}}", t_str, t_str, t_str, l_str));
             }
@@ -1139,7 +1139,7 @@ mod continue_stmt_in_returning_func_with_params_tests {
                         }),
                 ];
 
-                let bin_str = holy_expr_to_rust_expr(&bin);
+                let bin_str = gold_expr_to_rust_expr(&bin);
                 
                 for t in ALL_TYPES_WITH_DYN_ARR.iter() {
                     let func = returning_func("foo", vec![param("a", t.clone()), param("b", t.clone())], vec![t.clone()], body.clone());
@@ -1150,7 +1150,7 @@ mod continue_stmt_in_returning_func_with_params_tests {
                     assert!(rcode.starts_with(&internals));
                     let rcode = rcode[internals.len()..].replace('\n', "");
 
-                    let t_str = holy_type_to_rust_type_str(&t);
+                    let t_str = gold_type_to_rust_type_str(&t);
 
                     assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ for x in {} {{continue;}}}}", t_str, t_str, t_str, bin_str));
                 }
@@ -1175,7 +1175,7 @@ mod continue_stmt_in_returning_func_with_params_tests {
                     }),
             ];
             
-            let l_str = holy_expr_to_rust_expr(&l);
+            let l_str = gold_expr_to_rust_expr(&l);
 
             for t in ALL_TYPES_WITH_DYN_ARR.iter() {
                 let func = returning_func("foo", vec![param("a", t.clone()), param("b", t.clone())], vec![t.clone()], body.clone());
@@ -1186,7 +1186,7 @@ mod continue_stmt_in_returning_func_with_params_tests {
                 assert!(rcode.starts_with(&internals));
                 let rcode = rcode[internals.len()..].replace('\n', "");
 
-                let t_str = holy_type_to_rust_type_str(&t);
+                let t_str = gold_type_to_rust_type_str(&t);
 
                 assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ if {} {{continue;}}}}", t_str, t_str, t_str, l_str));
             }
@@ -1218,7 +1218,7 @@ mod continue_stmt_in_returning_func_with_params_tests {
                         }),
                 ];
                 
-                let bin_str = holy_expr_to_rust_expr(&bin);
+                let bin_str = gold_expr_to_rust_expr(&bin);
 
                 for t in ALL_TYPES_WITH_DYN_ARR.iter() {
                     let func = returning_func("foo", vec![param("a", t.clone()), param("b", t.clone())], vec![t.clone()], body.clone());
@@ -1229,7 +1229,7 @@ mod continue_stmt_in_returning_func_with_params_tests {
                     assert!(rcode.starts_with(&internals));
                     let rcode = rcode[internals.len()..].replace('\n', "");
 
-                    let t_str = holy_type_to_rust_type_str(&t);
+                    let t_str = gold_type_to_rust_type_str(&t);
 
                     assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ if {} {{continue;}}}}", t_str, t_str, t_str, bin_str));
                 }
@@ -1257,7 +1257,7 @@ mod continue_stmt_in_returning_func_with_params_tests {
                     }),
             ];
             
-            let l_str = holy_expr_to_rust_expr(&l);
+            let l_str = gold_expr_to_rust_expr(&l);
 
             for t in ALL_TYPES_WITH_DYN_ARR.iter() {
                 let func = returning_func("foo", vec![param("a", t.clone()), param("b", t.clone())], vec![t.clone()], body.clone());
@@ -1268,7 +1268,7 @@ mod continue_stmt_in_returning_func_with_params_tests {
                 assert!(rcode.starts_with(&internals));
                 let rcode = rcode[internals.len()..].replace('\n', "");
 
-                let t_str = holy_type_to_rust_type_str(&t);
+                let t_str = gold_type_to_rust_type_str(&t);
 
                 assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ if {} {{continue;}} else {{continue;}}}}", t_str, t_str, t_str, l_str));
             }
@@ -1302,7 +1302,7 @@ mod continue_stmt_in_returning_func_with_params_tests {
                             span: span(),
                         }),
                 ];
-                let bin_str = holy_expr_to_rust_expr(&bin);
+                let bin_str = gold_expr_to_rust_expr(&bin);
 
 
                 for t in ALL_TYPES_WITH_DYN_ARR.iter() {
@@ -1314,7 +1314,7 @@ mod continue_stmt_in_returning_func_with_params_tests {
                     assert!(rcode.starts_with(&internals));
                     let rcode = rcode[internals.len()..].replace('\n', "");
 
-                    let t_str = holy_type_to_rust_type_str(&t);
+                    let t_str = gold_type_to_rust_type_str(&t);
 
                     assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ if {} {{continue;}} else {{continue;}}}}", t_str, t_str, t_str, bin_str));
                 }
@@ -1343,7 +1343,7 @@ mod continue_stmt_in_returning_func_with_params_tests {
                     }),
             ];
             
-            let l_str = holy_expr_to_rust_expr(&l);
+            let l_str = gold_expr_to_rust_expr(&l);
 
             for t in ALL_TYPES_WITH_DYN_ARR.iter() {
                 let func = returning_func("foo", vec![param("a", t.clone()), param("b", t.clone())], vec![t.clone()], body.clone());
@@ -1354,7 +1354,7 @@ mod continue_stmt_in_returning_func_with_params_tests {
                 assert!(rcode.starts_with(&internals));
                 let rcode = rcode[internals.len()..].replace('\n', "");
 
-                let t_str = holy_type_to_rust_type_str(&t);
+                let t_str = gold_type_to_rust_type_str(&t);
 
                 assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ if {} {{continue;}} else if {} {{continue;}} else {{continue;}}}}", t_str, t_str, t_str, l_str, l_str));
             }
@@ -1391,7 +1391,7 @@ mod continue_stmt_in_returning_func_with_params_tests {
                         }),
                 ];
                     
-                let bin_str = holy_expr_to_rust_expr(&bin);
+                let bin_str = gold_expr_to_rust_expr(&bin);
 
                 for t in ALL_TYPES_WITH_DYN_ARR.iter() {
                     let func = returning_func("foo", vec![param("a", t.clone()), param("b", t.clone())], vec![t.clone()], body.clone());
@@ -1403,7 +1403,7 @@ mod continue_stmt_in_returning_func_with_params_tests {
                     let rcode = rcode[internals.len()..].replace('\n', "");
 
                 
-                    let t_str = holy_type_to_rust_type_str(&t);
+                    let t_str = gold_type_to_rust_type_str(&t);
 
                     assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ if {} {{continue;}} else if {} {{continue;}} else {{continue;}}}}", t_str, t_str, t_str, bin_str, bin_str));
                 }

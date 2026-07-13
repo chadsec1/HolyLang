@@ -3,7 +3,7 @@
 use crate::ast::exprs::Expr;
 use crate::ast::span::Span;
 use crate::ast::int_literal_value::IntLiteralValue;
-use crate::error::HolyError;
+use crate::error::GoldError;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FixedArraySize {
@@ -11,7 +11,7 @@ pub enum FixedArraySize {
     Const(String)
 }
 
-/// Holy Types
+/// Gold Types
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
     Int8,
@@ -134,9 +134,9 @@ impl Type {
     /// Any other types produces a panic, because it requires programmer explicit initialization 
     ///
     /// # Errors
-    /// Calling this on fixed-array types, or char types, will cause a `HolyError` to be returned.
+    /// Calling this on fixed-array types, or char types, will cause a `GoldError` to be returned.
     ///
-    pub fn get_default_value(&self, span: Span) -> Result<Expr, HolyError> {
+    pub fn get_default_value(&self, span: Span) -> Result<Expr, GoldError> {
         match self {
             Self::Int8  => Ok(Expr::IntLiteral { value: IntLiteralValue::Int8(0), span }),
             Self::Int16 => Ok(Expr::IntLiteral { value: IntLiteralValue::Int16(0), span }),
@@ -168,9 +168,9 @@ impl Type {
                 //
                 Expr::ArrayLiteral { elements: Vec::new(), type_name: None, span }
             }),
-            Self::FixedArray(_, _) => Err(HolyError::Parse(format!("Fixed-size arrays must have explicit values (line {} column {})", span.line, span.column))),
+            Self::FixedArray(_, _) => Err(GoldError::Parse(format!("Fixed-size arrays must have explicit values (line {} column {})", span.line, span.column))),
 
-            Self::Char => Err(HolyError::Parse(format!("chars must have explicit values (line {} column {})",  span.line, span.column)))
+            Self::Char => Err(GoldError::Parse(format!("chars must have explicit values (line {} column {})",  span.line, span.column)))
         }
     }
 

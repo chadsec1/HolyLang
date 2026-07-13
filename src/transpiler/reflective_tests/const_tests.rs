@@ -9,7 +9,7 @@ mod const_in_globals_tests {
         let boolean_conds = get_many_boolean_conditions();
         
         let t = Type::Bool;
-        let t_str = holy_type_to_rust_type_str(&t);
+        let t_str = gold_type_to_rust_type_str(&t);
         
         for bl in boolean_conds {
             let globals = vec![
@@ -23,7 +23,7 @@ mod const_in_globals_tests {
             assert!(rcode.starts_with(&internals));
             let rcode = rcode[internals.len()..].replace('\n', "");
 
-            let bl_str = holy_expr_to_rust_expr(&bl);
+            let bl_str = gold_expr_to_rust_expr(&bl);
 
             assert_eq!(rcode, format!("const x: {} = {};", t_str, bl_str));
         }
@@ -48,8 +48,8 @@ mod const_in_globals_tests {
             assert!(rcode.starts_with(&internals));
             let rcode = rcode[internals.len()..].replace('\n', "");
 
-            let t_str = holy_type_to_rust_type_str(&t);
-            let l_str = holy_expr_to_rust_expr(&l);
+            let t_str = gold_type_to_rust_type_str(&t);
+            let l_str = gold_expr_to_rust_expr(&l);
 
             assert_eq!(rcode, format!("const x: {} = {};", t_str, l_str));
         }
@@ -75,8 +75,8 @@ mod const_in_globals_tests {
                 assert!(rcode.starts_with(&internals));
                 let rcode = rcode[internals.len()..].replace('\n', "");
 
-                let fixed_arr_ty_str = holy_type_to_rust_type_str(&fixed_arr_ty);
-                let l_arr_str = holy_expr_to_rust_expr(&l_arr);
+                let fixed_arr_ty_str = gold_type_to_rust_type_str(&fixed_arr_ty);
+                let l_arr_str = gold_expr_to_rust_expr(&l_arr);
 
                 assert_eq!(rcode, format!("const x: {} = {};", fixed_arr_ty_str,  l_arr_str));
             }
@@ -103,8 +103,8 @@ mod const_in_globals_tests {
                 assert!(rcode.starts_with(&internals));
                 let rcode = rcode[internals.len()..].replace('\n', "");
 
-                let fixed_arr_ty_str = holy_type_to_rust_type_str(&fixed_arr_ty);
-                let l_arr_str = holy_expr_to_rust_expr(&l_arr);
+                let fixed_arr_ty_str = gold_type_to_rust_type_str(&fixed_arr_ty);
+                let l_arr_str = gold_expr_to_rust_expr(&l_arr);
 
                 assert_eq!(rcode, format!("const x: {} = {};", fixed_arr_ty_str,  l_arr_str));
             }
@@ -121,7 +121,7 @@ mod const_in_void_func_tests {
         let boolean_conds = get_many_boolean_conditions();
         
         let t = Type::Bool;
-        let t_str = holy_type_to_rust_type_str(&t);
+        let t_str = gold_type_to_rust_type_str(&t);
         
         for bl in boolean_conds {
             let body = vec![
@@ -135,7 +135,7 @@ mod const_in_void_func_tests {
             assert!(rcode.starts_with(&internals));
             let rcode = rcode[internals.len()..].replace('\n', "");
 
-            let bl_str = holy_expr_to_rust_expr(&bl);
+            let bl_str = gold_expr_to_rust_expr(&bl);
 
             assert_eq!(rcode, format!("fn foo() {{ const x: {} = {};}}", t_str, bl_str));
         }
@@ -161,8 +161,8 @@ mod const_in_void_func_tests {
             assert!(rcode.starts_with(&internals));
             let rcode = rcode[internals.len()..].replace('\n', "");
 
-            let t_str = holy_type_to_rust_type_str(&t);
-            let l_str = holy_expr_to_rust_expr(&l);
+            let t_str = gold_type_to_rust_type_str(&t);
+            let l_str = gold_expr_to_rust_expr(&l);
 
             assert_eq!(rcode, format!("fn foo() {{ const x: {} = {};}}", t_str, l_str));
         }
@@ -188,8 +188,8 @@ mod const_in_void_func_tests {
                 assert!(rcode.starts_with(&internals));
                 let rcode = rcode[internals.len()..].replace('\n', "");
 
-                let fixed_arr_ty_str = holy_type_to_rust_type_str(&fixed_arr_ty);
-                let l_arr_str = holy_expr_to_rust_expr(&l_arr);
+                let fixed_arr_ty_str = gold_type_to_rust_type_str(&fixed_arr_ty);
+                let l_arr_str = gold_expr_to_rust_expr(&l_arr);
 
                 assert_eq!(rcode, format!("fn foo() {{ const x: {} = {};}}", fixed_arr_ty_str,  l_arr_str));
             }
@@ -216,8 +216,8 @@ mod const_in_void_func_tests {
                 assert!(rcode.starts_with(&internals));
                 let rcode = rcode[internals.len()..].replace('\n', "");
 
-                let fixed_arr_ty_str = holy_type_to_rust_type_str(&fixed_arr_ty);
-                let l_arr_str = holy_expr_to_rust_expr(&l_arr);
+                let fixed_arr_ty_str = gold_type_to_rust_type_str(&fixed_arr_ty);
+                let l_arr_str = gold_expr_to_rust_expr(&l_arr);
 
                 assert_eq!(rcode, format!("fn foo() {{ const x: {} = {};}}", fixed_arr_ty_str,  l_arr_str));
             }
@@ -237,7 +237,7 @@ mod const_in_void_func_with_params_tests {
         let boolean_conds = get_many_boolean_conditions();
         
         let t = Type::Bool;
-        let t_str = holy_type_to_rust_type_str(&t);
+        let t_str = gold_type_to_rust_type_str(&t);
         
         for bl in boolean_conds {
             let body = vec![
@@ -251,7 +251,7 @@ mod const_in_void_func_with_params_tests {
             assert!(rcode.starts_with(&internals));
             let rcode = rcode[internals.len()..].replace('\n', "");
 
-            let bl_str = holy_expr_to_rust_expr(&bl);
+            let bl_str = gold_expr_to_rust_expr(&bl);
 
             assert_eq!(rcode, format!("fn foo(a: {}, b: {}) {{ const x: {} = {};}}", t_str, t_str, t_str, bl_str));
         }
@@ -276,8 +276,8 @@ mod const_in_void_func_with_params_tests {
             assert!(rcode.starts_with(&internals));
             let rcode = rcode[internals.len()..].replace('\n', "");
 
-            let t_str = holy_type_to_rust_type_str(&t);
-            let l_str = holy_expr_to_rust_expr(&l);
+            let t_str = gold_type_to_rust_type_str(&t);
+            let l_str = gold_expr_to_rust_expr(&l);
 
             assert_eq!(rcode, format!("fn foo(a: {}, b: {}) {{ const x: {} = {};}}", t_str, t_str, t_str, l_str));
         }
@@ -303,8 +303,8 @@ mod const_in_void_func_with_params_tests {
                 assert!(rcode.starts_with(&internals));
                 let rcode = rcode[internals.len()..].replace('\n', "");
 
-                let fixed_arr_ty_str = holy_type_to_rust_type_str(&fixed_arr_ty);
-                let l_arr_str = holy_expr_to_rust_expr(&l_arr);
+                let fixed_arr_ty_str = gold_type_to_rust_type_str(&fixed_arr_ty);
+                let l_arr_str = gold_expr_to_rust_expr(&l_arr);
 
                 assert_eq!(rcode, format!("fn foo(a: {}, b: {}) {{ const x: {} = {};}}", fixed_arr_ty_str, fixed_arr_ty_str, fixed_arr_ty_str, l_arr_str));
             }
@@ -331,8 +331,8 @@ mod const_in_void_func_with_params_tests {
                 assert!(rcode.starts_with(&internals));
                 let rcode = rcode[internals.len()..].replace('\n', "");
 
-                let fixed_arr_ty_str = holy_type_to_rust_type_str(&fixed_arr_ty);
-                let l_arr_str = holy_expr_to_rust_expr(&l_arr);
+                let fixed_arr_ty_str = gold_type_to_rust_type_str(&fixed_arr_ty);
+                let l_arr_str = gold_expr_to_rust_expr(&l_arr);
 
                 assert_eq!(rcode, format!("fn foo(a: {}, b: {}) {{ const x: {} = {};}}", fixed_arr_ty_str, fixed_arr_ty_str, fixed_arr_ty_str, l_arr_str));
             }
@@ -352,7 +352,7 @@ mod const_in_single_returning_func_with_params_tests {
         let boolean_conds = get_many_boolean_conditions();
         
         let t = Type::Bool;
-        let t_str = holy_type_to_rust_type_str(&t);
+        let t_str = gold_type_to_rust_type_str(&t);
         
         for bl in boolean_conds {
             let body = vec![
@@ -366,7 +366,7 @@ mod const_in_single_returning_func_with_params_tests {
             assert!(rcode.starts_with(&internals));
             let rcode = rcode[internals.len()..].replace('\n', "");
 
-            let bl_str = holy_expr_to_rust_expr(&bl);
+            let bl_str = gold_expr_to_rust_expr(&bl);
             
             assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ const x: {} = {};}}", t_str, t_str, t_str, t_str, bl_str));
         }
@@ -392,8 +392,8 @@ mod const_in_single_returning_func_with_params_tests {
             assert!(rcode.starts_with(&internals));
             let rcode = rcode[internals.len()..].replace('\n', "");
 
-            let t_str = holy_type_to_rust_type_str(&t);
-            let l_str = holy_expr_to_rust_expr(&l);
+            let t_str = gold_type_to_rust_type_str(&t);
+            let l_str = gold_expr_to_rust_expr(&l);
 
             assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ const x: {} = {};}}", t_str, t_str, t_str, t_str, l_str));
         }
@@ -419,8 +419,8 @@ mod const_in_single_returning_func_with_params_tests {
                 assert!(rcode.starts_with(&internals));
                 let rcode = rcode[internals.len()..].replace('\n', "");
 
-                let fixed_arr_ty_str = holy_type_to_rust_type_str(&fixed_arr_ty);
-                let l_arr_str = holy_expr_to_rust_expr(&l_arr);
+                let fixed_arr_ty_str = gold_type_to_rust_type_str(&fixed_arr_ty);
+                let l_arr_str = gold_expr_to_rust_expr(&l_arr);
 
                 assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ const x: {} = {};}}", fixed_arr_ty_str, fixed_arr_ty_str, fixed_arr_ty_str, fixed_arr_ty_str, l_arr_str));
             }
@@ -448,8 +448,8 @@ mod const_in_single_returning_func_with_params_tests {
                 assert!(rcode.starts_with(&internals));
                 let rcode = rcode[internals.len()..].replace('\n', "");
 
-                let fixed_arr_ty_str = holy_type_to_rust_type_str(&fixed_arr_ty);
-                let l_arr_str = holy_expr_to_rust_expr(&l_arr);
+                let fixed_arr_ty_str = gold_type_to_rust_type_str(&fixed_arr_ty);
+                let l_arr_str = gold_expr_to_rust_expr(&l_arr);
 
                 assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> {} {{ const x: {} = {};}}", fixed_arr_ty_str, fixed_arr_ty_str, fixed_arr_ty_str, fixed_arr_ty_str, l_arr_str));
             }
@@ -466,7 +466,7 @@ mod const_in_multi_returning_func_with_params_tests {
         let boolean_conds = get_many_boolean_conditions();
         
         let t = Type::Bool;
-        let t_str = holy_type_to_rust_type_str(&t);
+        let t_str = gold_type_to_rust_type_str(&t);
         
         for bl in boolean_conds {
             let body = vec![
@@ -480,7 +480,7 @@ mod const_in_multi_returning_func_with_params_tests {
             assert!(rcode.starts_with(&internals));
             let rcode = rcode[internals.len()..].replace('\n', "");
 
-            let bl_str = holy_expr_to_rust_expr(&bl);
+            let bl_str = gold_expr_to_rust_expr(&bl);
             
             assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> ({}, {}, {}) {{ const x: {} = {};}}", t_str, t_str, t_str, t_str, t_str, t_str, bl_str));
         }
@@ -507,8 +507,8 @@ mod const_in_multi_returning_func_with_params_tests {
             assert!(rcode.starts_with(&internals));
             let rcode = rcode[internals.len()..].replace('\n', "");
 
-            let t_str = holy_type_to_rust_type_str(&t);
-            let l_str = holy_expr_to_rust_expr(&l);
+            let t_str = gold_type_to_rust_type_str(&t);
+            let l_str = gold_expr_to_rust_expr(&l);
 
             assert_eq!(rcode, format!("fn foo(a: {}, b: {}) -> ({}, {}, {}) {{ const x: {} = {};}}", t_str, t_str, t_str, t_str, t_str, t_str, l_str));
         }
@@ -534,8 +534,8 @@ mod const_in_multi_returning_func_with_params_tests {
                 assert!(rcode.starts_with(&internals));
                 let rcode = rcode[internals.len()..].replace('\n', "");
 
-                let fixed_arr_ty_str = holy_type_to_rust_type_str(&fixed_arr_ty);
-                let l_arr_str = holy_expr_to_rust_expr(&l_arr);
+                let fixed_arr_ty_str = gold_type_to_rust_type_str(&fixed_arr_ty);
+                let l_arr_str = gold_expr_to_rust_expr(&l_arr);
 
                 assert_eq!(
                     rcode, 
@@ -568,8 +568,8 @@ mod const_in_multi_returning_func_with_params_tests {
                 assert!(rcode.starts_with(&internals));
                 let rcode = rcode[internals.len()..].replace('\n', "");
 
-                let fixed_arr_ty_str = holy_type_to_rust_type_str(&fixed_arr_ty);
-                let l_arr_str = holy_expr_to_rust_expr(&l_arr);
+                let fixed_arr_ty_str = gold_type_to_rust_type_str(&fixed_arr_ty);
+                let l_arr_str = gold_expr_to_rust_expr(&l_arr);
 
                 assert_eq!(
                     rcode,
