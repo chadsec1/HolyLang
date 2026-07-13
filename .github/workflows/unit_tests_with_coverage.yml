@@ -22,18 +22,30 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # This is 6.0.2
         with:
           fetch-depth: 0
+          
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # Latest master commit
+        with:
+          toolchain: stable
 
-      - name: Install nightly + llvm-cov
-        run: |
-          rustup toolchain install nightly --component llvm-tools-preview
-          cargo install cargo-llvm-cov
-      
-      - name: Generate coverage
-        run: cargo +nightly llvm-cov --branch --lcov --output-path coverage.lcov
-      
+      - name: Cache cargo-tarpaulin
+        id: cache
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # This is 5.0.4
+        with:
+          path: ~/.cargo/bin/cargo-tarpaulin
+          key: cargo-tarpaulin-${{ runner.os }}
+
+      - name: Install cargo-tarpaulin
+        run: cargo install cargo-tarpaulin
+        if: steps.cache.outputs.cache-hit != 'true'
+
+      - name: Run unit tests and generate tarpaulin report
+        run: cargo tarpaulin --timeout 30000 --verbose --lib --out Xml --output-dir ./coverage
+
+    
       - name: Upload to Codacy
         uses: codacy/codacy-coverage-reporter-action@89d6c85cfafaec52c72b6c5e8b2878d33104c699 # This is v1.3.0
         with:
           project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
-          coverage-reports: coverage.lcov
+          coverage-reports: coverage/cobertura.xml
 
