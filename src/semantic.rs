@@ -259,29 +259,15 @@ fn check_stmts(
                 check_const(cons, locals, fun_sigs)?;
             },
             Stmt::VarDecl(var) => {
-                if fun_sigs.contains_key(&var.name) {
-                    return Err(GoldError::Semantic(format!(
-                                "Variable identifier name `{}` is already taken by a function. (line {} column {})", 
-                                var.name, var.span.line, var.span.column
-                            )))
-                }
+                helpers::check_identifier_is_already_taken(&var.name, &var.span, locals, fun_sigs)?;
 
                 let expr_ty = infer::infer_expr_type(&mut var.value, locals, fun_sigs, Some(var.type_name.clone()))?;
                 if expr_ty != var.type_name {
                     return Err(GoldError::Semantic(format!(
                         "Type mismatch assigning to `{}`: got `{}`, expected `{}` (line {} column {})",
                         var.name, expr_ty, var.type_name, var.span.line, var.span.column
-                    )));
+                    )))
                 }
-
-                // GoldLang commandment 1. You shall not overshadow variables
-                if locals.contains_key(&var.name) {
-                    return Err(GoldError::Semantic(format!(
-                            "Variable `{}` is already declared, overshadowing is not allowed. (line {} column {})", 
-                            var.name, var.span.line, var.span.column
-                        )))
-                }
-
 
                 let mut value_len: Option<usize> = None;
 
@@ -336,7 +322,7 @@ fn check_stmts(
                         }
                     }
                 );
-            }
+            },
 
             Stmt::VarDeclMulti(var_list, call_expr) => {
                 // Expect the right-hand side to be a function Call expression
@@ -359,14 +345,7 @@ fn check_stmts(
                             )));
                         }
 
-
-                        // GoldLang commandment 1. You shall not overshadow variables
-                        if locals.contains_key(&var.name) {
-                            return Err(GoldError::Semantic(format!(
-                                    "Variable `{}` is already declared, overshadowing is not allowed. (line {} column {})", 
-                                    var.name, var.span.line, var.span.column
-                                )))
-                        }
+                        helpers::check_identifier_is_already_taken(&var.name, &var.span, locals, fun_sigs)?;
 
                         // insert into locals
                         //
@@ -387,7 +366,7 @@ fn check_stmts(
                     return Err(GoldError::Semantic(format!(
                         "Multi-declarement requires only a single function call on the right-hand side (line {} column {})",
                         stmt_span.line, stmt_span.column
-                    )));
+                    )))
                 }
             }
 
@@ -408,7 +387,7 @@ fn check_stmts(
                     return Err(GoldError::Semantic(format!(
                             "Type mismatch assigning to `{}`: got `{}`, expected `{}` (line {} column {})",
                             assign.name, expr_ty, varinfo.ty, assign.span.line, assign.span.column
-                    )));
+                    )))
                 }
 
 
@@ -752,8 +731,7 @@ fn check_stmts(
                         }
                     }
                 }
-            }
-
+            },
 
             Stmt::For(for_stmt) => {
                 let expr_ty = infer::infer_expr_type(&mut for_stmt.value, locals, fun_sigs, None)?;
@@ -762,16 +740,10 @@ fn check_stmts(
                     return Err(GoldError::Semantic(format!(
                         "For loop statement require an expression to be evaulatable to any `Array` type, or `range(expr1, expr2)`, instead we got `{}` (line {} column {})",
                         expr_ty, stmt_span.line, stmt_span.column,
-                    )));
-                }
-
-
-                if locals.contains_key(&for_stmt.holder_name) {
-                    return Err(GoldError::Semantic(format!(
-                        "Cannot use variable name `{}` in for loop statement as it is already declared. (line {} column {})",
-                        for_stmt.holder_name, stmt_span.line, stmt_span.column,
                     )))
                 }
+
+                helpers::check_identifier_is_already_taken(&for_stmt.holder_name, &stmt_span, locals, fun_sigs)?;
 
                 // If this is a for looping over an array, move the array only if its not an array
                 // literal. i.e. its a variable that holds an array.
@@ -846,15 +818,14 @@ fn check_stmts(
                     upstream.push(var_name.clone());
                 }
 
-                // We also add holder_name to the list to prevent programmer overshadowing the
+                // We also add holder_name to the upstream list to prevent programmer overshadowing the
                 // variable within the loop.
                 upstream.push(for_stmt.holder_name.clone());
 
                     
                 check_stmts(func, &mut for_stmt.branch, &mut locals_clone, upstream.as_slice(), fun_sigs, true)?;
                 update_local_assignments_from_clone(locals, locals_clone);
-            }
-
+            },
 
             Stmt::While(while_stmt) => {
                 let expr_ty = infer::infer_expr_type(&mut while_stmt.condition, locals, fun_sigs, Some(Type::Bool))?;
