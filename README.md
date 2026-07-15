@@ -18,7 +18,7 @@
 - Documentation is forced for functions, structs, and constants.
 - No type inference, everything must be explicilty stated (this prevents common errors that stems especially from numeric types and assumptions.).
 - No overshadowing allowed. Making codebases easier to audit, and reducing likelyhood of logic bugs.
-- `lock` and `unlock` statements allow you to declare "zones" where variables behave as constants.
+- `lock` and `unlock` statements allow you to declare "zones" where variables behave as constants, protecting you from yourself .
 
 
 **GoldLang**'s bootstrap compiler transpiles down to pure Rust for a mathematical guarantee of safety: `"If Rust is safe, then GoldLang must also be at least as safe as Rust"`.
