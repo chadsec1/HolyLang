@@ -21,8 +21,7 @@ pub fn dead_code_analysis(block: &Vec<Stmt>, in_loop: bool) -> Result<bool, Gold
             return Err(GoldError::Semantic(format!(
                         "Dead code detected starting from line `{}` up to the end of the scope",
                         stmt_span.line,
-                    )));
-
+                    )))
         }
 
         match stmt {
@@ -35,9 +34,8 @@ pub fn dead_code_analysis(block: &Vec<Stmt>, in_loop: bool) -> Result<bool, Gold
                 if body.is_empty() {
                     return Err(GoldError::Semantic(format!(
                             "Infinite loop branch has no statements. Empty branches are not allowed (line {} column {})",
-                            infinite_stmt.span.line, infinite_stmt.span.column,
-                        )));
-
+                            infinite_stmt.span.line, infinite_stmt.span.column
+                        )))
                 }
 
                 let inner_terminates = dead_code_analysis(body, true)?;
@@ -45,19 +43,16 @@ pub fn dead_code_analysis(block: &Vec<Stmt>, in_loop: bool) -> Result<bool, Gold
                 if inner_terminates { 
                     end_detected = true;
                 }
-            }
-
+            },
 
             Stmt::While(while_stmt) => {
                 let body = &while_stmt.branch;
                 if body.is_empty() {
                     return Err(GoldError::Semantic(format!(
                             "While loop branch has no statements. Empty branches are not allowed (line {} column {})",
-                            while_stmt.span.line, while_stmt.span.column,
-                        )));
-
+                            while_stmt.span.line, while_stmt.span.column
+                        )))
                 }
-
 
                 dead_code_analysis(body, in_loop)?;
             },
@@ -67,11 +62,9 @@ pub fn dead_code_analysis(block: &Vec<Stmt>, in_loop: bool) -> Result<bool, Gold
                 if body.is_empty() {
                     return Err(GoldError::Semantic(format!(
                             "For loop branch has no statements. Empty branches are not allowed (line {} column {})",
-                            for_stmt.span.line, for_stmt.span.column,
-                        )));
-
+                            for_stmt.span.line, for_stmt.span.column
+                        )))
                 }
-
 
                 dead_code_analysis(body, in_loop)?;
             },
@@ -80,8 +73,8 @@ pub fn dead_code_analysis(block: &Vec<Stmt>, in_loop: bool) -> Result<bool, Gold
                 if if_stmt.if_branch.is_empty() {
                     return Err(GoldError::Semantic(format!(
                             "If statement main branch has no statements. Empty branches are not allowed (line {} column {})",
-                            if_stmt.span.line, if_stmt.span.column,
-                        )));
+                            if_stmt.span.line, if_stmt.span.column
+                        )))
                 }
 
                 let if_term: bool = dead_code_analysis(&if_stmt.if_branch, in_loop)?;
@@ -94,8 +87,8 @@ pub fn dead_code_analysis(block: &Vec<Stmt>, in_loop: bool) -> Result<bool, Gold
                     if s_vec.1.is_empty() {
                         return Err(GoldError::Semantic(format!(
                             "If statement `elif` branch has no statements. Empty branches are not allowed (line {} column {})",
-                            expr_span.line, expr_span.column,
-                        )));
+                            expr_span.line, expr_span.column
+                        )))
                     }
 
                     if !dead_code_analysis(&s_vec.1, in_loop)? {
@@ -109,8 +102,8 @@ pub fn dead_code_analysis(block: &Vec<Stmt>, in_loop: bool) -> Result<bool, Gold
                     if else_branch.is_empty() {
                         return Err(GoldError::Semantic(format!(
                             "If statement `else` branch has no statements. Empty branches are not allowed (line {} column {})",
-                            if_stmt.span.line, if_stmt.span.column,
-                        )));
+                            if_stmt.span.line, if_stmt.span.column
+                        )))
                     } 
                 
                     let else_term = dead_code_analysis(else_branch, in_loop)?;
@@ -150,9 +143,8 @@ pub fn return_branch_analysis(
                 return Err(GoldError::Semantic(format!(
                         "You cannot `break` out of a infinite loop if its the last statement in a function that returns. Use a return statement instead. (line {} column {})",
                         break_stmt.span.line, break_stmt.span.column,
-                    )));
+                    )))
             }
-
         },
         Stmt::Return(_) => {},
         Stmt::Infinite(infinite_stmt) => {
@@ -179,8 +171,8 @@ pub fn return_branch_analysis(
                         Stmt::Break(break_stmt) => {
                             return Err(GoldError::Semantic(format!(
                                 "You cannot `break` out of a infinite loop if its the last statement in a function that returns. Use a return statement instead. (line {} column {})",
-                                break_stmt.span.line, break_stmt.span.column,
-                            )));
+                                break_stmt.span.line, break_stmt.span.column
+                            )))
                         }
 
                         Stmt::If(_) => {

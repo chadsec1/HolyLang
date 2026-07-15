@@ -63,8 +63,6 @@ pub fn get_bigger_type_of_two_integers(t_1: Type, t_2: Type) -> Type {
 }
 
 
-
-
 pub fn check_identifier_is_already_taken(
     identifier: &str,
     span: &Span,
@@ -87,9 +85,6 @@ pub fn check_identifier_is_already_taken(
 
     Ok(())
 }
-
-
-
 
 
 // helper to get the span of a statement (so we can point to offending code)
