@@ -179,7 +179,7 @@ fn check_global_stmt(
     match globalstmt {
         GlobalStmt::Const(cons) => check_const(cons, storage, fun_sigs),
 
-        GlobalStmt::_PlaceholderDummyUntilIAddMoreStmtsHereLikeStructsAndEnums => panic!("(Compiler bug) Unimplemented")
+        GlobalStmt::_PlaceholderDummyUntilIAddMoreStmtsHereLikeStructsAndEnums => todo!()
     }
 }
 
@@ -273,9 +273,7 @@ fn check_stmts(
 
                 // Check if source value is a variable and if its locked or moved, and moves it
                 if let Expr::Var { name: src_name, span } = &var.value {
-                    let src = locals.get_mut(src_name).unwrap_or_else(|| panic!(
-                            "(Compiler bug) infer_expr_type should've already errored if source variable didnt exist, but it didnt. var: {var:?}"
-                        ));
+                    let src = locals.get_mut(src_name).unwrap();
 
                     match &mut src.kind {
                         BindingKind::Var { moved: src_moved, len: src_len, .. } => {
@@ -422,9 +420,7 @@ fn check_stmts(
                 let mut value_len: Option<usize> = None;
               
                 if let Expr::Var { name: src_name, span } = &assign.value {
-                    let src = locals.get_mut(src_name).unwrap_or_else(|| panic!(
-                                "(Compiler bug) infer_expr_type should've already errored if source variable didnt exist, but it didnt. assign: {assign:?}" 
-                            ));
+                    let src = locals.get_mut(src_name).unwrap();
 
                     match &mut src.kind {
                         BindingKind::Var { moved: src_moved, len: src_len, .. } => {
@@ -466,7 +462,7 @@ fn check_stmts(
 
                 match &mut varinfo.kind {
                     BindingKind::Var { len, .. } => *len = value_len,
-                    BindingKind::Const { .. } => panic!("(Compiler bug) Variable is const, despite our supposed earlier checks that its not. Wtf ?: {varinfo:?}")
+                    _ => unreachable!()
                  }
             },
 
@@ -592,9 +588,7 @@ fn check_stmts(
 
 
                 for var_name in var_names_to_lock {
-                    let var = locals.get_mut(&var_name).unwrap_or_else(|| {
-                        panic!("(Compiler bug) Variable doesnt exist in locals despite our earlier call to infer_expr_type shouldve checked the variable thourghly, including its existence, but apparently it didnt. expr_vec: `{expr_vec:?}`, var_name: {var_name:?}");
-                    });
+                    let var = locals.get_mut(&var_name).unwrap();
 
                     match &mut var.kind {
                         BindingKind::Var { locked, .. } => {
@@ -670,9 +664,7 @@ fn check_stmts(
 
 
                 for var_name in var_names_to_unlock {
-                    let var = locals.get_mut(&var_name).unwrap_or_else(|| {
-                        panic!("(Compiler bug) Variable doesnt exist in locals despite our earlier call to infer_expr_type shouldve checked the variable thourghly, including its existence, but apparently it didnt. expr_vec: `{expr_vec:?}`, var_name: {var_name:?}")
-                    });
+                    let var = locals.get_mut(&var_name).unwrap();
 
                     match &mut var.kind {
                         BindingKind::Var { locked, .. } => {
@@ -749,9 +741,7 @@ fn check_stmts(
                 // literal. i.e. its a variable that holds an array.
                 if expr_ty.is_array_type()
                     && let Expr::Var { name, .. } = &for_stmt.value {
-                    let src = locals.get_mut(name).unwrap_or_else(|| panic!(
-                        "(Compiler bug) infer_expr_type should've already errored if the array variable didnt exist, but it didnt. for_stmt: {for_stmt:?}"
-                    ));
+                    let src = locals.get_mut(name).unwrap();
 
                     match &mut src.kind {
                         BindingKind::Var { moved: src_moved, .. } => {
@@ -770,29 +760,25 @@ fn check_stmts(
 
                 let mut locals_clone = locals.clone();
 
+                let local_fake_var_ty: Type = match expr_ty {
+                    Type::Array(inner_ty) |
+                    Type::FixedArray(inner_ty, _) => *inner_ty,
+
+                    // Since earlier we checked to see if for stmt is array type, or a rangecall
+                    // expression, we know rangecall evaluates to integer, so, this means
+                    // rangecall. 
+                    //
+                    other if other.is_integer_type() => other,
+
+                    _ => unreachable!()
+                };
+
+
                 // We inject the holder variable into the locals. It is "fake" variable that does
                 // not exist in the AST, but we need it in locals to make analysis work.
                 //
 
-                let decided_ty: Type;
-
-                if let Type::Array(inner_ty) = expr_ty {
-                    decided_ty = *inner_ty;
-
-                } else if let Type::FixedArray(inner_ty, _) = expr_ty {
-                    decided_ty = *inner_ty;
-                    
-                } else if expr_ty.is_integer_type() {
-                    decided_ty = expr_ty;
-                } else {
-                    panic!(
-                        "(Compiler bug) Expected for loop expression to either be an array or an integer (more precisely an integer cuz programmer used range()), instead we got: {:?} {:?}", 
-                        for_stmt.value, expr_ty);
-                }
-
-
-
-                // NOTE only specific if decided_ty is of an array: 
+                // NOTE that's only relevant if `local_fake_var_ty` is of an array type: 
                 //      Out-of-bounds access protection here is non-existent, but thats fine because Rust
                 //      will catch at transpile layer
                 //      However it would be nicer if we can do better job of catching out of bounds
@@ -801,7 +787,7 @@ fn check_stmts(
                 locals_clone.insert(
                     for_stmt.holder_name.clone(),
                     BindingInfo {
-                        ty: decided_ty,
+                        ty: local_fake_var_ty,
                         kind: BindingKind::Var {
                             value: None,
                             moved: false,
@@ -822,19 +808,18 @@ fn check_stmts(
                 // variable within the loop.
                 upstream.push(for_stmt.holder_name.clone());
 
-                    
                 check_stmts(func, &mut for_stmt.branch, &mut locals_clone, upstream.as_slice(), fun_sigs, true)?;
                 update_local_assignments_from_clone(locals, locals_clone);
             },
 
             Stmt::While(while_stmt) => {
-                let expr_ty = infer::infer_expr_type(&mut while_stmt.condition, locals, fun_sigs, Some(Type::Bool))?;
+                let expr_ty = infer::infer_expr_type(&mut while_stmt.condition, locals, fun_sigs, None).unwrap();
                 
                 if expr_ty != Type::Bool {
                     return Err(GoldError::Semantic(format!(
                         "While statement require an expression to be evaulatable to type `bool`, instead we got `{}` (line {} column {})",
-                        expr_ty, stmt_span.line, stmt_span.column,
-                    )));
+                        expr_ty, stmt_span.line, stmt_span.column
+                    )))
                 }
 
                 // This gets all upstream variable names, and passes it to check stmts to ensure
@@ -848,8 +833,7 @@ fn check_stmts(
                 check_stmts(func, &mut while_stmt.branch, &mut locals_clone, upstream.as_slice(), fun_sigs, true)?;
                 update_local_assignments_from_clone(locals, locals_clone);
                 
-            }
-
+            },
             Stmt::Infinite(infinite_stmt) => {
                 // This gets all upstream variable names, and passes it to check stmts to ensure
                 // you cannot overshadow them.
@@ -862,9 +846,7 @@ fn check_stmts(
                 check_stmts(func, &mut infinite_stmt.branch, &mut locals_clone, upstream.as_slice(), fun_sigs, true)?;
                 update_local_assignments_from_clone(locals, locals_clone);
                 
-            }
-
-
+            },
 
             Stmt::Break(break_stmt) => {
                 if !in_loop {
@@ -886,13 +868,13 @@ fn check_stmts(
             }
 
             Stmt::If(if_stmt) => {
-                let main_expr_ty = infer::infer_expr_type(&mut if_stmt.condition, locals, fun_sigs, Some(Type::Bool))?;
+                let main_expr_ty = infer::infer_expr_type(&mut if_stmt.condition, locals, fun_sigs, None).unwrap();
                 
                 if main_expr_ty != Type::Bool {
                     return Err(GoldError::Semantic(format!(
                         "If statement require an expression to be evaulatable to type `bool`, instead we got `{}` (line {} column {})",
-                        main_expr_ty, stmt_span.line, stmt_span.column,
-                    )));
+                        main_expr_ty, stmt_span.line, stmt_span.column
+                    )))
                 }
 
                 // This gets all upstream variable names, and passes it to check stmts to ensure
@@ -906,7 +888,6 @@ fn check_stmts(
                 // state.
                 let locals_clone = locals.clone();
 
-                    
                 let mut main_locals_clone = locals.clone();
                 let mut else_locals_clone = locals.clone();
 
@@ -915,13 +896,13 @@ fn check_stmts(
                 
 
                 for s in &mut if_stmt.elif_branches {
-                    let elif_expr_ty = infer::infer_expr_type(&mut s.0, locals, fun_sigs, Some(Type::Bool))?; 
+                    let elif_expr_ty = infer::infer_expr_type(&mut s.0, locals, fun_sigs, None).unwrap();
 
                     if elif_expr_ty != Type::Bool {
                         return Err(GoldError::Semantic(format!(
                             "Elif statements require an expression to be evaulatable to type `bool`, instead we got `{}` (line {} column {})",
-                            elif_expr_ty, stmt_span.line, stmt_span.column,
-                        )));
+                            elif_expr_ty, stmt_span.line, stmt_span.column
+                        )))
                     }
 
                 
@@ -1011,9 +992,7 @@ fn check_call(
 
         // If this arg is a variable, mark it moved (same semantics as before)
         if let Expr::Var { name: vname, span: _ } = arg_expr {
-            let v = locals.get_mut(vname).unwrap_or_else(|| panic!(
-                    "(Compiler bug) infer_expr_type should've already errored if source argument variable didnt exist, but it didnt. arg_expr: {arg_expr:?}" 
-                ));
+            let v = locals.get_mut(vname).unwrap();
 
             match &mut v.kind {
                 BindingKind::Var { moved, ..} => {
