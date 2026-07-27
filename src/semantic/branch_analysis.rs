@@ -1,10 +1,263 @@
+/// This file is mainly responsible for branch analysis, such as:
+///     1. Analyzing functions for empty branchaes and erroring.
+///
+/// and
+///     2. Analyzing return branches to ensure branches correctly return, or infinitely loops
+///        without breaking
+///
+/// and
+///     3. Analyzing branches for unreachable code (i.e. statements after a `return`, or a `break` statements)
+/// 
+///
 use super::{
-    Stmt, 
+    Stmt,
+    // Type,
     GoldError, 
     helpers, 
     Function
 };
 
+
+/// Performs code analysis on a specific function, the analysis include:
+/// - empty branch analysis (ensuring the function body, and statements bodies, are not empty)
+/// - return branch analysis (ensuring proper returning and legal control flow in branches)
+///
+///
+pub fn code_analysis(
+    func: &Function
+) -> Result<(), GoldError> {
+
+    /*
+    let last_func_stmt = func.body.last().ok_or(GoldError::Semantic(format!(
+                    "Function `{}` has no statements, empty functions are not allowed! (line {} column {})",
+                    func.name, func.span.line, func.span.column
+                )))?;
+*/
+
+    empty_branch_analysis_hazmat(&func.body)?;
+
+    unreachable_code_branch_analysis_hazmat(&func.body)?;
+
+    /*if let Some(return_type) = &func.return_type {
+        return_branch_analysis_hazmat(return_type, &func.body)?;
+    }*/
+
+    Ok(())
+}
+
+
+/// Checks statements in a statement block for empty branches.
+/// NOTE: Do not call this function directly. this function only meant to be called within
+/// `code_analysis`
+fn empty_branch_analysis_hazmat(
+    block: &Vec<Stmt>
+) -> Result<(), GoldError> {
+    for stmt in block {
+        match stmt {
+            Stmt::Return(_) |Stmt::Break(_) | Stmt::Continue(_) | Stmt::Lock(_) | Stmt::Unlock(_) | Stmt::Expr(_) | Stmt::VarDecl(_) 
+                | Stmt::VarDeclMulti(_, _) | Stmt::VarAssign(_) | Stmt::VarAssignMulti(_) | Stmt::Const(_) => {},
+
+            Stmt::Infinite(infinite_stmt) => {
+                let body = &infinite_stmt.branch;
+                if body.is_empty() {
+                    return Err(GoldError::Semantic(format!(
+                            "Infinite loop branch has no statements. Empty branches are not allowed (line {} column {})",
+                            infinite_stmt.span.line, infinite_stmt.span.column
+                        )))
+                }
+
+                empty_branch_analysis_hazmat(body)?;
+            },
+            Stmt::While(while_stmt) => {
+                let body = &while_stmt.branch;
+                if body.is_empty() {
+                    return Err(GoldError::Semantic(format!(
+                            "While loop branch has no statements. Empty branches are not allowed (line {} column {})",
+                            while_stmt.span.line, while_stmt.span.column
+                        )))
+                }
+
+                empty_branch_analysis_hazmat(body)?;
+            },
+            Stmt::For(for_stmt) => {
+                let body = &for_stmt.branch;
+                if body.is_empty() {
+                    return Err(GoldError::Semantic(format!(
+                            "For loop branch has no statements. Empty branches are not allowed (line {} column {})",
+                            for_stmt.span.line, for_stmt.span.column
+                        )))
+                }
+
+                empty_branch_analysis_hazmat(body)?;
+            },
+            Stmt::If(if_stmt) => {
+                if if_stmt.if_branch.is_empty() {
+                    return Err(GoldError::Semantic(format!(
+                            "If statement main branch has no statements. Empty branches are not allowed (line {} column {})",
+                            if_stmt.span.line, if_stmt.span.column
+                        )))
+                }
+
+                empty_branch_analysis_hazmat(&if_stmt.if_branch)?;
+
+                for s_vec in &if_stmt.elif_branches {
+                    let expr_span = helpers::expr_span(&s_vec.0);
+
+                    if s_vec.1.is_empty() {
+                        return Err(GoldError::Semantic(format!(
+                            "If statement `elif` branch has no statements. Empty branches are not allowed (line {} column {})",
+                            expr_span.line, expr_span.column
+                        )))
+                    }
+
+                    empty_branch_analysis_hazmat(&s_vec.1)?;
+                }
+
+                if let Some(else_branch) = &if_stmt.else_branch {
+                    if else_branch.is_empty() {
+                        return Err(GoldError::Semantic(format!(
+                            "If statement `else` branch has no statements. Empty branches are not allowed (line {} column {})",
+                            if_stmt.span.line, if_stmt.span.column
+                        )))
+                    } 
+                
+                    empty_branch_analysis_hazmat(else_branch)?;
+                }
+            }
+        }
+        
+    }
+
+    Ok(())
+}
+
+
+/// Performs unreachable code branch analysis, errors if it detects statements and or branches that could never be
+/// "reached" (aka executed) due to `return`s and `break`s (or `continue`) statements.
+///
+/// NOTE: Do not call this function directly. this function only meant to be called within `code_analysis` function
+///
+fn unreachable_code_branch_analysis_hazmat(
+    block: &Vec<Stmt>
+) -> Result<(bool, bool), GoldError> {
+    let mut certain_return_detected: bool = false;
+    let mut stop_detected: bool = false;
+
+    for stmt in block {
+        if certain_return_detected || stop_detected {
+            let current_stmt_span = helpers::stmt_span(stmt);
+            let last_block_stmt_span = helpers::stmt_span(block.last().unwrap());
+
+            if current_stmt_span == last_block_stmt_span {
+                return Err(GoldError::Semantic(format!(
+                            "Unreachable statement at line {}",
+                            current_stmt_span.line
+                        )))
+            } else {
+                return Err(GoldError::Semantic(format!(
+                            "Unreachable code starting from line {} down to line {}",
+                            current_stmt_span.line, last_block_stmt_span.line
+                        )))
+            }
+        }
+
+        match stmt {
+            Stmt::Return(_) => certain_return_detected = true,
+            Stmt::Break(_) | Stmt::Continue(_) => stop_detected = true,
+            Stmt::Infinite(inf_stmt) => (certain_return_detected, _) = unreachable_code_branch_analysis_hazmat(&inf_stmt.branch)?,
+            Stmt::If(if_stmt) => if let Some(else_branch) = &if_stmt.else_branch {
+                let (if_branch_returns, if_branch_stops) = unreachable_code_branch_analysis_hazmat(&if_stmt.if_branch)?;
+                let (else_branch_returns, else_branch_stops) = unreachable_code_branch_analysis_hazmat(&else_branch)?;
+
+                let (mut elif_branches_returns, mut elif_branches_stops) = (true, true);
+
+                for s_vec in &if_stmt.elif_branches {
+                    let (elif_returns, elif_stops) = unreachable_code_branch_analysis_hazmat(&s_vec.1)?;
+
+                    if !elif_returns {
+                        elif_branches_returns = false;
+                    }
+
+                    if !elif_stops {
+                        elif_branches_stops = false;
+                    }
+                }
+
+                certain_return_detected = if_branch_returns && elif_branches_returns && else_branch_returns;
+                
+                // If a specific branch returns, it might as well act as a stop (break or
+                // continue) because whatever after it, is for sure unreachable. :)
+                //
+                stop_detected = (if_branch_returns || if_branch_stops) && (elif_branches_returns || elif_branches_stops) && (else_branch_returns || else_branch_stops);
+            },
+
+            Stmt::While(while_stmt) => (_, _) = unreachable_code_branch_analysis_hazmat(&while_stmt.branch)?,
+
+            // Non branching statements, so we safely ignore them
+            Stmt::Const(_) | Stmt::Expr(_) | Stmt::VarDecl(_) | Stmt::VarDeclMulti(..) | Stmt::VarAssign(_) | Stmt::VarAssignMulti(..) |
+            Stmt::Lock(_) | Stmt::Unlock(_) | Stmt::For(_) => {}
+        }
+        
+    }
+    
+    Ok((certain_return_detected, stop_detected))
+}
+
+/*
+/// Performs return branch analysis code branch analysis, errors if it detects statements that could never be
+/// reached due to `returns` and `breaks` statements.
+///
+/// NOTE: Do not call this function directly. this function only meant to be called within `code_analysis` function
+///
+fn return_branch_analysis_hazmat(
+    block: &Vec<Stmt>
+) -> Result<bool, GoldError> {
+    let mut certain_return_detected: bool = false;
+    let mut break_detected: bool = false;
+
+    for stmt in block {
+        if certain_return_detected || break_detected {
+            let current_stmt_span = helpers::stmt_span(stmt);
+            let last_block_stmt_span = helpers::stmt_span(block.last().unwrap());
+
+            if current_stmt_span == last_block_stmt_span {
+                return Err(GoldError::Semantic(format!(
+                            "Unreachable statement at line `{}`",
+                            current_stmt_span.line
+                        )))
+            } else {
+                return Err(GoldError::Semantic(format!(
+                            "Unreachable code starting from line `{}` up to line `{}`",
+                            current_stmt_span.line, last_block_stmt_span.line
+                        )))
+            }
+        }
+
+        match stmt {
+            Stmt::Return(_) => certain_return_detected = true,
+            Stmt::Break(_) => break_detected = true,
+            Stmt::Infinite(inf_stmt) => certain_return_detected = unreachable_code_branch_analysis_hazmat(&inf_stmt.branch)?,
+            Stmt::If(if_stmt) => if let Some(else_branch) = &if_stmt.else_branch {
+                let if_branch_returns = unreachable_code_branch_analysis_hazmat(&if_stmt.if_branch)?;
+                let else_branch_returns = unreachable_code_branch_analysis_hazmat(&else_branch)?;
+
+                certain_return_detected = if_branch_returns && else_branch_returns;
+            },
+
+            // Everything else is ignored. 
+            _ => {}
+        }
+    }
+    
+    Ok(certain_return_detected)
+}
+*/
+
+
+
+// pub fn return_branch_analysis(block: &Vec<Stmt>, break_detected: bool, return_detected: bool) -> Result<bool, GoldError> {
+
+/*
 pub fn dead_code_analysis(block: &Vec<Stmt>, in_loop: bool) -> Result<bool, GoldError> {
     // Instead of returning error here, we panic, because if we returned an error here
     // we would not have ability to pinpoint to the empty branch line. leaving responsiblity to
@@ -136,15 +389,16 @@ pub fn return_branch_analysis(
 
     match last_stmt {
         Stmt::Break(break_stmt) => {
-            // Just a compiler bug guard.
+            // Just a compiler bug guard to enforce the invariant.
             assert!(is_loop, "(Compiler bug) check_stmts shouldve errored before we even got called. We got a break statement when we arent even in a loop!");
 
             if forbid_break {
                 return Err(GoldError::Semantic(format!(
                         "You cannot `break` out of a infinite loop if its the last statement in a function that returns. Use a return statement instead. (line {} column {})",
-                        break_stmt.span.line, break_stmt.span.column,
+                        break_stmt.span.line, break_stmt.span.column
                     )))
             }
+
         },
         Stmt::Return(_) => {},
         Stmt::Infinite(infinite_stmt) => {
@@ -173,18 +427,13 @@ pub fn return_branch_analysis(
                                 "You cannot `break` out of a infinite loop if its the last statement in a function that returns. Use a return statement instead. (line {} column {})",
                                 break_stmt.span.line, break_stmt.span.column
                             )))
-                        }
-
+                        },
                         Stmt::If(_) => {
                             return_branch_analysis(func, s, true, true)?;
-                        }
-
-
+                        },
                         Stmt::While(_) | Stmt::For(_) | Stmt::Infinite(_) => {
                             return_branch_analysis(func, s, true, false)?;
-                        }
-
-
+                        },
 
                         // Skip all other statements
                         _ => {}
@@ -287,4 +536,4 @@ pub fn return_branch_analysis(
 
     Ok(())
 }
-
+*/

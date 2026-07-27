@@ -132,38 +132,10 @@ fn check_function(
 
     check_stmts(&func.clone(), &mut func.body, locals, &upstream_var_names, fun_sigs, false)?;
 
-
-    // Branch analysis to determine if function returns in all branches
+    // code analysis ensures no empty branches, nor dead code, and also ensures correct returning
+    // branches.
     //
-
-    // This is just to check that function has at least one statement
-    // Reason it's here and not in dead_code_snalysis is because so
-    // dead code analysis can properly error with lines.
-    //
-    let last_func_stmt = func.body.last();
-    if last_func_stmt.is_none() {
-        return Err(GoldError::Semantic(format!(
-                        "Function `{}` has no statements, empty functions are not allowed! (line {} column {})",
-                        func.name, func.span.line, func.span.column,
-                    )));
-    }
-
-    // We call dead code analysis here after check_stmts, because we want checked semantics.
-    // Semantics take priority more than dead code
-    //
-    branch_analysis::dead_code_analysis(&func.body, false)?;
-
-    // Return analysis only needs to check last statement which has return statements
-    // because dead code analysis should not let dead code pass.
-    // last statement should be always be the one actualy always returning.
-    //
-    // We only do return branch analysis if function has declared return type.
-    if func.return_type.is_some() {
-        branch_analysis::return_branch_analysis(func, last_func_stmt.unwrap(), false, false)?;
-    }
-
-    Ok(())
-
+    branch_analysis::code_analysis(&func)
 }
 
 
@@ -704,7 +676,7 @@ fn check_stmts(
                     Some(declared_ty_vec) => {
                         if declared_ty_vec.len() != expr_vec.len() {
                             return Err(GoldError::Semantic(format!(
-                                    "Return length mismatch in `{}`: got `{}` expressions, expected `{}` expressions (line {} column {})",
+                                    "Return length mismatch in `{}`: got {} expressions, expected {} expressions (line {} column {})",
                                     func.name, expr_vec.len(), declared_ty_vec.len(), stmt_span.line, stmt_span.column,
                                 )))
                         }
