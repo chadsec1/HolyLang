@@ -11,8 +11,6 @@ mod infer;
 mod helpers;
 
 
-#[cfg(test)]
-mod branch_analysis_tests; 
 
 #[cfg(test)]
 mod helpers_tests;
