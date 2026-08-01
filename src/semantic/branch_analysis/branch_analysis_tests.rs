@@ -3,7 +3,7 @@ use super::*;
 use crate::semantic_test_helpers::*;
 
 use crate::ast::{
-    InfiniteStmt
+    InfiniteStmt, WhileStmt
 };
 
 mod empty_branch_analysis_tests;
