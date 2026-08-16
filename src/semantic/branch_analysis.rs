@@ -8,6 +8,8 @@
 ///     3. Analyzing return branches to ensure branches correctly return, or infinitely loops
 ///        without breaking
 ///
+/// P.S. No, these comments are not AI
+///
 use super::{
     Stmt,
     GoldError, 
@@ -96,7 +98,7 @@ fn empty_branch_analysis_hazmat(
             Stmt::If(if_stmt) => {
                 if if_stmt.if_branch.is_empty() {
                     return Err(GoldError::Semantic(format!(
-                            "If statement main branch has no statements. Empty branches are not allowed (line {} column {})",
+                            "If statement `main` branch has no statements. Empty branches are not allowed (line {} column {})",
                             if_stmt.span.line, if_stmt.span.column
                         )))
                 }

@@ -598,7 +598,6 @@ pub fn void_func(name: &str, params: Vec<Param>, mut body: Vec<Stmt>) -> Functio
     }
 }
 
-/// Build a function that returns a single type.
 pub fn returning_func(name: &str, params: Vec<Param>, ret: Vec<Type>, body: Vec<Stmt>) -> Function {
     Function {
         name: name.to_string(),
