@@ -1,3 +1,15 @@
+/// This file is mainly responsible for analyzing function bodies for semantics analysis, such as:
+///     1. Ensure statements are legal (i.e. a break statement must be in a loop, etc)
+///
+/// and
+///     2. Tracking ownership (variable moves, copying, etc) to ensure legality (i.e. moved
+///        variables cannot be used unless re-declared, etc)
+/// and
+///     3. Internally coercing integer types if possible depending on the context
+///
+/// P.S. No, these comments are not AI
+///
+
 use std::collections::HashMap;
 
 use crate::error::GoldError;
@@ -174,7 +186,7 @@ fn check_const(
 
 
     // Validate the constant type against the expression, AND internally coerce literals if
-    // possible (i.e. int8 -> int32, etc), AND validate the constant value expression 
+    // possible (i.e. int8 becomes int32, etc), AND validate the constant value expression 
     // to ensure it is known at compile-time, AND evaluate it, and then fold it.
     //
     constants::eval_const_expr_and_fold_it(cons, storage, fun_sigs)?;
@@ -208,8 +220,6 @@ fn check_stmts(
     in_loop: bool
 
 ) -> Result<(), GoldError> {
-
-
     // Special rule: Despite fact you cannot lock/unlock variables declared upstream,
     // and function arguments are considered declared upstream, the
     // special rule, if we are not in a nested scope (i.e. the block of
