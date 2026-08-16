@@ -769,8 +769,6 @@ mod empty_branch_analysis_tests {
     }
 
 
-
-
     // Similar tests as above, except this time it's for If statements
     //
     #[test]
